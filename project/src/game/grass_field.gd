@@ -60,7 +60,13 @@ func _recenter(center: Vector2i) -> void:
 			if not tiles.has(key) or _tile_grids[key] != grid_for(key):
 				_pending.append(key)
 	_pending.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
-		return a.distance_squared_to(center) < b.distance_squared_to(center))
+		return _tile_priority(a) < _tile_priority(b))
+
+
+func _tile_priority(key: Vector2i) -> float:
+	# Turunkan tile lama dulu supaya batas geometri terjaga saat melewati batas sel.
+	var downgrade := _tile_grids.has(key) and _tile_grids[key] == GRID and grid_for(key) == FAR_GRID
+	return key.distance_squared_to(_center) - (1000.0 if downgrade else 0.0)
 
 
 func can_grow(x: float, z: float) -> bool:

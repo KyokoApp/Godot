@@ -72,6 +72,7 @@ func _run() -> void:
 			_check(absf(point.y + 0.03 - island.surface_height(point.x, point.z)) < 0.01,
 				"Akar rumput mengambang")
 	_test_cover(field)
+	_test_lod_subset(field)
 	_check(total > 100, "Tidak ada padang rumput yang cukup untuk dirender")
 	_check(total <= Grass.MAX_CLUMPS, "Budget rumput terlampaui")
 	if "--render" in OS.get_cmdline_user_args():
@@ -88,6 +89,15 @@ func _run() -> void:
 	for key in field.tiles:
 		_check(absi(key.x - floori(player.position.x / Grass.TILE_SIZE)) <= Grass.RADIUS,
 			"Tile jauh tidak dilepas")
+	# Melintasi satu batas tile harus tetap di bawah budget selama transisi LOD.
+	player.position.x += Grass.TILE_SIZE
+	for frame in range(35):
+		await process_frame
+		var triangles := 0
+		for tile in field.tiles.values():
+			var tris := 6 if tile.multimesh.mesh == blade_mesh else 4
+			triangles += tile.multimesh.instance_count * tris
+		_check(triangles <= Grass.MAX_TRIANGLES, "Budget terlampaui saat transisi LOD")
 	print("[grass-test] HASIL: ", "OK" if _failures == 0 else "GAGAL")
 	quit(0 if _failures == 0 else 1)
 
@@ -200,3 +210,17 @@ func _test_cover(field: Node3D) -> void:
 	_check(checked > 30, "Sampel area hijau tidak cukup untuk tes penutup tanah")
 	_check(covered >= checked * 0.95, "Penutup tanah dekat belum mencapai 95% sampel")
 	print("::notice::Ground cover: ", covered, "/", checked, " sampel tertutup")
+
+
+func _test_lod_subset(field: Node3D) -> void:
+	var saved: Vector2i = field.get("_center")
+	var near: Array[Transform3D] = field.placements_for(saved)
+	var origins: Dictionary[Vector3, bool] = {}
+	for placement in near:
+		origins[placement.origin] = true
+	field.set("_center", saved + Vector2i(2, 0))
+	var far: Array[Transform3D] = field.placements_for(saved)
+	field.set("_center", saved)
+	_check(far.size() < near.size(), "LOD jauh tidak mengurangi kepadatan")
+	for placement in far:
+		_check(origins.has(placement.origin), "Akar berpindah saat ganti LOD")
