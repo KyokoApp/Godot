@@ -117,6 +117,11 @@ jobs:
           timeout 60 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_movement.gd"
 
+      - name: Tes mannequin dan animasi tulang
+        run: |
+          timeout 60 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_mannequin.gd"
+
       - name: Tes validasi updater
         run: |
           timeout 60 ./godot --headless --path project \

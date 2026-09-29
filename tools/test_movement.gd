@@ -36,8 +36,12 @@ func _run() -> void:
 	await process_frame
 	var stick: Control = game.get("_joystick")
 	var player: CharacterBody3D = game.get("_player")
-	var center := Vector2(140.0, stick.size.y - 140.0)
+	var center := Vector2(stick.size.x * 0.3, stick.size.y * 0.6)
+	_check(int(stick.get("_finger")) == -1, "Analog tampil sebelum disentuh")
+	_touch(stick, 8, Vector2(stick.size.x * 0.8, stick.size.y * 0.5), true)
+	_check(int(stick.get("_finger")) == -1, "Area kanan mengaktifkan analog")
 	_touch(stick, 0, center, true)
+	_check(stick.get("_origin") == center, "Analog tidak muncul di titik sentuh")
 	_drag(stick, 0, center + Vector2(2, 0))
 	_check(stick.get("direction") == Vector2.ZERO, "Dead zone gagal")
 	_drag(stick, 0, center + Vector2(200, 0))
@@ -56,6 +60,7 @@ func _run() -> void:
 	for frame in range(3):
 		await physics_frame
 	_check(absf(player.velocity.x) < 0.001, "Pemain tidak berhenti")
+	_check(int(stick.get("_finger")) == -1, "Analog tidak disembunyikan setelah dilepas")
 	_touch(stick, 2, center, true)
 	_drag(stick, 2, center + Vector2(0, -86))
 	start = player.position

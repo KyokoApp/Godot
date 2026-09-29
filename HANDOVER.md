@@ -1,5 +1,14 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- Permintaan terbaru: mannequin asli + idle/jalan/lari didahulukan (5A), analog
+  transparan mengambang hanya saat disentuh di kiri layar. Kamera tetap dulu.
+- Aset UAL1 Standard diambil utuh dari archive (asal + hash di docs/CREDITS.md).
+- Perubahan gameplay ini dikirim melalui PCK kompatibel launcher 1; jangan
+  meminta install APK lagi jika launcher 3A sudah terpasang.
+- Menunggu tes HP: update otomatis benar masuk, arah hadap, kaki tidak meluncur,
+  idle/walk/run, analog muncul/hilang. Jangan lanjut fitur lain sebelum tes.
+
+
 - Jangan push/merge ke main. Kerja di `arena/01a0eaf5-godot`.
 - Milestone 2A joystick sudah dibuat; tes otomatis lolos, hasil tes HP belum dicatat.
 - Pengguna mendahulukan launcher/update dalam game sebelum swipe kamera 2B.

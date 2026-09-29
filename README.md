@@ -127,3 +127,23 @@ memakai konten tersimpan yang valid atau gameplay bawaan APK.
 
 Semua tetap di branch sesi; **jangan merge ke main**. Tahap 2B ditunda sampai
 launcher dan update konten ini lolos pengujian pengguna.
+
+## Milestone 5A — mannequin + analog mengambang
+
+Urutan disesuaikan permintaan pengguna: karakter lebih dulu, dunia/kamera menyusul.
+Mannequin rigged UAL1 Standard dari project lama, dengan klip Idle, Walk, Jog_Fwd
+hasil import Godot. Tarikan analog mengatur kecepatan 0–5 m/detik; langkah dan
+transisi animasi mengikuti kecepatan aktual dengan blend 0,18 detik dan histeresis.
+Analog muncul di posisi sentuhan pertama pada separuh kiri layar, lebih transparan,
+lenyap setelah dilepas/kehilangan fokus. Separuh kanan tidak mengaktifkan analog.
+
+Cukup tutup penuh lalu buka launcher 3A online untuk mengunduh konten baru.
+HUD harus berubah menjadi **MILESTONE 5A — mannequin + animasi**. Tidak ada perubahan
+launcher/engine/native, jadi pengguna launcher 3A tidak perlu update APK.
+
+Tes HP: idle bergerak halus, tarik dekat untuk jalan, jauh untuk lari, lepas kembali
+idle; periksa karakter menghadap arah gerak dan kaki tidak terbenam/meluncur parah.
+Periksa analog tak terlihat saat idle, muncul di titik sentuh kiri, transparan,
+hilang saat dilepas, dan jari kedua tidak merebut kontrol. CI mengecek klip impor,
+perubahan pose tulang, transisi state, dan aturan sentuhan; tampilan/performa tetap
+perlu tes di perangkat. Tetap jangan merge ke main.

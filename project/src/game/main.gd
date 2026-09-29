@@ -17,6 +17,7 @@ extends Node3D
 ##   5. Karakter        — model + animasi
 
 const Joystick = preload("res://src/game/virtual_joystick.gd")
+const Mannequin = preload("res://src/game/mannequin.gd")
 const MOVE_SPEED := 5.0
 const CAMERA_OFFSET := Vector3(0.0, 3.2, 7.0)
 
@@ -26,7 +27,7 @@ const CHARACTER_HEIGHT := 1.8
 var _label: Label
 var _camera: Camera3D
 var _player: CharacterBody3D
-var _visual: Node3D
+var _visual: Mannequin
 var _joystick: Joystick
 
 
@@ -36,7 +37,7 @@ func _ready() -> void:
 	_build_player()
 	_build_camera()
 	_build_hud()
-	print("[main] milestone 2A siap")
+	print("[main] mannequin 5A siap")
 	_confirm_boot.call_deferred()
 
 
@@ -109,38 +110,11 @@ func _build_player() -> void:
 	shape.shape = capsule
 	body.add_child(shape)
 
-	var visual := Node3D.new()
+	var visual := Mannequin.new()
+	visual.position.y = -CHARACTER_HEIGHT / 2.0
 	visual.name = "Visual"
 	_visual = visual
 	body.add_child(visual)
-
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.55, 0.40, 0.75)
-
-	var cap := CapsuleMesh.new()
-	cap.radius = 0.3
-	cap.height = CHARACTER_HEIGHT
-	var mi := MeshInstance3D.new()
-	mi.name = "Body"
-	mi.mesh = cap
-	mi.material_override = mat
-	visual.add_child(mi)
-
-	# Pembeda arah hadap supaya jelas menghadap ke mana. Satu kerucut kecil
-	# di depan — jauh lebih murah daripada model penuh, dan cukup untuk
-	# memastikan kontrol kamera nanti tidak terbalik.
-	var nose_mat := StandardMaterial3D.new()
-	nose_mat.albedo_color = Color(0.95, 0.85, 0.35)
-	var nose := MeshInstance3D.new()
-	var nose_mesh := CylinderMesh.new()
-	nose_mesh.top_radius = 0.0
-	nose_mesh.bottom_radius = 0.14
-	nose_mesh.height = 0.3
-	nose_mesh.radial_segments = 8
-	nose.mesh = nose_mesh
-	nose.material_override = nose_mat
-	nose.position = Vector3(0.0, 0.35, -0.42)
-	visual.add_child(nose)
 
 	add_child(body)
 	_player = body
@@ -162,7 +136,7 @@ func _build_hud() -> void:
 	add_child(layer)
 
 	_label = Label.new()
-	_label.text = "MILESTONE 2A — joystick gerak"
+	_label.text = "MILESTONE 5A — mannequin"
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_label.add_theme_font_size_override("font_size", 26)
 	_label.add_theme_color_override("font_color", Color(1, 1, 1))
@@ -187,11 +161,15 @@ func _physics_process(delta: float) -> void:
 		_player.velocity += _player.get_gravity() * delta
 	else:
 		_player.velocity.y = 0.0
+	var before := _player.position
 	_player.move_and_slide()
 	# Area uji masih berupa plane; jangan biarkan pemain keluar tanah terlihat.
 	var edge := GROUND_SIZE / 2.0 - 1.0
 	_player.position.x = clampf(_player.position.x, -edge, edge)
 	_player.position.z = clampf(_player.position.z, -edge, edge)
+	var travelled := _player.position - before
+	var speed := Vector2(travelled.x, travelled.z).length() / delta
+	_visual.update_motion(speed)
 	if movement.length_squared() > 0.001:
 		_visual.rotation.y = atan2(-movement.x, -movement.z)
 
@@ -200,8 +178,8 @@ func _process(_delta: float) -> void:
 	_camera.position = _player.global_position + CAMERA_OFFSET
 	_camera.look_at(_player.global_position + Vector3(0, 0.5, 0), Vector3.UP)
 	_label.text = (
-		"MILESTONE 3A — update konten | joystick 2A\nFPS: %d | Posisi: %.1f, %.1f\n"
-		+ "Geser lingkaran kiri bawah. Lepaskan untuk berhenti."
+		"MILESTONE 5A — mannequin + animasi\nFPS: %d | Posisi: %.1f, %.1f\n"
+		+ "Tahan kiri layar: tarik dekat = jalan, jauh = lari."
 	) % [Engine.get_frames_per_second(), _player.position.x, _player.position.z]
 
 
