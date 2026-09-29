@@ -20,6 +20,8 @@ func _run() -> void:
 	await process_frame
 	for node in character.find_children("*", "MeshInstance3D", true, false):
 		var mesh := node as MeshInstance3D
+		if character.robe != null and character.robe.is_ancestor_of(mesh):
+			continue
 		var material := mesh.material_override as StandardMaterial3D
 		_check(material != null and material.next_pass is ShaderMaterial,
 			"Outline mannequin hilang")

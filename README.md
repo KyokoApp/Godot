@@ -257,3 +257,22 @@ Android (legacy + adaptive). Tidak digambar ulang. APK version code 4, agar teta
 lebih tinggi dari build sementara code 3 yang sudah ditarik. Install di atas
 aplikasi lama tanpa uninstall; package ID dan keystore sama. Loading/gameplay
 Tidak berubah. Mengganti ikon memerlukan APK, bukan hanya content pack.
+
+## Jubah api biru pastel (skin mannequin)
+
+Rig dan animasi UAL1 tetap dipakai. Skin luar prosedural menutup torso, lengan dan
+kaki, dengan tudung, sarung tangan dan sepatu. Mesh mannequin di bawahnya hanya
+disembunyikan setelah pemasangan jubah berhasil agar tidak menembus kain; skeleton
+asli tidak diubah. Jika tulang wajib tidak ditemukan, mannequin asli tetap tampil.
+
+- Kain opaque tipis, toon biru pastel, pola lidah api lembut di ujung dan manset,
+  emisi rendah, outline tipis. Bukan api volumetrik atau simulasi fluida.
+- Rok: 64 partikel Verlet, pin pinggang, 3 iterasi constraint, gravitasi/inersia,
+  angin, tumbukan kapsul kaki dan tinggi tanah. Torso/lengan mengikuti pose rig.
+- Teleport mereset kain; pergeseran tiap titik dibatasi untuk menghindari ledakan.
+  Tidak memakai cloth/self-collision penuh atau ragdoll seluruh badan.
+- CI: pin, gerak, lantai, teleport, finite coordinates; tes renderer Mobile Vulkan
+  juga menggambar skin beserta shader. Kualitas gerak, clipping dan FPS tetap
+  harus diuji saat jalan/lari/belok di HP.
+- Konten kompatibel launcher lama: buka ulang online, tidak perlu install APK.
+  HUD **PULAU 1K — jubah api biru**. Ikon/loading/map tidak diubah.

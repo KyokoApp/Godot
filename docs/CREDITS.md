@@ -68,3 +68,9 @@ Referensi yang diberikan: https://pin.it/39gUpFwmd . Tidak digambar ulang AI.
 `icon-background.png` adalah ungu gelap polos untuk adaptive icon.
 Nama seniman dan lisensi sumber belum terverifikasi. Jangan menyebutnya CC0 atau
 karya orisinal proyek; hak distribusi komersial/store perlu diverifikasi tersendiri.
+
+## Jubah api biru
+
+Mesh pakaian, tudung/aksesori prosedural, solver kain ringan dan shader api toon
+pastel ditulis untuk proyek ini; tidak menyalin pakaian/aset karakter eksternal.
+Animasi dan skeleton penggerak tetap UAL1 Standard Quaternius (kredit di atas).

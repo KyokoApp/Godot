@@ -164,3 +164,11 @@ File root `547d844ffaca3a9b862a3c20e929770d.jpg` diupload pada commit eea852f,
 sudah dibaca dan digunakan untuk ikon 512/192/adaptive432. APK code4/name0.4.2-user-icon.
 Loading art dan gameplay tidak diubah. Kredit sumber/izin belum terverifikasi
 tercatat di docs/CREDITS.md. Keystore tetap; jangan merge main.
+
+## Skin jubah api biru (permintaan terbaru)
+
+Mannequin diberi outfit prosedural (flame_robe.gd + blue_flame_cloth.gdshader).
+Rig tetap; mesh sumber disembunyikan hanya jika outfit berhasil. Torso/lengan/hood
+mengikuti posisi tulang, skirt64partikel Verlet 3iterasi + kaki/lantai collision.
+Toon pastel opaque dengan polaapi hem/cuff, bukan fluida. Buka ulang launcher
+untuk konten, ikon/loading tetap. Tunggu uji clipping/gerak/FPS HP; jangan merge main.

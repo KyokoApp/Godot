@@ -86,6 +86,7 @@ func _build_player() -> void:
 	body.add_child(shape)
 
 	var visual := Mannequin.new()
+	visual.terrain = _island
 	visual.position.y = -CHARACTER_HEIGHT / 2.0
 	visual.name = "Visual"
 	_visual = visual
@@ -108,7 +109,7 @@ func _build_hud() -> void:
 	add_child(layer)
 
 	_label = Label.new()
-	_label.text = "PULAU 1K — soft light + outline"
+	_label.text = "PULAU 1K — jubah api biru"
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_label.add_theme_font_size_override("font_size", 26)
 	_label.add_theme_color_override("font_color", Color(1, 1, 1))
@@ -155,7 +156,7 @@ func _physics_process(delta: float) -> void:
 
 func _process(_delta: float) -> void:
 	_label.text = (
-		"PULAU 1K — soft light + outline\nFPS: %d | Posisi: %.1f, %.1f\n"
+		"PULAU 1K — jubah api biru\nFPS: %d | Posisi: %.1f, %.1f\n"
 		+ "Kiri: gerak | Geser kanan: kamera | Cubit kanan: zoom"
 	) % [Engine.get_frames_per_second(), _player.position.x, _player.position.z]
 
