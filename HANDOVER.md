@@ -307,3 +307,7 @@ some hidden objects; real-device cost/benefit and pop-in still need measurement.
 Night depth fog32–230m strength.48, sky_affect0; not volumetric, near pet unchanged.
 New test_world_details headless+Vulkan verifies sources/textures, deterministic
 safe placement, tile budgets/teleport cleanup, occluder containment, haze and PCK.
+- First integrated render run: HUD assertions printed OK but engine failed to
+  exit within180s on Mesa. Add explicit scene teardown before quit and simplify
+  shared nature materials to vertex lighting / no specular or normal map, keeping
+  original base textures/colors/alpha cutout. Do not bypass renderer gate.

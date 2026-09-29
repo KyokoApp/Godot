@@ -225,5 +225,5 @@ func _make_mesh(with_cover: bool) -> ArrayMesh:
 
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_VISIBILITY_CHANGED and island != null:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and is_instance_valid(island):
 		island.set_grass_cover(is_visible_in_tree())

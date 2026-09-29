@@ -90,6 +90,10 @@ func _run() -> void:
 	if "--render" in OS.get_cmdline_user_args():
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("user://hud-clean-test.png")
+	game.queue_free()
+	await process_frame
+	if "--render" in OS.get_cmdline_user_args():
+		await RenderingServer.frame_post_draw
 	print("[hud-test] HASIL: ", "OK" if _failures == 0 else "GAGAL")
 	quit(0 if _failures == 0 else 1)
 

@@ -218,6 +218,7 @@ jobs:
           STATUS=${PIPESTATUS[0]}
           set -e
           if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' hud-test.log; then
+            echo "::error::HUD engine exit status: $STATUS"
             tail -50 hud-test.log | while IFS= read -r line; do echo "::error::$line"; done
             exit 1
           fi
