@@ -8,7 +8,7 @@ from pathlib import Path
 MAX_BLOCK = 1024 * 1024
 
 
-def file_ranges(data):
+def entries(data):
     """Read unencrypted Godot PCK v2/v3 directory; preserve every byte including gaps."""
     magic, version, major, minor, patch, flags = struct.unpack_from('<6I', data)
     if magic != 0x43504447 or version not in (2, 3) or flags & ~2:
@@ -17,9 +17,10 @@ def file_ranges(data):
     cursor = struct.unpack_from('<Q', data, 32)[0] if version == 3 else 96
     count = struct.unpack_from('<I', data, cursor)[0]
     cursor += 4
-    ranges = []
+    result = {}
     for _ in range(count):
         length = struct.unpack_from('<I', data, cursor)[0]
+        path = data[cursor + 4:cursor + 4 + length].rstrip(b"\0").decode()
         cursor += 4 + length
         offset, size = struct.unpack_from('<QQ', data, cursor)
         file_flags = struct.unpack_from('<I', data, cursor + 32)[0]
@@ -30,8 +31,12 @@ def file_ranges(data):
             start = base + offset
             if start < 0 or start + size > len(data):
                 raise ValueError('Invalid PCK file range')
-            ranges.append((start, start + size))
-    return ranges
+            result[path] = (start, start + size)
+    return result
+
+
+def file_ranges(data):
+    return entries(data).values()
 
 
 def split(data):

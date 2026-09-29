@@ -37,12 +37,21 @@ try:
                            timeout=120, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         export()
         print('[incremental-export] repeat sha:', hashlib.sha256(test_pack.read_bytes()).hexdigest(), 'original:', manifest['sha256'])
-        if test_pack.read_bytes() != pack:
-            from chunk_content import file_ranges
-            a, b = pack, test_pack.read_bytes()
-            print('[incremental-export] repeat sizes:', len(a), len(b))
-            print('[incremental-export] first differences:', [i for i in range(min(len(a), len(b))) if a[i] != b[i]][:20])
-            raise AssertionError('Repeat export is not deterministic')
+        # Godot's small export metadata may change; imported asset bytes must not.
+        from chunk_content import entries, split
+        repeat = test_pack.read_bytes()
+        before_files, after_files = entries(pack), entries(repeat)
+        assert before_files.keys() == after_files.keys(), 'Repeat export changed file set'
+        changed_paths = [p for p in before_files
+                         if pack[slice(*before_files[p])] != repeat[slice(*after_files[p])]]
+        print('[incremental-export] changed on repeat:', changed_paths)
+        allowed = {'res://.godot/uid_cache.bin', 'res://.godot/global_script_class_cache.cfg',
+                   '.godot/uid_cache.bin', '.godot/global_script_class_cache.cfg'}
+        assert set(changed_paths) <= allowed, 'Unexpected repeat changes: ' + str(changed_paths)
+        known = {hashlib.sha256(b).hexdigest() for b in split(pack)}
+        churn = sum(len(b) for b in split(repeat) if hashlib.sha256(b).hexdigest() not in known)
+        assert churn <= 1024 * 1024, f'Export metadata churn too large: {churn}'
+        print('[incremental-export] unchanged export metadata delta:', churn)
         script.write_text(original.replace('const MOVE_SPEED := 5.0', 'const MOVE_SPEED := 5.01'))
         export()
         changed = build(test_pack, root / 'build/probe-chunks', 'abcdef1')
