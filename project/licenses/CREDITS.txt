@@ -230,3 +230,10 @@ lisensi model Naxzed. Tidak menambah aset model/tekstur rambut eksternal.
 `foot_fire/`: geometri tapak/lidah api3D dan shader prosedural orisinal, dengan
 arah visual terinspirasi pet proyek sendiri. Palet perkarakter dan seluruh kode
 baru mengikuti hak karya orisinal proyek; tidak menyalin efek Genshin/HSR.
+
+
+## Speed afterimages & transparent HUD
+The speed-toggle icon, transparent white HUD styling and fading skin-snapshot shader
+are original project work. Afterimages reuse the existing credited model geometry
+and bone poses; no Flash, Genshin or other game's art, icons, shaders or UI assets
+are included. Third-party model permissions and noncommercial scope remain unchanged.

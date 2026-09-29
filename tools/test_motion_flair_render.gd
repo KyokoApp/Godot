@@ -1,5 +1,6 @@
 extends SceneTree
 
+const Afterimages = preload("res://src/game/speed/afterimage_trail.gd")
 const Character = preload("res://src/game/mannequin.gd")
 const Trail = preload("res://src/game/foot_fire/foot_fire_trail.gd")
 const Night = preload("res://src/game/environment/night_environment.gd")
@@ -48,6 +49,7 @@ func _run() -> void:
 	var camera := Camera3D.new()
 	world.add_child(camera)
 	camera.current = true
+	await _test_afterimages(world, camera)
 	await _test_hair(world, camera)
 	camera.position = Vector3(0, 1.4, 2)
 	camera.look_at(Vector3(0, 0.2, 0))
@@ -107,3 +109,35 @@ func _hair_capture(character: Character, camera: Camera3D) -> Image:
 		await process_frame
 	await RenderingServer.frame_post_draw
 	return root.get_texture().get_image()
+
+
+func _test_afterimages(world: Node3D, camera: Camera3D) -> void:
+	camera.position = Vector3(0.8, 1.3, 3.1)
+	camera.look_at(Vector3(0, 0.95, 0))
+	var empty: Image = await _capture()
+	var character := Character.new()
+	world.add_child(character)
+	var trail := Afterimages.new()
+	trail.character = character
+	world.add_child(trail)
+	for skin in [Character.MANNEQUIN, Character.MIKU, Character.KANNA]:
+		character.show()
+		character.set_skin(skin)
+		character.update_motion(15)
+		character.animation.speed_scale = 0.35
+		for frame in range(24):
+			trail.update_motion(1.0 / 60.0, 15, true)
+			await process_frame
+		_check(trail.emitted > 0, "Native snapshot tidak diproses: " + skin)
+		character.hide()
+		var image: Image = await _capture()
+		var pixels := _difference(empty, image)
+		_check(pixels > 30 and pixels < 20000, "Ghost hilang/transform salah: " + skin)
+		image.save_png("user://motion-afterimage-" + skin + "-test.png")
+		trail.update_motion(0.5, 0, false)
+		var cleared: Image = await _capture()
+		_check(_difference(empty, cleared) < 15, "Ghost belum hilang: " + skin)
+	trail.queue_free()
+	character.queue_free()
+	for frame in range(5):
+		await process_frame

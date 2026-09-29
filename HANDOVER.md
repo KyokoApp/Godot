@@ -459,3 +459,20 @@ changed. Sole length scales from rig ankle-to-toe distance (20–34cm) and cente
 shifts toward toe, rather than centering the heel on ankle. Keep all-three repeated
 contacts/idle/teleport gates; do not weaken their >=5-step check. Native diagnostic
 annotations report min/max gaps, rest clearance, source swing and stamp count.
+
+
+## Speed toggle / monochrome transparent HUD
+SpeedButton uses existing per-finger RuneButton input; camera speed_exclusion,
+modal hiding, focus reset inherited. Desired move multiplier3; locomotion playback
+fixed.35 while moving; casting clock untouched. No auto-save: starts normal.
+AfterimageTrail captures final native modifier poses: source CastLayer for UAL,
+Miku HairSpring, Kanna retarget. Shared mesh+Skin resources and cloned bare skeletons;
+no AnimationPlayers or cloned gameplay. Pool3/2Kanna, fade.28s quadratic opacity,
+.10s cadence, LOD bias.08, no textures/shadow/light. Geometry silhouettes, not textured
+copies; resource cost still scales with imported mesh LODs. Rebuild only on active
+skin change while boosting, old pool freed; clear teleport/skin, no emission idle.
+White/transparent cards retain same input rectangles: name left/portrait right.
+Settings/attack/speed/analog accents white; drawer neutral translucent for readability.
+Tests: test_speed (movement ratio, slowed playback, pool/idle), test_hud touch toggle
+and camera exclusion, test_motion_flair_render now renders all three frozen skins.
+Warmup22: actual skinned ghost shader included. No changes to keystore or main branch.

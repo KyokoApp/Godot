@@ -59,20 +59,12 @@ func _draw() -> void:
 	var center := size * 0.5
 	var radius := minf(size.x, size.y) * 0.5 - 3.0
 	var held := _finger != -1
-	draw_circle(center + Vector2(0, 3), radius, Color(0.03, 0.02, 0.08, 0.24))
-	draw_circle(center, radius, Color(0.10, 0.07, 0.20, 0.64 if compact else 0.80))
-	draw_circle(center, radius - 5, Color(0.43, 0.29, 0.68, 0.44 if held else 0.19))
-	draw_arc(center, radius, 0, TAU, 80, Color(0.78, 0.70, 1, 0.85), 1.5, true)
-	draw_arc(center, radius - 5, 0, TAU, 80, Color(0.70, 0.59, 1, 0.26), 1, true)
-	if not compact:
-		for index in range(4):
-			var angle := PI * 0.25 + index * PI * 0.5
-			var tip := center + Vector2.from_angle(angle) * (radius - 9)
-			draw_circle(tip, 1.5, Color(0.82, 0.77, 1, 0.9))
+	draw_circle(center, radius, Color(0, 0, 0, 0.10 if held else 0.025))
+	draw_arc(center, radius, 0, TAU, 80, Color(1, 1, 1, 0.7 if held else 0.3), 1, true)
 	if glyph != null:
 		var extent := size * (0.67 if compact else 0.65) * (0.94 if held else 1.0)
 		var tint := Color(1, 1, 1, 0.5 if cooldown_fraction > 0 else 1.0)
 		draw_texture_rect(glyph, Rect2(center - extent * 0.5, extent), false, tint)
 	if cooldown_fraction > 0.001:
 		draw_arc(center, radius - 2, -PI * 0.5,
-			-PI * 0.5 + TAU * cooldown_fraction, 80, Color(0.71, 0.88, 1), 3, true)
+			-PI * 0.5 + TAU * cooldown_fraction, 80, Color.WHITE, 3, true)

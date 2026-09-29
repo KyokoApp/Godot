@@ -149,6 +149,19 @@ jobs:
           fi
           grep -F '[motion-flair-test] HASIL: OK' motion-test.log
 
+      - name: Tes speed 3x, animasi lambat dan cleanup afterimage
+        run: |
+          set +e
+          timeout 120 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_speed.gd" 2>&1 | tee speed-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' speed-test.log; then
+            tail -60 speed-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[speed-test] HASIL: OK' speed-test.log
+
       - name: Tes mannequin dan kontrol performa
         run: |
           set +e

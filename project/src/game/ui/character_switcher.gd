@@ -14,21 +14,18 @@ var _cards: Array[Card] = []
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_theme_constant_override("separation", 10)
-	_add_card(Character.MIKU, "Miku", MIKU_PORTRAIT, Color("98eee3"), "01")
-	_add_card(Character.KANNA, "Kanna", KANNA_PORTRAIT, Color("f2c79a"), "02")
-	_add_card(Character.MANNEQUIN, "Mannequin", MANNEQUIN_PORTRAIT, Color("cbb0ff"), "03")
+	_add_card(Character.MIKU, "Miku", MIKU_PORTRAIT)
+	_add_card(Character.KANNA, "Kanna", KANNA_PORTRAIT)
+	_add_card(Character.MANNEQUIN, "Mannequin", MANNEQUIN_PORTRAIT)
 	character.skin_changed.connect(_refresh)
 	_refresh(character.skin_id)
 
 
-func _add_card(id: String, label: String, portrait: Texture2D, accent: Color,
-		slot: String) -> void:
+func _add_card(id: String, label: String, portrait: Texture2D) -> void:
 	var card := Card.new()
 	card.name = id
 	card.character_name = label
 	card.portrait = portrait
-	card.accent = accent
-	card.slot = slot
 	card.custom_minimum_size = Vector2(208, 68)
 	card.pressed.connect(func() -> void: character.set_skin(id))
 	add_child(card)

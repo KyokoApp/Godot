@@ -68,4 +68,4 @@ func _draw() -> void:
 		return
 	draw_circle(_center(), RADIUS, Color(0.08, 0.10, 0.18, 0.16))
 	draw_arc(_center(), RADIUS, 0.0, TAU, 64, Color(1.0, 1.0, 1.0, 0.28), 3.0, true)
-	draw_circle(_center() + _offset, 34.0, Color(0.8, 0.72, 1.0, 0.38))
+	draw_circle(_center() + _offset, 34.0, Color(1, 1, 1, 0.38))

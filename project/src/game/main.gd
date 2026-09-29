@@ -1,6 +1,8 @@
 extends Node3D
 ## Pulau 1 km + kamera sentuh, tetap memakai mannequin dan updater yang sama.
 
+const SpeedButton = preload("res://src/game/ui/speed_button.gd")
+const Afterimages = preload("res://src/game/speed/afterimage_trail.gd")
 const FootFire = preload("res://src/game/foot_fire/foot_fire_trail.gd")
 const ShaderWarmup = preload("res://src/game/loading/shader_warmup.gd")
 const NatureField = preload("res://src/game/world/nature_field.gd")
@@ -23,6 +25,7 @@ const Orbit = preload("res://src/game/orbit_camera.gd")
 
 const CHARACTER_HEIGHT := 1.8
 
+var speed_boosted := false
 var warmup_requested := false
 var warmup_complete := false
 var warmup_report: Dictionary = {}
@@ -32,6 +35,8 @@ var _previous_occlusion := false
 var _audio: WorldAudio
 var _footsteps: Footsteps
 var _foot_fire: FootFire
+var _speed_button: SpeedButton
+var _afterimages: Afterimages
 var _pet: FirePet
 var _attack: RuneButton
 var _settings: RuneButton
@@ -71,6 +76,9 @@ func _ready() -> void:
 	_foot_fire.body = _player
 	_foot_fire.island = _island
 	add_child(_foot_fire)
+	_afterimages = Afterimages.new()
+	_afterimages.character = _visual
+	add_child(_afterimages)
 	_pet = FirePet.new()
 	_pet.player = _player
 	_pet.facing = _visual
@@ -182,6 +190,18 @@ func _build_hud() -> void:
 	_attack.offset_bottom = -120
 	_attack.pressed.connect(_pet.attack)
 	_orbit.attack_exclusion = _attack
+	_speed_button = SpeedButton.new()
+	_speed_button.name = "SpeedBoost"
+	_speed_button.glyph = preload("res://src/game/ui/speed.svg")
+	_speed_button.tooltip_text = "Toggle kecepatan ×3 / normal"
+	layer.add_child(_speed_button)
+	_speed_button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	_speed_button.offset_left = -120
+	_speed_button.offset_right = -40
+	_speed_button.offset_top = -226
+	_speed_button.offset_bottom = -146
+	_speed_button.pressed.connect(_toggle_speed)
+	_orbit.speed_exclusion = _speed_button
 	_character_switcher = CharacterSwitcher.new()
 	_character_switcher.character = _visual
 	layer.add_child(_character_switcher)
@@ -197,8 +217,8 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 	_graphics_drawer = PanelContainer.new()
 	_graphics_drawer.name = "GraphicsDrawer"
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.065, 0.045, 0.12, 0.96)
-	style.border_color = Color(0.55, 0.44, 0.77, 0.8)
+	style.bg_color = Color(0.025, 0.025, 0.03, 0.78)
+	style.border_color = Color(1, 1, 1, 0.2)
 	style.set_border_width_all(1)
 	style.set_corner_radius_all(18)
 	style.content_margin_left = 20
@@ -218,7 +238,7 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 	var title := Label.new()
 	title.text = "GRAFIK"
 	title.add_theme_font_size_override("font_size", 20)
-	title.add_theme_color_override("font_color", Color("e4d8ff"))
+	title.add_theme_color_override("font_color", Color.WHITE)
 	content.add_child(title)
 	_drawer_title = title
 	_credits_button = Button.new()
@@ -238,6 +258,12 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 	_graphics_drawer.hide()
 
 
+func _toggle_speed() -> void:
+	speed_boosted = not speed_boosted
+	_speed_button.boosted = speed_boosted
+	_speed_button.queue_redraw()
+
+
 func _toggle_credits() -> void:
 	var opened := not _credits.visible
 	_credits.visible = opened
@@ -251,6 +277,7 @@ func _toggle_graphics() -> void:
 	var opened := not _graphics_drawer.visible
 	_graphics_drawer.visible = opened
 	_attack.visible = not opened
+	_speed_button.visible = not opened
 	_character_switcher.visible = not opened
 	_joystick.reset()
 	_joystick.input_enabled = not opened
@@ -280,8 +307,9 @@ func _physics_process(delta: float) -> void:
 	var stick := _joystick.direction
 	# Arah gerak mengikuti yaw kamera; joystick atas selalu maju di layar.
 	var movement := _orbit.movement_direction(stick)
-	_player.velocity.x = movement.x * MOVE_SPEED
-	_player.velocity.z = movement.z * MOVE_SPEED
+	var move_speed := MOVE_SPEED * (3.0 if speed_boosted else 1.0)
+	_player.velocity.x = movement.x * move_speed
+	_player.velocity.z = movement.z * move_speed
 	if not _player.is_on_floor():
 		_player.velocity += _player.get_gravity() * delta
 	else:
@@ -300,6 +328,9 @@ func _physics_process(delta: float) -> void:
 	var travelled := _player.position - before
 	var speed := Vector2(travelled.x, travelled.z).length() / delta
 	_visual.update_motion(speed)
+	if speed_boosted and speed > 0.05:
+		_visual.animation.speed_scale = 0.35
+	_afterimages.update_motion(delta, speed, speed_boosted and _player.is_on_floor())
 	_footsteps.update_motion(delta, speed)
 	if movement.length_squared() > 0.001:
 		var target_yaw := atan2(-movement.x, -movement.z)

@@ -1,11 +1,9 @@
 extends "res://src/game/ui/rune_button.gd"
-## Original party-card design: portrait, active accent, slot number. No fake HP bar.
+## Transparent party row: left name, right portrait, white selection only.
 
 var portrait: Texture2D
 var character_name := ""
-var slot := "01"
 var selected := false
-var accent := Color("98eee3")
 
 
 func contains_point(point: Vector2) -> bool:
@@ -13,26 +11,18 @@ func contains_point(point: Vector2) -> bool:
 
 
 func _draw() -> void:
-	var held := _finger != -1
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color(0.07, 0.09, 0.16, 0.94 if held else 0.82)
-	box.border_color = accent if selected else Color(0.68, 0.72, 0.82, 0.30)
-	box.set_border_width_all(1)
-	box.set_corner_radius_all(12)
-	box.shadow_color = Color(0.01, 0.02, 0.04, 0.25)
-	box.shadow_size = 3
-	draw_style_box(box, Rect2(Vector2.ZERO, size))
-	draw_line(Vector2(3, 19), Vector2(3, size.y - 19),
-		accent if selected else Color(0.7, 0.75, 0.8, 0.25), 3, true)
-	var center := Vector2(38, size.y * 0.5)
-	draw_circle(center, 29, Color(0.12, 0.16, 0.24))
+	var center := Vector2(size.x - 34, size.y * 0.5)
 	if portrait != null:
 		draw_texture_rect(portrait, Rect2(center - Vector2(27, 27), Vector2(54, 54)), false)
-	draw_arc(center, 29, 0, TAU, 64, accent if selected else Color("697088"), 1, true)
+	var white := Color(1, 1, 1, 1.0 if selected or _finger != -1 else 0.7)
+	if selected:
+		draw_arc(center, 29, 0, TAU, 64, white, 1, true)
+		draw_circle(Vector2(size.x - 2, size.y * 0.5), 2, white)
 	var font := ThemeDB.fallback_font
-	draw_string(font, Vector2(76, 30), character_name, HORIZONTAL_ALIGNMENT_LEFT,
-		-1, 19, Color("f0f0fc"))
-	draw_string(font, Vector2(77, 49), "AKTIF" if selected else "GANTI",
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 11, accent if selected else Color("a8b0c6"))
-	draw_string(font, Vector2(size.x - 21, 15), slot, HORIZONTAL_ALIGNMENT_LEFT,
-		-1, 10, Color(0.8, 0.85, 0.96, 0.55))
+	var label_position := Vector2(0, size.y * 0.5 + 6)
+	var width := size.x - 78
+	# A subtle neutral text shadow, no panel or colored border covering the world.
+	draw_string(font, label_position + Vector2(1, 1), character_name,
+		HORIZONTAL_ALIGNMENT_RIGHT, width, 19, Color(0, 0, 0, 0.45))
+	draw_string(font, label_position, character_name,
+		HORIZONTAL_ALIGNMENT_RIGHT, width, 19, white)
