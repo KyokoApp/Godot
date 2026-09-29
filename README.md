@@ -557,5 +557,5 @@ atau rollback dibersihkan pada start berikutnya. Data legacy v1 tidak dihapus.
 
 CI memeriksa format manifest, checksum, kerusakan, deduplikasi, retry, rollback,
 APK seed/duplikasi aset, ekspor ulang deterministik, dan ukuran perubahan script
-pada PCK asli. Cold boot dijalankan dari aset APK tanpa source project: versi
-bawaan dan hasil update. Tidak mengklaim delta per-baris atau selalu ukuran KB.
+pada PCK asli. Cold boot dari aset APK saja belum diuji otomatis; perlu uji perangkat sebelum
+menyatakan migrasi HP tervalidasi. Tidak mengklaim delta per-baris atau selalu ukuran KB.

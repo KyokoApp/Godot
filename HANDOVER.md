@@ -497,5 +497,4 @@ Native arena render checks exterior, partial edge, interior occlusion, and exit.
   APK seed reused without network; subsequent updates fetch only missing blocks.
 - Tests: Python synthetic PCK split/rebuild/stability; GDScript store corruption,
   retry and rollback; actual repeat export and script-only delta <=4MiB gate;
-  APK ZIP stored seed, no duplicated assets; cold boot seed and new assembled PCK
-  using only extracted exported APK files in fresh processes.
+  APK ZIP stored seed, no duplicated assets. Cold boot APK/device remains unverified.

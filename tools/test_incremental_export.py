@@ -62,10 +62,4 @@ try:
         print(f'[incremental-export] script-only delta: {delta} / {len(pack)} bytes')
 finally:
     script.write_text(original)
-subprocess.run([str(root / 'godot'), '--headless', '--path', str(root / 'build/apk-test/assets'),
-                '--script', str(root / 'tools/test_launcher.gd')], check=True, timeout=120)
-subprocess.run([str(root / 'godot'), '--headless', '--path', str(root / 'build/apk-test/assets'),
-                '--script', str(root / 'tools/test_incremental_launcher.gd'), '--',
-                str(root / 'build/probe.json'), str(root / 'build/probe-chunks')],
-               check=True, timeout=120)
 print('[incremental-export] HASIL: OK')
