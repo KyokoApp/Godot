@@ -15,6 +15,7 @@ func _ready() -> void:
 	name = "LegacyFireSpirit"
 	_shell = ShaderMaterial.new()
 	_shell.shader = FLAME
+	_shell.set_shader_parameter("outline_pixels", 0.55)
 	var flame := MeshInstance3D.new()
 	flame.name = "FireTongues"
 	var card := QuadMesh.new()
