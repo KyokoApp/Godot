@@ -93,3 +93,37 @@ Tes HP: gerak empat arah dan diagonal, lepas jari di luar lingkaran,
 letakkan jari kedua, pindah aplikasi lalu kembali. Pemain tidak boleh bergerak
 sendiri. Periksa kapsul menapak tanah, kamera mengikuti, dan FPS stabil.
 Jangan lanjut 2B sebelum hasil tes HP disetujui. Jangan merge ke main dulu.
+
+## Milestone 3A — launcher + update konten (sebelum swipe kamera)
+
+Install APK launcher sekali di atas app lama (keystore dan package ID sama).
+Saat aplikasi dibuka, launcher memeriksa `releases/latest/download/content.json`.
+Konten baru diunduh sebagai PCK penuh (bukan binary delta), diverifikasi ukuran dan
+SHA-256, lalu dipasang sebelum scene gameplay dimuat. Progress unduhan nyata
+terlihat di bar tipis bawah. Bila jaringan gagal, pilih **Main offline** untuk
+memakai konten tersimpan yang valid atau gameplay bawaan APK.
+
+- Manifest mengunci schema 1, engine 4.5.2, minimum launcher 1, URL release repo ini.
+- Download sementara tidak mengganti metadata aktif sebelum verifikasi selesai.
+- Boot konten memakai marker; boot yang tidak dikonfirmasi mengembalikan ke
+  gameplay bawaan pada pembukaan berikutnya. Ini bukan jaminan bebas bug runtime.
+- PCK hanya scene gameplay dan dependensinya; launcher tidak ikut diperbarui.
+- Workflow menerbitkan APK + checksum + `content.pck` + `content.json` setelah tes.
+- Update kode gameplay/aset yang kompatibel cukup melalui konten. Perubahan
+  launcher, engine, native plugin atau izin Android tetap membutuhkan APK.
+- Untuk sekarang, buka ulang aplikasi untuk mengecek update; tidak mengganti kode
+  gameplay di tengah permainan. File pack lama belum dibersihkan otomatis.
+- SHA-256 melindungi integritas file, bukan tanda tangan publisher terpisah;
+  kepercayaan publikasi tetap pada HTTPS dan akses tulis GitHub repo ini.
+
+### Tes HP tahap 3A
+
+1. Install APK, buka online: loading → cek update → unduh → game joystick.
+2. Tutup penuh lalu buka ulang: hash sama tidak mengunduh pack lagi.
+3. Mode pesawat: setelah pemeriksaan gagal pilih Main offline, game tetap terbuka.
+4. Putus koneksi saat download: tidak masuk file parsial, retry/offline tersedia.
+5. Bukti update lintas versi perlu build konten berikutnya: APK tetap, tampilan
+   versi gameplay berubah setelah buka ulang. Jangan klaim lulus sebelum tes HP.
+
+Semua tetap di branch sesi; **jangan merge ke main**. Tahap 2B ditunda sampai
+launcher dan update konten ini lolos pengujian pengguna.

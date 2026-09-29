@@ -37,6 +37,7 @@ func _ready() -> void:
 	_build_camera()
 	_build_hud()
 	print("[main] milestone 2A siap")
+	_confirm_boot.call_deferred()
 
 
 # ---------------------------------------------------------------- dunia ----
@@ -199,6 +200,13 @@ func _process(_delta: float) -> void:
 	_camera.position = _player.global_position + CAMERA_OFFSET
 	_camera.look_at(_player.global_position + Vector3(0, 0.5, 0), Vector3.UP)
 	_label.text = (
-		"MILESTONE 2A — joystick gerak\nFPS: %d | Posisi: %.1f, %.1f\n"
+		"MILESTONE 3A — update konten | joystick 2A\nFPS: %d | Posisi: %.1f, %.1f\n"
 		+ "Geser lingkaran kiri bawah. Lepaskan untuk berhenti."
 	) % [Engine.get_frames_per_second(), _player.position.x, _player.position.z]
+
+
+func _confirm_boot() -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	# Launcher memakai marker ini untuk mendeteksi boot konten yang terputus.
+	DirAccess.remove_absolute("user://content_boot_pending")

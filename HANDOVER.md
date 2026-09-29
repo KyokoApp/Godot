@@ -1,3 +1,16 @@
+# STATUS TERBARU — prioritas dari pengguna
+
+- Jangan push/merge ke main. Kerja di `arena/01a0eaf5-godot`.
+- Milestone 2A joystick sudah dibuat; tes otomatis lolos, hasil tes HP belum dicatat.
+- Pengguna mendahulukan launcher/update dalam game sebelum swipe kamera 2B.
+- Implementasi 3A: launcher bawaan APK, manifest release, PCK gameplay tervalidasi,
+  loading bar tipis bawah, retry/offline, marker pemulihan boot. Lihat README.
+- Satu update APK diperlukan untuk memasang launcher. Update berikutnya yang
+  kompatibel bisa lewat PCK; bukan janji semua perubahan bebas update APK.
+- Konfirmasi tes HP dan uji dua versi konten sebelum lanjut milestone lain.
+
+---
+
 # SERAH TERIMA — untuk sesi AI berikutnya
 
 Ditulis: 2026-09-29. Kamu (agent baru) sedang bekerja di repo **KyokoApp/Godot**.
