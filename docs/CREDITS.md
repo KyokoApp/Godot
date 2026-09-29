@@ -244,3 +244,13 @@ boundary aurora and localized fog. No external texture or audio added.
   an original reverse-Z depth-mask shader with 16 radial samples instead of the
   article's second scene-render SubViewport. Credit identifies method inspiration,
   not a verbatim copy or performance guarantee.
+
+
+### Universal Animation Library 2 Standard — combat
+- Quaternius, CC0 1.0, license included in the user's main-branch upload.
+- Source: `Universal Animation Library 2[Standard]/Unreal-Godot/UAL2_Standard.glb`.
+- Runtime: `project/assets/combat/UAL2_Standard.glb`, non-root-motion original.
+- Combat library includes punches, hit, shield, sword combos, zombie attacks,
+  slide and ninja jump variants. First encounter uses unarmed hook + hit reaction;
+  weapon clips are available, not falsely presented as equipped weapons.
+- https://quaternius.com/animviewer.html

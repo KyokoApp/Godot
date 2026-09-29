@@ -8,6 +8,7 @@ const MIN_PITCH := 0.10
 const MAX_PITCH := 1.15
 
 var input_enabled := true
+var interact_exclusion: Control
 var input_exclusion: Control
 var attack_exclusion: Control
 var speed_exclusion: Control
@@ -54,18 +55,11 @@ func _input(event: InputEvent) -> void:
 		if not touch.pressed or touch.canceled:
 			_touches.erase(touch.index)
 		elif touch.position.x >= get_viewport().get_visible_rect().size.x * 0.5:
-			if is_instance_valid(input_exclusion) and input_exclusion.is_visible_in_tree():
-				if input_exclusion.get_global_rect().has_point(touch.position):
-					return
-			if is_instance_valid(attack_exclusion) and attack_exclusion.is_visible_in_tree():
-				if attack_exclusion.get_global_rect().has_point(touch.position):
-					return
-			if is_instance_valid(speed_exclusion) and speed_exclusion.is_visible_in_tree():
-				if speed_exclusion.get_global_rect().has_point(touch.position):
-					return
-			if is_instance_valid(character_exclusion) and character_exclusion.is_visible_in_tree():
-				if character_exclusion.get_global_rect().has_point(touch.position):
-					return
+			for control in [interact_exclusion, input_exclusion, attack_exclusion,
+					speed_exclusion, character_exclusion]:
+				if is_instance_valid(control) and control.is_visible_in_tree():
+					if control.get_global_rect().has_point(touch.position):
+						return
 			if _touches.size() < 2:
 				_touches[touch.index] = touch.position
 	elif event is InputEventScreenDrag:

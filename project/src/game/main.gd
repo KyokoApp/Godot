@@ -1,6 +1,7 @@
 extends Node3D
 ## Pulau 1 km + kamera sentuh, tetap memakai mannequin dan updater yang sama.
 
+const Challenge = preload("res://src/game/combat/arena_challenge.gd")
 const Minimap = preload("res://src/game/ui/minimap.gd")
 const MoonRays = preload("res://src/game/god_rays/moon_rays.gd")
 const BattleArena = preload("res://src/game/arena/battle_arena.gd")
@@ -35,6 +36,7 @@ var inside_arena := false
 var warmup_requested := false
 var warmup_complete := false
 var warmup_report: Dictionary = {}
+var _challenge: Challenge
 var _minimap: Minimap
 var _moon_rays: MoonRays
 var _nature: NatureField
@@ -112,6 +114,9 @@ func _ready() -> void:
 	_grass.player = _player
 	add_child(_grass)
 	_build_hud()
+	_challenge = Challenge.new()
+	_challenge.game = self
+	add_child(_challenge)
 	print("[main] pulau 1K + kamera siap")
 	_confirm_boot.call_deferred()
 
@@ -213,7 +218,7 @@ func _build_hud() -> void:
 	_attack.offset_right = -132
 	_attack.offset_top = -248
 	_attack.offset_bottom = -120
-	_attack.pressed.connect(_pet.attack)
+	_attack.pressed.connect(_attack_action)
 	_orbit.attack_exclusion = _attack
 	_speed_button = SpeedButton.new()
 	_speed_button.name = "SpeedBoost"
@@ -347,6 +352,8 @@ func _physics_process(delta: float) -> void:
 	var stick := _joystick.direction
 	# Arah gerak mengikuti yaw kamera; joystick atas selalu maju di layar.
 	var movement := _orbit.movement_direction(stick)
+	if _challenge.movement_locked():
+		movement = Vector3.ZERO
 	var move_speed := MOVE_SPEED * (3.0 if speed_boosted else 1.0)
 	_player.velocity.x = movement.x * move_speed
 	_player.velocity.z = movement.z * move_speed
@@ -382,8 +389,17 @@ func _physics_process(delta: float) -> void:
 	_orbit.follow(_player.global_position + Vector3(0, 0.55, 0), delta)
 
 
+func _attack_action() -> void:
+	if _challenge.active:
+		_challenge.attack()
+	else:
+		_pet.attack()
+
+
 func _process(_delta: float) -> void:
 	_attack.cooldown_fraction = clampf(_pet.cooldown / FirePet.COOLDOWN, 0, 1)
+	if _challenge.active:
+		_attack.cooldown_fraction = clampf(_challenge.player_cooldown, 0, 1)
 	_attack.queue_redraw()
 
 

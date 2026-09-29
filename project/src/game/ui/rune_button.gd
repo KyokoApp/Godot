@@ -1,6 +1,7 @@
 extends Button
 ## Raw touch per finger: tidak bergantung pada emulasi satu pointer mouse GUI.
 
+var rectangular := false
 var glyph: Texture2D
 var compact := false
 var cooldown_fraction := 0.0
@@ -29,6 +30,8 @@ func reset_touch() -> void:
 
 func contains_point(point: Vector2) -> bool:
 	var local := get_global_transform_with_canvas().affine_inverse() * point
+	if rectangular:
+		return Rect2(Vector2.ZERO, size).has_point(local)
 	return local.distance_to(size * 0.5) <= minf(size.x, size.y) * 0.5
 
 
@@ -56,6 +59,9 @@ func _input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
+	if rectangular:
+		draw_style_box(get_theme_stylebox("panel", "Panel"), Rect2(Vector2.ZERO, size))
+		return
 	var center := size * 0.5
 	var radius := minf(size.x, size.y) * 0.5 - 3.0
 	var held := _finger != -1

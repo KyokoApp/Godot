@@ -3,6 +3,7 @@ extends Node3D
 
 signal skin_changed(skin_id: String)
 
+const FightLibrary = preload("res://src/game/combat/fight_library.gd")
 const HairSpring = preload("res://src/game/animation/hair_spring.gd")
 const KannaRig = preload("res://src/game/animation/kanna_rig.gd")
 const MikuRig = preload("res://src/game/animation/miku_rig.gd")
@@ -20,6 +21,7 @@ const RUN := "Jog_Fwd"
 const RUN_ON := 2.8
 const RUN_OFF := 2.4
 
+var action_time := 0.0
 var hair: HairSpring
 var skin_id := MANNEQUIN
 var skin: Node3D
@@ -73,6 +75,8 @@ func _ready() -> void:
 
 
 func update_motion(speed: float) -> void:
+	if action_time > 0:
+		return
 	if animation == null:
 		return
 	var next := WALK
@@ -190,3 +194,32 @@ func foot_stride_lift(left: bool) -> float:
 	var bone := source_skeleton.find_bone("foot_l" if left else "foot_r")
 	return source_skeleton.get_bone_global_pose(bone).origin.y \
 		- source_skeleton.get_bone_global_rest(bone).origin.y
+
+
+func play_fight(clip: String) -> float:
+	if not FightLibrary.install(animation, source_skeleton):
+		return 0.0
+	if not animation.has_animation(clip):
+		return 0.0
+	cast_layer.playing = false
+	cast_layer.active = false
+	cast_layer.influence = 0.0
+	animation.speed_scale = 1.0
+	animation.play(clip, 0.08)
+	action_time = animation.get_animation(clip).length
+	return action_time
+
+
+func cancel_fight() -> void:
+	action_time = 0.0
+	state = IDLE
+	animation.speed_scale = 1.0
+	animation.play(IDLE, 0.12)
+
+
+func _physics_process(delta: float) -> void:
+	if action_time <= 0:
+		return
+	action_time = maxf(0.0, action_time - delta)
+	if action_time == 0:
+		state = "" # Allow the next motion update to leave the one-shot pose.
