@@ -465,8 +465,9 @@ annotations report min/max gaps, rest clearance, source swing and stamp count.
 SpeedButton uses existing per-finger RuneButton input; camera speed_exclusion,
 modal hiding, focus reset inherited. Desired move multiplier3; locomotion playback
 fixed.35 while moving; casting clock untouched. No auto-save: starts normal.
-AfterimageTrail captures final native modifier poses: source CastLayer for UAL,
-Miku HairSpring, Kanna retarget. Shared mesh+Skin resources and cloned bare skeletons;
+AfterimageTrail captures final native Skeleton3D.skeleton_updated poses, after
+all modifiers and before skin upload/pose restoration (Godot4.5.2 source verified).
+Do not use CastLayer.modification_processed: it is inactive outside an attack. Shared mesh+Skin resources and cloned bare skeletons;
 no AnimationPlayers or cloned gameplay. Pool3/2Kanna, fade.28s quadratic opacity,
 .10s cadence, LOD bias.08, no textures/shadow/light. Geometry silhouettes, not textured
 copies; resource cost still scales with imported mesh LODs. Rebuild only on active

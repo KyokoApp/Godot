@@ -61,14 +61,11 @@ func _rebuild() -> void:
 	_skin = character.skin_id
 	_next = 0
 	_source = character.source_skeleton if _skin == Character.MANNEQUIN else character.retarget.target
-	var modifier: SkeletonModifier3D = character.cast_layer
-	if _skin == Character.MIKU:
-		modifier = character.hair
-	elif _skin == Character.KANNA:
-		modifier = character.retarget
+	# Godot emits this after all modifiers, before skin upload and pose restoration.
+	# Unlike CastLayer's signal, it also fires during ordinary non-casting locomotion.
 	var capture := _capture.bind(_source)
-	if not modifier.modification_processed.is_connected(capture):
-		modifier.modification_processed.connect(capture)
+	if not _source.skeleton_updated.is_connected(capture):
+		_source.skeleton_updated.connect(capture)
 	for node in character.find_children("*", "MeshInstance3D", true, false):
 		var mesh := node as MeshInstance3D
 		if mesh.is_visible_in_tree():
