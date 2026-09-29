@@ -45,6 +45,7 @@ func _run() -> void:
 		game._visual.set_skin(skin)
 		var duration: float = game._visual.play_fight("fight/Melee_Hook")
 		_check(duration > 0.2, "Fight animation absent on " + skin)
+		await _frames(8)
 		game._visual.animation.advance(duration * 0.4)
 		_check(game._visual.source_skeleton.get_bone_count() > 50, "Rig missing")
 	game._visual.cancel_fight()

@@ -123,7 +123,7 @@ jobs:
           STATUS=${PIPESTATUS[0]}
           set -e
           if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' challenge.log; then
-            tail -10 challenge.log | while IFS= read -r line; do echo "::error::$line"; done
+            grep -E "\[[0-9]+\]|ERROR|signal|HASIL|UAL2|Challenge|Fight|Missing" challenge.log | head -10 | while IFS= read -r line; do echo "::error::$line"; done
             exit 1
           fi
           grep -F '[challenge-test] HASIL: OK' challenge.log
