@@ -20,7 +20,7 @@ static func make_environment() -> Environment:
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color(0.48, 0.57, 0.78)
 	environment.ambient_light_energy = 0.38
-	environment.reflected_light_source = Environment.REFLECTED_SOURCE_SKY
+	environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	return environment
 
