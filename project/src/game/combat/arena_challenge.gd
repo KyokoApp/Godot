@@ -1,6 +1,7 @@
 extends Node3D
 ## One opt-in, non-gory sparring encounter. No enemy outside the challenge.
 const Character = preload("res://src/game/mannequin.gd")
+const FightLibrary = preload("res://src/game/combat/fight_library.gd")
 const Shape = preload("res://src/game/arena/arena_shape.gd")
 const Rune = preload("res://src/game/ui/rune_button.gd")
 const REACH := 2.5
@@ -80,7 +81,7 @@ func nearby() -> bool:
 func start() -> void:
 	if active or finishing or not nearby() or game._graphics_drawer.visible:
 		return
-	if not Character.FightLibrary.install(game._visual.animation, game._visual.source_skeleton):
+	if not Character.FightLibrary.install(game._visual.animation):
 		return
 	active = true
 	player_hp = MAX_HP
@@ -99,7 +100,7 @@ func start() -> void:
 	enemy.position = Vector3(Shape.CENTER.x + 5, Shape.HEIGHT + 0.1, Shape.CENTER.y)
 	enemy_visual = Character.new()
 	enemy.add_child(enemy_visual)
-	Character.FightLibrary.install(enemy_visual.animation, enemy_visual.source_skeleton)
+	Character.FightLibrary.install(enemy_visual.animation)
 	artifact.hide()
 	prompt.hide()
 	status.show()
@@ -121,7 +122,7 @@ func attack() -> void:
 		return
 	var direction: Vector3 = enemy.position - game._player.position
 	game._visual.rotation.y = atan2(-direction.x, -direction.z)
-	var length: float = game._visual.play_fight("fight/Melee_Hook")
+	var length: float = game._visual.play_fight(FightLibrary.PUNCH)
 	player_cooldown = maxf(length + 0.2, 0.8)
 	_player_hit = length * 0.45
 
@@ -157,20 +158,20 @@ func _physics_process(delta: float) -> void:
 	enemy.move_and_slide()
 	enemy_visual.update_motion(Vector2(velocity.x, velocity.z).length())
 	if distance <= REACH and enemy_cooldown == 0:
-		var length := enemy_visual.play_fight("fight/Melee_Hook")
+		var length := enemy_visual.play_fight(FightLibrary.PUNCH)
 		enemy_cooldown = maxf(1.7, length + 0.5)
 		_enemy_hit = length * 0.55
 	if _player_hit >= 0:
 		_player_hit -= delta
 		if _player_hit < 0 and distance <= REACH:
 			enemy_hp = maxi(0, enemy_hp - 25)
-			enemy_visual.play_fight("fight/Hit_Knockback")
+			enemy_visual.play_fight(FightLibrary.HIT)
 			_enemy_hit = -1.0
 	if _enemy_hit >= 0:
 		_enemy_hit -= delta
 		if _enemy_hit < 0 and distance <= REACH:
 			player_hp = maxi(0, player_hp - 15)
-			game._visual.play_fight("fight/Hit_Knockback")
+			game._visual.play_fight(FightLibrary.HIT)
 			_player_hit = -1.0
 	status.text = "TANTANGAN ARENA\nKamu  %d / 100     •     Mannequin  %d / 100" % [
 		player_hp, enemy_hp]
@@ -181,9 +182,9 @@ func _physics_process(delta: float) -> void:
 		_enemy_hit = -1
 		status.text = "Tantangan selesai!" if enemy_hp == 0 else "Coba lagi — dekati artefak"
 		if enemy_hp == 0:
-			enemy_visual.play_fight("Death01")
+			enemy_visual.play_fight(FightLibrary.DEATH)
 		else:
-			game._visual.play_fight("Death01")
+			game._visual.play_fight(FightLibrary.DEATH)
 
 
 func movement_locked() -> bool:
