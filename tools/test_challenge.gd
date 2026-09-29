@@ -45,6 +45,9 @@ func _run() -> void:
 	_check(challenge.artifact.visible, "Artefak tidak terlihat")
 	challenge.start()
 	_check(challenge.active, "Tantangan tidak mulai")
+	_check(challenge.hud_panel.visible, "HUD tantangan tidak muncul")
+	_check(challenge.player_hp_bar is ProgressBar, "Bar HP pemain tidak ada")
+	_check(challenge.enemy_hp_bar is ProgressBar, "Bar HP musuh tidak ada")
 	_check(is_instance_valid(challenge.enemy), "Musuh tidak ada")
 	_check(challenge.enemy_visual._fight_driver.has_clip(FightLibrary.PUNCH),
 		"Musuh tidak memakai klip UAL2")
@@ -71,12 +74,15 @@ func _run() -> void:
 	_check(challenge.enemy_hp == 100, "Damage terjadi sebelum windup")
 	_step_challenge(challenge, game, 200)
 	_check(challenge.enemy_hp == 75, "Damage salah: %d" % challenge.enemy_hp)
+	_check(is_equal_approx(challenge.enemy_hp_bar.value, 75), "Bar HP musuh tidak diperbarui")
 
 	# Enemy attacks at close range using the same UAL2 hook clip.
 	challenge.enemy_visual.cancel_fight()
 	challenge.enemy_cooldown = 0.0
 	_step_challenge(challenge, game, 200)
 	_check(challenge.player_hp < 100, "Musuh tidak menyerang")
+	_check(is_equal_approx(challenge.player_hp_bar.value, challenge.player_hp),
+		"Bar HP pemain tidak diperbarui")
 
 	# Victory and cleanup.
 	challenge.enemy_hp = 0
@@ -92,6 +98,7 @@ func _run() -> void:
 	game._update_arena_state()
 	challenge._physics_process(0.016)
 	_check(not challenge.active, "Musuh bertahan setelah keluar arena")
+	_check(not challenge.hud_panel.visible, "HUD tertinggal setelah keluar arena")
 	_check(game._visual.action_time == 0, "Action lock tertinggal")
 	game.queue_free()
 	await process_frame
