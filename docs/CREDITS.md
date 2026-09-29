@@ -112,3 +112,15 @@ bukan aset Naruto atau interpretasi baru dari ingatan.
 ### HUD rune icons
 `project/src/game/ui/flame.svg` and `settings.svg`: original vector artwork
 created for A-Sekai, not copied from an icon pack or third-party image.
+
+### Positional gameplay audio
+- Fire shoot/explode/loop: byte-for-byte original procedural SFX from
+  `KyokoApp/Unity` archive `bca3e575fc26311ef5a43c0263e772a6d9fced20`,
+  `project/packs/audio_sfx/`. Original generator: `tools/synth_fire.py` there.
+- Footsteps: Kenney **Impact Sounds** (2019), CC0:
+  https://kenney.nl/assets/impact-sounds . Source grass/concrete variations
+  000–003 retrieved from `iree-gd/iree.gd`, commit
+  `9db7d7069a9ad75c77e9b5657d1ae5bdf615a6bc`, `sample/assets/audio/impact/`.
+  Converted/downmixed/trimmed/gain-adjusted by `tools/prepare_footsteps.py`.
+  Dirt is a designed blend of these recordings, not a separate dirt recording.
+  Attribution/provenance also exported in `licenses/Kenney-Impact.txt`.

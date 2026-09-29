@@ -79,6 +79,10 @@ func attack() -> bool:
 	shot.velocity = (aim - shot.global_position) / duration - Projectile.GRAVITY * duration * 0.5
 	shot.impacted.connect(_on_impact)
 	projectiles.append(shot)
+	var audio := get_tree().get_first_node_in_group("world_audio")
+	if audio != null:
+		audio.shoot(global_position)
+		audio.follow_fire(shot, true)
 	return true
 
 
@@ -91,6 +95,9 @@ func _on_impact(point: Vector3, normal: Vector3) -> void:
 	burst.position = (get_parent() as Node3D).to_local(point + normal * 0.02)
 	get_parent().add_child(burst)
 	bursts.append(burst)
+	var audio := get_tree().get_first_node_in_group("world_audio")
+	if audio != null:
+		audio.explode(point + normal * 0.15)
 
 
 func _prune() -> void:

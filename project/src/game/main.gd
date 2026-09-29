@@ -1,6 +1,8 @@
 extends Node3D
 ## Pulau 1 km + kamera sentuh, tetap memakai mannequin dan updater yang sama.
 
+const WorldAudio = preload("res://src/game/audio/world_audio.gd")
+const Footsteps = preload("res://src/game/audio/footsteps.gd")
 const RuneButton = preload("res://src/game/ui/rune_button.gd")
 const FirePet = preload("res://src/game/fire_pet.gd")
 const PerformancePanel = preload("res://src/game/performance_panel.gd")
@@ -13,6 +15,8 @@ const Orbit = preload("res://src/game/orbit_camera.gd")
 
 const CHARACTER_HEIGHT := 1.8
 
+var _audio: WorldAudio
+var _footsteps: Footsteps
 var _pet: FirePet
 var _attack: RuneButton
 var _settings: RuneButton
@@ -32,11 +36,21 @@ func _ready() -> void:
 	_build_ground()
 	_build_player()
 	_build_camera()
+	_audio = WorldAudio.new()
+	_audio.listener = _orbit.camera
+	add_child(_audio)
+	_footsteps = Footsteps.new()
+	_footsteps.audio = _audio
+	_footsteps.body = _player
+	_footsteps.island = _island
+	_footsteps.visual = _visual
+	add_child(_footsteps)
 	_pet = FirePet.new()
 	_pet.player = _player
 	_pet.facing = _visual
 	_pet.camera = _orbit.camera
 	add_child(_pet)
+	_audio.follow_fire(_pet)
 	_grass = Grass.new()
 	_grass.island = _island
 	_grass.player = _player
@@ -238,6 +252,7 @@ func _physics_process(delta: float) -> void:
 	var travelled := _player.position - before
 	var speed := Vector2(travelled.x, travelled.z).length() / delta
 	_visual.update_motion(speed)
+	_footsteps.update_motion(delta, speed)
 	if movement.length_squared() > 0.001:
 		var target_yaw := atan2(-movement.x, -movement.z)
 		_visual.rotation.y = lerp_angle(_visual.rotation.y, target_yaw, 1.0 - exp(-14.0 * delta))

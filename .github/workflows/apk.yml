@@ -230,6 +230,19 @@ jobs:
           path: ~/.local/share/godot/app_userdata/**/hud-*-test.png
           if-no-files-found: ignore
 
+      - name: Tes audio mixer, jarak, panning, occlusion dan langkah
+        run: |
+          set +e
+          timeout 120 ./godot --headless --audio-driver Dummy --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_audio.gd" 2>&1 | tee audio-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' audio-test.log; then
+            tail -50 audio-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[audio-test] HASIL: OK' audio-test.log
+
       - name: Tes validasi updater
         run: |
           timeout 60 ./godot --headless --path project \

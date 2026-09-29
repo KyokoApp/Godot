@@ -229,3 +229,17 @@ wajib karena transparansi/noise berbeda. Tunggu screenshot sebelum revisi lain.
 - `test_hud.gd`: viewport input dispatch, move+attack both press orders, third
   finger orbit, unrelated release, cancellation, emulation duplicate rejection,
   focus reset and drawer open/close; actual Mobile Vulkan + HUD screenshots.
+
+## Gameplay audio milestone (2026-09-29)
+User explicitly prioritizes sound before dummy/enemies. Keep approved UI/VFX.
+`audio/world_audio.gd`: 16 pooled 3D voices, camera listener, inverse distance,
+24m footsteps / 65m shot / 140m explosion, distance low-pass and world-mask
+occlusion every .12s, smoothed -10dB/1400Hz obstruction, WorldSFX limiter.
+Own scene-root voices preserve explosion tails beyond burst lifetime; loops
+track pet/projectile and terminate when source disappears/projectile finishes.
+`audio/footsteps.gd`: actual movement + floor gate, two contacts per animated
+cycle, 120ms retrigger guard, small landing accent, side alternation. Road/coast
+use designed dirt blend; steep/raised rock uses stone; other land grass.
+Kenney CC0 recordings (4 per bank) + original archived procedural fire samples.
+No new HUD, music or indoor reverb. Phone speaker/headphone listening still
+required; CI validates routing and relative levels, not subjective realism.

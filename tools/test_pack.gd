@@ -16,6 +16,13 @@ func _run() -> void:
 		push_error("Lisensi shader partikel tidak ikut content pack")
 		quit(1)
 		return
+	for path in ["fire_shoot", "fire_explode", "fire_loop", "step_grass_0",
+			"step_dirt_0", "step_stone_0"]:
+		var sound: AudioStream = load("res://assets/audio/" + path + ".wav")
+		if sound == null or sound.get_length() <= 0:
+			push_error("Audio tidak ikut PCK: " + path)
+			quit(1)
+			return
 	var scene: PackedScene = load("res://src/game/main.tscn")
 	if scene == null or not scene.can_instantiate():
 		quit(1)

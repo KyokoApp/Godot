@@ -362,3 +362,15 @@ feedback tekan dan ring cooldown tanpa teks. Tombol menangani index sentuh
 secara independen, bukan emulasi mouse satu jari: jalan + attack + orbit dapat
 bersamaan. Menu mereset/memblokir joystick dan kamera sementara dibuka.
 Regresi `test_hud.gd` menginjeksi event lewat viewport pada Mobile/Vulkan.
+
+### Audio gameplay spasial
+Langkah rumput/tanah/batu: empat variasi tanpa pengulangan berturut-turut,
+variasi pitch/gain, dua kontak per siklus animasi, berhenti saat diam/di udara.
+Api: suara tembak, desis peluru bergerak, ledakan, dan crackle pet sangat pelan.
+SFX memakai posisi dunia dengan listener kamera: stereo panning, falloff jarak,
+Doppler peluru, treble meredup jauh, dan occlusion collider dunia (cek 8Hz).
+Pool 16 suara, limiter bus khusus; ekor ledakan tidak dipotong saat VFX hilang.
+Tes audio merekam output mixer untuk membandingkan dekat/jauh dan kiri/kanan;
+cek occlusion, variasi langkah, pool, cleanup, serta audio dalam PCK.
+Tanpa musik/reverb indoor atau simulasi akustik penuh. Penyetelan akhir tetap
+perlu didengar di speaker HP dan earphone; bukan klaim suara foto-realistis.
