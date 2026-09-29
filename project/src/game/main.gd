@@ -8,6 +8,8 @@ const TerrainOcclusion = preload("res://src/game/world/terrain_occlusion.gd")
 const Night = preload("res://src/game/environment/night_environment.gd")
 const WorldAudio = preload("res://src/game/audio/world_audio.gd")
 const Footsteps = preload("res://src/game/audio/footsteps.gd")
+const CharacterSwitcher = preload("res://src/game/ui/character_switcher.gd")
+const CreditsPanel = preload("res://src/game/ui/credits_panel.gd")
 const RuneButton = preload("res://src/game/ui/rune_button.gd")
 const FirePet = preload("res://src/game/fire_pet.gd")
 const PerformancePanel = preload("res://src/game/performance_panel.gd")
@@ -31,6 +33,10 @@ var _footsteps: Footsteps
 var _pet: FirePet
 var _attack: RuneButton
 var _settings: RuneButton
+var _character_switcher: CharacterSwitcher
+var _credits: CreditsPanel
+var _credits_button: Button
+var _drawer_title: Label
 var _graphics_drawer: PanelContainer
 var _sun: DirectionalLight3D
 var _performance: PerformancePanel
@@ -124,6 +130,7 @@ func _build_player() -> void:
 	body.add_child(visual)
 
 	add_child(body)
+	_visual.set_skin(Mannequin.MIKU)
 	_player = body
 
 
@@ -162,12 +169,21 @@ func _build_hud() -> void:
 	_attack.tooltip_text = "Serangan api"
 	layer.add_child(_attack)
 	_attack.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	_attack.offset_left = -176
-	_attack.offset_right = -48
-	_attack.offset_top = -180
-	_attack.offset_bottom = -52
+	_attack.offset_left = -260
+	_attack.offset_right = -132
+	_attack.offset_top = -248
+	_attack.offset_bottom = -120
 	_attack.pressed.connect(_pet.attack)
 	_orbit.attack_exclusion = _attack
+	_character_switcher = CharacterSwitcher.new()
+	_character_switcher.character = _visual
+	layer.add_child(_character_switcher)
+	_character_switcher.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	_character_switcher.offset_left = -236
+	_character_switcher.offset_right = -28
+	_character_switcher.offset_top = 126
+	_character_switcher.offset_bottom = 350
+	_orbit.character_exclusion = _character_switcher
 
 
 func _build_graphics_drawer(layer: CanvasLayer) -> void:
@@ -197,18 +213,38 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 	title.add_theme_font_size_override("font_size", 20)
 	title.add_theme_color_override("font_color", Color("e4d8ff"))
 	content.add_child(title)
+	_drawer_title = title
+	_credits_button = Button.new()
+	_credits_button.text = "Kredit & lisensi"
+	_credits_button.custom_minimum_size.y = 44
+	_credits_button.pressed.connect(_toggle_credits)
+	content.add_child(_credits_button)
 	_performance = PerformancePanel.new()
 	_performance.sun = _sun
 	_performance.grass = _grass
 	_performance.water = _island.water
 	content.add_child(_performance)
+	_credits = CreditsPanel.new()
+	content.add_child(_credits)
+	_credits.hide()
+	_graphics_drawer.offset_bottom = 565
 	_graphics_drawer.hide()
+
+
+func _toggle_credits() -> void:
+	var opened := not _credits.visible
+	_credits.visible = opened
+	_performance.visible = not opened
+	_drawer_title.text = "KREDIT & LISENSI" if opened else "GRAFIK"
+	_credits_button.text = "Kembali ke grafik" if opened else "Kredit & lisensi"
+	_graphics_drawer.offset_left = -660 if opened else -334
 
 
 func _toggle_graphics() -> void:
 	var opened := not _graphics_drawer.visible
 	_graphics_drawer.visible = opened
 	_attack.visible = not opened
+	_character_switcher.visible = not opened
 	_joystick.reset()
 	_joystick.input_enabled = not opened
 	_orbit.reset_touches()

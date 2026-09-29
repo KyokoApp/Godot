@@ -1,0 +1,36 @@
+Hatsune Miku -NXZ- / uploaded Hatsune Miku -NXZ- V2 — Naxzed
+Model source supplied by the project owner:
+https://hub.vroid.com/en/characters/2683662322917339267/models/691279642315813628
+V2 listing (uploaded file metadata names V2):
+https://hub.vroid.com/en/characters/2683662322917339267/models/8391550879584741424
+Creator: https://hub.vroid.com/en/users/43470460
+Hatsune Miku is a character of Crypton Future Media, INC.
+Unofficial fan model; no affiliation or endorsement is claimed.
+
+STATUS: integrated into the local skin-switch prototype, not released or
+engine-verified yet. Runtime GLB: assets/characters/miku/miku.glb.
+Original mesh, skin weights, bones and morph geometry retained. Base-color maps
+resized to <=1024px; materials changed to a lightweight lit/toon preset. Rig
+motion uses a rest-space retarget from the CC0 UAL mannequin. No VRM spring-bone
+simulation is imported. Portrait comes from this model's embedded thumbnail.
+The root upload is retained until import/render tests pass, then may be removed
+as requested by the owner. The converted in-project model must remain.
+No claim that the older listing changes all V2 restrictions is made.
+
+PROJECT-SPECIFIC PERMISSION REPORTED BY THE PROJECT OWNER
+The owner reports asking the model creator about use in a non-commercial game
+prototype with spell-casting animations and magical projectiles, without blood
+or gore. The owner supplied these replies in chat:
+
+「私のライセンスをあなたのプロジェクトに含めてくれる限り、私はそれを許可します。」
+Translation: I permit it as long as you include my license in your project.
+
+「私はそれを持っていません。私のモデルをダウンロードできるリンクを投稿してください。」
+Translation: I do not have it. Please post a link where my model can be downloaded.
+
+The requested model-source links are credited above. These replies were relayed
+by the project owner, not independently authenticated by the coding assistant.
+The original conversation should be retained by the owner. This record is NOT
+an MIT/CC0 license, a permission grant by the project owner to other people,
+or authorization for unrestricted redistribution, commercial use or store release.
+It records only the reported project-specific use and attribution condition.

@@ -1,0 +1,8 @@
+Stylized Multimesh Grass shader — Malido / Malidos
+CC0 1.0 Universal; full legal text: CC0-1.0.txt.
+https://godotshaders.com/shader/stylized-multimesh-grass-shader/
+https://github.com/Malidos/Grass-Shader-Example
+Source revision: 13bb96e556b6b80ccdcb9fa42e116770ede8dcc8
+Adapted gradients, wind noise, player displacement and root AO. Project changes:
+world-up lighting, fade/LOD, thinner mesh blades, palette and procedural noise.
+No upstream demo artwork included.

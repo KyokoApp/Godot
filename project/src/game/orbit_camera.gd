@@ -10,6 +10,7 @@ const MAX_PITCH := 1.15
 var input_enabled := true
 var input_exclusion: Control
 var attack_exclusion: Control
+var character_exclusion: Control
 var yaw := 0.0
 var pitch := 0.30
 var distance := DEFAULT_DISTANCE
@@ -57,6 +58,9 @@ func _input(event: InputEvent) -> void:
 					return
 			if is_instance_valid(attack_exclusion) and attack_exclusion.is_visible_in_tree():
 				if attack_exclusion.get_global_rect().has_point(touch.position):
+					return
+			if is_instance_valid(character_exclusion) and character_exclusion.is_visible_in_tree():
+				if character_exclusion.get_global_rect().has_point(touch.position):
 					return
 			if _touches.size() < 2:
 				_touches[touch.index] = touch.position

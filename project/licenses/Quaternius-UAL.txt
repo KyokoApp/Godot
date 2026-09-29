@@ -1,0 +1,10 @@
+Universal Animation Library [Standard] — Quaternius
+CC0 1.0 Universal. Full legal text: CC0-1.0.txt in this directory.
+https://quaternius.com/packs/universalanimationlibrary.html
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Source: KyokoApp/Unity archive bca3e575fc26311ef5a43c0263e772a6d9fced20
+project/packs/char_assets/mannequin/UAL1_Standard.glb
+Git blob: 473e59080288428d0b6da826ba19324d07b191f0
+Original rigged mannequin and motion clips retained. Lavender material/outline
+and upper-body casting layer are project modifications, not new original mocap.

@@ -463,3 +463,34 @@ input. Clock locomotion dan timing langkah tidak diganti. Tembakan/suara/pulse p
 keluar setelah windup0,16s; cooldown0,85s mulai sejak input diterima. Spam selama
 windup tidak menambah peluru atau mengulang pose. Pet/warna/ledakan tetap sama.
 Tidak menambah target latihan, damage, senjata atau multiplayer pada tahap ini.
+
+
+### Kredit, lisensi dan izin aset
+Karya orisinal A-Sekai: all rights reserved; lihat `LICENSE`. Ini bukan lisensi
+ulang atas aset pihak ketiga. Model, animasi, audio, shader dan engine tetap
+mengikuti ketentuan pembuatnya masing-masing. Daftar sumber/status di
+`docs/CREDITS.md`; salinan pemberitahuan di `project/licenses/` ikut APK/PCK.
+Di game: ikon grafik → **Kredit & lisensi**, pilih dokumen lalu scroll.
+Pembaca bekerja offline; URL sumber ditampilkan sebagai teks yang bisa disalin.
+Setelah mengedit kredit/hak orisinal, jalankan `python3 tools/sync_credits.py`.
+Catatan Miku merekam izin khusus yang dilaporkan pemilik, bukan lisensi bebas;
+skin tersebut baru terintegrasi sebagai prototipe lokal, belum dirilis. Izin tidak otomatis berlaku untuk
+Kanna, ikon, atau model lain. Simpan percakapan asli dengan pembuat.
+
+
+### Prototipe lokal: Miku / mannequin & HUD karakter
+Miku memakai animasi CC0 UAL melalui retarget52 tulang setelah layer casting.
+Switch melalui dua kartu portrait di kanan; sumber mannequin tetap berjalan
+tersembunyi, tidak membuat player/collider/pet baru dan tidak mereset cooldown.
+Miku menjadi pilihan awal gameplay; mannequin tetap tersedia sebagai fallback.
+Attack128px kini berjarak132px dari kanan dan120px dari bawah (basis1280x720).
+Kartu disembunyikan saat membuka grafik/kredit dan dikecualikan dari input kamera.
+Material mempertahankan tekstur model; tidak memakai plugin VRM atau physics
+rambut. Model42,674 tris/24 material, tekstur <=1024px; perlu tes kinerja HP.
+Warmup19 tahap mencakup skin Miku selain mannequin dan water.
+
+**Status validasi:** tes aset/matematika offline + parser/lint bisa dijalankan
+lokal. Godot4.5.2 import/compile, retarget headless, HUD/render Mobile, PCK/APK
+belum dijalankan untuk perubahan ini karena engine tidak tersedia di workspace.
+Jangan melewati gerbang compile/render. Jangan push/rilis publik tanpa persetujuan.
+Upload VRM di root baru dihapus sesudah gerbang engine lolos; aset runtime tetap ada.

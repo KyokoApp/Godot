@@ -56,6 +56,18 @@ func _run() -> void:
 	character.animation.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
 	character.cast_layer.set_physics_process(false)
 	character.cast_layer.modification_processed.connect(func() -> void: _processed += 1)
+	for skin in [Character.MANNEQUIN, Character.MIKU, Character.KANNA]:
+		_check(character.set_skin(skin), "Skin gagal dimuat: " + skin)
+		await _test_skin(character, skin)
+	_check(_processed > 0, "Native skeleton modifier tidak pernah diproses")
+	world.queue_free()
+	for frame in range(5):
+		await process_frame
+	print("[cast-render-test] HASIL: ", "OK" if _failures == 0 else "GAGAL")
+	quit(0 if _failures == 0 else 1)
+
+
+func _test_skin(character: Character, skin: String) -> void:
 	for motion in [Character.IDLE, Character.RUN]:
 		character.animation.play(motion, 0)
 		character.animation.advance(0.2)
@@ -65,14 +77,8 @@ func _run() -> void:
 		var cast: Image = await _capture(character)
 		var changed := _difference(before, cast)
 		_check(changed > 30, "Casting tidak terlihat pada skin: " + motion)
-		cast.save_png("user://casting-" + motion + "-test.png")
+		cast.save_png("user://casting-" + skin + "-" + motion + "-test.png")
 		character.cast_layer._physics_process(0.4)
 		var after: Image = await _capture(character)
 		_check(_difference(before, after) < 15, "Pose tidak pulih setelah casting: " + motion)
 		print("[cast-render-test] ", motion, " changed pixels=", changed)
-	_check(_processed > 0, "Native skeleton modifier tidak pernah diproses")
-	world.queue_free()
-	for frame in range(5):
-		await process_frame
-	print("[cast-render-test] HASIL: ", "OK" if _failures == 0 else "GAGAL")
-	quit(0 if _failures == 0 else 1)

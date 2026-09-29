@@ -12,8 +12,7 @@ func _run() -> void:
 		push_error("Pack gagal dipasang")
 		quit(1)
 		return
-	if not FileAccess.file_exists("res://licenses/GDQuest-MIT.txt"):
-		push_error("Lisensi shader partikel tidak ikut content pack")
+	if not _licenses_present():
 		quit(1)
 		return
 	for path in ["fire_shoot", "fire_explode", "fire_loop", "pet_crackle", "step_grass_0",
@@ -28,6 +27,9 @@ func _run() -> void:
 		push_error("Aset nature tidak masuk PCK")
 		quit(1)
 		return
+	for skin in ["miku", "kanna"]:
+		var model: PackedScene = load("res://assets/characters/" + skin + "/" + skin + ".glb")
+		assert(model != null and model.can_instantiate(), "Skin tidak ikut PCK: " + skin)
 	var scene: PackedScene = load("res://src/game/main.tscn")
 	if scene == null or not scene.can_instantiate():
 		quit(1)
@@ -44,3 +46,13 @@ func _run() -> void:
 		return
 	print("[pack-test] HASIL: OK")
 	quit(0)
+
+
+func _licenses_present() -> bool:
+	for notice in ["GDQuest-MIT.txt", "CREDITS.txt", "A-Sekai-Rights.txt",
+			"Miku-Naxzed-Permission.txt", "Quaternius-UAL.txt", "Malido-Grass.txt",
+			"CC0-1.0.txt", "Godot-MIT.txt"]:
+		if FileAccess.get_file_as_string("res://licenses/" + notice).is_empty():
+			push_error("Pemberitahuan lisensi tidak masuk PCK: " + notice)
+			return false
+	return true

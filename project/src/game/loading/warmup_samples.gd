@@ -7,7 +7,7 @@ const Spirit = preload("res://src/game/legacy_spirit/spirit_visual.gd")
 const Projectile = preload("res://src/game/fire_projectile.gd")
 const Burst = preload("res://src/game/fire_burst.gd")
 const WaterMaterial = preload("res://src/game/water/water_material.gd")
-const STAGES := 18
+const STAGES := 20
 
 
 static func populate(stage: int, world: Node3D, game: Node3D) -> void:
@@ -50,6 +50,12 @@ static func populate(stage: int, world: Node3D, game: Node3D) -> void:
 		burst.set_process(false)
 		burst.age = 0.22
 		burst._update_visuals()
+	elif stage >= 18:
+		var character := Character.new()
+		world.add_child(character)
+		character.set_skin(Character.MIKU if stage == 18 else Character.KANNA)
+		character.update_motion(5)
+		character.start_cast()
 	elif stage >= 16:
 		var visual := MeshInstance3D.new()
 		var plane := PlaneMesh.new()

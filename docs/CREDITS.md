@@ -14,7 +14,9 @@
 
 ## Kode
 
-Semua kode dalam repo ini ditulis khusus untuk project ini.
+Kode orisinal mengikuti pemberitahuan hak cipta `LICENSE` (all rights reserved).
+Kode adaptasi pihak ketiga, termasuk shader MIT/CC0 di bawah, tetap mengikuti
+lisensi asalnya. Tidak semua kode/aset di repo merupakan karya orisinal proyek.
 
 ## Mannequin + animasi (Milestone 5A)
 
@@ -69,13 +71,13 @@ Referensi yang diberikan: https://pin.it/39gUpFwmd . Tidak digambar ulang AI.
 Nama seniman dan lisensi sumber belum terverifikasi. Jangan menyebutnya CC0 atau
 karya orisinal proyek; hak distribusi komersial/store perlu diverifikasi tersendiri.
 
-## Jubah api biru
+## Jubah api biru — riwayat, sudah dihapus
 
 Mesh pakaian, tudung/aksesori prosedural, solver kain ringan dan shader api toon
 pastel ditulis untuk proyek ini; tidak menyalin pakaian/aset karakter eksternal.
 Animasi dan skeleton penggerak tetap UAL1 Standard Quaternius (kredit di atas).
 
-## Pet api astral
+## Pet api astral — riwayat versi awal, bukan model aktif
 
 Model pet prosedural, shader gradien api toon, proyektil gravitasi dan VFX ledakan
 bulat ditulis untuk proyek ini. Tidak memakai model, tekstur atau suara dari
@@ -166,3 +168,56 @@ regenerate with `tools/make_meadow_textures.py` (Pillow).
   near/far-independent reconstruction, disabled/miss fallback and night palette.
 - Water maps and watershed geometry are original procedural work. No upstream
   demo textures/models/media copied. Generator: `tools/make_water_textures.py`.
+
+
+## Miku — skin prototipe lokal / izin khusus, belum dirilis
+- Pembuat: **Naxzed**; karakter Hatsune Miku milik Crypton Future Media, INC.
+- Link model yang diberikan pemilik proyek:
+  https://hub.vroid.com/en/characters/2683662322917339267/models/691279642315813628
+- Metadata upload menyebut V2; halaman versi V2:
+  https://hub.vroid.com/en/characters/2683662322917339267/models/8391550879584741424
+- Izin prototipe nonkomersial dengan casting/proyektil tanpa darah/gore dilaporkan
+  pemilik proyek lewat percakapan dengan pembuat, dengan syarat mencantumkan link
+  download model. Kutipan, terjemahan, batas cakupan, dan status verifikasinya:
+  `project/licenses/Miku-Naxzed-Permission.txt`.
+- Ini bukan lisensi bebas untuk model atau izin komersial/redistribusi tanpa batas.
+  Simpan percakapan asli. Integrasi skin baru ada di workspace; tes engine/render
+  masih wajib sebelum dipublikasikan atau dinyatakan siap di HP.
+
+## Kanna — skin dari arsip proyek lama
+Sumber: `KyokoApp/Unity:archive`, `google_drive/OC-Kanna.vrm` dan
+`project/packs/char_assets/mannequin/kanna.glb` (blob yang sama
+`070e57256db556c2611d074d7d285d825c2788de`). Metadata menyebut **Animeit**,
+commercial/violent use Allow, licenseName Redistribution_Prohibited.
+Pemilik kini juga menyampaikan izin khusus **Kanna** dari akun yang sebelumnya
+ia identifikasi sebagai **Naxzed**, dengan syarat mencantumkan nama akun.
+Kredit akun izin: Naxzed — https://hub.vroid.com/en/users/43470460 .
+Kredit metadata model tetap **Animeit**, tidak diganti. Hubungan akun/pembuat
+belum diverifikasi independen; kutipan dan batas cakupan ada di
+`project/licenses/Kanna-Permission.txt`. Simpan percakapan asli.
+Model194.476tris/43material dipertahankan; tekstur base-color <=1024px.
+Portrait berasal dari thumbnail model. Lisensi ini bukan CC0/MIT untuk model.
+
+## Engine
+Godot Engine 4.5.2 — Juan Linietsky, Ariel Manzur dan kontributor Godot, MIT.
+https://godotengine.org/license/
+Salinan MIT: `project/licenses/Godot-MIT.txt`.
+Pemberitahuan komponen pihak ketiga engine:
+https://github.com/godotengine/godot/blob/4.5.2-stable/COPYRIGHT.txt
+
+## Status penggunaan
+Build yang sudah dirilis: mannequin UAL dan aset nature/stone path di atas.
+Workspace kini memiliki prototipe skin Miku; belum diuji engine/dirilis.
+Kanna kini juga terintegrasi sebagai skin pilihan; paket bangunan belum aktif.
+Sumber ikon unggahan tetap belum terverifikasi lisensinya; pemberitahuan hak
+cipta game tidak menghapus ketidakpastian tersebut.
+
+
+### Perubahan model Miku & UI switch
+`tools/prepare_miku.py` mengemas VRM unggahan menjadi GLB dengan geometri/rig
+asli, mengecilkan base-color maps ke <=1024px, dan menyalin thumbnail asli
+sebagai portrait. Metadata hak model tetap disimpan dalam GLB `asset.extras`.
+Retarget 52 tulang berangkat dari metode Kanna proyek lama: delta rest-space,
+koreksi arah 180°Y, panjang tulang target dipertahankan. Simulasi spring-bone
+VRM belum disertakan. Desain kartu switch dan ilustrasi portrait mannequin
+adalah karya baru untuk proyek; tidak menyalin UI/icon dari Genshin atau HSR.

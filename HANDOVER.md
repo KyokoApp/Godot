@@ -370,3 +370,48 @@ HUD multitouch + fire lifecycle tests updated to assert windup, movement, releas
 Mobile render test compares actual skinned idle/run with casting and verifies
 pose restoration/native modifier callback; artifacts casting-screenshots.
 No target dummy/damage/multiplayer yet; one tested milestone at a time.
+
+
+## Rights / credits work (local only, not released)
+User chose original work reserved, NOT MIT. Root LICENSE and exported
+A-Sekai-Rights exclude all third-party works and preserve MIT/CC0 permissions.
+Added offline graphics drawer CreditsPanel, source/status inventory and exact
+MIT/CC0 notices. sync_credits.py --check enforces docs/export parity; pack/HUD
+tests extended. Miku creator replies relayed in chat are recorded as reported,
+not independently authenticated. Download-link attribution included; no general
+redistribution/commercial license invented. Miku/Kanna are not playable yet.
+Keep no-push/no-public-release decision until user explicitly authorizes a new
+release path. Current GitHub repo is public. Uploaded root VRM is not deleted.
+Engine/HUD/PCK verification must pass before claiming these local edits shipped.
+
+
+## Miku skin / party switch prototype (local, not engine-verified)
+Runtime assets/characters/miku/miku.glb generated from root868295879255555982.vrm:
+19,542,632 ->10,311,744 bytes; full42,674tris, 24base-color maps<=1024, 52bone mapping.
+prepare_miku.py preserves mesh/skin/accessor bytes, metadata extras and author
+thumbnail portrait. No VRM plugin, springbones, external art or MToon dependency.
+SkinRetarget is LAST SkeletonModifier on hidden UAL skeleton, after CastLayer;
+reads weighted final pose (not restored base), conjugates rest delta180Y like
+old Kanna, keeps target lengths, scales hip bob only. 52 mappings include fingers.
+Miku starts gameplay; standalone Character defaults mannequin for existing tests.
+Switch caches one Miku node; hidden model stops retarget, player/pet/cooldown intact.
+Party cards original design, author thumbnail + original mannequin vector portrait.
+Raw finger support inherited RuneButton; camera excludes entire party control,
+menu hides/reset-touches. Attack moved84px inward/68px up at1280x720, still128px.
+Warmup19 includes Miku; test_cast_render now both skins; newtest_skin_switch plus
+HUD/PCK assertions. test_miku_asset.py verifies byte-preserved geometry, textures,
+rest correction and sampled idle/walk/jog/cast math. These are NOT engine proof.
+Local download attempts from SourceForge and official object storage failed TLS35.
+No push/release. Existing credits/license edits remain local. Do NOT delete root
+VRM until actual Godot import/compile/headless/render gates pass. Preserve model
+permission scope and source links. Need engine-enabled validation next.
+
+
+## Kanna + publishing authorization (2026-09-29)
+User explicitly authorized push/build for phone, superseding the prior local-only
+restriction, and relayed an additional Kanna permission requiring account credit.
+Preserve Animeit original metadata and Naxzed reported permission-account credit.
+Kanna converted from archive blob070e5725, 194476tris/43materials, base-color1024.
+52-bone Miku /50-bone Kanna share UAL driver, per-skin cached native retargets;
+only selected skin visible/driver active. Third party card, warmup20 stages.
+All engine gates must pass before claiming release ready or removing root VRM.

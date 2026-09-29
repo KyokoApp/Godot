@@ -1,6 +1,15 @@
 extends Node3D
 ## Model dan mocap asli dari arsip project, tanpa sistem combat/skin lama.
 
+signal skin_changed(skin_id: String)
+
+const KannaRig = preload("res://src/game/animation/kanna_rig.gd")
+const MikuRig = preload("res://src/game/animation/miku_rig.gd")
+const KANNA := "kanna"
+const Retarget = preload("res://src/game/animation/skin_retarget.gd")
+const MikuVisual = preload("res://src/game/animation/miku_visual.gd")
+const MANNEQUIN := "mannequin"
+const MIKU := "miku"
 const CastLayer = preload("res://src/game/animation/cast_layer.gd")
 const MODEL = preload("res://assets/mannequin/UAL1_Standard.glb")
 const OUTLINE = preload("res://src/game/character_outline.gdshader")
@@ -10,9 +19,16 @@ const RUN := "Jog_Fwd"
 const RUN_ON := 2.8
 const RUN_OFF := 2.4
 
+var skin_id := MANNEQUIN
+var skin: Node3D
+var retarget: Retarget
+var source_skeleton: Skeleton3D
 var cast_layer: CastLayer
 var animation: AnimationPlayer
 var state := IDLE
+var _skins: Dictionary[String, Node3D] = {}
+var _retargets: Dictionary[String, Retarget] = {}
+var _source_meshes: Array[MeshInstance3D] = []
 
 
 func _ready() -> void:
@@ -23,6 +39,7 @@ func _ready() -> void:
 	animation = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	for node in model.find_children("*", "MeshInstance3D", true, false):
 		var mesh := node as MeshInstance3D
+		_source_meshes.append(mesh)
 		var material := StandardMaterial3D.new()
 		material.albedo_color = Color(0.68, 0.58, 0.84)
 		material.roughness = 0.85
@@ -39,10 +56,12 @@ func _ready() -> void:
 			return
 		animation.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
 	animation.play(IDLE)
+	animation.advance(0)
 	var skeleton := model.find_child("Skeleton3D", true, false) as Skeleton3D
 	if skeleton == null or not animation.has_animation(CastLayer.CLIP):
 		push_error("Mannequin: rig/klip casting hilang")
 		return
+	source_skeleton = skeleton
 	cast_layer = CastLayer.new()
 	cast_layer.name = "UpperBodyCast"
 	skeleton.add_child(cast_layer)
@@ -74,3 +93,44 @@ func update_motion(speed: float) -> void:
 func start_cast() -> void:
 	if cast_layer != null:
 		cast_layer.begin()
+
+
+func set_skin(selected: String) -> bool:
+	if selected not in [MANNEQUIN, MIKU, KANNA] or source_skeleton == null:
+		return false
+	if selected == skin_id:
+		return true
+	if selected != MANNEQUIN and not _skins.has(selected):
+		if not _load_skin(selected):
+			return false
+	for mesh in _source_meshes:
+		mesh.visible = selected == MANNEQUIN
+	for id: String in _skins:
+		_skins[id].visible = selected == id
+		_retargets[id].active = selected == id
+	if selected != MANNEQUIN:
+		skin = _skins[selected]
+		retarget = _retargets[selected]
+		retarget.transfer()
+	skin_id = selected
+	skin_changed.emit(skin_id)
+	return true
+
+
+func _load_skin(selected: String) -> bool:
+	var model := MikuVisual.create(self, source_skeleton, selected == KANNA)
+	if model == null:
+		return false
+	var driver := Retarget.new()
+	driver.name = "FinalPoseRetarget_" + selected
+	# Every retarget reads after CastLayer; only the selected driver stays active.
+	source_skeleton.add_child(driver)
+	var destination := model.find_child("Skeleton3D", true, false) as Skeleton3D
+	var mapping: Array = KannaRig.PAIRS if selected == KANNA else MikuRig.PAIRS
+	if not driver.configure(destination, mapping):
+		driver.queue_free()
+		model.queue_free()
+		return false
+	_skins[selected] = model
+	_retargets[selected] = driver
+	return true
