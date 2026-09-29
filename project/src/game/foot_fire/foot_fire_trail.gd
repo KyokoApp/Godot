@@ -77,10 +77,9 @@ func _sample(side: int) -> void:
 	# Retargeted proportions can keep an ankle inside the contact band throughout
 	# a stride (Kanna). Use the real mocap foot's lift to re-arm, never a timer alone.
 	var lift := character.foot_stride_lift(side == 0)
-	if lift > 0.075:
-		_contact[side] = false
-		return
 	if lift > 0.04:
+		if lift > 0.075:
+			_contact[side] = false
 		return
 	var pose := character.foot_pose(side == 0)
 	var ray := PhysicsRayQueryParameters3D.create(pose.origin + Vector3.UP * 0.22,
