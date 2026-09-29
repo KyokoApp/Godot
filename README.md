@@ -474,23 +474,26 @@ Di game: ikon grafik → **Kredit & lisensi**, pilih dokumen lalu scroll.
 Pembaca bekerja offline; URL sumber ditampilkan sebagai teks yang bisa disalin.
 Setelah mengedit kredit/hak orisinal, jalankan `python3 tools/sync_credits.py`.
 Catatan Miku merekam izin khusus yang dilaporkan pemilik, bukan lisensi bebas;
-skin tersebut baru terintegrasi sebagai prototipe lokal, belum dirilis. Izin tidak otomatis berlaku untuk
+skin tersebut terintegrasi dalam prototipe nonkomersial dengan kredit sumber. Izin tidak otomatis berlaku untuk
 Kanna, ikon, atau model lain. Simpan percakapan asli dengan pembuat.
 
 
-### Prototipe lokal: Miku / mannequin & HUD karakter
+### Miku / Kanna / mannequin & HUD karakter
 Miku memakai animasi CC0 UAL melalui retarget52 tulang setelah layer casting.
-Switch melalui dua kartu portrait di kanan; sumber mannequin tetap berjalan
+Switch melalui tiga kartu portrait di kanan; sumber mannequin tetap berjalan
 tersembunyi, tidak membuat player/collider/pet baru dan tidak mereset cooldown.
+Kanna dari arsip proyek lama juga tersedia; 50 tulang dipetakan untuk rig Kanna.
 Miku menjadi pilihan awal gameplay; mannequin tetap tersedia sebagai fallback.
 Attack128px kini berjarak132px dari kanan dan120px dari bawah (basis1280x720).
 Kartu disembunyikan saat membuka grafik/kredit dan dikecualikan dari input kamera.
 Material mempertahankan tekstur model; tidak memakai plugin VRM atau physics
 rambut. Model42,674 tris/24 material, tekstur <=1024px; perlu tes kinerja HP.
-Warmup19 tahap mencakup skin Miku selain mannequin dan water.
+Warmup20 tahap mencakup Miku, Kanna, mannequin dan water.
+Kanna194.476tris/43material lebih berat: gunakan Miku/mannequin bila FPS turun.
 
-**Status validasi:** tes aset/matematika offline + parser/lint bisa dijalankan
-lokal. Godot4.5.2 import/compile, retarget headless, HUD/render Mobile, PCK/APK
-belum dijalankan untuk perubahan ini karena engine tidak tersedia di workspace.
-Jangan melewati gerbang compile/render. Jangan push/rilis publik tanpa persetujuan.
-Upload VRM di root baru dihapus sesudah gerbang engine lolos; aset runtime tetap ada.
+**Validasi:** import/compile Godot4.5.2, retarget/casting headless, pergantian skin,
+multitouch, dan render skin Mobile Vulkan diuji oleh workflow sebelum export/rilis.
+Tes aset/matematika offline: `tools/test_miku_asset.py`. Pengukuran HP tetap perlu.
+Pemilik telah mengizinkan push dan build HP. Unggahan VRM duplikat di root dihapus
+setelah import/render lolos; sumber historis ada di commit upload `c95925e`.
+Aset runtime dalam `project/assets/characters/` dan kredit/lisensi tetap disertakan.

@@ -7,14 +7,15 @@ Creator: https://hub.vroid.com/en/users/43470460
 Hatsune Miku is a character of Crypton Future Media, INC.
 Unofficial fan model; no affiliation or endorsement is claimed.
 
-STATUS: integrated into the local skin-switch prototype, not released or
-engine-verified yet. Runtime GLB: assets/characters/miku/miku.glb.
+STATUS: integrated into the skin-switch prototype. Godot import, compile,
+retarget and Mobile Vulkan casting/HUD tests passed in Actions36562331346. Runtime GLB: assets/characters/miku/miku.glb.
 Original mesh, skin weights, bones and morph geometry retained. Base-color maps
 resized to <=1024px; materials changed to a lightweight lit/toon preset. Rig
 motion uses a rest-space retarget from the CC0 UAL mannequin. No VRM spring-bone
 simulation is imported. Portrait comes from this model's embedded thumbnail.
-The root upload is retained until import/render tests pass, then may be removed
-as requested by the owner. The converted in-project model must remain.
+The redundant root upload was removed after import/render tests passed, as
+requested by the owner. Original upload commit: c95925e9ec3fcd63e7db74c5715cdce052b1b176.
+The converted in-project model remains; this does not erase historical Git blobs.
 No claim that the older listing changes all V2 restrictions is made.
 
 PROJECT-SPECIFIC PERMISSION REPORTED BY THE PROJECT OWNER

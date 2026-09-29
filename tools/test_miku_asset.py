@@ -1,10 +1,11 @@
 """Offline asset/mapping gate. Does NOT replace Godot import/render tests.
-Run with Pillow + numpy; source upload is retained until engine gates pass.
+Run with Pillow + numpy; original upload can be read from its historical commit after cleanup.
 """
 import hashlib
 import io
 import json
 import struct
+import subprocess
 from pathlib import Path
 import numpy as np
 from PIL import Image
@@ -12,7 +13,14 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 
 def load(path):
-    raw = path.read_bytes()
+    if path.exists():
+        raw = path.read_bytes()
+    elif path.name == '868295879255555982.vrm':
+        # Original upload intentionally removed after engine validation; keep provenance.
+        raw = subprocess.check_output(['git', 'show',
+            'c95925e9ec3fcd63e7db74c5715cdce052b1b176:868295879255555982.vrm'], cwd=ROOT)
+    else:
+        raise FileNotFoundError(path)
     magic, version, size = struct.unpack_from('<4sII', raw)
     assert magic == b'glTF' and version == 2 and size == len(raw)
     count, kind = struct.unpack_from('<II', raw, 12)

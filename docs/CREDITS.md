@@ -170,7 +170,7 @@ regenerate with `tools/make_meadow_textures.py` (Pillow).
   demo textures/models/media copied. Generator: `tools/make_water_textures.py`.
 
 
-## Miku — skin prototipe lokal / izin khusus, belum dirilis
+## Miku — skin prototipe / izin khusus
 - Pembuat: **Naxzed**; karakter Hatsune Miku milik Crypton Future Media, INC.
 - Link model yang diberikan pemilik proyek:
   https://hub.vroid.com/en/characters/2683662322917339267/models/691279642315813628
@@ -181,8 +181,8 @@ regenerate with `tools/make_meadow_textures.py` (Pillow).
   download model. Kutipan, terjemahan, batas cakupan, dan status verifikasinya:
   `project/licenses/Miku-Naxzed-Permission.txt`.
 - Ini bukan lisensi bebas untuk model atau izin komersial/redistribusi tanpa batas.
-  Simpan percakapan asli. Integrasi skin baru ada di workspace; tes engine/render
-  masih wajib sebelum dipublikasikan atau dinyatakan siap di HP.
+  Simpan percakapan asli. Integrasi skin telah lolos import/compile, retarget,
+  serta tes casting dan HUD Mobile Vulkan; FPS perangkat tetap harus diukur.
 
 ## Kanna — skin dari arsip proyek lama
 Sumber: `KyokoApp/Unity:archive`, `google_drive/OC-Kanna.vrm` dan
@@ -206,9 +206,8 @@ Pemberitahuan komponen pihak ketiga engine:
 https://github.com/godotengine/godot/blob/4.5.2-stable/COPYRIGHT.txt
 
 ## Status penggunaan
-Build yang sudah dirilis: mannequin UAL dan aset nature/stone path di atas.
-Workspace kini memiliki prototipe skin Miku; belum diuji engine/dirilis.
-Kanna kini juga terintegrasi sebagai skin pilihan; paket bangunan belum aktif.
+Karakter pilihan: Miku, Kanna, mannequin UAL. Aset nature/stone path aktif.
+Paket bangunan belum aktif. Model sumber tetap mengikuti ketentuan masing-masing.
 Sumber ikon unggahan tetap belum terverifikasi lisensinya; pemberitahuan hak
 cipta game tidak menghapus ketidakpastian tersebut.
 
