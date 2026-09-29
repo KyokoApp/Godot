@@ -58,18 +58,31 @@ func _test_contacts() -> void:
 	root.add_child(game)
 	var trail: Trail = game.get("_foot_fire")
 	var stick: Control = game.get("_joystick")
-	for frame in range(30):
+	var player: Node3D = game.get("_player")
+	var character: Character = game.get("_visual")
+	var start := player.position
+	for skin in [Character.MANNEQUIN, Character.MIKU, Character.KANNA]:
+		character.set_skin(skin)
+		player.position = start
+		for frame in range(30):
+			await physics_frame
+		var before := trail.emitted
+		for frame in range(15):
+			await physics_frame
+		_check(trail.emitted == before, "Api muncul saat diam: " + skin)
+		stick.set("direction", Vector2.UP)
+		for frame in range(180):
+			await physics_frame
+		_check(trail.emitted - before >= 5,
+			"Kontak langkah %s berulang kurang: %d" % [skin, trail.emitted - before])
+		print("[motion-flair-test] contacts ", skin, "=", trail.emitted - before)
+		stick.set("direction", Vector2.ZERO)
+		# Drain the already-started physics tick before measuring idle.
 		await physics_frame
-	_check(trail.emitted == 0, "Api muncul saat diam")
-	stick.set("direction", Vector2.UP)
-	for frame in range(180):
-		await physics_frame
-	_check(trail.emitted >= 5, "Kontak langkah berulang kurang: %d" % trail.emitted)
-	var count := trail.emitted
-	stick.set("direction", Vector2.ZERO)
-	for frame in range(100):
-		await physics_frame
-	_check(trail.emitted == count, "Api baru tetap muncul setelah berhenti")
+		var count := trail.emitted
+		for frame in range(100):
+			await physics_frame
+		_check(trail.emitted == count, "Api baru tetap muncul setelah berhenti: " + skin)
 	for stamp in trail.stamps:
 		_check(not stamp.visible, "Api tidak habis sesuai lifetime")
 	trail.set_physics_process(false)
@@ -81,7 +94,6 @@ func _test_contacts() -> void:
 	_check(material.get_shader_parameter("middle") == Trail.PALETTES["miku"][1],
 		"Palet Miku tidak terpasang")
 	trail.set_physics_process(true)
-	var player: Node3D = game.get("_player")
 	player.position.x += 50
 	for frame in range(3):
 		await physics_frame
