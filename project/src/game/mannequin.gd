@@ -4,7 +4,6 @@ extends Node3D
 signal skin_changed(skin_id: String)
 
 const FightLibrary = preload("res://src/game/combat/fight_library.gd")
-
 const HairSpring = preload("res://src/game/animation/hair_spring.gd")
 const KannaRig = preload("res://src/game/animation/kanna_rig.gd")
 const MikuRig = preload("res://src/game/animation/miku_rig.gd")
@@ -198,18 +197,11 @@ func foot_stride_lift(left: bool) -> float:
 
 
 func play_fight(clip: String) -> float:
-	if not FightLibrary.install(animation):
+	var length := FightLibrary.play(animation, clip, cast_layer)
+	if length == 0.0:
 		return 0.0
-	if not animation.has_animation("combat/" + clip):
-		return 0.0
-	if cast_layer != null:
-		cast_layer.playing = false
-		cast_layer.active = false
-		cast_layer.influence = 0.0
-	animation.speed_scale = 1.0
-	animation.play("combat/" + clip, 0.12)
-	action_time = animation.get_animation("combat/" + clip).length
-	return action_time
+	action_time = length
+	return length
 
 
 func cancel_fight() -> void:

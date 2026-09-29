@@ -1,28 +1,26 @@
 extends RefCounted
-## Combat animations from the already-loaded UAL1 rig.
-## No extra GLB or skeleton retarget needed.
+## Combat clip names from the already-loaded UAL1 rig.
+## No extra GLB, library, or skeleton retarget.
 const PUNCH := "Punch_Cross"
 const PUNCH_ALT := "Punch_Jab"
 const SWORD := "Sword_Attack"
 const HIT := "Hit_Chest"
 const HIT_HEAD := "Hit_Head"
 const DEATH := "Death01"
-const IDLE := "Idle_Loop"
 
 
-static func install(player: AnimationPlayer) -> bool:
-	if player.has_animation_library("combat"):
-		return true
-	# All clips are already in the default library from the UAL1 import.
-	for clip in [PUNCH, HIT, DEATH]:
-		if not player.has_animation(clip):
-			push_error("Combat anim hilang: " + clip)
-			return false
-	var library := AnimationLibrary.new()
-	for clip in [PUNCH, PUNCH_ALT, SWORD, HIT, HIT_HEAD, DEATH, IDLE]:
-		if player.has_animation(clip):
-			var anim := player.get_animation(clip).duplicate(true)
-			anim.loop_mode = Animation.LOOP_NONE
-			library.add_animation(clip, anim)
-	player.add_animation_library("combat", library)
-	return true
+static func available(player: AnimationPlayer) -> bool:
+	return player.has_animation(PUNCH) and player.has_animation(HIT)
+
+
+static func play(player: AnimationPlayer, clip: String,
+		cast_layer, speed: float = 1.0) -> float:
+	if not player.has_animation(clip):
+		return 0.0
+	if cast_layer != null:
+		cast_layer.playing = false
+		cast_layer.active = false
+		cast_layer.influence = 0.0
+	player.speed_scale = speed
+	player.play(clip, 0.15)
+	return player.get_animation(clip).length

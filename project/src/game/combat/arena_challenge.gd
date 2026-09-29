@@ -81,7 +81,7 @@ func nearby() -> bool:
 func start() -> void:
 	if active or finishing or not nearby() or game._graphics_drawer.visible:
 		return
-	if not Character.FightLibrary.install(game._visual.animation):
+	if not Character.FightLibrary.available(game._visual.animation):
 		return
 	active = true
 	player_hp = MAX_HP
@@ -100,7 +100,7 @@ func start() -> void:
 	enemy.position = Vector3(Shape.CENTER.x + 5, Shape.HEIGHT + 0.1, Shape.CENTER.y)
 	enemy_visual = Character.new()
 	enemy.add_child(enemy_visual)
-	Character.FightLibrary.install(enemy_visual.animation)
+	Character.FightLibrary.available(enemy_visual.animation)
 	artifact.hide()
 	prompt.hide()
 	status.show()
