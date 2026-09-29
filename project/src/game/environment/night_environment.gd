@@ -2,7 +2,7 @@ extends RefCounted
 ## Shared preset for gameplay and real renderer regression tests.
 
 const SKY_SHADER = preload("res://src/game/environment/night_sky.gdshader")
-const MOON_DIRECTION := Vector3(-0.31, 0.24, -0.92).normalized()
+const MOON_DIRECTION := Vector3(-0.3099845, 0.2399880, -0.9199540)
 
 
 static func make_environment() -> Environment:

@@ -107,7 +107,8 @@ jobs:
             --script "$GITHUB_WORKSPACE/tools/compile_check.gd" 2>&1 | tee compile.log
           if ! grep -q "HASIL: OK" compile.log; then
             echo "::error::compile check GAGAL"
-            grep -E "SCRIPT ERROR|Parse Error|compile-check" compile.log | head -25
+            grep -E "SCRIPT ERROR|Parse Error|compile-check|at:" compile.log | head -60 \
+              | while IFS= read -r line; do echo "::error::$line"; done
             exit 1
           fi
           echo "semua skrip lolos kompilasi engine"
