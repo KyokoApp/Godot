@@ -177,3 +177,21 @@ terlalu pucat. Sisi tebing memakai normal per bidang (flat shaded) dan batu low-
 juga flat shaded. Puncak datar tetap hijau, tidak berubah putih karena ketinggian.
 Tidak memakai gambar tekstur/noise salju. Geometri/collision pulau dan kontrol tetap.
 HUD: **PULAU 1K — hijau + tebing batu**. Warna akhir perlu konfirmasi ulang di HP.
+
+## Rumput tebal dengan angin (uji HP berikutnya)
+
+Adaptasi shader CC0 Malido dari referensi pengguna (kredit di docs/CREDITS.md).
+Rumpun terdiri dari tiga helai meruncing, gradasi hijau, angin Perlin lembut dan
+reaksi menyingkir di sekitar kaki pemain. Tanpa texture alpha/transparency.
+
+- Streaming sekitar pemain: 25 tile × 12 m, maksimal 400 rumpun per tile
+  (10.000 rumpun / 90.000 segitiga sebelum mask); satu tile dibangun tiap frame.
+- Rumput menyusut halus pada jarak 18–27 m. Tile jauh dilepas, bukan menanam
+  jutaan rumpun di seluruh pulau. Shadow casting dimatikan untuk rumput.
+- Hanya tanah hijau: mask jalan + margin angin, pantai/laut, lereng curam, dan batu.
+  Akar mengikuti interpolasi mesh terrain; tidak menggunakan tinggi perkiraan.
+- CI menguji mask/streaming dan renderer **Mobile Vulkan melalui Mesa/Xvfb**;
+  ini bukan benchmark GPU Android. FPS, flicker, pop-in dan ketebalan akhir tetap
+  harus diuji di HP.
+- Update lewat launcher yang sama, tanpa APK baru. HUD **PULAU 1K — rumput angin**.
+  Dari jalan awal, berjalan ke sisi hijau untuk melihat rumput. Jalan tetap bersih.

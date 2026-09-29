@@ -27,3 +27,19 @@ Semua kode dalam repo ini ditulis khusus untuk project ini.
 - Git blob asli (diverifikasi saat migrasi): `473e59080288428d0b6da826ba19324d07b191f0`.
 - Model rigged dan animasi asli; bukan mannequin prosedural. Klip Godot:
   `Idle`, `Walk`, `Jog_Fwd`. Material diubah menjadi lavender pastel.
+
+## Rumput angin — adaptasi shader Malido (CC0)
+
+- Pembuat shader referensi: **@_Malido / Malidos**.
+- Halaman: https://godotshaders.com/shader/stylized-multimesh-grass-shader/
+- Demo sumber: https://github.com/Malidos/Grass-Shader-Example
+- File referensi `grass_shader.gdshader`, commit
+  `13bb96e556b6b80ccdcb9fa42e116770ede8dcc8`.
+- Halaman menyatakan kode shader/snippet berlisensi **CC0 1.0**:
+  https://creativecommons.org/publicdomain/zero/1.0/ . Gambar/video pada halaman
+  tidak termasuk lisensi tersebut dan tidak disalin ke proyek ini.
+- `project/src/game/grass.gdshader` mengadaptasi gradien ujung/akar, wind noise
+  berfase UV, displacement pemain dan AO akar. Perubahan: ruang vertex dunia,
+  normalisasi aman, batas jarak dengan penyusutan opaque, material matte untuk
+  mobile. Noise Perlin dibuat dalam kode; mesh tiga helai dan streaming tile
+  dibuat khusus proyek ini. Tidak menyalin model/tekstur demo.

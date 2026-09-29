@@ -12,6 +12,9 @@ const DIRT_COLOR := Color("a97848")
 const CLIFF_COLOR := Color("777c7e")
 const SAND_COLOR := Color("c9ad72")
 
+## Vector3(x, rayon_horizontal, z) untuk mengosongkan rumput di bawah batu.
+var rock_clearances: Array[Vector3] = []
+
 var _heights := PackedFloat32Array()
 
 
@@ -167,6 +170,7 @@ func _build_rocks() -> void:
 		rock.scale = Vector3(random.randf_range(3, 9), random.randf_range(2, 8),
 			random.randf_range(3, 9))
 		rock.rotation.y = random.randf_range(0, TAU)
+		rock_clearances.append(Vector3(x, maxf(rock.scale.x, rock.scale.z) * 0.5, z))
 		add_child(rock)
 		rock.create_convex_collision()
 

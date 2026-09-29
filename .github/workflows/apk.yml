@@ -56,7 +56,7 @@ jobs:
           sudo apt-get install -y -qq --no-install-recommends \
             libx11-6 libxkbcommon0 libxinerama1 libxcursor1 libxi6 \
             libxrandr2 libxext6 libxrender1 libgl1 libegl1 libasound2 \
-            fontconfig libfontconfig1 unzip zip
+            fontconfig libfontconfig1 unzip zip xvfb xauth mesa-vulkan-drivers
 
       - name: Unduh Godot 4.5.2
         run: |
@@ -126,6 +126,27 @@ jobs:
         run: |
           timeout 90 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_island_camera.gd"
+
+      - name: Tes mask dan streaming rumput
+        run: |
+          timeout 90 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_grass.gd"
+
+      - name: Render shader rumput (Mobile Vulkan software)
+        run: |
+          set +e
+          timeout 180 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --audio-driver Dummy --resolution 480x270 \
+            --script "$GITHUB_WORKSPACE/tools/test_grass.gd" -- --render 2>&1 | tee grass-render.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' grass-render.log; then
+            tail -40 grass-render.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[grass-test] HASIL: OK' grass-render.log
 
       - name: Tes validasi updater
         run: |

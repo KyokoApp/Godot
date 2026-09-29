@@ -5,6 +5,7 @@ const Joystick = preload("res://src/game/virtual_joystick.gd")
 const Mannequin = preload("res://src/game/mannequin.gd")
 const MOVE_SPEED := 5.0
 const Island = preload("res://src/game/island.gd")
+const Grass = preload("res://src/game/grass_field.gd")
 const Orbit = preload("res://src/game/orbit_camera.gd")
 
 const CHARACTER_HEIGHT := 1.8
@@ -15,6 +16,7 @@ var _island: Island
 var _player: CharacterBody3D
 var _visual: Mannequin
 var _joystick: Joystick
+var _grass: Grass
 
 
 func _ready() -> void:
@@ -23,6 +25,10 @@ func _ready() -> void:
 	_build_player()
 	_build_camera()
 	_build_hud()
+	_grass = Grass.new()
+	_grass.island = _island
+	_grass.player = _player
+	add_child(_grass)
 	print("[main] pulau 1K + kamera siap")
 	_confirm_boot.call_deferred()
 
@@ -102,7 +108,7 @@ func _build_hud() -> void:
 	add_child(layer)
 
 	_label = Label.new()
-	_label.text = "PULAU 1K — hijau + tebing batu"
+	_label.text = "PULAU 1K — rumput angin"
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_label.add_theme_font_size_override("font_size", 26)
 	_label.add_theme_color_override("font_color", Color(1, 1, 1))
@@ -149,7 +155,7 @@ func _physics_process(delta: float) -> void:
 
 func _process(_delta: float) -> void:
 	_label.text = (
-		"PULAU 1K — hijau + tebing batu\nFPS: %d | Posisi: %.1f, %.1f\n"
+		"PULAU 1K — rumput angin\nFPS: %d | Posisi: %.1f, %.1f\n"
 		+ "Kiri: gerak | Geser kanan: kamera | Cubit kanan: zoom"
 	) % [Engine.get_frames_per_second(), _player.position.x, _player.position.z]
 

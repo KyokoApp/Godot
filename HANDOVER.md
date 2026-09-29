@@ -123,3 +123,12 @@ User melaporkan pulau terlihat putih/salju. Revisi menjadi rumput hijau solid,
 jalan cokelat polos, sisi tebing abu-abu batu flat-shaded; puncak tetap hijau.
 Material vertex color sekarang sRGB, ambient 0,65. HUD `hijau + tebing batu`.
 Tidak mengubah bentuk pulau/kontrol. Tunggu screenshot/konfirmasi HP.
+
+## Tahap rumput (permintaan terbaru)
+
+Rumput rapat/angin diadaptasi dari shader CC0 Malido yang dikirim pengguna.
+Shader + streaming ada di src/game/grass*; sumber/lisensi di docs/CREDITS.md.
+Maksimal 25 tile / 10k rumpun, satu tile/frame, fade geometris 18–27 m,
+mask jalan/pantai/tebing/batu. Tidak mengubah launcher atau kontrol. Tes render
+CI memakai Mobile Vulkan/Mesa (bukan dummy headless). Tunggu hasil FPS/visual HP
+sebelum menambah aset/shader dunia lain. HUD `PULAU 1K — rumput angin`.
