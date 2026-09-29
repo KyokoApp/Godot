@@ -8,7 +8,7 @@ const Projectile = preload("res://src/game/fire_projectile.gd")
 const Burst = preload("res://src/game/fire_burst.gd")
 const WaterMaterial = preload("res://src/game/water/water_material.gd")
 const FootFire = preload("res://src/game/foot_fire/foot_fire_trail.gd")
-const SpeedAura = preload("res://src/game/speed/speed_aura.gd")
+const ArenaFog = preload("res://src/game/arena/arena_fog.gd")
 const STAGES := 22
 
 
@@ -53,18 +53,9 @@ static func populate(stage: int, world: Node3D, game: Node3D) -> void:
 		burst.age = 0.22
 		burst._update_visuals()
 	elif stage == 21:
-		var character := Character.new()
-		world.add_child(character)
-		character.update_motion(5)
-		var trail := SpeedAura.new()
-		trail.character = character
-		trail.environment = (world.get_parent().get_child(0) as WorldEnvironment).environment
-		world.add_child(trail)
-		trail.update_motion(0.11, 15, true)
-		for sample in range(24):
-			character.position.z += 0.08
-			trail.update_motion(1.0 / 60.0, 15, true)
-		character.hide()
+		var fog := ArenaFog.new()
+		world.add_child(fog)
+		fog.update_for_position(Vector3(-145, 9, 140), 1.0)
 	elif stage == 20:
 		var fire := FootFire.new()
 		world.add_child(fire)

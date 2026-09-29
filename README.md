@@ -517,32 +517,17 @@ Warmup21 tahap mencakup shader tapak api. Tes kontak/decay/pool dan Mobile Vulka
 untuk skin rambut, palet serta tampak samping api wajib; FPS tetap diuji di HP.
 
 
-### Speed ×3 dan HUD transparan
-Tombol petir ×1/×3 di samping attack men-toggle kecepatan penuh5→15m/s,
-tetap analog dan collision-aware. Mode ×3 memperlambat playback locomotion ke
-0,35× (bukan attack/casting), sehingga satu langkah menempuh jarak jauh.
-Aura speed sekarang berupa enam pita energi melengkung, transparan dan halus,
-ditambah halo lembut di tepi karakter (bukan salinan tubuh dan bukan petir).
-Warna efek dan wash pinggir layar mengikuti skin: Miku biru, Kanna oranye,
-mannequin ungu. Intensitas dan bloom naik pelan saat mulai berlari ×3,
-kemudian turun saat diam, terhalang, di udara atau kembali ×1. Bloom lingkungan
-dipulihkan ke nilai awal setelah aura hilang. Jejak dibatasi 24 sampel ×6 pita,
-tanpa tekstur, lampu, bayangan atau mesh karakter tambahan; teleport/ganti skin
-membersihkan jejak lama. Ini bukan blur frame penuh atau jaminan FPS60 pada HP.
+### HUD putih transparan
 Nama karakter di kiri, portrait di kanan; tanpa panel/aksen berwarna/teks GANTI.
 Rune, analog dan garis HUD putih transparan; portrait tetap memakai warna aslinya.
-Warmup22 tahap serta gate speed/multitouch/render aura semua skin wajib.
+Tombol speed ×3 dan efek larinya sudah dihapus; gerak kembali 5 m/s.
 
 
-## Revision: smoke echoes and separate battle clearing
-Supersedes previous ribbon/sphere speed effect: restored final-pose skin echoes
-(cap3, Kanna2) plus pool10 soft smoke cards, lifetime0.48s. No luminous tubes or
-bubble shell. Colors blue/orange/purple and reduced screen wash retained.
-Arena: center(-145,140), ~84m diameter, height9m, shared irregular footprint.
-Terrain collider flattened with22m transition, grass/trees/rocks excluded.
-Procedural earth/stone cellular texture and radial cracks are on actual terrain,
-not a floating disk. Grey-white aurora skirt (192 segments, ~3m high) is visual
-only and traversable. No enemies/damage/teleport added. Walk to negative X,
-positive Z from spawn (~200m). Original shaders; no new third-party assets.
-Native gates: arena walkability/collision/vegetation/render; all-skin speed render.
-Phone FPS still requires real-device measurement.
+## Kabut arena
+Area arena terpisah di (-145, 140) mempertahankan tanah-batu retak dan aurora
+abu-putih. Masuk ke arena: kabut luar berangsur menebal dari sekitar 8m luar
+tepi hingga penuh 10m dalam tepi; dua lapis tembok kabut di batas dan kubah
+kabut di atasnya menutup panorama luar. Di luar arena kabut ini tidak dirender;
+keluar arena memudarkannya lagi. Lantai, karakter dan pertarungan tetap terlihat.
+Dinding kabut hanya visual, bukan collision atau sistem teleport/musuh.
+Updater masih memakai full content.pck; belum ada incremental/delta download.

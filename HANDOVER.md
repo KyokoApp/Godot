@@ -461,35 +461,17 @@ contacts/idle/teleport gates; do not weaken their >=5-step check. Native diagnos
 annotations report min/max gaps, rest clearance, source swing and stamp count.
 
 
-## Speed toggle / monochrome transparent HUD
-SpeedButton uses existing per-finger RuneButton input; camera speed_exclusion,
-modal hiding, focus reset inherited. Desired move multiplier3; locomotion playback
-fixed.35 while moving; casting clock untouched. No auto-save: starts normal.
-SpeedAura replaces frozen Skeleton3D character copies entirely: six flowing
-camera-facing 3D energy ribbons (24 position samples) + soft rim sphere,
-both additive and unlit. Screen-edge wash is a mouse-filter-ignore ColorRect,
-on CanvasLayer 0 under HUD layer1; it fades with aura. Skin tint: Miku blue,
-Kanna orange, mannequin purple. Environment glow enabled only when active,
-original enabled/strength/HDR threshold restored when stopped or freed. No
-textures, cloned skins, bones, projectiles, shadows or lights. Render cost still
-needs measurement on actual phone. Switch/teleport flushes history; idle, blocked
-or airborne fades out (not emitted). Warmup stage21 includes aura shader/glow.
-White/transparent cards retain same input rectangles: name left/portrait right.
-Settings/attack/speed/analog accents white; drawer neutral translucent for readability.
-Tests: test_speed (movement ratio, slowed playback, bounded aura/idle), test_hud touch toggle
-and camera exclusion, test_motion_flair_render now renders all three aura colors, bloom and fade.
-Warmup22: aura glow and wash shader included. No changes to keystore or main branch.
-
-
-## Revision: smoke echoes and separate battle clearing
-Supersedes previous ribbon/sphere speed effect: restored final-pose skin echoes
-(cap3, Kanna2) plus pool10 soft smoke cards, lifetime0.48s. No luminous tubes or
-bubble shell. Colors blue/orange/purple and reduced screen wash retained.
-Arena: center(-145,140), ~84m diameter, height9m, shared irregular footprint.
-Terrain collider flattened with22m transition, grass/trees/rocks excluded.
-Procedural earth/stone cellular texture and radial cracks are on actual terrain,
-not a floating disk. Grey-white aurora skirt (192 segments, ~3m high) is visual
-only and traversable. No enemies/damage/teleport added. Walk to negative X,
-positive Z from spawn (~200m). Original shaders; no new third-party assets.
-Native gates: arena walkability/collision/vegetation/render; all-skin speed render.
-Phone FPS still requires real-device measurement.
+## HUD and isolated battle arena (latest)
+Speed ×3 button, speed boost, afterimages, smoke and colored speed wash removed
+as requested. Player remains at MOVE_SPEED 5m/s, standard locomotion. HUD cards
+still name-left/portrait-right and white transparent. No hidden speed toggle.
+BattleArena at (-145,140), ~84m across, unchanged cracked rocky ground and
+thin grey-white perimeter aurora. ArenaFog owns four lightweight unlit shells:
+two irregular boundary walls following ArenaShape.radius_at, from terrain-8m
+through +62m; two enclosing domes cover sky beyond. No gameplay collision.
+Fog opacity ramps spatially between 8m outside and 10m inside boundary, then
+exponentially across time; outside it becomes invisible and has no global fog
+setting changes. Exposed update_for_position for rendered transition tests;
+warmup stage21 renders the new shader. Neither the sky nor ordinary island fog
+is modified, world normal outside arena. Updater unchanged (full content pack).
+Native arena render checks exterior, partial edge, interior occlusion, and exit.

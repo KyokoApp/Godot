@@ -1,6 +1,5 @@
 extends SceneTree
 
-const SpeedAura = preload("res://src/game/speed/speed_aura.gd")
 const Character = preload("res://src/game/mannequin.gd")
 const Trail = preload("res://src/game/foot_fire/foot_fire_trail.gd")
 const Night = preload("res://src/game/environment/night_environment.gd")
@@ -49,7 +48,6 @@ func _run() -> void:
 	var camera := Camera3D.new()
 	world.add_child(camera)
 	camera.current = true
-	await _test_aura(world, camera)
 	await _test_hair(world, camera)
 	camera.position = Vector3(0, 1.4, 2)
 	camera.look_at(Vector3(0, 0.2, 0))
@@ -109,39 +107,3 @@ func _hair_capture(character: Character, camera: Camera3D) -> Image:
 		await process_frame
 	await RenderingServer.frame_post_draw
 	return root.get_texture().get_image()
-
-
-func _test_aura(world: Node3D, camera: Camera3D) -> void:
-	camera.position = Vector3(0.8, 1.3, 4.5)
-	camera.look_at(Vector3(0, 0.95, 0))
-	var empty: Image = await _capture()
-	var character := Character.new()
-	world.add_child(character)
-	var trail := SpeedAura.new()
-	trail.character = character
-	trail.environment = (world.get_child(0) as WorldEnvironment).environment
-	world.add_child(trail)
-	var previous := empty
-	for skin in [Character.MANNEQUIN, Character.MIKU, Character.KANNA]:
-		character.show()
-		character.set_skin(skin)
-		character.position = Vector3(0, 0, -2)
-		for frame in range(24):
-			character.position.z += 0.08
-			trail.update_motion(1.0 / 60.0, 15, true)
-			await process_frame
-		_check(trail.ghosts.emitted > 0, "Pose echo tidak aktif: " + skin)
-		character.hide()
-		var image: Image = await _capture()
-		_check(_difference(empty, image) > 100, "Aura tidak terlihat: " + skin)
-		_check(_difference(previous, image) > 80, "Palet aura tidak berubah: " + skin)
-		_check(trail.environment.glow_enabled, "Bloom tidak aktif")
-		image.save_png("user://motion-aura-" + skin + "-test.png")
-		previous = image
-		trail.update_motion(1.0, 0, false)
-		var cleared: Image = await _capture()
-		_check(_difference(empty, cleared) < 15, "Aura/wash belum hilang: " + skin)
-	trail.queue_free()
-	character.queue_free()
-	for frame in range(5):
-		await process_frame

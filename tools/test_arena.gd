@@ -4,6 +4,7 @@ const Arena = preload("res://src/game/arena/battle_arena.gd")
 const Grass = preload("res://src/game/grass_field.gd")
 const Nature = preload("res://src/game/world/nature_field.gd")
 const Night = preload("res://src/game/environment/night_environment.gd")
+const ArenaFog = preload("res://src/game/arena/arena_fog.gd")
 var _failures := 0
 
 
@@ -61,6 +62,40 @@ func _run() -> void:
 	var image := root.get_texture().get_image()
 	image.save_png("user://motion-arena-test.png")
 	_check(image.get_pixel(240, 135) != image.get_pixel(210, 135), "Tanah arena polos")
+	# Real Mobile Vulkan frame: outside remains unchanged, inside occludes horizon.
+	var fog := ArenaFog.new()
+	world.add_child(fog)
+	camera.position = Vector3(center.x, 11, center.y)
+	camera.look_at(Vector3(center.x + 90, 9, center.y))
+	for frame in range(4):
+		await process_frame
+	await RenderingServer.frame_post_draw
+	var outside := root.get_texture().get_image()
+	fog.update_for_position(Vector3.ZERO, 1.0)
+	_check(fog.fog_amount == 0 and not fog._shells[0].visible,
+		"Kabut aktif di luar arena")
+	fog.update_for_position(Vector3(center.x + 35, 9, center.y), 1.0)
+	var edge := fog.fog_amount
+	_check(edge > 0 and edge < 1, "Transisi masuk arena terputus")
+	fog.update_for_position(Vector3(center.x, 9, center.y), 4.0)
+	_check(fog.fog_amount > 0.99 and fog._shells[0].visible,
+		"Kabut penuh gagal menutup pinggir arena")
+	for frame in range(6):
+		await process_frame
+	await RenderingServer.frame_post_draw
+	var inside := root.get_texture().get_image()
+	inside.save_png("user://motion-arena-fog-test.png")
+	var changed := 0
+	for y in range(0, 135, 4):
+		for x in range(0, 480, 4):
+			var a := outside.get_pixel(x, y)
+			var b := inside.get_pixel(x, y)
+			if Vector3(a.r - b.r, a.g - b.g, a.b - b.b).length() > 0.12:
+				changed += 1
+	_check(changed > 200, "Kabut arena tidak menutup horizon")
+	fog.update_for_position(Vector3.ZERO, 4.0)
+	_check(fog.fog_amount < 0.002 and not fog._shells[0].visible,
+		"Kabut tidak hilang setelah keluar arena")
 	grass.free()
 	nature.free()
 	world.queue_free()
