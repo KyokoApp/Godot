@@ -58,7 +58,7 @@ static func populate(stage: int, world: Node3D, game: Node3D) -> void:
 		character.update_motion(5)
 		var trail := SpeedAura.new()
 		trail.character = character
-		trail.environment = (world.get_child(0) as WorldEnvironment).environment
+		trail.environment = (world.get_parent().get_child(0) as WorldEnvironment).environment
 		world.add_child(trail)
 		trail.update_motion(0.11, 15, true)
 		for sample in range(24):
