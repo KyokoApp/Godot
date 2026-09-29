@@ -1,0 +1,41 @@
+; A-SEKAI — konfigurasi proyek Godot 4.5
+; ---------------------------------------------------------------------------
+; ATURAN: file ini harus RINGKAS dan Known-good. Setiap setting baru hanya
+; ditambah setelah milestone berjalan di HP, bukan di awal. Ronde-11 pernah
+; hilang berhari-hari karena satu setting VRAM yang salah.
+; ---------------------------------------------------------------------------
+
+config_version=5
+
+[application]
+
+config/name="A-Sekai"
+config/description="Game 3D open-world untuk Android."
+run/main_scene="res://src/game/main.tscn"
+config/features=PackedStringArray("4.5", "Mobile")
+config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=0
+
+[rendering]
+
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="mobile"
+textures/vram_compression/import_etc2_astc=true
+anti_aliasing/quality/msaa_3d=0
+
+[physics]
+
+common/physics_ticks_per_second=60
+3d/default_gravity=24.0
+
+[layer_names]
+
+3d_physics/layer_1="world"
+3d_physics/layer_2="player"

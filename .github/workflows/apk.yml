@@ -1,0 +1,145 @@
+name: apk
+# Build APK A-Sekai.
+# Gerbang WAJIB di urutan ini:
+#   1. lint sintaks + cek inferensi tipe (cepat, tanpa Godot)
+#   2. import proyek  (Godot mengisi cache .godot/)
+#   3. UJI COMPILE    (SEMUA .gd, dengan engine sungguhan)
+#   4. baru ekspor APK
+# Langkah 3 dulu tidak ada, dan itulah sebabnya bug "layar biru" lolos
+# sampai ke HP pengguna. Jangan dihapus.
+
+on:
+  push:
+    branches: [main, arena/01a0eaf5-godot]
+  workflow_dispatch:
+
+concurrency: apk
+
+permissions:
+  contents: write
+
+env:
+  GVER: 4.5.2
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # --- 1. lint + cek tipe -------------------------------------------
+      - name: Lint GDScript (gdparse)
+        run: |
+          pip install -q gdtoolkit
+          FAIL=0
+          for f in $(find project tools -name "*.gd"); do
+            if ! out=$(gdparse "$f" 2>&1); then
+              echo "::error::parse error di $f :: $(echo "$out" | head -5 | tr '\n' ' ')"
+              FAIL=1
+            fi
+          done
+          [ "$FAIL" = 0 ] && echo "semua .gd lolos parse" || exit 1
+          gdlint project tools
+          # Cek inferensi tipe. gdparse hanya cek sintaks, dan kelas bug
+          # yang muncul di device adalah 'Cannot infer the type of ...'.
+          python3 tools/check_scripts.py .
+
+      # --- 2. dependensi + Godot ----------------------------------------
+      - name: Dependensi sistem
+        run: |
+          sudo apt-get update -qq || true
+          sudo apt-get install -y -qq --no-install-recommends \
+            libx11-6 libxkbcommon0 libxinerama1 libxcursor1 libxi6 \
+            libxrandr2 libxext6 libxrender1 libgl1 libegl1 libasound2 \
+            fontconfig libfontconfig1 unzip zip
+
+      - name: Unduh Godot 4.5.2
+        run: |
+          curl -sL -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GVER}-stable/Godot_v${GVER}-stable_linux.x86_64.zip"
+          unzip -qo godot.zip
+          mv Godot_v${GVER}-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Siapkan keystore debug
+        run: |
+          mkdir -p "$HOME/.config/godot" build
+          # Keystore PERMANEN ikut repo. Kalau di-generate tiap build, tiap
+          # APK punya kunci berbeda dan Android menolak install di atas app
+          # lama -> "bentrok"/konflik, user tidak bisa update.
+          if [ ! -f "keystore/debug.keystore" ]; then
+            echo "::error::keystore/debug.keystore hilang — signature akan berubah"
+            exit 1
+          fi
+          JAVA_DIR="$(dirname "$(dirname "$(readlink -f "$(which java)")")")"
+          cat > "$HOME/.config/godot/editor_settings-4.5.tres" <<SEOF
+          [gd_resource type="EditorSettings" format=1]
+
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_SDK_ROOT"
+          export/android/java_sdk_path = "$JAVA_DIR"
+          export/android/debug_keystore = "$GITHUB_WORKSPACE/keystore/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          SEOF
+
+      - name: Unduh template ekspor Android
+        run: |
+          curl -fL -o templates.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GVER}-stable/Godot_v${GVER}-stable_export_templates.tpz"
+          mkdir -p "$HOME/.local/share/godot/export_templates/${GVER}.stable"
+          unzip -jo templates.tpz templates/android_debug.apk \
+            -d "$HOME/.local/share/godot/export_templates/${GVER}.stable"
+
+      - name: Import proyek
+        run: ./godot --headless --path project --import --editor --quit
+
+      # --- 3. GERBANG: compile semua skrip ------------------------------
+      - name: "Uji COMPILE semua skrip (gerbang wajib)"
+        run: |
+          timeout 300 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/compile_check.gd" 2>&1 | tee compile.log
+          if ! grep -q "HASIL: OK" compile.log; then
+            echo "::error::compile check GAGAL"
+            grep -E "SCRIPT ERROR|Parse Error|compile-check" compile.log | head -25
+            exit 1
+          fi
+          echo "semua skrip lolos kompilasi engine"
+
+      # --- 4. ekspor ---------------------------------------------------
+      - name: Export APK
+        run: |
+          mkdir -p build
+          ./godot --headless --path project \
+            --export-debug "Android" "$GITHUB_WORKSPACE/build/asekai.apk" \
+            2>&1 | tee build/export.log
+          test -f build/asekai.apk || { echo "::error::APK tidak terbentuk"; exit 1; }
+          ls -la build/asekai.apk
+
+      - name: Terbitkan build ke GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA=$(sha256sum build/asekai.apk | cut -d' ' -f1)
+          echo "$SHA  asekai.apk" > build/asekai.apk.sha256
+          TAG="build-$(git rev-parse --short HEAD)"
+          {
+            echo "## A-Sekai — build \`$(git rev-parse --short HEAD)\`"
+            echo
+            echo "Install: unduh \`asekai.apk\` -> izinkan sumber tak dikenal -> buka."
+            echo
+            echo '```'
+            echo "$SHA  asekai.apk"
+            echo '```'
+          } > build/NOTES.md
+          gh release create "$TAG" build/asekai.apk build/asekai.apk.sha256 \
+            --target "$GITHUB_SHA" --title "A-Sekai $TAG" \
+            --notes-file build/NOTES.md \
+            || gh release upload "$TAG" build/asekai.apk build/asekai.apk.sha256 --clobber
+          echo "rilis: $TAG"
