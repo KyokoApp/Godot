@@ -80,3 +80,16 @@ Release dengan `asekai.apk` + SHA-256.
 
 Model dari *Medieval Village MegaKit* oleh Quaternius (CC0 1.0).
 Detail atribusi di `docs/CREDITS.md`.
+
+## Milestone 2A — joystick gerak (menunggu tes HP)
+
+- Joystick analog kiri bawah, dead zone, satu jari pemilik input.
+- Kapsul bergerak 5 m/detik, gravitasi dan collision; lepas joystick untuk berhenti.
+- Kamera mengikuti dengan arah tetap. Swipe kamera belum masuk (tahap 2B).
+- Input di-reset ketika aplikasi kehilangan fokus atau ukuran viewport berubah.
+- Area gerak dibatasi ke tanah uji; HUD posisi membantu mengecek pergerakan.
+
+Tes HP: gerak empat arah dan diagonal, lepas jari di luar lingkaran,
+letakkan jari kedua, pindah aplikasi lalu kembali. Pemain tidak boleh bergerak
+sendiri. Periksa kapsul menapak tanah, kamera mengikuti, dan FPS stabil.
+Jangan lanjut 2B sebelum hasil tes HP disetujui. Jangan merge ke main dulu.

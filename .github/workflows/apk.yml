@@ -112,6 +112,11 @@ jobs:
           fi
           echo "semua skrip lolos kompilasi engine"
 
+      - name: Tes joystick dan gerak (headless)
+        run: |
+          timeout 60 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_movement.gd"
+
       # --- 4. ekspor ---------------------------------------------------
       - name: Export APK
         run: |

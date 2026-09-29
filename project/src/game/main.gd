@@ -16,13 +16,18 @@ extends Node3D
 ##   4. Dunia           — tanah, rumput, jalan
 ##   5. Karakter        — model + animasi
 
+const Joystick = preload("res://src/game/virtual_joystick.gd")
+const MOVE_SPEED := 5.0
+const CAMERA_OFFSET := Vector3(0.0, 3.2, 7.0)
+
 const GROUND_SIZE := 120.0
 const CHARACTER_HEIGHT := 1.8
 
 var _label: Label
 var _camera: Camera3D
-var _player: Node3D
-var _elapsed := 0.0
+var _player: CharacterBody3D
+var _visual: Node3D
+var _joystick: Joystick
 
 
 func _ready() -> void:
@@ -31,7 +36,7 @@ func _ready() -> void:
 	_build_player()
 	_build_camera()
 	_build_hud()
-	print("[main] milestone 1 siap")
+	print("[main] milestone 2A siap")
 
 
 # ---------------------------------------------------------------- dunia ----
@@ -92,6 +97,7 @@ func _build_ground() -> void:
 func _build_player() -> void:
 	var body := CharacterBody3D.new()
 	body.name = "Player"
+	body.position.y = CHARACTER_HEIGHT / 2.0 + 0.02
 	body.collision_layer = 2
 	body.collision_mask = 1
 
@@ -104,6 +110,7 @@ func _build_player() -> void:
 
 	var visual := Node3D.new()
 	visual.name = "Visual"
+	_visual = visual
 	body.add_child(visual)
 
 	var mat := StandardMaterial3D.new()
@@ -154,23 +161,44 @@ func _build_hud() -> void:
 	add_child(layer)
 
 	_label = Label.new()
-	_label.text = "MILESTONE 1 — app hidup"
+	_label.text = "MILESTONE 2A — joystick gerak"
+	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_label.add_theme_font_size_override("font_size", 26)
 	_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	_label.add_theme_color_override("font_shadow", Color(0, 0, 0, 0.8))
 	_label.position = Vector2(24, 24)
 	layer.add_child(_label)
 
+	_joystick = Joystick.new()
+	layer.add_child(_joystick)
+	_joystick.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
 
 # ----------------------------------------------------------------- loop ----
 
-func _process(delta: float) -> void:
-	_elapsed += delta
-	# Kamera berputar pelan mengelilingi pemain supaya jelas ada dunia 3D di
-	# layar, bukan layar datar.
-	var a := _elapsed * 0.35
-	var r := 7.0
-	_camera.position = _player.global_position + Vector3(sin(a) * r, 3.2, cos(a) * r)
-	_camera.look_at(_player.global_position + Vector3(0, 1.0, 0), Vector3.UP)
+func _physics_process(delta: float) -> void:
+	var stick := _joystick.direction
+	# Arah layar tetap: atas joystick = menjauh dari kamera (sumbu -Z).
+	var movement := Vector3(stick.x, 0.0, stick.y)
+	_player.velocity.x = movement.x * MOVE_SPEED
+	_player.velocity.z = movement.z * MOVE_SPEED
+	if not _player.is_on_floor():
+		_player.velocity += _player.get_gravity() * delta
+	else:
+		_player.velocity.y = 0.0
+	_player.move_and_slide()
+	# Area uji masih berupa plane; jangan biarkan pemain keluar tanah terlihat.
+	var edge := GROUND_SIZE / 2.0 - 1.0
+	_player.position.x = clampf(_player.position.x, -edge, edge)
+	_player.position.z = clampf(_player.position.z, -edge, edge)
+	if movement.length_squared() > 0.001:
+		_visual.rotation.y = atan2(-movement.x, -movement.z)
 
-	_label.text = "MILESTONE 1 — app hidup\nFPS: %d" % Engine.get_frames_per_second()
+
+func _process(_delta: float) -> void:
+	_camera.position = _player.global_position + CAMERA_OFFSET
+	_camera.look_at(_player.global_position + Vector3(0, 0.5, 0), Vector3.UP)
+	_label.text = (
+		"MILESTONE 2A — joystick gerak\nFPS: %d | Posisi: %.1f, %.1f\n"
+		+ "Geser lingkaran kiri bawah. Lepaskan untuk berhenti."
+	) % [Engine.get_frames_per_second(), _player.position.x, _player.position.z]
