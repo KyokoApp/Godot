@@ -70,9 +70,24 @@ func _test_contacts() -> void:
 		for frame in range(15):
 			await physics_frame
 		_check(trail.emitted == before, "Api muncul saat diam: " + skin)
+		var minimum := Vector2(INF, INF)
+		var maximum := Vector2(-INF, -INF)
+		var lift_range := Vector2(INF, -INF)
+		var island: Node3D = game.get("_island")
 		stick.set("direction", Vector2.UP)
 		for frame in range(180):
 			await physics_frame
+			for side in range(2):
+				var point := character.foot_pose(side == 0).origin
+				var gap: float = point.y - island.surface_height(point.x, point.z)
+				minimum[side] = minf(minimum[side], gap)
+				maximum[side] = maxf(maximum[side], gap)
+			var lift := character.foot_stride_lift(true)
+			lift_range.x = minf(lift_range.x, lift)
+			lift_range.y = maxf(lift_range.y, lift)
+		print("::notice::Foot contact ", skin, " min=", minimum, " max=", maximum,
+			" rest=", character.foot_clearance(true), " source swing=", lift_range,
+			" stamps=", trail.emitted - before)
 		_check(trail.emitted - before >= 5,
 			"Kontak langkah %s berulang kurang: %d" % [skin, trail.emitted - before])
 		print("[motion-flair-test] contacts ", skin, "=", trail.emitted - before)

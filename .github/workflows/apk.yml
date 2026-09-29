@@ -136,6 +136,19 @@ jobs:
           fi
           grep -F '[skin-switch-test] HASIL: OK' skin-test.log
 
+      - name: Tes spring rambut dan kontak jejak api
+        run: |
+          set +e
+          timeout 120 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_motion_flair.gd" 2>&1 | tee motion-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' motion-test.log; then
+            tail -60 motion-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[motion-flair-test] HASIL: OK' motion-test.log
+
       - name: Tes mannequin dan kontrol performa
         run: |
           set +e
@@ -252,19 +265,6 @@ jobs:
             exit 1
           fi
           grep -F '[cast-render-test] HASIL: OK' cast-render.log
-
-      - name: Tes spring rambut dan kontak jejak api
-        run: |
-          set +e
-          timeout 120 ./godot --headless --path project \
-            --script "$GITHUB_WORKSPACE/tools/test_motion_flair.gd" 2>&1 | tee motion-test.log
-          STATUS=${PIPESTATUS[0]}
-          set -e
-          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' motion-test.log; then
-            tail -60 motion-test.log | while IFS= read -r line; do echo "::error::$line"; done
-            exit 1
-          fi
-          grep -F '[motion-flair-test] HASIL: OK' motion-test.log
 
       - name: Render rambut dan api tapak 3D (Mobile Vulkan)
         run: |
