@@ -255,3 +255,15 @@ User clarified via choice that both aspects felt unlike fire. Pet-only changes:
 - New render tests front/side/time; audio test checks pet-specific loop/level;
   pack boot test loads it. Pixel/mixer tests do not constitute visual/listening
   approval: ask user to compare still pet and moving pet on phone.
+
+## Approved pet + very thin outline / smoother rolling dirt road
+User LOVES current flame appearance: preserve silhouette/palette/motion/audio.
+Only added internal ~0.55-render-pixel indigo contour, same single pass.
+Road: terrain shader draws continuous analytic dirt mask (no grid-triangle edge),
+retains solid dirt/no textures, original winding centerline. Perpendicular width
+approximation shared by CPU grading, grass exclusion, rock clearance and steps.
+Added gentle 1.1*(1-cos(z/28)) elevation on existing broad road profile; maximum
+slope <.11 and curvature <.0025/m tested, existing mesh/collision interpolation
+still authoritative. No added geometry beyond existing 80k triangles.
+Tests: terrain shader/material colors, centerline/curvature/slope, grass bounds,
+pet outline budget, real Mobile Vulkan road color render and pet regressions.

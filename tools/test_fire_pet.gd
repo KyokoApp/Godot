@@ -28,6 +28,9 @@ func _run() -> void:
 	var tongues := spirit.get_node("FireTongues") as MeshInstance3D
 	_check(tongues.mesh is QuadMesh, "Siluet lidah api belum dipasang")
 	_check(tongues.mesh.size.y > tongues.mesh.size.x, "Api harus lebih tinggi daripada lebar")
+	var flame_material := tongues.material_override as ShaderMaterial
+	var outline: float = flame_material.get_shader_parameter("outline_pixels")
+	_check(outline > 0 and outline <= 0.6, "Outline pet bukan subpixel tipis")
 	var embers := spirit.get_node("SpiritEmbers") as GPUParticles3D
 	_check(embers.amount == 5, "Budget percikan lama berubah")
 	spirit.set("external_velocity", Vector3(5, 0, 0))

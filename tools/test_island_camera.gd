@@ -42,10 +42,11 @@ func _run() -> void:
 	var terrain_materials := 0
 	for child in island.get_children():
 		if child is MeshInstance3D:
-			var material := child.material_override as StandardMaterial3D
-			if material != null and material.vertex_color_use_as_albedo:
+			var material := child.material_override as ShaderMaterial
+			if material != null and material.shader == Island.TERRAIN_SHADER:
 				terrain_materials += 1
-				_check(material.vertex_color_is_srgb, "Warna terrain salah ruang warna")
+				_check(material.get_shader_parameter("dirt_color") == Island.DIRT_COLOR,
+					"Warna tanah berubah")
 	_check(terrain_materials == 16, "Material chunk terrain hilang")
 	_check(Island.SIZE == 1000.0, "Ukuran map bukan 1 km")
 	_check(Island.terrain_height(500, 500) < 0, "Sudut map tidak berada di laut")
@@ -54,6 +55,15 @@ func _run() -> void:
 		var x := Island.road_x(z)
 		_check(absf(island.surface_height(x, z) - Island.road_height(z)) < 0.2,
 			"Permukaan jalan tidak mengikuti terrain")
+	for z in range(-290, 291, 2):
+		var x := Island.road_x(z)
+		_check(Island.road_mask(x, z) > 0.99, "Pusat jalan terputus")
+		_check(Island.road_mask(x + 25, z) < 0.01, "Jalur melebar berlebihan")
+		var slope := (Island.road_height(z + 1) - Island.road_height(z - 1)) * 0.5
+		_check(absf(slope) < 0.11, "Gelombang jalan terlalu curam")
+		var curve := Island.road_height(z + 1) + Island.road_height(z - 1)
+		curve -= 2 * Island.road_height(z)
+		_check(absf(curve) < 0.0025, "Jalan bergelombang terlalu tajam")
 	for frame in range(3):
 		await physics_frame
 	var ray := PhysicsRayQueryParameters3D.create(Vector3(0, 100, 0), Vector3(0, -10, 0), 1)

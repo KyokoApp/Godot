@@ -76,7 +76,7 @@ func can_grow(x: float, z: float) -> bool:
 	if height < 5.4:
 		return false
 	# Margin tambahan menahan daun yang tertiup angin agar tidak masuk jalan.
-	if absf(z) < 340 and absf(x - Island.road_x(z)) < 17.0:
+	if absf(z) < 340 and Island.road_distance(x, z) < 15.0:
 		return false
 	var gradient := Vector2(
 		island.surface_height(x + 1, z) - island.surface_height(x - 1, z),

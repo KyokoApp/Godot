@@ -384,3 +384,11 @@ Pet memakai loop crackling CC0 terpisah selama 8 detik, lebih terdengar daripada
 loop sintetis lama: -22dB, jangkauan18m, tetap spatial/occluded. Peluru tetap
 memakai loop lamanya. Uji render mencakup pet dari depan/samping serta animasi;
 uji audio/PCK memeriksa loop pet baru. Tampilan/mix akhir perlu konfirmasi HP.
+
+### Outline pet tipis + jalan tanah lebih mulus
+Siluet/gerak api yang disetujui tetap; contour indigo di dalam tepi api ~0.55
+pixel render, tanpa pass tambahan. Jalan tetap tanah polos berkelok, tetapi
+batas warnanya kini dihitung per-pixel, bukan blok warna antarsegitiga 5m.
+Lebar jalur mengikuti arah tikungan, dengan gelombang elevasi panjang/lembut;
+mesh dan collider tetap satu permukaan. Rumput, batu, dan foley memakai ukuran
+jalur yang sama. Budget terrain tetap 80k triangles, tanpa mesh jalan tumpang tindih.

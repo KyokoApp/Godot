@@ -2,6 +2,7 @@ extends Node3D
 ## Pulau deterministik 1 km, terrain ber-collision dengan jalan menyatu permukaan.
 ## 16 chunk, total 80.000 segitiga; tanpa shader/tekstur eksternal.
 
+const TERRAIN_SHADER = preload("res://src/game/terrain.gdshader")
 const SIZE := 1000.0
 const STEP := 5.0
 const CELLS := 200
@@ -36,7 +37,19 @@ static func road_x(z: float) -> float:
 
 
 static func road_height(z: float) -> float:
-	return 5.0 + 7.0 * (1.0 - cos(z / 110.0))
+	# Broad rise plus gentle ~176m undulations; no small bumps underfoot.
+	return 5.0 + 7.0 * (1.0 - cos(z / 110.0)) + 1.1 * (1.0 - cos(z / 28.0))
+
+
+static func road_distance(x: float, z: float) -> float:
+	# Local perpendicular distance keeps the width steady through bends.
+	var slope := (65.0 / 95.0) * cos(z / 95.0) + (22.0 / 43.0) * cos(z / 43.0)
+	return absf(x - road_x(z)) / sqrt(1.0 + slope * slope)
+
+
+static func road_mask(x: float, z: float) -> float:
+	return (1.0 - smoothstep(9.0, 11.0, road_distance(x, z))) * (
+		1.0 - smoothstep(300.0, 335.0, absf(z)))
 
 
 static func terrain_height(x: float, z: float) -> float:
@@ -50,7 +63,7 @@ static func terrain_height(x: float, z: float) -> float:
 	var cliff := 44.0 * (1.0 - smoothstep(65.0, 92.0, Vector2(x - 230, z + 110).length()))
 	var rolling := 3.0 * sin(x / 48.0) * cos(z / 61.0)
 	var height := -7.0 + coast * (12.0 + hills + cliff + rolling)
-	var road_weight := 1.0 - smoothstep(12.0, 36.0, absf(x - road_x(z)))
+	var road_weight := 1.0 - smoothstep(13.0, 38.0, road_distance(x, z))
 	road_weight *= 1.0 - smoothstep(300.0, 350.0, absf(z))
 	return lerpf(height, road_height(z), road_weight)
 
@@ -77,12 +90,14 @@ func _height(x: int, z: int) -> float:
 
 
 func _color(x: float, z: float, height: float, normal: Vector3) -> Color:
+	return _land_color(height, normal).lerp(DIRT_COLOR, road_mask(x, z))
+
+
+func _land_color(height: float, normal: Vector3) -> Color:
 	# Warna solid: hijau di bidang datar, batu di sisi curam, bukan berdasarkan tinggi.
 	var color := GRASS_COLOR.lerp(CLIFF_COLOR, 1.0 - smoothstep(0.65, 0.88, normal.y))
 	color = SAND_COLOR.lerp(color, smoothstep(1.0, 5.0, height))
-	var road := 1.0 - smoothstep(8.0, 13.0, absf(x - road_x(z)))
-	road *= 1.0 - smoothstep(300.0, 335.0, absf(z))
-	return color.lerp(DIRT_COLOR, road)
+	return color
 
 
 func _build_chunk(start_x: int, start_z: int) -> void:
@@ -97,7 +112,7 @@ func _build_chunk(start_x: int, start_z: int) -> void:
 				_height(x, z - 1) - _height(x, z + 1)).normalized()
 			vertices.append(point)
 			normals.append(normal)
-			colors.append(_color(point.x, point.z, point.y, normal))
+			colors.append(_land_color(point.y, normal))
 	for z in range(CHUNK):
 		for x in range(CHUNK):
 			var a := z * (CHUNK + 1) + x
@@ -114,12 +129,9 @@ func _build_chunk(start_x: int, start_z: int) -> void:
 	_facet_cliffs(arrays)
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	var material := StandardMaterial3D.new()
-	material.vertex_color_use_as_albedo = true
-	# Color(hex) adalah sRGB. Tanpa flag ini warna dibaca linear dan tampak pucat.
-	material.vertex_color_is_srgb = true
-	material.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
-	material.roughness = 1.0
+	var material := ShaderMaterial.new()
+	material.shader = TERRAIN_SHADER
+	material.set_shader_parameter("dirt_color", DIRT_COLOR)
 	var visual := MeshInstance3D.new()
 	visual.mesh = mesh
 	visual.material_override = material
@@ -157,7 +169,7 @@ func _build_rocks() -> void:
 		var x := random.randf_range(-370, 370)
 		var z := random.randf_range(-370, 370)
 		var y := surface_height(x, z)
-		if y < 2.0 or absf(x - road_x(z)) < 24.0:
+		if y < 2.0 or road_distance(x, z) < 24.0:
 			continue
 		var rock := MeshInstance3D.new()
 		rock.mesh = rock_mesh

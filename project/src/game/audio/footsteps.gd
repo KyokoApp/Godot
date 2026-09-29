@@ -22,7 +22,7 @@ func surface_at(point: Vector3, normal: Vector3) -> String:
 		return "stone"
 	if point.y < 4.0:
 		return "dirt"
-	if absf(point.z) < 330 and absf(point.x - Island.road_x(point.z)) < 11:
+	if absf(point.z) < 330 and Island.road_distance(point.x, point.z) < 11:
 		return "dirt"
 	return "grass"
 

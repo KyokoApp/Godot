@@ -4,6 +4,7 @@ render_mode unshaded, blend_mix, cull_disabled, depth_draw_never, shadows_disabl
 // Camera-facing card keeps the small silhouette readable without an opaque orb.
 uniform vec3 trail = vec3(0.0);
 uniform float pulse = 0.0;
+uniform float outline_pixels : hint_range(0.0, 1.0) = 0.55;
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -50,6 +51,11 @@ void fragment() {
 	vec3 color = mix(vec3(0.38, 0.13, 0.82), vec3(0.70, 0.45, 1.0), main);
 	color = mix(color, vec3(0.34, 0.72, 1.0), heat * 0.90);
 	color = mix(color, vec3(0.85, 0.96, 1.0), core);
+	// Subpixel inner contour: same silhouette/motion, no extra pass or expanded halo.
+	float width = clamp(fwidth(flame) * outline_pixels, 0.001, 0.55);
+	float outline = (1.0 - smoothstep(0.12, 0.12 + width, flame));
+	outline *= step(0.001, outline_pixels);
+	color = mix(color, vec3(0.14, 0.08, 0.27), outline * 0.85);
 	ALBEDO = color * (1.05 + pulse * 0.25);
 	ALPHA = flame * 0.94;
 }

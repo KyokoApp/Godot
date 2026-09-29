@@ -92,6 +92,7 @@ func _run() -> void:
 		_check(image != null and not image.is_empty(), "Render menghasilkan gambar kosong")
 		image.save_png("user://grass-render-test.png")
 		await _test_two_sided_lighting()
+		await _test_road_color()
 	# Jalan jauh tidak menumpuk tile dari posisi sebelumnya.
 	player.position = Vector3(-130, island.surface_height(-130, 40) + 0.9, 40)
 	for frame in range(35):
@@ -235,3 +236,47 @@ func _test_lod_subset(field: Node3D) -> void:
 	_check(far.size() < near.size(), "LOD jauh tidak mengurangi kepadatan")
 	for placement in far:
 		_check(origins.has(placement.origin), "Akar berpindah saat ganti LOD")
+
+
+func _test_road_color() -> void:
+	var viewport := SubViewport.new()
+	viewport.size = Vector2i(256, 128)
+	viewport.own_world_3d = true
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	root.add_child(viewport)
+	var camera := Camera3D.new()
+	viewport.add_child(camera)
+	camera.position = Vector3(0, 40, 0.01)
+	camera.look_at(Vector3.ZERO)
+	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	camera.size = 32
+	camera.current = true
+	var sun := DirectionalLight3D.new()
+	sun.rotation_degrees.x = -90
+	viewport.add_child(sun)
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(80, 80)
+	var arrays := plane.get_mesh_arrays()
+	var colors := PackedColorArray()
+	colors.resize((arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size())
+	colors.fill(Island.GRASS_COLOR)
+	arrays[Mesh.ARRAY_COLOR] = colors
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var material := ShaderMaterial.new()
+	material.shader = Island.TERRAIN_SHADER
+	material.set_shader_parameter("dirt_color", Island.DIRT_COLOR)
+	var surface := MeshInstance3D.new()
+	surface.mesh = mesh
+	surface.material_override = material
+	viewport.add_child(surface)
+	for frame in range(3):
+		await process_frame
+	await RenderingServer.frame_post_draw
+	var image := viewport.get_texture().get_image()
+	var center := image.get_pixel(128, 64)
+	var edge := image.get_pixel(8, 64)
+	_check(center.r > center.g * 1.15, "Jalan shader tidak berwarna tanah")
+	_check(edge.g > edge.r * 1.15, "Tanah jalan bocor ke rumput")
+	image.save_png("user://road-render-test.png")
+	viewport.queue_free()
