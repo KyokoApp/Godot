@@ -581,3 +581,11 @@ saat bulan di belakang/luar kamera atau pemain di dalam arena. Efek berada di
 bawah HUD dan transparansi, tidak menerangi terrain/karakter. Objek transparan
 atau di luar layar tidak ikut menghalangi sinar. Toggle tersimpan “Sinar bulan”
 ada di Grafik untuk tes A/B HP; tidak menjamin FPS. Renderer target Mobile 4.5.2.
+
+## Minimap bulat
+HUD kiri atas 176px, north-up, pemain di tengah dan arah karakter + kerucut kamera.
+Kartografi original (bukan aset Genshin): tanah, pantai, jalan utama, danau/sungai,
+dan lingkaran arena saat seluruhnya dalam jangkauan. Radius pandang 125m.
+Tekstur 256px dibuat sekali dari terrain aktual; update posisi 10Hz, tanpa kamera
+3D tambahan. Sentuhan peta tidak mengaktifkan joystick. Belum ada peta fullscreen,
+quest marker atau teleport. HUD mengikuti skala viewport seperti kontrol lain.

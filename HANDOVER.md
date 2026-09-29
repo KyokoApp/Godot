@@ -523,3 +523,11 @@ ada di Grafik untuk tes A/B HP; tidak menjamin FPS. Renderer target Mobile 4.5.2
 
 Moon rays included in shader warmup (24 stages); Vulkan regression tests also verify
 opaque blocker, behind-camera/arena exclusion and graphics toggle persistence.
+
+## Circular minimap
+`ui/minimap.gd` + shader: cached 256² CPU cartography via existing Island sampled
+surface heights, road mask and shared Water/Arena shapes; one texture, no viewport.
+North is -Z. 125m radius, 176px at (24,24), center follows player at 10Hz; character
+arrow and camera cone independent. Joystick excludes circular minimap touches.
+Original visual treatment, no Genshin assets. HUD regression includes center/north,
+layout and touch-exclusion assertions. No fullscreen map/teleport introduced.

@@ -1,6 +1,7 @@
 extends Node3D
 ## Pulau 1 km + kamera sentuh, tetap memakai mannequin dan updater yang sama.
 
+const Minimap = preload("res://src/game/ui/minimap.gd")
 const MoonRays = preload("res://src/game/god_rays/moon_rays.gd")
 const BattleArena = preload("res://src/game/arena/battle_arena.gd")
 const SpeedButton = preload("res://src/game/ui/speed_button.gd")
@@ -34,6 +35,7 @@ var inside_arena := false
 var warmup_requested := false
 var warmup_complete := false
 var warmup_report: Dictionary = {}
+var _minimap: Minimap
 var _moon_rays: MoonRays
 var _nature: NatureField
 var _stone_path: StonePath
@@ -180,6 +182,13 @@ func _build_hud() -> void:
 	_joystick = Joystick.new()
 	layer.add_child(_joystick)
 	_joystick.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_minimap = Minimap.new()
+	_minimap.island = _island
+	_minimap.player = _player
+	_minimap.facing = _visual
+	_minimap.camera = _orbit.camera
+	layer.add_child(_minimap)
+	_joystick.input_exclusion = _minimap
 	_build_graphics_drawer(layer)
 	_settings = RuneButton.new()
 	_settings.name = "GraphicsRune"
