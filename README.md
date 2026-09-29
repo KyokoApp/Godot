@@ -195,3 +195,18 @@ reaksi menyingkir di sekitar kaki pemain. Tanpa texture alpha/transparency.
   harus diuji di HP.
 - Update lewat launcher yang sama, tanpa APK baru. HUD **PULAU 1K — rumput angin**.
   Dari jalan awal, berjalan ke sisi hijau untuk melihat rumput. Jalan tetap bersih.
+
+### Rumput v2 — revisi dari screenshot HP (32 FPS)
+
+Bidang gelap diperbaiki dengan normal world-up **di fragment/view space**, bukan
+hanya di vertex: normal sisi belakang tidak lagi menerima cahaya berlawanan.
+Akar memakai AO lebih ringan dan gradasi hijau lebih dekat agar tidak berkontras
+hitam. Tes renderer kini membandingkan pixel kartu depan/belakang dengan winding
+berlawanan, termasuk A/B shader lama, bukan hanya memeriksa gambar tidak kosong.
+
+Helai dipersempit dari 20 cm menjadi 8,5 cm, tinggi dasar 55 cm. Sebaran dari
+20×20 menjadi 24×24 per tile (+44% rumpun), tetap 25 tile. Mesh disederhanakan
+3→2 segitiga per helai: maksimum 14.400 rumpun / **86.400 segitiga**, dibanding
+90.000 sebelumnya. Ini batas geometri, bukan jaminan FPS lebih tinggi di Android.
+Tetap opaque, tanpa shadow casting rumput, dan mask jalan/pantai/tebing/batu.
+HUD: **PULAU 1K — rumput halus v2**. Minta video/FPS untuk penilaian ulang.

@@ -108,7 +108,7 @@ func _build_hud() -> void:
 	add_child(layer)
 
 	_label = Label.new()
-	_label.text = "PULAU 1K — rumput angin"
+	_label.text = "PULAU 1K — rumput halus v2"
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_label.add_theme_font_size_override("font_size", 26)
 	_label.add_theme_color_override("font_color", Color(1, 1, 1))
@@ -155,7 +155,7 @@ func _physics_process(delta: float) -> void:
 
 func _process(_delta: float) -> void:
 	_label.text = (
-		"PULAU 1K — rumput angin\nFPS: %d | Posisi: %.1f, %.1f\n"
+		"PULAU 1K — rumput halus v2\nFPS: %d | Posisi: %.1f, %.1f\n"
 		+ "Kiri: gerak | Geser kanan: kamera | Cubit kanan: zoom"
 	) % [Engine.get_frames_per_second(), _player.position.x, _player.position.z]
 

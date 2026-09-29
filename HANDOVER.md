@@ -132,3 +132,11 @@ Maksimal 25 tile / 10k rumpun, satu tile/frame, fade geometris 16–23 m,
 mask jalan/pantai/tebing/batu. Tidak mengubah launcher atau kontrol. Tes render
 CI memakai Mobile Vulkan/Mesa (bukan dummy headless). Tunggu hasil FPS/visual HP
 sebelum menambah aset/shader dunia lain. HUD `PULAU 1K — rumput angin`.
+
+## Koreksi screenshot rumput terbaru
+
+Screenshot menunjukkan sisi daun hitam dan 32 FPS. V2: fragment normal view-space
+world-up untuk cahaya dua sisi, AO akar dikurangi; lebar helai 8,5 cm, 24×24 rumpun
+per tile (+44%). Turun 3→2 tris/helai sehingga budget 86.400 tris, bukan 90.000.
+Tes Vulkan mengukur cahaya depan/belakang dan mereproduksi perbedaan shader lama.
+HUD `rumput halus v2`. Jangan menjanjikan FPS tanpa tes perangkat.

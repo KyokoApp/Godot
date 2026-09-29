@@ -1,12 +1,15 @@
 extends Node3D
-## Rumput streamed: maksimum 25 tile / 10.000 rumpun, bukan memenuhi seluruh 1 km.
+## Rumput streamed: maksimum 25 tile / 14.400 rumpun, bukan memenuhi seluruh 1 km.
 
 const Island = preload("res://src/game/island.gd")
 const SHADER = preload("res://src/game/grass.gdshader")
 const TILE_SIZE := 12.0
-const GRID := 20
+const GRID := 24
 const RADIUS := 2
 const MAX_TILES := 25
+const MAX_CLUMPS := MAX_TILES * GRID * GRID
+const BLADE_WIDTH := 0.085
+const BLADE_HEIGHT := 0.55
 
 var island: Island
 var player: Node3D
@@ -32,7 +35,7 @@ func _process(_delta: float) -> void:
 	var center := Vector2i(floori(position_3d.x / TILE_SIZE), floori(position_3d.z / TILE_SIZE))
 	if center != _center:
 		_recenter(center)
-	# Batasi lonjakan CPU: paling banyak satu tile (400 kandidat) tiap frame.
+	# Batasi lonjakan CPU: paling banyak satu tile (576 kandidat) tiap frame.
 	if not _pending.is_empty():
 		_build_tile(_pending.pop_front())
 
@@ -143,18 +146,19 @@ func _make_mesh() -> ArrayMesh:
 	var normals := PackedVector3Array()
 	var uvs := PackedVector2Array()
 	var indices := PackedInt32Array()
-	# Tiga helai meruncing, masing-masing 3 segitiga; bukan quad transparan.
+	# Tiga helai meruncing, masing-masing 2 segitiga; bukan quad transparan.
 	for blade in range(3):
 		var angle := blade * TAU / 3.0
-		var offset := Vector3(0.13, 0, 0).rotated(Vector3.UP, angle)
-		var points: Array[Vector3] = [Vector3(-0.10, 0, 0), Vector3(0.10, 0, 0),
-			Vector3(-0.065, 0.30, 0.03), Vector3(0.065, 0.30, 0.03), Vector3(0, 0.62, 0.09)]
+		var offset := Vector3(0.15, 0, 0).rotated(Vector3.UP, angle)
+		var points: Array[Vector3] = [Vector3(-BLADE_WIDTH / 2.0, 0, 0),
+			Vector3(BLADE_WIDTH / 2.0, 0, 0), Vector3(-0.025, 0.28, 0.03),
+			Vector3(0.015, BLADE_HEIGHT, 0.075)]
 		var base := vertices.size()
 		for point in points:
 			vertices.append(point.rotated(Vector3.UP, angle) + offset)
 			normals.append(Vector3.UP)
-			uvs.append(Vector2(0.5, 1.0 - point.y / 0.62))
-		for index in [0, 1, 2, 1, 3, 2, 2, 3, 4]:
+			uvs.append(Vector2(0.5, 1.0 - point.y / BLADE_HEIGHT))
+		for index in [0, 1, 2, 1, 3, 2]:
 			indices.append(base + index)
 	var arrays: Array = []
 	arrays.resize(Mesh.ARRAY_MAX)
