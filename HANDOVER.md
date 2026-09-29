@@ -157,3 +157,10 @@ Shader dirender bersama mannequin pada tes Vulkan rumput, tes rig tetap jalan.
 Art loading/ikon AI orisinal setelah penelusuran Pinterest; sumber di CREDITS.
 APK version code2 diperlukan untuk art/ikon launcher, PCK visual tetap kompatibel
 launcher1. Keystore tidak berubah. Tidak ada progress compile shader buatan.
+
+## Ikon pengguna sudah tersedia lewat GitHub
+
+File root `547d844ffaca3a9b862a3c20e929770d.jpg` diupload pada commit eea852f,
+sudah dibaca dan digunakan untuk ikon 512/192/adaptive432. APK code4/name0.4.2-user-icon.
+Loading art dan gameplay tidak diubah. Kredit sumber/izin belum terverifikasi
+tercatat di docs/CREDITS.md. Keystore tetap; jangan merge main.
