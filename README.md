@@ -323,3 +323,22 @@ Tombol attack dikecualikan dari swipe/pinch kamera; joystick kiri tetap bekerja.
 CI menguji hover, jarak pet, tombol/kamera, cooldown, gravitasi, benturan tanah,
 pembersihan dan batas efek. Shader pet/ledakan juga ikut tes Mobile Vulkan.
 HUD **PULAU 1K — pet api astral**, update lewat PCK tanpa APK baru.
+
+### Koreksi pet: ambil visual spirit api project lama
+
+Setelah pengguna menolak pet baru, visual dirujuk langsung ke
+`KyokoApp/Unity` branch `archive`, commit `bca3e575fc26311ef5a43c0263e772a6d9fced20`:
+`project/packs/character_player/fire_spirit.gd`, `fireball_core.gdshader`,
+`fireball_shell.gdshader`, dan helper `fire_fx.gd`.
+
+Dua shader core/shell disalin **utuh**, bukan perkiraan shader baru. Visualnya
+inti lavender terang, selubung api ungu aditif dengan lidah menjilat ke atas,
+halo lembut dan lima ember kecil. Ukuran/material mengikuti parameter pet lama;
+bukan bola besar bermata. Nyala mendapat flow/trail dari kecepatan pemain,
+serta pulse saat attack. Tidak membawa OmniLight tambahan demi menjaga beban.
+
+Perbedaan sengaja: controller posisi tetap terpisah ±1,1 m di samping bahu sesuai
+permintaan terbaru (arsip terakhir mendekatkannya ke bahu). Attack/proyektil/
+ledakan tetap versi saat ini; ronde ini hanya mengoreksi visual pet. Tidak membawa
+sistem combat, dunia, atau shader lainnya dari archive. HUD **spirit api lama**.
+Hasil layar/FPS harus diuji kembali; glow lingkungan lama tidak ikut diaktifkan.

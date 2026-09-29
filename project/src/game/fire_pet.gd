@@ -1,7 +1,7 @@
 extends Node3D
 ## Pet adalah node dunia terpisah dari rig. Attack diarahkan ke titik bidik kamera.
 
-const Visual = preload("res://src/game/fire_visual.gd")
+const Spirit = preload("res://src/game/legacy_spirit/spirit_visual.gd")
 const Projectile = preload("res://src/game/fire_projectile.gd")
 const Burst = preload("res://src/game/fire_burst.gd")
 const COOLDOWN := 0.85
@@ -14,35 +14,17 @@ var camera: Camera3D
 var cooldown := 0.0
 var projectiles: Array[CharacterBody3D] = []
 var bursts: Array[Node3D] = []
-var _body: Node3D
+var _body: Spirit
+var _previous_player := Vector3.ZERO
 var _time := 0.0
 
 
 func _ready() -> void:
-	_body = Node3D.new()
+	_body = Spirit.new()
 	add_child(_body)
-	_body.add_child(Visual.make_orb(0.30))
-	var crown := Visual.make_orb(0.16)
-	crown.position = Vector3(-0.08, 0.28, 0)
-	crown.scale.y = 0.30
-	_body.add_child(crown)
-	var eye_material := StandardMaterial3D.new()
-	eye_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	eye_material.albedo_color = Color("d9f5ff")
-	for side in [-1, 1]:
-		var eye := MeshInstance3D.new()
-		var sphere := SphereMesh.new()
-		sphere.radius = 0.045
-		sphere.height = 0.11
-		sphere.radial_segments = 8
-		sphere.rings = 4
-		eye.mesh = sphere
-		eye.material_override = eye_material
-		eye.position = Vector3(side * 0.10, 0.05, -0.27)
-		eye.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_body.add_child(eye)
 	if player != null:
 		global_position = _desired_position()
+		_previous_player = player.global_position
 
 
 func _desired_position() -> Vector3:
@@ -69,9 +51,9 @@ func _physics_process(delta: float) -> void:
 		var direction := offset.normalized() if offset.length() > 0.001 else Vector2.RIGHT
 		global_position.x = player.global_position.x + direction.x * 0.85
 		global_position.z = player.global_position.z + direction.y * 0.85
-	if facing != null:
-		_body.rotation.y = lerp_angle(_body.rotation.y, facing.global_rotation.y, 1.0 - exp(-8 * delta))
-	_body.scale = Vector3.ONE * (1.0 + sin(_time * 3.0) * 0.035)
+	_body.external_velocity = ((player.global_position - _previous_player)
+		/ maxf(delta, 0.001)).limit_length(20.0)
+	_previous_player = player.global_position
 
 
 func attack() -> bool:
@@ -79,6 +61,7 @@ func attack() -> bool:
 	if cooldown > 0.0 or projectiles.size() >= MAX_PROJECTILES or camera == null:
 		return false
 	cooldown = COOLDOWN
+	_body.pulse()
 	var screen := camera.get_viewport().get_visible_rect().size * Vector2(0.5, 0.42)
 	var start := camera.project_ray_origin(screen)
 	var direction := camera.project_ray_normal(screen)

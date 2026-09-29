@@ -22,6 +22,16 @@ func _run() -> void:
 	for frame in range(3):
 		await physics_frame
 	var pet: Pet = game.get("_pet")
+	var spirit: Node3D = pet.get("_body")
+	_check(spirit.name == "LegacyFireSpirit", "Visual pet lama belum dipasang")
+	_check(spirit.get_node_or_null("FireCore") != null, "Inti api lama hilang")
+	_check(spirit.get_node_or_null("FireShell") != null, "Selubung api lama hilang")
+	var embers := spirit.get_node("SpiritEmbers") as GPUParticles3D
+	_check(embers.amount == 5, "Budget percikan lama berubah")
+	spirit.set("external_velocity", Vector3(5, 0, 0))
+	spirit._process(0.1)
+	var trail: Vector3 = spirit.get("_trail")
+	_check(trail.x < 0 and trail.length() <= 0.20, "Api tidak mengikuti arah gerak")
 	_check(pet.get_parent() == game, "Pet menempel pada rig, bukan node dunia")
 	var delta := pet.global_position - pet.player.global_position
 	_check(Vector2(delta.x, delta.z).length() >= 0.84, "Pet terlalu dekat dengan karakter")

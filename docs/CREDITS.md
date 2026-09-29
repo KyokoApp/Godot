@@ -80,3 +80,12 @@ Animasi dan skeleton penggerak tetap UAL1 Standard Quaternius (kredit di atas).
 Model pet prosedural, shader gradien api toon, proyektil gravitasi dan VFX ledakan
 bulat ditulis untuk proyek ini. Tidak memakai model, tekstur atau suara dari
 Naruto/game lain. Referensi pengguna hanya berupa bentuk ledakan bulat berputar.
+
+## Spirit api dari project lama pengguna
+
+`project/src/game/legacy_spirit/fireball_core.gdshader` dan
+`fireball_shell.gdshader` disalin utuh dari `KyokoApp/Unity`, commit archive
+`bca3e575fc26311ef5a43c0263e772a6d9fced20`, folder `project/packs/character_player/`.
+`spirit_visual.gd` memport bagian visual/animasi `fire_spirit.gd` serta helper
+halo/particle dari `fire_fx.gd` ke fondasi baru. Ini kode project lama pengguna,
+bukan aset Naruto atau interpretasi baru dari ingatan.

@@ -189,3 +189,12 @@ fire_pet/projectile/burst/visual + spirit_fire shader implementasi prosedural.
 Cap3peluru/2ledakan, cooldown0,85, TTL4s/1s. Aimreticlekamera, sphere sweepworld.
 Tidak ada damage/enemy/fluidfire. Jubah tetap dihapus. Wajib tes FPS HP; jangan
 merge main. HUD pet api astral, distribusi PCK kompatibel launcher.
+
+## Pet dikoreksi berdasarkan archive (terbaru)
+
+Pengguna menolak bentuk pet baru dan meminta cek project lama. Archive fire_spirit
+ternyata spirit api kecil tanpa mata: core terang + shell aditif noise, halo,5embers.
+Core/shellshader sekarang disalin utuh ke src/game/legacy_spirit; visualcontroller
+porttyped. Anchor terbaru tetap terpisah dari bahu; OmniLight lama tidak dibawa.
+Attack/ledakan belum dipindah dari archive. HUD spirit api lama, uji shaderVulkan
+wajib karena transparansi/noise berbeda. Tunggu screenshot sebelum revisi lain.

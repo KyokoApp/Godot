@@ -121,7 +121,7 @@ func _build_hud() -> void:
 	add_child(layer)
 
 	_label = Label.new()
-	_label.text = "PULAU 1K — pet api astral"
+	_label.text = "PULAU 1K — spirit api lama"
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_label.add_theme_font_size_override("font_size", 26)
 	_label.add_theme_color_override("font_color", Color(1, 1, 1))
@@ -202,7 +202,7 @@ func _process(delta: float) -> void:
 	_hud_elapsed = 0.0
 	_attack.text = "ATTACK" if _pet.cooldown <= 0 else "%.1f s" % _pet.cooldown
 	_label.text = (
-		"PULAU 1K — pet api astral\nFPS: %d | Posisi: %.1f, %.1f\n"
+		"PULAU 1K — spirit api lama\nFPS: %d | Posisi: %.1f, %.1f\n"
 		+ "Kiri: gerak | Geser kanan: kamera | Cubit kanan: zoom"
 	) % [Engine.get_frames_per_second(), _player.position.x, _player.position.z]
 
