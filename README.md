@@ -249,3 +249,10 @@ Cache/pre-warm dapat mengurangi stutter saat efek pertama digunakan. CI render
 Mobile/Vulkan mengecek shader dapat dirender, tetapi hasil compile di CI bukan
 cache untuk GPU HP. Build ini tidak menambah layar/progres compile shader palsu;
 perilaku precompilation/cache tetap mengikuti Godot dan driver perangkat.
+
+### Ikon pilihan pengguna (APK 0.4.1)
+
+Ikon anime diganti gambar ungu yang dilampirkan pengguna, tanpa gambar ulang AI.
+Legacy 192 px dan adaptive 432 px disiapkan dari sumber yang sama. APK version
+code 3; install di atas versi lama untuk memperbarui ikon. Package ID/keystore,
+loading art, dan gameplay tidak berubah. Perubahan ini bukan update konten game.

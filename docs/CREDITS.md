@@ -46,10 +46,9 @@ Semua kode dalam repo ini ditulis khusus untuk project ini.
 
 ## Ikon dan ilustrasi loading A-Sekai
 
-`project/launcher/art/icon*.png` dan `loading.jpg` adalah ilustrasi AI orisinal
-untuk proyek ini, bukan karakter/aset resmi Genshin/HoYoverse. Adaptasi ukuran
-ikon Android dibuat dari ilustrasi yang sama; background adaptive berupa warna
-teal polos. Tidak mengambil gambar Pinterest langsung untuk didistribusikan.
+`project/launcher/art/loading.jpg` adalah ilustrasi AI orisinal
+untuk proyek ini, bukan karakter/aset resmi Genshin/HoYoverse. Ikon AI versi sebelumnya sudah diganti oleh gambar kiriman pengguna (lihat bagian
+berikut). Tidak mengambil gambar Pinterest langsung untuk didistribusikan.
 
 Penelusuran referensi visual yang diminta pengguna:
 - https://pinterest.com/pin/582512533028994284
@@ -58,3 +57,15 @@ Penelusuran referensi visual yang diminta pengguna:
 Referensi tersebut bukan sumber aset yang dibundel; izin redistribusinya belum
 terverifikasi. Jangan menyebut ilustrasi AI ini sebagai karya seniman Pinterest
 atau mengklaimnya berlisensi CC0. Shader outline mannequin ditulis untuk proyek.
+
+
+## Ikon aplikasi — gambar pilihan pengguna (pengganti ikon AI)
+
+`project/launcher/art/icon.png`, `icon-192.png`, dan `icon-foreground.png` kini
+berasal dari gambar yang dilampirkan pengguna dengan nama
+`547d844ffaca3a9b862a3c20e929770d.jpg`, atas permintaan langsung untuk ikon aplikasi.
+Hanya crop persegi tengah yang minimal dan resize; tidak digambar ulang AI.
+`icon-background.png` adalah warna ungu gelap polos untuk adaptive icon.
+Nama seniman, sumber awal dan izin redistribusi belum terverifikasi; jangan
+mengklaim ikon ini sebagai karya orisinal proyek atau aset CC0. Perlu verifikasi
+hak penggunaan sebelum distribusi komersial/store. Loading art tidak berubah.
