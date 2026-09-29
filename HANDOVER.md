@@ -157,9 +157,3 @@ Shader dirender bersama mannequin pada tes Vulkan rumput, tes rig tetap jalan.
 Art loading/ikon AI orisinal setelah penelusuran Pinterest; sumber di CREDITS.
 APK version code2 diperlukan untuk art/ikon launcher, PCK visual tetap kompatibel
 launcher1. Keystore tidak berubah. Tidak ada progress compile shader buatan.
-
-## Ikon terbaru dari lampiran pengguna
-
-Pengguna memilih gambar anime ungu 547d844ffaca3a9b862a3c20e929770d.jpg untuk ikon.
-Menggantikan ikon AI saja; loading/gameplay tetap. Export APK code3/name0.4.1-user-icon.
-Sumber/izin belum terverifikasi dicatat di CREDITS; jangan klaim CC0/orisinal.
