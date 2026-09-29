@@ -186,7 +186,7 @@ reaksi menyingkir di sekitar kaki pemain. Tanpa texture alpha/transparency.
 
 - Streaming sekitar pemain: 25 tile × 12 m, maksimal 400 rumpun per tile
   (10.000 rumpun / 90.000 segitiga sebelum mask); satu tile dibangun tiap frame.
-- Rumput menyusut halus pada jarak 18–27 m. Tile jauh dilepas, bukan menanam
+- Rumput menyusut halus pada jarak 16–23 m. Tile jauh dilepas, bukan menanam
   jutaan rumpun di seluruh pulau. Shadow casting dimatikan untuk rumput.
 - Hanya tanah hijau: mask jalan + margin angin, pantai/laut, lereng curam, dan batu.
   Akar mengikuti interpolasi mesh terrain; tidak menggunakan tinggi perkiraan.

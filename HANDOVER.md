@@ -128,7 +128,7 @@ Tidak mengubah bentuk pulau/kontrol. Tunggu screenshot/konfirmasi HP.
 
 Rumput rapat/angin diadaptasi dari shader CC0 Malido yang dikirim pengguna.
 Shader + streaming ada di src/game/grass*; sumber/lisensi di docs/CREDITS.md.
-Maksimal 25 tile / 10k rumpun, satu tile/frame, fade geometris 18–27 m,
+Maksimal 25 tile / 10k rumpun, satu tile/frame, fade geometris 16–23 m,
 mask jalan/pantai/tebing/batu. Tidak mengubah launcher atau kontrol. Tes render
 CI memakai Mobile Vulkan/Mesa (bukan dummy headless). Tunggu hasil FPS/visual HP
 sebelum menambah aset/shader dunia lain. HUD `PULAU 1K — rumput angin`.

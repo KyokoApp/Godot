@@ -10,8 +10,8 @@ uniform sampler2D wind_noise : repeat_enable, filter_linear;
 uniform vec3 player_position = vec3(0.0);
 uniform vec2 wind_direction = vec2(0.8, 0.4);
 uniform float wind_strength = 0.20;
-uniform float fade_start = 18.0;
-uniform float fade_end = 27.0;
+uniform float fade_start = 16.0;
+uniform float fade_end = 23.0;
 
 void vertex() {
 	vec3 root = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
