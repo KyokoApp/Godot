@@ -1,7 +1,6 @@
 extends Node3D
 ## Model dan mocap asli dari arsip project, tanpa sistem combat/skin lama.
 
-const Robe = preload("res://src/game/flame_robe.gd")
 const MODEL = preload("res://assets/mannequin/UAL1_Standard.glb")
 const OUTLINE = preload("res://src/game/character_outline.gdshader")
 const IDLE := "Idle"
@@ -10,8 +9,6 @@ const RUN := "Jog_Fwd"
 const RUN_ON := 2.8
 const RUN_OFF := 2.4
 
-var terrain: Node3D
-var robe: Robe
 var animation: AnimationPlayer
 var state := IDLE
 
@@ -40,15 +37,6 @@ func _ready() -> void:
 			return
 		animation.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
 	animation.play(IDLE)
-	animation.advance(0.0)
-	robe = Robe.new()
-	robe.skeleton = model.find_child("Skeleton3D", true, false) as Skeleton3D
-	robe.terrain = terrain
-	add_child(robe)
-	if robe.ready_to_wear:
-		# Rig/mocap tetap berjalan; mesh di bawah kain disembunyikan untuk mencegah clipping.
-		for node in model.find_children("*", "MeshInstance3D", true, false):
-			(node as MeshInstance3D).visible = false
 
 
 func update_motion(speed: float) -> void:

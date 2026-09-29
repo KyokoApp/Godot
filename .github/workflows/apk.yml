@@ -122,18 +122,18 @@ jobs:
           timeout 60 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_mannequin.gd"
 
-      - name: Tes jubah dan simulasi kain
+      - name: Tes mannequin dan kontrol performa
         run: |
           set +e
           timeout 90 ./godot --headless --path project \
-            --script "$GITHUB_WORKSPACE/tools/test_robe.gd" 2>&1 | tee robe-test.log
+            --script "$GITHUB_WORKSPACE/tools/test_performance.gd" 2>&1 | tee performance-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
-          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' robe-test.log; then
-            tail -40 robe-test.log | while IFS= read -r line; do echo "::error::$line"; done
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' performance-test.log; then
+            tail -40 performance-test.log | while IFS= read -r line; do echo "::error::$line"; done
             exit 1
           fi
-          grep -F '[robe-test] HASIL: OK' robe-test.log
+          grep -F '[performance-test] HASIL: OK' performance-test.log
 
       - name: Tes pulau, collision, kamera dan multitouch
         run: |

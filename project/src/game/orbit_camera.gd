@@ -7,6 +7,7 @@ const MAX_DISTANCE := 8.0
 const MIN_PITCH := 0.10
 const MAX_PITCH := 1.15
 
+var input_exclusion: Control
 var yaw := 0.0
 var pitch := 0.30
 var distance := DEFAULT_DISTANCE
@@ -47,6 +48,9 @@ func _input(event: InputEvent) -> void:
 		if not touch.pressed or touch.canceled:
 			_touches.erase(touch.index)
 		elif touch.position.x >= get_viewport().get_visible_rect().size.x * 0.5:
+			if is_instance_valid(input_exclusion):
+				if input_exclusion.get_global_rect().has_point(touch.position):
+					return
 			if _touches.size() < 2:
 				_touches[touch.index] = touch.position
 	elif event is InputEventScreenDrag:

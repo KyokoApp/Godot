@@ -276,3 +276,28 @@ asli tidak diubah. Jika tulang wajib tidak ditemukan, mannequin asli tetap tampi
   harus diuji saat jalan/lari/belok di HP.
 - Konten kompatibel launcher lama: buka ulang online, tidak perlu install APK.
   HUD **PULAU 1K — jubah api biru**. Ikon/loading/map tidak diubah.
+
+## Jubah dibatalkan + alat pembanding performa di HP
+
+Atas permintaan pengguna, skin jubah beserta solver kain/shader dihapus dan
+mannequin asli dengan outline dikembalikan. Ikon, loading, dunia, dan rumput v3 tetap.
+
+Panel kanan atas (tersimpan ke user://graphics.cfg):
+- Resolusi 3D 75% / 100%, UI tetap tajam. Default baru 75% (Ringan).
+- Bayangan Nyala/Mati, default Mati. Tidak mengubah warna/arah pencahayaan.
+- Rumput Nyala/Mati untuk diagnosis; Mati juga menghentikan streaming CPU.
+- Batas FPS 60 / Bebas. Bebas menghapus cap aplikasi saja; VSync/Hz layar/OS tetap
+  berlaku. Tidak memaksa refresh rate, tidak menjanjikan 60/90/120 FPS.
+- Frame time rata-rata/P95 dari 120 frame terakhir dan total draw calls.
+  Ini bukan GPU timer; P95 tinggi dapat mengindikasikan hitch, bukan diagnosis pasti.
+
+Cara A/B: berdiri di tempat sama, kamera sama, tunggu streaming selesai, catat
+FPS/frame-time 15–30 detik; ubah satu kontrol saja. Jika 75% jauh lebih cepat,
+biaya rendering pixel kemungkinan berpengaruh. Bandingkan rumput dan bayangan
+secara terpisah. 60 FPS perlu sekitar 16,7 ms/frame; 120 FPS sekitar 8,3 ms/frame.
+Tes durasi beberapa menit juga diperlukan untuk panas/throttling.
+
+Untuk diagnosis lanjut: Godot Profiler/Visual Profiler pada perangkat, Android
+GPU Inspector (device/driver yang kompatibel), serta Perfetto. Hasil CI/Mesa bukan
+benchmark HP. Minta tipe HP/chipset, Hz layar dan hasil A/B sebelum menyimpulkan
+CPU/GPU bottleneck. HUD **PULAU 1K — mannequin + mode FPS**. Update lewat PCK.

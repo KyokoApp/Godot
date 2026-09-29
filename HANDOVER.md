@@ -172,3 +172,11 @@ Rig tetap; mesh sumber disembunyikan hanya jika outfit berhasil. Torso/lengan/ho
 mengikuti posisi tulang, skirt64partikel Verlet 3iterasi + kaki/lantai collision.
 Toon pastel opaque dengan polaapi hem/cuff, bukan fluida. Buka ulang launcher
 untuk konten, ikon/loading tetap. Tunggu uji clipping/gerak/FPS HP; jangan merge main.
+
+## PERMINTAAN TERBARU: hapus jubah, investigasi FPS
+
+Jubah DIBATALKAN pengguna. Mannequin asli + outline kembali; file robe/solver/test
+robe dihapus. Panel kanan atas membandingkan render75/100%, rumput, bayangan,
+cap60/bebas; default75%, bayanganmati, rumputnyala, cap60. Pengaturan tersimpan.
+Frameavg/P95/drawcalls hanya indikator, bukan GPU timing. Tombol dikecualikan dari
+input kamera. Perlu tipe HP/Hz + uji A/B lokasi sama. Jangan janjikan 60 FPS dari CI.

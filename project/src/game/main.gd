@@ -1,6 +1,7 @@
 extends Node3D
 ## Pulau 1 km + kamera sentuh, tetap memakai mannequin dan updater yang sama.
 
+const PerformancePanel = preload("res://src/game/performance_panel.gd")
 const Joystick = preload("res://src/game/virtual_joystick.gd")
 const Mannequin = preload("res://src/game/mannequin.gd")
 const MOVE_SPEED := 5.0
@@ -10,6 +11,9 @@ const Orbit = preload("res://src/game/orbit_camera.gd")
 
 const CHARACTER_HEIGHT := 1.8
 
+var _sun: DirectionalLight3D
+var _performance: PerformancePanel
+var _hud_elapsed := 0.0
 var _label: Label
 var _orbit: Orbit
 var _island: Island
@@ -24,11 +28,11 @@ func _ready() -> void:
 	_build_ground()
 	_build_player()
 	_build_camera()
-	_build_hud()
 	_grass = Grass.new()
 	_grass.island = _island
 	_grass.player = _player
 	add_child(_grass)
+	_build_hud()
 	print("[main] pulau 1K + kamera siap")
 	_confirm_boot.call_deferred()
 
@@ -56,6 +60,7 @@ func _build_environment() -> void:
 	add_child(we)
 
 	var sun := DirectionalLight3D.new()
+	_sun = sun
 	sun.rotation_degrees = Vector3(-52.0, 135.0, 0.0)
 	sun.light_energy = 0.98
 	sun.shadow_enabled = true
@@ -86,7 +91,6 @@ func _build_player() -> void:
 	body.add_child(shape)
 
 	var visual := Mannequin.new()
-	visual.terrain = _island
 	visual.position.y = -CHARACTER_HEIGHT / 2.0
 	visual.name = "Visual"
 	_visual = visual
@@ -109,7 +113,7 @@ func _build_hud() -> void:
 	add_child(layer)
 
 	_label = Label.new()
-	_label.text = "PULAU 1K — jubah api biru"
+	_label.text = "PULAU 1K — mannequin + mode FPS"
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_label.add_theme_font_size_override("font_size", 26)
 	_label.add_theme_color_override("font_color", Color(1, 1, 1))
@@ -120,6 +124,16 @@ func _build_hud() -> void:
 	_joystick = Joystick.new()
 	layer.add_child(_joystick)
 	_joystick.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_performance = PerformancePanel.new()
+	_performance.sun = _sun
+	_performance.grass = _grass
+	layer.add_child(_performance)
+	_performance.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	_performance.offset_left = -274
+	_performance.offset_right = -24
+	_performance.offset_top = 24
+	_performance.offset_bottom = 294
+	_orbit.input_exclusion = _performance
 
 
 # ----------------------------------------------------------------- loop ----
@@ -154,9 +168,13 @@ func _physics_process(delta: float) -> void:
 	_orbit.follow(_player.global_position + Vector3(0, 0.55, 0), delta)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_hud_elapsed += delta
+	if _hud_elapsed < 0.25:
+		return
+	_hud_elapsed = 0.0
 	_label.text = (
-		"PULAU 1K — jubah api biru\nFPS: %d | Posisi: %.1f, %.1f\n"
+		"PULAU 1K — mannequin + mode FPS\nFPS: %d | Posisi: %.1f, %.1f\n"
 		+ "Kiri: gerak | Geser kanan: kamera | Cubit kanan: zoom"
 	) % [Engine.get_frames_per_second(), _player.position.x, _player.position.z]
 
