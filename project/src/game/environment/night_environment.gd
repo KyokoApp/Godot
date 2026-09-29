@@ -21,6 +21,16 @@ static func make_environment() -> Environment:
 	environment.ambient_light_color = Color(0.48, 0.57, 0.78)
 	environment.ambient_light_energy = 0.38
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+	# Cheap depth haze, no volumetric fog; leave stars/moon unobscured.
+	environment.fog_enabled = true
+	environment.fog_mode = Environment.FOG_MODE_DEPTH
+	environment.fog_depth_begin = 32.0
+	environment.fog_depth_end = 230.0
+	environment.fog_density = 0.48
+	environment.fog_depth_curve = 1.5
+	environment.fog_light_color = Color(0.19, 0.24, 0.36)
+	environment.fog_light_energy = 0.55
+	environment.fog_sky_affect = 0.0
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	return environment
 

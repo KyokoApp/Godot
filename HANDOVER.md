@@ -281,3 +281,29 @@ energy .48, aligned to sky moon; existing shadows/graphics.cfg still work.
 blue night tone, moonlight alignment and ground readability; saves screenshots.
 User approval of brightness still requires HP check. Approved pet/audio/road
 and clean UI remain untouched; no new color grading/post-process filter.
+
+## World dressing + grass distance LOD + thin haze
+User requested ACTUAL former trees/bushes/rocks/path, thin fog, camera/occlusion
+culling, and whole-world grass appearance without full dense geometry.
+Nature source found in Unity/archive build_mode/objects/nature (Quaternius CC0),
+not procedural substitutes. 11 glTF/bin originals + <=512px textures, ~3.3MB.
+No build-mode UI/buildings restored. Stone path model flattened vertically and
+slope-aligned over existing dirt centerline; 24m render batches, 72m visibility.
+Central footstep surface updated to stone; shoulders remain dirt.
+NatureField: seeded 40m cells, 49 resident max, one built/frame, 6 tree +12 detail
+candidates/cell. Small fern/flower authoring scales corrected. Native imported
+mesh LOD and type-per-cell MultiMeshes; trees110m/details65m. Simple solid trunk/
+rock colliders stay with cells; shrub/flower non-solid. No foliage shadows.
+Grass: approved near system untouched; DistantGrass child adds 49x32m cells,
+12x12 crossed cards/tile (4 tris/clump), 14–23m grow-in /65–90m shrink-out.
+Max extra28,224 tris; terrain-only grass pattern beyond that, masked off dirt,
+coast/cliff; no actual far blades beyond90m. Parent drives far streaming so the
+existing grass toggle stops both, and toggles terrain cover uniform too.
+Viewport occlusion enabled/restored on exit. Occluder patches y=min of ALL
+source5m-grid vertices in each20m patch minus.5m: inside terrain, no false valley
+bridges. <=5000 triangles. Transparent foliage is NOT an occluder. Frustum bounds
+are per tile/type, not one island-wide MultiMesh. Conservative occlusion may miss
+some hidden objects; real-device cost/benefit and pop-in still need measurement.
+Night depth fog32–230m strength.48, sky_affect0; not volumetric, near pet unchanged.
+New test_world_details headless+Vulkan verifies sources/textures, deterministic
+safe placement, tile budgets/teleport cleanup, occluder containment, haze and PCK.

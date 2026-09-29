@@ -20,6 +20,8 @@ var _left := false
 func surface_at(point: Vector3, normal: Vector3) -> String:
 	if normal.y < 0.78 or point.y > island.surface_height(point.x, point.z) + 0.5:
 		return "stone"
+	if absf(point.z) < 310 and Island.road_distance(point.x, point.z) < 1.25:
+		return "stone"
 	if point.y < 4.0:
 		return "dirt"
 	if absf(point.z) < 330 and Island.road_distance(point.x, point.z) < 11:

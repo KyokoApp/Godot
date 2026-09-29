@@ -400,3 +400,22 @@ Moonlight mengikuti posisi bulan; ambient biru dipisahkan dari sky agar jalan,
 rumput dan karakter tetap terbaca. Satu directional light yang sama, pengaturan
 shadow tetap berlaku. Tidak memasang color-reducer/post-process, kabut volumetrik,
 atau siklus siang-malam. UI, pet, outline, audio dan combat tidak diubah.
+
+### World dressing, kabut tipis, dan rumput LOD tiga lapis
+- Aset asli archive: 3 jenis pohon, semak/semak bunga, pakis, bunga, 2 batu,
+  kerikil dan model setapak batu mengikuti jalur tanah berkelok. Trunk/batu
+  punya collider sederhana; semak/bunga dekorasi tanpa collider.
+- Nature deterministik di seluruh daratan yang layak, bukan spawn di air/jalan.
+  Streaming 49 sel x40m (max 6 kandidat pohon +12 detail/sel), satu sel/frame.
+  Mesh/material dibagi via MultiMesh per jenis/per sel; imported mesh LOD,
+  visibility range pohon110m/detail65m; foliage tanpa shadow tambahan.
+- Rumput dekat yang disetujui tetap (max112k tris); kartu silang 2D dari14–90m
+  menambah max28,224 tris/49 sel x32m. Setelah itu corak penutup rumput menyatu
+  dengan terrain sampai horizon; bukan jutaan helai di seluruh pulau sekaligus.
+  Toggle rumput juga menghentikan streaming jauh dan corak terrain.
+- Frustum culling bawaan tetap. Occlusion culling kini aktif dengan patch
+  konservatif di DALAM bukit/terrain, <=5k tris; tidak menganggap daun transparan
+  sebagai dinding. Ini bukan janji semua objek yang tertutup apa saja pasti dicull.
+- Kabut depth ringan32–230m, langit/bulan tidak ditutupi, tanpa volumetric fog.
+  Tes aset/mask/budget/determinisme/cleanup/occluder/PCK + Mobile Vulkan wajib;
+  FPS/overdraw/CPU occlusion tetap perlu pengukuran HP nyata.

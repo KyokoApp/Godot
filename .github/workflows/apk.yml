@@ -268,6 +268,43 @@ jobs:
           path: ~/.local/share/godot/app_userdata/**/night-*-test.png
           if-no-files-found: ignore
 
+      - name: Tes aset alam, LOD rumput, occlusion dan streaming
+        run: |
+          set +e
+          timeout 180 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_world_details.gd" 2>&1 | tee world-details.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' world-details.log; then
+            tail -50 world-details.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[world-details-test] HASIL: OK' world-details.log
+
+      - name: Render world nature + grass LOD (Mobile Vulkan)
+        run: |
+          set +e
+          timeout 240 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --audio-driver Dummy --resolution 480x270 \
+            --script "$GITHUB_WORKSPACE/tools/test_world_details.gd" -- --render 2>&1 | tee world-render.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' world-render.log; then
+            tail -50 world-render.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[world-details-test] HASIL: OK' world-render.log
+
+      - name: Simpan screenshot world
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: world-screenshots
+          path: ~/.local/share/godot/app_userdata/**/world-*-test.png
+          if-no-files-found: ignore
+
       - name: Tes validasi updater
         run: |
           timeout 60 ./godot --headless --path project \

@@ -1,6 +1,7 @@
 extends Node3D
 ## Rumput berlapis: 9 tile dekat rapat, 16 tile luar lebih ringan.
 
+const DistantGrass = preload("res://src/game/world/distant_grass.gd")
 const Island = preload("res://src/game/island.gd")
 const SHADER = preload("res://src/game/grass.gdshader")
 const TILE_SIZE := 12.0
@@ -14,6 +15,7 @@ const COVER_HALF_SIZE := 0.25
 const BLADE_WIDTH := 0.085
 const BLADE_HEIGHT := 0.55
 
+var distant: DistantGrass
 var island: Island
 var player: Node3D
 var tiles: Dictionary[Vector2i, MultiMeshInstance3D] = {}
@@ -31,12 +33,16 @@ func _ready() -> void:
 	_material = ShaderMaterial.new()
 	_material.shader = SHADER
 	_material.set_shader_parameter("wind_noise", _make_noise())
+	distant = DistantGrass.new()
+	distant.field = self
+	add_child(distant)
 
 
 func _process(_delta: float) -> void:
 	if island == null or player == null:
 		return
 	var position_3d := player.global_position
+	distant.update_center(position_3d)
 	_material.set_shader_parameter("player_position", position_3d - Vector3(0, 0.9, 0))
 	var center := Vector2i(floori(position_3d.x / TILE_SIZE), floori(position_3d.z / TILE_SIZE))
 	if center != _center:
@@ -216,3 +222,8 @@ func _make_mesh(with_cover: bool) -> ArrayMesh:
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	return mesh
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and island != null:
+		island.set_grass_cover(is_visible_in_tree())

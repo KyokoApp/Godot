@@ -16,11 +16,17 @@ const SAND_COLOR := Color("c9ad72")
 ## Vector3(x, rayon_horizontal, z) untuk mengosongkan rumput di bawah batu.
 var rock_clearances: Array[Vector3] = []
 
+var _terrain_material: ShaderMaterial
 var _heights := PackedFloat32Array()
 
 
 func _ready() -> void:
 	name = "Island"
+	_terrain_material = ShaderMaterial.new()
+	_terrain_material.shader = TERRAIN_SHADER
+	_terrain_material.set_shader_parameter("dirt_color", DIRT_COLOR)
+	_terrain_material.set_shader_parameter("meadow_cover",
+		preload("res://assets/nature/meadow_cover.png"))
 	_heights.resize((CELLS + 1) * (CELLS + 1))
 	for z in range(CELLS + 1):
 		for x in range(CELLS + 1):
@@ -129,9 +135,7 @@ func _build_chunk(start_x: int, start_z: int) -> void:
 	_facet_cliffs(arrays)
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	var material := ShaderMaterial.new()
-	material.shader = TERRAIN_SHADER
-	material.set_shader_parameter("dirt_color", DIRT_COLOR)
+	var material := _terrain_material
 	var visual := MeshInstance3D.new()
 	visual.mesh = mesh
 	visual.material_override = material
@@ -228,3 +232,8 @@ func _flat_rock(source: Mesh) -> ArrayMesh:
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	return mesh
+
+
+func set_grass_cover(enabled: bool) -> void:
+	if _terrain_material != null:
+		_terrain_material.set_shader_parameter("grass_cover_enabled", enabled)

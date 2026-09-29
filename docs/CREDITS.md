@@ -140,3 +140,16 @@ created for A-Sekai, not copied from an icon pack or third-party image.
 `environment/night_sky.gdshader`: original procedural sky for A-Sekai,
 seeded sparse stars, small moon with analytic crater marks and subtle halo.
 No downloaded sky image, shader-site code, or third-party celestial artwork.
+
+### Archived nature and stone footpath
+Eleven actual glTF models from the user's `KyokoApp/Unity` archive
+`bca3e575fc26311ef5a43c0263e772a6d9fced20`,
+`project/packs/build_mode/objects/nature/`: trees, bushes, fern, flowers,
+rocks, pebble and RockPath_Round_Wide. The archive credits identify these as
+**Quaternius Stylized Nature MegaKit, CC0**:
+https://quaternius.com/packs/stylizednaturemegakit.html .
+Full list/provenance exported in `licenses/Quaternius-Nature.txt`.
+Original glTF/bin geometry preserved; referenced PNGs resized to <=512px.
+`tools/fetch_nature_assets.py` reproduces retrieval and resizing.
+`grass_cards.png` and `meadow_cover.png` are original deterministic textures;
+regenerate with `tools/make_meadow_textures.py` (Pillow).

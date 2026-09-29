@@ -1,6 +1,9 @@
 extends Node3D
 ## Pulau 1 km + kamera sentuh, tetap memakai mannequin dan updater yang sama.
 
+const NatureField = preload("res://src/game/world/nature_field.gd")
+const StonePath = preload("res://src/game/world/stone_path.gd")
+const TerrainOcclusion = preload("res://src/game/world/terrain_occlusion.gd")
 const Night = preload("res://src/game/environment/night_environment.gd")
 const WorldAudio = preload("res://src/game/audio/world_audio.gd")
 const Footsteps = preload("res://src/game/audio/footsteps.gd")
@@ -16,6 +19,9 @@ const Orbit = preload("res://src/game/orbit_camera.gd")
 
 const CHARACTER_HEIGHT := 1.8
 
+var _nature: NatureField
+var _stone_path: StonePath
+var _previous_occlusion := false
 var _audio: WorldAudio
 var _footsteps: Footsteps
 var _pet: FirePet
@@ -33,6 +39,8 @@ var _grass: Grass
 
 
 func _ready() -> void:
+	_previous_occlusion = get_viewport().use_occlusion_culling
+	get_viewport().use_occlusion_culling = true
 	_build_environment()
 	_build_ground()
 	_build_player()
@@ -52,6 +60,10 @@ func _ready() -> void:
 	_pet.camera = _orbit.camera
 	add_child(_pet)
 	_audio.follow_fire(_pet)
+	_nature = NatureField.new()
+	_nature.island = _island
+	_nature.player = _player
+	add_child(_nature)
 	_grass = Grass.new()
 	_grass.island = _island
 	_grass.player = _player
@@ -76,6 +88,10 @@ func _build_environment() -> void:
 func _build_ground() -> void:
 	_island = Island.new()
 	add_child(_island)
+	TerrainOcclusion.build(_island)
+	_stone_path = StonePath.new()
+	_stone_path.island = _island
+	add_child(_stone_path)
 
 
 # ------------------------------------------------------------- karakter ----
@@ -252,3 +268,7 @@ func _confirm_boot() -> void:
 	await get_tree().process_frame
 	# Launcher memakai marker ini untuk mendeteksi boot konten yang terputus.
 	DirAccess.remove_absolute("user://content_boot_pending")
+
+
+func _exit_tree() -> void:
+	get_viewport().use_occlusion_culling = _previous_occlusion

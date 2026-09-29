@@ -23,6 +23,11 @@ func _run() -> void:
 			push_error("Audio tidak ikut PCK: " + path)
 			quit(1)
 			return
+	var nature_scene: PackedScene = load("res://assets/nature/RockPath_Round_Wide.gltf")
+	if nature_scene == null or not nature_scene.can_instantiate():
+		push_error("Aset nature tidak masuk PCK")
+		quit(1)
+		return
 	var scene: PackedScene = load("res://src/game/main.tscn")
 	if scene == null or not scene.can_instantiate():
 		quit(1)
