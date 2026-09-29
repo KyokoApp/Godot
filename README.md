@@ -210,3 +210,22 @@ Helai dipersempit dari 20 cm menjadi 8,5 cm, tinggi dasar 55 cm. Sebaran dari
 90.000 sebelumnya. Ini batas geometri, bukan jaminan FPS lebih tinggi di Android.
 Tetap opaque, tanpa shadow casting rumput, dan mask jalan/pantai/tebing/batu.
 HUD: **PULAU 1K — rumput halus v2**. Minta video/FPS untuk penilaian ulang.
+
+### Padang lebat v3 — menutup celah tanah dekat pemain
+
+Dari screenshot v2 (36 FPS), celah antar-rumpun masih jelas. V3 memakai dua tingkat:
+9 tile dekat grid 40×40, 16 tile luar grid 20×20. Empat helai tipis per rumpun
+(sebelumnya tiga); kepadatan dekat sekitar **3,7× helai/m²** dibanding v2.
+Lapisan pendek opaque ±5 cm di atas tanah menutup sela, mengikuti kemiringan
+terrain dan memakai corak daun kecil. Bukan sekadar memperlebar helai atas.
+
+Detail dekat + lapisan pendek memudar pada 8–11 m, sebelum batas pergantian tile;
+rumput dasar tetap sampai 23 m. Akar far adalah subset tetap dari grid dekat,
+sehingga tidak bergeser ketika ganti LOD. Maksimal 20.800 rumpun / 112.000 segitiga
+(sebelumnya 86.400); satu tile dibangun tiap frame. Ada tambahan beban geometri,
+meski dibatasi—FPS HP wajib diuji ulang. Mask jalan/pantai/tebing/batu tetap.
+
+CI mencakup tes sampel cakupan penutup tanah dekat (target >=95% area hijau yang
+disampel), streaming, batas geometri, dan render pencahayaan dua sisi. Ini bukan
+jaminan tidak ada satu pixel celah dari semua sudut. HUD **PULAU 1K — padang lebat v3**.
+Update lewat launcher, tidak perlu APK baru.

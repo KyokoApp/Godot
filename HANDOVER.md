@@ -140,3 +140,11 @@ world-up untuk cahaya dua sisi, AO akar dikurangi; lebar helai 8,5 cm, 24×24 ru
 per tile (+44%). Turun 3→2 tris/helai sehingga budget 86.400 tris, bukan 90.000.
 Tes Vulkan mengukur cahaya depan/belakang dan mereproduksi perbedaan shader lama.
 HUD `rumput halus v2`. Jangan menjanjikan FPS tanpa tes perangkat.
+
+## Padang lebat v3 (terbaru)
+
+User ingin tanah tak terlihat di antara rumput (screenshot v2: 36 FPS). Near grid40
++4 helai/rumpun (~3,7× density v2), lapisan pendek opaque mengikuti lereng.
+Far grid20 subset gridnear; fade detail8–11m, rumputdasar16–23m. Budget20.800rumpun,
+112k tris; jangan klaim FPS naik. Tes cakupan near>=95% sampel + Vulkan tetap wajib.
+HUD `padang lebat v3`; tunggu screenshot/FPS sebelum menambah fitur lain.

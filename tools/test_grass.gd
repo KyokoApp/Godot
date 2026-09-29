@@ -33,8 +33,8 @@ func _run() -> void:
 	var arrays := blade_mesh.surface_get_arrays(0)
 	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 	_check(indices.size() == 18, "Budget 6 segitiga per rumpun berubah")
-	_check(Grass.MAX_CLUMPS * indices.size() / 3 <= 90000,
-		"Kepadatan baru melampaui budget segitiga versi lama")
+	_check(Grass.MAX_TRIANGLES <= 112000,
+		"Kepadatan baru melampaui budget LOD")
 	_check(Grass.BLADE_WIDTH < 0.1, "Helai rumput masih terlalu lebar")
 	var camera := Camera3D.new()
 	world.add_child(camera)
@@ -71,6 +71,7 @@ func _run() -> void:
 			_check(field.can_grow(point.x, point.z), "Penempatan di area terlarang")
 			_check(absf(point.y + 0.03 - island.surface_height(point.x, point.z)) < 0.01,
 				"Akar rumput mengambang")
+	_test_cover(field)
 	_check(total > 100, "Tidak ada padang rumput yang cukup untuk dirender")
 	_check(total <= Grass.MAX_CLUMPS, "Budget rumput terlampaui")
 	if "--render" in OS.get_cmdline_user_args():
@@ -122,7 +123,7 @@ func _test_two_sided_lighting() -> void:
 	var material := ShaderMaterial.new()
 	material.shader = Grass.SHADER
 	material.set_shader_parameter("wind_strength", 0.0)
-	material.set_shader_parameter("player_position", Vector3(0, 0, 10))
+	material.set_shader_parameter("player_position", Vector3(0, 0, 5))
 	var image := Image.create(2, 2, false, Image.FORMAT_RGB8)
 	image.fill(Color(0.5, 0.5, 0.5))
 	material.set_shader_parameter("wind_noise", ImageTexture.create_from_image(image))
@@ -175,3 +176,27 @@ func _lighting_card(reverse: bool) -> ArrayMesh:
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	return mesh
+
+
+func _test_cover(field: Node3D) -> void:
+	var key := Vector2i(3, 0)
+	var placements: Array[Transform3D] = field.placements_for(key)
+	var origin := Vector3(key.x * Grass.TILE_SIZE, 0, key.y * Grass.TILE_SIZE)
+	var checked := 0
+	var covered := 0
+	for z in range(1, 10):
+		for x in range(1, 10):
+			var point := origin + Vector3(x + 0.17, 0, z + 0.23)
+			if not field.can_grow(point.x, point.z):
+				continue
+			if Vector2(point.x - 45.0, point.z).length() > 7.5:
+				continue
+			checked += 1
+			for placement in placements:
+				var local := placement.affine_inverse() * (point - origin)
+				if absf(local.x) <= Grass.COVER_HALF_SIZE and absf(local.z) <= Grass.COVER_HALF_SIZE:
+					covered += 1
+					break
+	_check(checked > 30, "Sampel area hijau tidak cukup untuk tes penutup tanah")
+	_check(covered >= checked * 0.95, "Penutup tanah dekat belum mencapai 95% sampel")
+	print("::notice::Ground cover: ", covered, "/", checked, " sampel tertutup")
