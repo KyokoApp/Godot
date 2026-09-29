@@ -135,7 +135,8 @@ jobs:
           ./godot --headless --path project --export-pack "Content" \
             "$GITHUB_WORKSPACE/build/content.pck"
           python3 tools/make_manifest.py
-          timeout 60 ./godot --headless --path project \
+          mkdir -p build/pack-test
+          timeout 60 ./godot --headless --path build/pack-test \
             --script "$GITHUB_WORKSPACE/tools/test_pack.gd" -- "$GITHUB_WORKSPACE/build/content.pck"
 
       # --- 4. ekspor ---------------------------------------------------
