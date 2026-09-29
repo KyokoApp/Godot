@@ -10,6 +10,8 @@ import hashlib
 import io
 import json
 import struct
+import subprocess
+import sys
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageOps
 
@@ -34,14 +36,16 @@ def image_bytes(index):
     view = data['bufferViews'][data['images'][index]['bufferView']]
     return binary[view.get('byteOffset', 0):view.get('byteOffset', 0) + view['byteLength']]
 
-# The portrait is the author's embedded model thumbnail, not unrelated fan art.
-portrait_index = data['textures'][vrm['meta']['texture']]['source']
-portrait = Image.open(io.BytesIO(image_bytes(portrait_index))).convert('RGBA')
-portrait = ImageOps.fit(portrait, (192, 192), method=Image.Resampling.LANCZOS)
-mask = Image.new('L', (192, 192))
-ImageDraw.Draw(mask).ellipse((0, 0, 191, 191), fill=255)
-portrait.putalpha(mask)
-portrait.save(OUT / 'portrait.png')
+# Kanna archive thumbnail index points to a BODY ATLAS; never display it as a face.
+if args.skin == "miku":
+    # The portrait is the author's embedded model thumbnail, not unrelated fan art.
+    portrait_index = data['textures'][vrm['meta']['texture']]['source']
+    portrait = Image.open(io.BytesIO(image_bytes(portrait_index))).convert('RGBA')
+    portrait = ImageOps.fit(portrait, (192, 192), method=Image.Resampling.LANCZOS)
+    mask = Image.new('L', (192, 192))
+    ImageDraw.Draw(mask).ellipse((0, 0, 191, 191), fill=255)
+    portrait.putalpha(mask)
+    portrait.save(OUT / 'portrait.png')
 
 result = copy.deepcopy(data)
 result.pop('extensions', None)
@@ -153,4 +157,7 @@ assert all(dst in human for _, dst in pairs)
 rig = 'extends RefCounted\n## Generated from supplied VRM humanoid metadata.\n\nconst PAIRS := [\n'
 rig += ''.join(f'\t["{src}", "{human[dst]}"],\n' for src, dst in pairs) + ']\n'
 (ROOT / 'project/src/game/animation' / (args.skin + '_rig.gd')).write_text(rig)
+if args.skin == 'kanna':
+    subprocess.run([sys.executable, str(ROOT/'tools/render_character_portrait.py'),
+                    str(OUT/'kanna.glb'), str(OUT/'portrait.png')], check=True)
 print(f'{args.skin}: {len(source):,} -> {len(output):,} bytes, {len(images)} maps, {len(pairs)} bones')

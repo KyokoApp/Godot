@@ -196,7 +196,8 @@ Kredit metadata model tetap **Animeit**, tidak diganti. Hubungan akun/pembuat
 belum diverifikasi independen; kutipan dan batas cakupan ada di
 `project/licenses/Kanna-Permission.txt`. Simpan percakapan asli.
 Model194.476tris/43material dipertahankan; tekstur base-color <=1024px.
-Portrait berasal dari thumbnail model. Lisensi ini bukan CC0/MIT untuk model.
+Portrait Kanna dirender dari mesh/tekstur asli, bukan thumbnail metadata
+(yang keliru menunjuk atlas tubuh). Lisensi ini bukan CC0/MIT untuk model.
 
 ## Engine
 Godot Engine 4.5.2 — Juan Linietsky, Ariel Manzur dan kontributor Godot, MIT.

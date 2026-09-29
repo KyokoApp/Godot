@@ -423,3 +423,9 @@ and pose restoration. Root868295879255555982.vrm removed only AFTER these passed
 Generated runtime GLBs remain; original upload c95925e retained in git history.
 test_miku_asset reads historical upload if root file absent. User expressly
 authorized branch push/build; older local-only notes are historical, superseded.
+
+Kanna portrait correction: VRM meta.texture43 points to body atlas source0,
+not a portrait. Replaced wrong preview with offline orthographic render of
+actual skinned bind-pose mesh/base textures (tools/render_character_portrait.py).
+prepare_miku.py --skin kanna invokes renderer; requires numpy + Pillow. No new
+runtime viewport or frame cost. Miku keeps its valid embedded author thumbnail.

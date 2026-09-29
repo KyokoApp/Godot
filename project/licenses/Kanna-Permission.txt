@@ -27,6 +27,7 @@ by this notice. The owner explicitly requested publishing this prototype build.
 
 Changes: repackaged VRM as native GLB; base-color maps <=1024px; soft lit/toon
 materials; rest-space retarget from UAL animations including casting. Original
-geometry/skinning retained. No VRM spring-bone simulation. Embedded thumbnail
-reused as the character portrait. Kanna is heavier than the other skins
+geometry/skinning retained. No VRM spring-bone simulation. Portrait is rendered offline from the actual model/texture data with
+tools/render_character_portrait.py (the archive thumbnail index incorrectly
+points to a body texture atlas, not a face). Kanna is heavier than the other skins
 (194,476 triangles, 43 materials); phone performance must be measured.
