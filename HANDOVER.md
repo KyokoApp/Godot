@@ -215,3 +215,17 @@ wajib karena transparansi/noise berbeda. Tunggu screenshot sebelum revisi lain.
 - Verify on phone: fire while moving/turning, near ground and cliff impacts,
   fast repeat attacks, disappearing sparks, readability on grass, mean/P95 FPS.
   CI shader success/pixel tests are NOT visual approval or a 60FPS guarantee.
+
+## HUD cleanup + simultaneous move/attack (2026-09-29)
+- User approved VFX v2; do not alter combat appearance in this UI milestone.
+- Removed debug label/instructions/crosshair. Settings hidden by default behind
+  original 60px rune top-right. Existing graphics.cfg options preserved.
+- Original flame SVG, round 128px attack, cooldown arc, press feedback. UI uses
+  RuneButton (Button subclass, no native mouse GUI handling) with independent
+  raw ScreenTouch finger ownership, release-anywhere/cancel/focus/resize reset,
+  and explicit rejection of emulated mouse events to avoid double attacks.
+- Drawer blocks movement/camera, hides attack; icon/outside tap closes it.
+  No world pause. Invisible exclusions no longer reserve camera touch regions.
+- `test_hud.gd`: viewport input dispatch, move+attack both press orders, third
+  finger orbit, unrelated release, cancellation, emulation duplicate rejection,
+  focus reset and drawer open/close; actual Mobile Vulkan + HUD screenshots.

@@ -7,6 +7,7 @@ const MAX_DISTANCE := 8.0
 const MIN_PITCH := 0.10
 const MAX_PITCH := 1.15
 
+var input_enabled := true
 var input_exclusion: Control
 var attack_exclusion: Control
 var yaw := 0.0
@@ -44,15 +45,17 @@ func reset_touches() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if not input_enabled:
+		return
 	if event is InputEventScreenTouch:
 		var touch := event as InputEventScreenTouch
 		if not touch.pressed or touch.canceled:
 			_touches.erase(touch.index)
 		elif touch.position.x >= get_viewport().get_visible_rect().size.x * 0.5:
-			if is_instance_valid(input_exclusion):
+			if is_instance_valid(input_exclusion) and input_exclusion.is_visible_in_tree():
 				if input_exclusion.get_global_rect().has_point(touch.position):
 					return
-			if is_instance_valid(attack_exclusion):
+			if is_instance_valid(attack_exclusion) and attack_exclusion.is_visible_in_tree():
 				if attack_exclusion.get_global_rect().has_point(touch.position):
 					return
 			if _touches.size() < 2:

@@ -5,6 +5,7 @@ extends Control
 const RADIUS := 86.0
 const DEAD_ZONE := 0.15
 
+var input_enabled := true
 var direction := Vector2.ZERO
 var _finger := -1
 var _offset := Vector2.ZERO
@@ -22,6 +23,8 @@ func _notification(what: int) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if not input_enabled:
+		return
 	if event is InputEventScreenTouch:
 		var touch := event as InputEventScreenTouch
 		if touch.index == _finger and (not touch.pressed or touch.canceled):

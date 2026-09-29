@@ -45,6 +45,9 @@ func _run() -> void:
 	var config := ConfigFile.new()
 	_check(config.load(PerfPanel.SETTINGS) == OK, "Pengaturan tidak tersimpan")
 	_check(config.get_value("graphics", "uncapped", false) == true, "Nilai tersimpan salah")
+	_check(not panel.is_visible_in_tree(), "Setting seharusnya tersembunyi saat mulai")
+	game._toggle_graphics()
+	_check(panel.is_visible_in_tree(), "Ikon tidak membuka setting")
 	var orbit: Node3D = game.get("_orbit")
 	var event := InputEventScreenTouch.new()
 	event.index = 6

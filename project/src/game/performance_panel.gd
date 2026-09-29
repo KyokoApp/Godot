@@ -19,6 +19,7 @@ var _elapsed := 0.0
 
 
 func _ready() -> void:
+	add_theme_constant_override("separation", 8)
 	_load_settings()
 	_quality = _button("", toggle_quality)
 	_grass_button = _button("", toggle_grass)
@@ -37,6 +38,16 @@ func _button(text: String, action: Callable) -> Button:
 	button.text = text
 	button.custom_minimum_size = Vector2(250, 46)
 	button.add_theme_font_size_override("font_size", 18)
+	button.focus_mode = Control.FOCUS_NONE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.19, 0.14, 0.29, 1)
+	style.set_corner_radius_all(10)
+	button.add_theme_stylebox_override("normal", style)
+	var active := style.duplicate() as StyleBoxFlat
+	active.bg_color = Color(0.32, 0.23, 0.47, 1)
+	button.add_theme_stylebox_override("pressed", active)
+	button.add_theme_stylebox_override("hover", active)
+	button.add_theme_color_override("font_color", Color("e4ddf4"))
 	button.pressed.connect(action)
 	add_child(button)
 	return button

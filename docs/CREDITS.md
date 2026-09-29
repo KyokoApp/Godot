@@ -108,3 +108,7 @@ bukan aset Naruto atau interpretasi baru dari ingatan.
   under the repository's separate CC-BY-NC-SA license are included.
 - Cartoon 3D Fire by erBimo was also inspected on GodotShaders; no code or
   artwork from that page was imported.
+
+### HUD rune icons
+`project/src/game/ui/flame.svg` and `settings.svg`: original vector artwork
+created for A-Sekai, not copied from an icon pack or third-party image.

@@ -353,3 +353,12 @@ TTL impact 1.9s, ekor 0.7s; cap tetap 3 proyektil / 2 impact, cooldown 0.85s.
 HUD: **PULAU 1K — api v2 — trail + impact**. Update via restart online/PCK.
 Tes Mobile Vulkan sekarang memeriksa pixel projectile, volume impact, peluruhan,
 cleanup, dan menyimpan screenshot CI. Kualitas visual/FPS tetap perlu uji HP.
+
+### HUD bersih + multitouch
+HUD debug, FPS/posisi, petunjuk dan crosshair dihapus dari layar bermain.
+Grafik dibuka melalui rune kecil 60px kanan atas; semua pengaturan/perbandingan
+frame tetap tersedia di drawer. Attack 128px bulat dengan SVG api original,
+feedback tekan dan ring cooldown tanpa teks. Tombol menangani index sentuh
+secara independen, bukan emulasi mouse satu jari: jalan + attack + orbit dapat
+bersamaan. Menu mereset/memblokir joystick dan kamera sementara dibuka.
+Regresi `test_hud.gd` menginjeksi event lewat viewport pada Mobile/Vulkan.
