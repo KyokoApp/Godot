@@ -25,6 +25,7 @@ func _ready() -> void:
 	_shadows = _button("", toggle_shadows)
 	_limit = _button("", toggle_limit)
 	_stats = Label.new()
+	_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_stats.add_theme_font_size_override("font_size", 16)
 	_stats.add_theme_color_override("font_shadow_color", Color.BLACK)
 	add_child(_stats)

@@ -1,6 +1,6 @@
 extends SceneTree
 
-const Panel = preload("res://src/game/performance_panel.gd")
+const PerfPanel = preload("res://src/game/performance_panel.gd")
 var _failures := 0
 
 
@@ -16,13 +16,13 @@ func _check(condition: bool, message: String) -> void:
 
 
 func _run() -> void:
-	var existed := FileAccess.file_exists(Panel.SETTINGS)
-	var saved := FileAccess.get_file_as_string(Panel.SETTINGS) if existed else ""
+	var existed := FileAccess.file_exists(PerfPanel.SETTINGS)
+	var saved := FileAccess.get_file_as_string(PerfPanel.SETTINGS) if existed else ""
 	var scene: PackedScene = load("res://src/game/main.tscn")
 	var game: Node3D = scene.instantiate()
 	root.add_child(game)
 	await process_frame
-	var panel: Panel = game.get("_performance")
+	var panel: PerfPanel = game.get("_performance")
 	panel.light_mode = true
 	panel.shadows_enabled = false
 	panel.grass_enabled = true
@@ -43,7 +43,7 @@ func _run() -> void:
 	panel.toggle_limit()
 	_check(Engine.max_fps == 0, "Mode FPS bebas tidak menghapus batas aplikasi")
 	var config := ConfigFile.new()
-	_check(config.load(Panel.SETTINGS) == OK, "Pengaturan tidak tersimpan")
+	_check(config.load(PerfPanel.SETTINGS) == OK, "Pengaturan tidak tersimpan")
 	_check(config.get_value("graphics", "uncapped", false) == true, "Nilai tersimpan salah")
 	var orbit: Node3D = game.get("_orbit")
 	var event := InputEventScreenTouch.new()
@@ -64,10 +64,10 @@ func _run() -> void:
 	_check(Engine.max_fps == 0 and is_equal_approx(root.scaling_3d_scale, 1.0),
 		"Pengaturan render bocor setelah keluar game")
 	if existed:
-		var file := FileAccess.open(Panel.SETTINGS, FileAccess.WRITE)
+		var file := FileAccess.open(PerfPanel.SETTINGS, FileAccess.WRITE)
 		file.store_string(saved)
 		file.close()
 	else:
-		DirAccess.remove_absolute(Panel.SETTINGS)
+		DirAccess.remove_absolute(PerfPanel.SETTINGS)
 	print("[performance-test] HASIL: ", "OK" if _failures == 0 else "GAGAL")
 	quit(0 if _failures == 0 else 1)
