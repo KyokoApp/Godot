@@ -51,7 +51,7 @@ func _run() -> void:
 	for tile in field.tiles.values():
 		total += tile.multimesh.instance_count
 		for index in range(tile.multimesh.instance_count):
-			var point := tile.position + tile.multimesh.get_instance_transform(index).origin
+			var point: Vector3 = tile.position + tile.multimesh.get_instance_transform(index).origin
 			_check(field.can_grow(point.x, point.z), "Penempatan di area terlarang")
 			_check(absf(point.y + 0.03 - island.surface_height(point.x, point.z)) < 0.01,
 				"Akar rumput mengambang")

@@ -129,8 +129,16 @@ jobs:
 
       - name: Tes mask dan streaming rumput
         run: |
+          set +e
           timeout 90 ./godot --headless --path project \
-            --script "$GITHUB_WORKSPACE/tools/test_grass.gd"
+            --script "$GITHUB_WORKSPACE/tools/test_grass.gd" 2>&1 | tee grass-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' grass-test.log; then
+            tail -40 grass-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[grass-test] HASIL: OK' grass-test.log
 
       - name: Render shader rumput (Mobile Vulkan software)
         run: |
