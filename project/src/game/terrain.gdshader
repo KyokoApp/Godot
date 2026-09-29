@@ -18,6 +18,37 @@ void vertex() {
 	green_land = smoothstep(0.04, 0.12, ground_color.g - max(ground_color.r, ground_color.b));
 	green_land *= smoothstep(0.88, 0.95, NORMAL.y);
 }
+float grain(vec2 p) {
+	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+vec3 arena_ground(vec2 p) {
+	vec2 cells = p * 0.65;
+	vec2 base = floor(cells);
+	vec2 local = fract(cells);
+	float first = 9.0;
+	float second = 9.0;
+	float seed = 0.0;
+	for (int y = -1; y <= 1; y++) {
+		for (int x = -1; x <= 1; x++) {
+			vec2 offset = vec2(float(x), float(y));
+			vec2 site = offset + vec2(grain(base + offset), grain(base + offset + 19.3));
+			float d = length(site - local);
+			if (d < first) { second = first; first = d; seed = grain(base + offset); }
+			else { second = min(second, d); }
+		}
+	}
+	float seams = 1.0 - smoothstep(0.018, 0.065, second - first);
+	vec3 stone = mix(vec3(0.24, 0.21, 0.17), vec3(0.42, 0.39, 0.32), seed);
+	stone *= 0.94 + 0.06 * grain(floor(p * 12.0));
+	stone = mix(stone, vec3(0.12, 0.10, 0.08), seams * 0.65);
+	float r = length(p);
+	float angle = atan(p.y, p.x);
+	float crack = abs(sin(angle * 5.5 + sin(r * 0.6) * 0.10 + sin(r * 1.8) * 0.04));
+	float width = 0.22 / max(r, 0.7);
+	float fracture = 1.0 - smoothstep(width, width * 2.0 + 0.005, crack);
+	fracture *= 1.0 - smoothstep(30.0, 42.0, r);
+	return mix(stone, vec3(0.065, 0.055, 0.045), fracture * 0.9);
+}
 void fragment() {
 	float z = world_position.z;
 	float center = 65.0 * sin(z / 95.0) + 22.0 * sin(z / 43.0);
@@ -31,5 +62,12 @@ void fragment() {
 		land *= mix(1.0, mix(0.82, 1.02, pattern), green_land);
 	}
 	ALBEDO = mix(land, dirt_color.rgb, road);
+	vec2 arena_p = world_position.xz - vec2(-145.0, 140.0);
+	float angle = atan(arena_p.y, arena_p.x);
+	float boundary = 42.0 + 1.4 * sin(angle * 5.0) + 0.7 * cos(angle * 9.0);
+	float arena_mask = 1.0 - smoothstep(-0.5, 1.2, length(arena_p) - boundary);
+	if (arena_mask > 0.0) {
+		ALBEDO = mix(ALBEDO, arena_ground(arena_p), arena_mask);
+	}
 	ROUGHNESS = 1.0;
 }

@@ -43,7 +43,7 @@ func _recenter(center: Vector2i) -> void:
 
 
 func can_place(point: Vector2, tree: bool) -> bool:
-	if point.length() > 405 or absf(point.x) > 440 or absf(point.y) > 440:
+	if Island.ArenaShape.distance_to(point.x, point.y) < 5 or point.length() > 405:
 		return false
 	var height := island.surface_height(point.x, point.y)
 	if height < 5.5 or Island.WaterShape.covers(point.x, point.y, 3.0):

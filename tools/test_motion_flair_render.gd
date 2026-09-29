@@ -123,12 +123,14 @@ func _test_aura(world: Node3D, camera: Camera3D) -> void:
 	world.add_child(trail)
 	var previous := empty
 	for skin in [Character.MANNEQUIN, Character.MIKU, Character.KANNA]:
+		character.show()
 		character.set_skin(skin)
 		character.position = Vector3(0, 0, -2)
 		for frame in range(24):
 			character.position.z += 0.08
 			trail.update_motion(1.0 / 60.0, 15, true)
 			await process_frame
+		_check(trail.ghosts.emitted > 0, "Pose echo tidak aktif: " + skin)
 		character.hide()
 		var image: Image = await _capture()
 		_check(_difference(empty, image) > 100, "Aura tidak terlihat: " + skin)

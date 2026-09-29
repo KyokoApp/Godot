@@ -479,3 +479,17 @@ Settings/attack/speed/analog accents white; drawer neutral translucent for reada
 Tests: test_speed (movement ratio, slowed playback, bounded aura/idle), test_hud touch toggle
 and camera exclusion, test_motion_flair_render now renders all three aura colors, bloom and fade.
 Warmup22: aura glow and wash shader included. No changes to keystore or main branch.
+
+
+## Revision: smoke echoes and separate battle clearing
+Supersedes previous ribbon/sphere speed effect: restored final-pose skin echoes
+(cap3, Kanna2) plus pool10 soft smoke cards, lifetime0.48s. No luminous tubes or
+bubble shell. Colors blue/orange/purple and reduced screen wash retained.
+Arena: center(-145,140), ~84m diameter, height9m, shared irregular footprint.
+Terrain collider flattened with22m transition, grass/trees/rocks excluded.
+Procedural earth/stone cellular texture and radial cracks are on actual terrain,
+not a floating disk. Grey-white aurora skirt (192 segments, ~3m high) is visual
+only and traversable. No enemies/damage/teleport added. Walk to negative X,
+positive Z from spawn (~200m). Original shaders; no new third-party assets.
+Native gates: arena walkability/collision/vegetation/render; all-skin speed render.
+Phone FPS still requires real-device measurement.

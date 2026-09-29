@@ -2,6 +2,7 @@ extends Node3D
 ## Pulau deterministik 1 km, terrain ber-collision dengan jalan menyatu permukaan.
 ## 16 chunk, total 80.000 segitiga; tanpa shader/tekstur eksternal.
 
+const ArenaShape = preload("res://src/game/arena/arena_shape.gd")
 const WaterShape = preload("res://src/game/water/water_shape.gd")
 const WaterSurfaces = preload("res://src/game/water/water_surfaces.gd")
 const TERRAIN_SHADER = preload("res://src/game/terrain.gdshader")
@@ -78,7 +79,8 @@ static func terrain_height(x: float, z: float) -> float:
 	var height := -7.0 + coast * (12.0 + hills + cliff + rolling)
 	var road_weight := 1.0 - smoothstep(13.0, 38.0, road_distance(x, z))
 	road_weight *= 1.0 - smoothstep(300.0, 350.0, absf(z))
-	return WaterShape.carve(x, z, lerpf(height, road_height(z), road_weight))
+	return ArenaShape.carve(x, z,
+		WaterShape.carve(x, z, lerpf(height, road_height(z), road_weight)))
 
 
 func surface_height(x: float, z: float) -> float:
@@ -187,6 +189,8 @@ func _build_rocks() -> void:
 		var x := random.randf_range(-370, 370)
 		var z := random.randf_range(-370, 370)
 		var y := surface_height(x, z)
+		if ArenaShape.distance_to(x, z) < 5:
+			continue
 		if y < 2.0 or road_distance(x, z) < 24.0 or WaterShape.covers(x, z, 5.0):
 			continue
 		var rock := MeshInstance3D.new()

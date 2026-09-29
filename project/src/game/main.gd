@@ -1,6 +1,7 @@
 extends Node3D
 ## Pulau 1 km + kamera sentuh, tetap memakai mannequin dan updater yang sama.
 
+const BattleArena = preload("res://src/game/arena/battle_arena.gd")
 const SpeedButton = preload("res://src/game/ui/speed_button.gd")
 const SpeedAura = preload("res://src/game/speed/speed_aura.gd")
 const FootFire = preload("res://src/game/foot_fire/foot_fire_trail.gd")
@@ -115,6 +116,7 @@ func _build_environment() -> void:
 func _build_ground() -> void:
 	_island = Island.new()
 	add_child(_island)
+	add_child(BattleArena.new())
 	TerrainOcclusion.build(_island)
 	_stone_path = StonePath.new()
 	_stone_path.island = _island

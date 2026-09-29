@@ -42,7 +42,8 @@ func _run() -> void:
 	var fast := Vector2(body.position.x - start.x, body.position.z - start.z).length()
 	_check(fast > normal * 2.7 and fast < normal * 3.3, "Speed bukan 3x: %f/%f" % [fast, normal])
 	_check(visual.get("animation").speed_scale < normal_rate * 0.4, "Animasi tidak diperlambat")
-	_check(trail.strength > 0.5 and trail.paths.size() <= Trail.POINTS, "Aura/budget salah")
+	_check(trail.strength > 0.5 and trail.ghosts.ghosts.size() == 3
+		and trail.ghosts.emitted > 0, "Aura/budget salah")
 	_check(trail.tint == Trail.COLORS["miku"], "Palet Miku bukan biru")
 	_check(trail.environment.glow_enabled and trail.wash.visible, "Bloom/wash speed mati")
 	stick.set("direction", Vector2.ZERO)

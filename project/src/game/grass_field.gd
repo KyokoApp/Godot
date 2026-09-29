@@ -76,7 +76,7 @@ func _tile_priority(key: Vector2i) -> float:
 
 
 func can_grow(x: float, z: float) -> bool:
-	if absf(x) > 495 or absf(z) > 495:
+	if Island.ArenaShape.distance_to(x, z) < 2 or absf(x) > 495 or absf(z) > 495:
 		return false
 	var height := island.surface_height(x, z)
 	if height < 5.4 or Island.WaterShape.covers(x, z, 1.5):
