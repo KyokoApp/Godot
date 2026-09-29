@@ -74,8 +74,8 @@ func _physics_process(delta: float) -> void:
 
 
 func _sample(side: int) -> void:
-	# Retargeted proportions can keep an ankle inside the contact band throughout
-	# a stride (Kanna). Use the real mocap foot's lift to re-arm, never a timer alone.
+	# Mocap stance/swing gates the wider contact band needed by retarget proportions.
+	# Placement still comes from the destination foot, never a body-centered timer.
 	var lift := character.foot_stride_lift(side == 0)
 	if lift > 0.04:
 		if lift > 0.075:
@@ -92,10 +92,13 @@ func _sample(side: int) -> void:
 	var normal: Vector3 = hit["normal"]
 	var distance := pose.origin.y - point.y
 	var clearance := character.foot_clearance(side == 0)
-	if distance > clearance + 0.09 or normal.y < 0.6:
+	# Measured Kanna jog stance: ankle .135-.156m vs .074m at rest (before floor offset).
+	# No foot IK is installed: project its mocap stance onto nearby terrain instead.
+	var margin := 0.11 if character.skin_id == Character.KANNA else 0.035
+	if distance > clearance + margin + 0.055 or normal.y < 0.6:
 		_contact[side] = false
 		return
-	if distance > clearance + 0.035 or _contact[side] or _cooldowns[side] > 0:
+	if distance > clearance + margin or _contact[side] or _cooldowns[side] > 0:
 		return
 	if not island.is_walkable_shore(point.x, point.z):
 		return

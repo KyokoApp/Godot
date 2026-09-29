@@ -449,10 +449,13 @@ No billboarding, lights, shadows, physics actors, sounds or damage. Clear telepo
 Tests test_motion_flair + test_motion_flair_render, screenshot motion-flair-screenshots.
 Warmup21 stages. Existing pet/attack/casting/credits/updater remain unchanged.
 
-Contact follow-up: all-three-rig repeated-walk gate found Kanna never re-armed
-from ankle-height hysteresis alone (shorter retarget proportions). Re-arm additionally
-uses actual source mocap foot lift (.075m swing/.04m stance). Destination ankle/toe
-pose + ground ray still determine placement and contact proximity, not body-centered
-phase stamps. Sole length scales from each rig's ankle-to-toe distance (20–34cm),
-with center shifted toward toe, so heel is not centered on ankle. Keep all-three
-repeat-contact/idle/teleport integration gates; do not weaken their >=5-step check.
+Contact follow-up: all-three-rig repeated-walk gate found Kanna's .035m stance
+band too strict: its jog ankle is .135-.156m high versus .074m rest height,
+before player floor offset. This is inherited retarget geometry, not a missing
+bone or a timing-only issue. Kanna uses .11m tolerance; other rigs retain .035m.
+All rigs additionally require actual mocap foot stance (.04m) and re-arm on swing
+(.075m), with active-skin ankle/toe ground rays. No foot IK or existing animations
+changed. Sole length scales from rig ankle-to-toe distance (20–34cm) and center
+shifts toward toe, rather than centering the heel on ankle. Keep all-three repeated
+contacts/idle/teleport gates; do not weaken their >=5-step check. Native diagnostic
+annotations report min/max gaps, rest clearance, source swing and stamp count.

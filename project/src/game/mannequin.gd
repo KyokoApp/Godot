@@ -185,8 +185,8 @@ func foot_clearance(left: bool) -> float:
 
 
 func foot_stride_lift(left: bool) -> float:
-	# Mocap swing must re-arm contact even when a shorter retargeted leg remains
-	# close to the floor throughout its cycle. Final placement still uses its own foot.
+	# Use the source foot's real stance/swing to gate retarget contact tolerance.
+	# Final placement and size still use the selected skin's own ankle/toe bones.
 	var bone := source_skeleton.find_bone("foot_l" if left else "foot_r")
 	return source_skeleton.get_bone_global_pose(bone).origin.y \
 		- source_skeleton.get_bone_global_rest(bone).origin.y
