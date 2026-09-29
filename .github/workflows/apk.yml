@@ -312,6 +312,13 @@ jobs:
           fi
           grep -F '[god-rays-test] HASIL: OK' god-rays.log
 
+      - name: Simpan screenshot sinar bulan
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: moon-rays-screenshots
+          path: ~/.local/share/godot/app_userdata/**/moon-rays-test.png
+
       - name: Render arena, collision dan vegetation (Mobile Vulkan)
         run: |
           set +e

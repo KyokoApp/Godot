@@ -79,6 +79,28 @@ func _run() -> void:
 	var blocked_off := root.get_texture().get_image()
 	_check(blocked.get_pixel(240, 135).is_equal_approx(blocked_off.get_pixel(240, 135)),
 		"Rays shine through opaque geometry")
+	# The graphics switch must affect the live effect and survive settings reload.
+	var panel_script = load("res://src/game/performance_panel.gd") as GDScript
+	var settings_path: String = panel_script.SETTINGS
+	var had_settings := FileAccess.file_exists(settings_path)
+	var saved := FileAccess.get_file_as_bytes(settings_path) if had_settings else PackedByteArray()
+	var panel: VBoxContainer = panel_script.new()
+	panel.set("rays", rays)
+	root.add_child(panel)
+	var initial: bool = panel.get("rays_enabled")
+	panel.call("toggle_rays")
+	_check(rays.enabled != initial, "Graphics toggle did not change rays")
+	var restored: VBoxContainer = panel_script.new()
+	root.add_child(restored)
+	_check(restored.get("rays_enabled") == not initial, "Rays setting was not persisted")
+	panel.queue_free()
+	restored.queue_free()
+	if had_settings:
+		var file := FileAccess.open(settings_path, FileAccess.WRITE)
+		file.store_buffer(saved)
+		file.close()
+	else:
+		DirAccess.remove_absolute(settings_path)
 	world.queue_free()
 	await process_frame
 	print("[god-rays-test] HASIL: ", "OK" if _failures == 0 else "GAGAL")

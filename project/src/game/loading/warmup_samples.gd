@@ -10,7 +10,8 @@ const WaterMaterial = preload("res://src/game/water/water_material.gd")
 const FootFire = preload("res://src/game/foot_fire/foot_fire_trail.gd")
 const ArenaFog = preload("res://src/game/arena/arena_fog.gd")
 const SpeedAura = preload("res://src/game/speed/speed_aura.gd")
-const STAGES := 23
+const MoonRays = preload("res://src/game/god_rays/moon_rays.gd")
+const STAGES := 24
 
 
 static func populate(stage: int, world: Node3D, game: Node3D) -> void:
@@ -53,6 +54,13 @@ static func populate(stage: int, world: Node3D, game: Node3D) -> void:
 		burst.set_process(false)
 		burst.age = 0.22
 		burst._update_visuals()
+	elif stage == 23:
+		var rays := MoonRays.new()
+		world.add_child(rays)
+		rays.set_process(false)
+		rays.visible = true
+		rays.material_override.set_shader_parameter("source_uv", Vector2(0.5, 0.5))
+		rays.material_override.set_shader_parameter("strength", 0.16)
 	elif stage == 22:
 		var character := Character.new()
 		world.add_child(character)

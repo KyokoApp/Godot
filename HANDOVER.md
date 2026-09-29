@@ -520,3 +520,6 @@ saat bulan di belakang/luar kamera atau pemain di dalam arena. Efek berada di
 bawah HUD dan transparansi, tidak menerangi terrain/karakter. Objek transparan
 atau di luar layar tidak ikut menghalangi sinar. Toggle tersimpan “Sinar bulan”
 ada di Grafik untuk tes A/B HP; tidak menjamin FPS. Renderer target Mobile 4.5.2.
+
+Moon rays included in shader warmup (24 stages); Vulkan regression tests also verify
+opaque blocker, behind-camera/arena exclusion and graphics toggle persistence.
