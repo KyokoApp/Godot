@@ -135,6 +135,19 @@ jobs:
           fi
           grep -F '[performance-test] HASIL: OK' performance-test.log
 
+      - name: Tes pet api, attack, collision dan cleanup
+        run: |
+          set +e
+          timeout 90 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_fire_pet.gd" 2>&1 | tee fire-pet-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' fire-pet-test.log; then
+            tail -40 fire-pet-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[fire-pet-test] HASIL: OK' fire-pet-test.log
+
       - name: Tes pulau, collision, kamera dan multitouch
         run: |
           timeout 90 ./godot --headless --path project \

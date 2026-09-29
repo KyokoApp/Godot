@@ -180,3 +180,12 @@ robe dihapus. Panel kanan atas membandingkan render75/100%, rumput, bayangan,
 cap60/bebas; default75%, bayanganmati, rumputnyala, cap60. Pengaturan tersimpan.
 Frameavg/P95/drawcalls hanya indikator, bukan GPU timing. Tombol dikecualikan dari
 input kamera. Perlu tipe HP/Hz + uji A/B lokasi sama. Jangan janjikan 60 FPS dari CI.
+
+## Terbaru: pet api astral + attack
+
+Permintaan pengguna: pet melayang sejajar bahu, terpisah dari karakter, gradasi
+ungu/biru + outline; attack api kecil fisik dan ledakan bulat besar berupa api.
+fire_pet/projectile/burst/visual + spirit_fire shader implementasi prosedural.
+Cap3peluru/2ledakan, cooldown0,85, TTL4s/1s. Aimreticlekamera, sphere sweepworld.
+Tidak ada damage/enemy/fluidfire. Jubah tetap dihapus. Wajib tes FPS HP; jangan
+merge main. HUD pet api astral, distribusi PCK kompatibel launcher.

@@ -74,3 +74,9 @@ karya orisinal proyek; hak distribusi komersial/store perlu diverifikasi tersend
 Mesh pakaian, tudung/aksesori prosedural, solver kain ringan dan shader api toon
 pastel ditulis untuk proyek ini; tidak menyalin pakaian/aset karakter eksternal.
 Animasi dan skeleton penggerak tetap UAL1 Standard Quaternius (kredit di atas).
+
+## Pet api astral
+
+Model pet prosedural, shader gradien api toon, proyektil gravitasi dan VFX ledakan
+bulat ditulis untuk proyek ini. Tidak memakai model, tekstur atau suara dari
+Naruto/game lain. Referensi pengguna hanya berupa bentuk ledakan bulat berputar.

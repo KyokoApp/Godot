@@ -2,6 +2,7 @@ extends SceneTree
 ## Digunakan dua kali: logika headless dan render Mobile/Vulkan via Mesa/Xvfb.
 
 const Island = preload("res://src/game/island.gd")
+const FirePet = preload("res://src/game/fire_pet.gd")
 const Character = preload("res://src/game/mannequin.gd")
 const Grass = preload("res://src/game/grass_field.gd")
 var _failures := 0
@@ -45,6 +46,12 @@ func _run() -> void:
 	camera.position = player.position + Vector3(0, 3, 6)
 	camera.look_at(player.position)
 	camera.current = true
+	var pet := FirePet.new()
+	pet.player = player
+	pet.facing = character
+	pet.camera = camera
+	world.add_child(pet)
+	pet._on_impact(player.position + Vector3(2, 0, -3), Vector3.UP)
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-50, 20, 0)
 	world.add_child(sun)

@@ -1,6 +1,7 @@
 extends Node3D
 ## Pulau 1 km + kamera sentuh, tetap memakai mannequin dan updater yang sama.
 
+const FirePet = preload("res://src/game/fire_pet.gd")
 const PerformancePanel = preload("res://src/game/performance_panel.gd")
 const Joystick = preload("res://src/game/virtual_joystick.gd")
 const Mannequin = preload("res://src/game/mannequin.gd")
@@ -11,6 +12,8 @@ const Orbit = preload("res://src/game/orbit_camera.gd")
 
 const CHARACTER_HEIGHT := 1.8
 
+var _pet: FirePet
+var _attack: Button
 var _sun: DirectionalLight3D
 var _performance: PerformancePanel
 var _hud_elapsed := 0.0
@@ -28,6 +31,11 @@ func _ready() -> void:
 	_build_ground()
 	_build_player()
 	_build_camera()
+	_pet = FirePet.new()
+	_pet.player = _player
+	_pet.facing = _visual
+	_pet.camera = _orbit.camera
+	add_child(_pet)
 	_grass = Grass.new()
 	_grass.island = _island
 	_grass.player = _player
@@ -113,7 +121,7 @@ func _build_hud() -> void:
 	add_child(layer)
 
 	_label = Label.new()
-	_label.text = "PULAU 1K — mannequin + mode FPS"
+	_label.text = "PULAU 1K — pet api astral"
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_label.add_theme_font_size_override("font_size", 26)
 	_label.add_theme_color_override("font_color", Color(1, 1, 1))
@@ -134,6 +142,25 @@ func _build_hud() -> void:
 	_performance.offset_top = 24
 	_performance.offset_bottom = 294
 	_orbit.input_exclusion = _performance
+	_attack = Button.new()
+	_attack.text = "ATTACK"
+	_attack.add_theme_font_size_override("font_size", 26)
+	layer.add_child(_attack)
+	_attack.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	_attack.offset_left = -220
+	_attack.offset_right = -40
+	_attack.offset_top = -180
+	_attack.offset_bottom = -80
+	_attack.button_down.connect(_pet.attack)
+	_orbit.attack_exclusion = _attack
+	var aim := Label.new()
+	aim.text = "+"
+	aim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	aim.add_theme_font_size_override("font_size", 26)
+	layer.add_child(aim)
+	aim.anchor_left = 0.5
+	aim.anchor_top = 0.42
+	aim.position -= Vector2(8, 18)
 
 
 # ----------------------------------------------------------------- loop ----
@@ -173,8 +200,9 @@ func _process(delta: float) -> void:
 	if _hud_elapsed < 0.25:
 		return
 	_hud_elapsed = 0.0
+	_attack.text = "ATTACK" if _pet.cooldown <= 0 else "%.1f s" % _pet.cooldown
 	_label.text = (
-		"PULAU 1K — mannequin + mode FPS\nFPS: %d | Posisi: %.1f, %.1f\n"
+		"PULAU 1K — pet api astral\nFPS: %d | Posisi: %.1f, %.1f\n"
 		+ "Kiri: gerak | Geser kanan: kamera | Cubit kanan: zoom"
 	) % [Engine.get_frames_per_second(), _player.position.x, _player.position.z]
 

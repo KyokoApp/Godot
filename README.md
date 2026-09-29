@@ -301,3 +301,25 @@ Untuk diagnosis lanjut: Godot Profiler/Visual Profiler pada perangkat, Android
 GPU Inspector (device/driver yang kompatibel), serta Perfetto. Hasil CI/Mesa bukan
 benchmark HP. Minta tipe HP/chipset, Hz layar dan hasil A/B sebelum menyimpulkan
 CPU/GPU bottleneck. HUD **PULAU 1K — mannequin + mode FPS**. Update lewat PCK.
+
+## Pet api astral + Attack
+
+Pet biru–ungu toon ber-outline melayang di samping bahu (offset sekitar 1,1 m),
+node dunia terpisah dari rig mannequin. Bobbing, napas dan lidah api bergerak.
+Jubah tetap dihapus; mannequin/ikon/loading/panel performa tidak diganti.
+
+Tombol ATTACK kanan bawah menembakkan bola api ke reticle (+). Target berasal
+ray kamera ke collider dunia; lintasan proyektil memakai gravitasi 12 m/s² dan
+sweep sphere `move_and_collide`, bukan teleport ke target. Saat benturan,
+inti api bulat membesar (radius inti maks 1,9 m), dengan lidah api berputar,
+cincin energi, lalu menyusut; tanpa flash layar atau guncangan kamera paksa.
+Ini VFX api stylized, bukan simulasi fluida, damage/AI musuh belum ada.
+
+Budget: cooldown0,85s, maksimal3 proyektil (TTL4s), maksimal2 ledakan (1s).
+Mesh/material dibagi, efek opaque, tidak ada lampu dinamis/particle shadow tambahan.
+Biaya render tetap bertambah: tes FPS HP saat spam attack tetap diperlukan.
+Tombol attack dikecualikan dari swipe/pinch kamera; joystick kiri tetap bekerja.
+
+CI menguji hover, jarak pet, tombol/kamera, cooldown, gravitasi, benturan tanah,
+pembersihan dan batas efek. Shader pet/ledakan juga ikut tes Mobile Vulkan.
+HUD **PULAU 1K — pet api astral**, update lewat PCK tanpa APK baru.
