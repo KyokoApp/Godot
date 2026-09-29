@@ -48,10 +48,19 @@ func _run() -> void:
 		await process_frame
 	_check(field.tiles.size() == Grass.MAX_TILES, "Jumlah tile tidak sesuai batas")
 	var total := 0
-	for tile in field.tiles.values():
+	for key in field.tiles:
+		var tile: MultiMeshInstance3D = field.tiles[key]
+		var placements := field.placements_for(key)
 		total += tile.multimesh.instance_count
-		for index in range(tile.multimesh.instance_count):
-			var point: Vector3 = tile.position + tile.multimesh.get_instance_transform(index).origin
+		_check(placements.size() == tile.multimesh.instance_count, "Jumlah instance berbeda")
+		for index in range(placements.size()):
+			var placement: Transform3D = placements[index]
+			# Renderer dummy tidak menyimpan transform MultiMesh di GPU.
+			# Readback GPU hanya diuji pada pass render Vulkan, bukan headless.
+			if "--render" in OS.get_cmdline_user_args():
+				placement = tile.multimesh.get_instance_transform(index)
+				_check(placement.is_equal_approx(placements[index]), "Transform GPU berbeda")
+			var point: Vector3 = tile.position + placement.origin
 			_check(field.can_grow(point.x, point.z), "Penempatan di area terlarang")
 			_check(absf(point.y + 0.03 - island.surface_height(point.x, point.z)) < 0.01,
 				"Akar rumput mengambang")

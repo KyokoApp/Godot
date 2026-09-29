@@ -73,12 +73,10 @@ func can_grow(x: float, z: float) -> bool:
 	return true
 
 
-func _build_tile(key: Vector2i) -> void:
+func placements_for(key: Vector2i) -> Array[Transform3D]:
 	var random := RandomNumberGenerator.new()
 	random.seed = hash(key) + 8421
 	var placements: Array[Transform3D] = []
-	var min_y := INF
-	var max_y := -INF
 	var origin := Vector3(key.x * TILE_SIZE, 0, key.y * TILE_SIZE)
 	for z in range(GRID):
 		for x in range(GRID):
@@ -89,11 +87,19 @@ func _build_tile(key: Vector2i) -> void:
 			if not can_grow(world_x, world_z):
 				continue
 			var height := island.surface_height(world_x, world_z) - 0.03
-			min_y = minf(min_y, height)
-			max_y = maxf(max_y, height)
 			var basis := Basis(Vector3.UP, random.randf_range(0, TAU))
 			basis = basis.scaled(Vector3.ONE * random.randf_range(0.8, 1.2))
 			placements.append(Transform3D(basis, Vector3(local_x, height, local_z)))
+	return placements
+
+
+func _build_tile(key: Vector2i) -> void:
+	var placements := placements_for(key)
+	var min_y := INF
+	var max_y := -INF
+	for placement in placements:
+		min_y = minf(min_y, placement.origin.y)
+		max_y = maxf(max_y, placement.origin.y)
 	var multi := MultiMesh.new()
 	multi.transform_format = MultiMesh.TRANSFORM_3D
 	multi.mesh = _mesh
@@ -108,7 +114,7 @@ func _build_tile(key: Vector2i) -> void:
 	if not placements.is_empty():
 		tile.custom_aabb = AABB(Vector3(-1, min_y - 0.3, -1),
 			Vector3(TILE_SIZE + 2, max_y - min_y + 1.5, TILE_SIZE + 2))
-	tile.position = origin
+	tile.position = Vector3(key.x * TILE_SIZE, 0, key.y * TILE_SIZE)
 	add_child(tile)
 	tiles[key] = tile
 
