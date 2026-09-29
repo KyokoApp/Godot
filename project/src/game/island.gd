@@ -7,6 +7,10 @@ const STEP := 5.0
 const CELLS := 200
 const CHUNK := 50
 const SEA_LEVEL := 0.0
+const GRASS_COLOR := Color("59a541")
+const DIRT_COLOR := Color("a97848")
+const CLIFF_COLOR := Color("777c7e")
+const SAND_COLOR := Color("c9ad72")
 
 var _heights := PackedFloat32Array()
 
@@ -70,13 +74,12 @@ func _height(x: int, z: int) -> float:
 
 
 func _color(x: float, z: float, height: float, normal: Vector3) -> Color:
-	var grass := Color("93b876").lerp(Color("b3c78a"), (sin(x / 23) * cos(z / 32) + 1) * 0.5)
-	var stone := Color("a7a4a0")
-	var color := grass.lerp(stone, 1.0 - smoothstep(0.65, 0.88, normal.y))
-	color = Color("e3d5ac").lerp(color, smoothstep(1.0, 5.0, height))
+	# Warna solid: hijau di bidang datar, batu di sisi curam, bukan berdasarkan tinggi.
+	var color := GRASS_COLOR.lerp(CLIFF_COLOR, 1.0 - smoothstep(0.65, 0.88, normal.y))
+	color = SAND_COLOR.lerp(color, smoothstep(1.0, 5.0, height))
 	var road := 1.0 - smoothstep(8.0, 13.0, absf(x - road_x(z)))
 	road *= 1.0 - smoothstep(300.0, 335.0, absf(z))
-	return color.lerp(Color("c6aa88"), road)
+	return color.lerp(DIRT_COLOR, road)
 
 
 func _build_chunk(start_x: int, start_z: int) -> void:
@@ -105,10 +108,14 @@ func _build_chunk(start_x: int, start_z: int) -> void:
 	arrays[Mesh.ARRAY_NORMAL] = normals
 	arrays[Mesh.ARRAY_COLOR] = colors
 	arrays[Mesh.ARRAY_INDEX] = indices
+	_facet_cliffs(arrays)
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	var material := StandardMaterial3D.new()
 	material.vertex_color_use_as_albedo = true
+	# Color(hex) adalah sRGB. Tanpa flag ini warna dibaca linear dan tampak pucat.
+	material.vertex_color_is_srgb = true
+	material.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
 	material.roughness = 1.0
 	var visual := MeshInstance3D.new()
 	visual.mesh = mesh
@@ -139,6 +146,10 @@ func _build_sea() -> void:
 func _build_rocks() -> void:
 	var random := RandomNumberGenerator.new()
 	random.seed = 42017
+	var source := SphereMesh.new()
+	source.radial_segments = 7
+	source.rings = 3
+	var rock_mesh := _flat_rock(source)
 	for index in range(60):
 		var x := random.randf_range(-370, 370)
 		var z := random.randf_range(-370, 370)
@@ -146,13 +157,11 @@ func _build_rocks() -> void:
 		if y < 2.0 or absf(x - road_x(z)) < 24.0:
 			continue
 		var rock := MeshInstance3D.new()
-		var mesh := SphereMesh.new()
-		mesh.radial_segments = 7
-		mesh.rings = 3
-		rock.mesh = mesh
+		rock.mesh = rock_mesh
 		var material := StandardMaterial3D.new()
-		material.albedo_color = Color("a9a7a0").lerp(Color("ccc5b5"), random.randf())
+		material.albedo_color = CLIFF_COLOR.lerp(Color("8b8880"), random.randf())
 		material.roughness = 1.0
+		material.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
 		rock.material_override = material
 		rock.position = Vector3(x, y, z)
 		rock.scale = Vector3(random.randf_range(3, 9), random.randf_range(2, 8),
@@ -160,3 +169,46 @@ func _build_rocks() -> void:
 		rock.rotation.y = random.randf_range(0, TAU)
 		add_child(rock)
 		rock.create_convex_collision()
+
+
+func _facet_cliffs(arrays: Array) -> void:
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	for face in range(0, indices.size(), 3):
+		var a := vertices[indices[face]]
+		var b := vertices[indices[face + 1]]
+		var c := vertices[indices[face + 2]]
+		var normal := (c - a).cross(b - a).normalized()
+		var center := (a + b + c) / 3.0
+		if normal.y >= 0.72 or center.y < 5.0:
+			continue
+		# Pisah vertex sisi curam agar bidang batu terlihat tegas/low-poly.
+		for corner in range(3):
+			var vertex := vertices[indices[face + corner]]
+			indices[face + corner] = vertices.size()
+			vertices.append(vertex)
+			normals.append(normal)
+			colors.append(CLIFF_COLOR)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_COLOR] = colors
+	arrays[Mesh.ARRAY_INDEX] = indices
+
+
+func _flat_rock(source: Mesh) -> ArrayMesh:
+	var vertices := source.get_faces()
+	var normals := PackedVector3Array()
+	for face in range(0, vertices.size(), 3):
+		var normal := (vertices[face + 2] - vertices[face]).cross(
+			vertices[face + 1] - vertices[face]).normalized()
+		for corner in range(3):
+			normals.append(normal)
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return mesh

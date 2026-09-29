@@ -167,3 +167,13 @@ Tes HP: swipe kanan sambil jalan dengan kiri, cubit kanan, lihat karakter dari
 berbagai sudut, mendekat ke tebing untuk uji kamera, jalan menanjak/menurun,
 jelajahi pantai, cek FPS dan durasi persiapan dunia. Belum diklaim performa stabil
 pada HP sebelum pengguna menguji. Main tetap tidak di-merge.
+
+### Revisi visual — hijau, tanah polos, tebing batu
+
+Permintaan setelah tes HP: versi sebelumnya tampak seperti salju. Palet terrain
+kini hijau solid, jalan cokelat tanah, pantai pasir hangat, sisi curam abu-abu batu.
+Material vertex color ditandai sRGB sesuai warna hex; ambient dikurangi agar tidak
+terlalu pucat. Sisi tebing memakai normal per bidang (flat shaded) dan batu low-poly
+juga flat shaded. Puncak datar tetap hijau, tidak berubah putih karena ketinggian.
+Tidak memakai gambar tekstur/noise salju. Geometri/collision pulau dan kontrol tetap.
+HUD: **PULAU 1K — hijau + tebing batu**. Warna akhir perlu konfirmasi ulang di HP.

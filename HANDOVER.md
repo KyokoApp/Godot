@@ -116,3 +116,10 @@ stickman → mannequin → Kanna → open world) gagal karena:
 Makanya project baru ini: gerbang compile ketat, checker inferensi tipe,
 keystore permanen, milestone kecil yang diuji di HP. Versi lama tersimpan
 penuh di branch `archive` repo `KyokoApp/Unity` (1.552 file).
+
+## Revisi visual terbaru
+
+User melaporkan pulau terlihat putih/salju. Revisi menjadi rumput hijau solid,
+jalan cokelat polos, sisi tebing abu-abu batu flat-shaded; puncak tetap hijau.
+Material vertex color sekarang sRGB, ambient 0,65. HUD `hijau + tebing batu`.
+Tidak mengubah bentuk pulau/kontrol. Tunggu screenshot/konfirmasi HP.

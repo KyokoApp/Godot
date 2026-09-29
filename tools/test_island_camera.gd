@@ -33,6 +33,20 @@ func _drag(orbit: Node3D, index: int, point: Vector2) -> void:
 func _run() -> void:
 	var island := Island.new()
 	root.add_child(island)
+	_check(island._color(300, 0, 50, Vector3.UP).is_equal_approx(Island.GRASS_COLOR),
+		"Puncak datar tidak hijau")
+	_check(island._color(300, 0, 50, Vector3.RIGHT).is_equal_approx(Island.CLIFF_COLOR),
+		"Sisi tebing tidak berwarna batu")
+	_check(island._color(0, 0, 5, Vector3.UP).is_equal_approx(Island.DIRT_COLOR),
+		"Jalan tidak berwarna tanah")
+	var terrain_materials := 0
+	for child in island.get_children():
+		if child is MeshInstance3D:
+			var material := child.material_override as StandardMaterial3D
+			if material != null and material.vertex_color_use_as_albedo:
+				terrain_materials += 1
+				_check(material.vertex_color_is_srgb, "Warna terrain salah ruang warna")
+	_check(terrain_materials == 16, "Material chunk terrain hilang")
 	_check(Island.SIZE == 1000.0, "Ukuran map bukan 1 km")
 	_check(Island.terrain_height(500, 500) < 0, "Sudut map tidak berada di laut")
 	_check(Island.terrain_height(230, -110) > 40, "Tebing tidak terbentuk")
