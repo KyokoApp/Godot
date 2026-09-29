@@ -224,6 +224,30 @@ jobs:
           fi
           grep -F '[hud-test] HASIL: OK' hud-test.log
 
+      - name: Render casting upper-body dan pemulihan pose (Mobile Vulkan)
+        run: |
+          set +e
+          timeout 180 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --audio-driver Dummy --resolution 480x270 \
+            --script "$GITHUB_WORKSPACE/tools/test_cast_render.gd" 2>&1 | tee cast-render.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' cast-render.log; then
+            tail -60 cast-render.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[cast-render-test] HASIL: OK' cast-render.log
+
+      - name: Simpan screenshot casting
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: casting-screenshots
+          path: ~/.local/share/godot/app_userdata/**/casting-*-test.png
+          if-no-files-found: ignore
+
       - name: Simpan screenshot HUD
         if: always()
         uses: actions/upload-artifact@v4

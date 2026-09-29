@@ -454,3 +454,12 @@ termasuk air ringan dan SSR. Gerbang headless + Mobile Vulkan menguji collision,
 vegetasi/jalan, depth/refraction, pantulan SSR nyata dan fallback. Ini bukan
 benchmark HP: biaya screen/depth copy dan overdraw tetap perlu diuji di perangkat.
 Update ini berupa PCK; launcher, keystore, package dan ikon tidak berubah.
+
+
+### Casting attack sambil bergerak
+Attack memakai klip asli Universal Animation Library `Spell_Simple_Shoot` (0,5s).
+Layer badan atas saja, dengan fade masuk/keluar; kaki tetap diam/jalan/jog sesuai
+input. Clock locomotion dan timing langkah tidak diganti. Tembakan/suara/pulse pet
+keluar setelah windup0,16s; cooldown0,85s mulai sejak input diterima. Spam selama
+windup tidak menambah peluru atau mengulang pose. Pet/warna/ledakan tetap sama.
+Tidak menambah target latihan, damage, senjata atau multiplayer pada tahap ini.

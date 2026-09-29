@@ -1,6 +1,9 @@
 extends Node3D
 ## Pet adalah node dunia terpisah dari rig. Attack diarahkan ke titik bidik kamera.
 
+signal cast_started
+
+const CastLayer = preload("res://src/game/animation/cast_layer.gd")
 const Spirit = preload("res://src/game/legacy_spirit/spirit_visual.gd")
 const Projectile = preload("res://src/game/fire_projectile.gd")
 const Burst = preload("res://src/game/fire_burst.gd")
@@ -12,8 +15,10 @@ var player: Node3D
 var facing: Node3D
 var camera: Camera3D
 var cooldown := 0.0
+var casting := false
 var projectiles: Array[CharacterBody3D] = []
 var bursts: Array[Node3D] = []
+var _windup := 0.0
 var _body: Spirit
 var _previous_player := Vector3.ZERO
 var _time := 0.0
@@ -54,13 +59,27 @@ func _physics_process(delta: float) -> void:
 	_body.external_velocity = ((player.global_position - _previous_player)
 		/ maxf(delta, 0.001)).limit_length(20.0)
 	_previous_player = player.global_position
+	if casting:
+		_windup -= delta
+		if _windup <= 0:
+			casting = false
+			_release_shot()
 
 
 func attack() -> bool:
 	_prune()
-	if cooldown > 0.0 or projectiles.size() >= MAX_PROJECTILES or camera == null:
+	if casting or cooldown > 0.0 or projectiles.size() >= MAX_PROJECTILES or camera == null:
 		return false
 	cooldown = COOLDOWN
+	casting = true
+	_windup = CastLayer.RELEASE_TIME
+	cast_started.emit()
+	return true
+
+
+func _release_shot() -> void:
+	if not is_instance_valid(camera):
+		return
 	_body.pulse()
 	var screen := camera.get_viewport().get_visible_rect().size * Vector2(0.5, 0.42)
 	var start := camera.project_ray_origin(screen)
@@ -83,7 +102,6 @@ func attack() -> bool:
 	if audio != null:
 		audio.shoot(global_position)
 		audio.follow_fire(shot, true)
-	return true
 
 
 func _on_impact(point: Vector3, normal: Vector3) -> void:

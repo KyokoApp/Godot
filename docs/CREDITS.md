@@ -26,7 +26,7 @@ Semua kode dalam repo ini ditulis khusus untuk project ini.
 - File asli: `project/packs/char_assets/mannequin/UAL1_Standard.glb`.
 - Git blob asli (diverifikasi saat migrasi): `473e59080288428d0b6da826ba19324d07b191f0`.
 - Model rigged dan animasi asli; bukan mannequin prosedural. Klip Godot:
-  `Idle`, `Walk`, `Jog_Fwd`. Material diubah menjadi lavender pastel.
+  `Idle`, `Walk`, `Jog_Fwd`, serta upper-body `Spell_Simple_Shoot`. Material diubah menjadi lavender pastel.
 
 ## Rumput angin — adaptasi shader Malido (CC0)
 

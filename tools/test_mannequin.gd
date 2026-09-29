@@ -58,5 +58,42 @@ func _run() -> void:
 	_check(character.state == Character.IDLE, "Berhenti tidak memilih Idle")
 	_check(not character.find_children("*", "MeshInstance3D", true, false).is_empty(),
 		"Mesh mannequin hilang")
+	_test_cast(character, skeleton)
 	print("[mannequin-test] gagal: ", _failures)
 	quit(0 if _failures == 0 else 1)
+
+
+func _test_cast(character: Character, skeleton: Skeleton3D) -> void:
+	var layer := character.cast_layer
+	_check(layer != null and layer.tracks.size() > 20, "Layer casting/filter hilang")
+	if layer == null:
+		return
+	_check(layer.clip.loop_mode == Animation.LOOP_NONE, "Casting tidak boleh loop")
+	for bone: int in layer.tracks.values():
+		var name := skeleton.get_bone_name(bone)
+		_check(not name.contains("thigh") and not name.contains("calf")
+			and not name.contains("foot") and name != "root" and name != "pelvis",
+			"Casting mengambil alih kaki/root: " + name)
+	for motion in [Character.IDLE, Character.WALK, Character.RUN]:
+		character.animation.play(motion, 0)
+		character.animation.advance(0.2)
+		var original: Array[Quaternion] = []
+		for bone in range(skeleton.get_bone_count()):
+			original.append(skeleton.get_bone_pose_rotation(bone))
+		character.start_cast()
+		layer._physics_process(0.2)
+		layer._process_modification_with_delta(0)
+		var changed := 0
+		for bone in range(skeleton.get_bone_count()):
+			var differs := not original[bone].is_equal_approx(skeleton.get_bone_pose_rotation(bone))
+			if layer.tracks.values().has(bone):
+				changed += int(differs)
+			else:
+				_check(not differs, "Casting mengubah tulang locomotion: "
+					+ skeleton.get_bone_name(bone))
+		_check(changed > 10, "Pose upper-body tidak berubah pada " + motion)
+		_check(character.animation.current_animation == motion, "Casting mengganti clock langkah")
+		layer._physics_process(0.4)
+		_check(not layer.playing and not layer.active and layer.influence == 0,
+			"Casting tidak kembali ke locomotion")
+		character.animation.advance(0)

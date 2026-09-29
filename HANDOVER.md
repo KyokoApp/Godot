@@ -353,3 +353,20 @@ asserts dry road, wet-zone exclusions, centerline flow and matching collider,
 budgets, visible lake, transparent bottom, actual SSR difference, miss nonblack,
 near/far invariance; screenshots artifact water-screenshots. Do not bypass gates.
 Multiplayer explicitly deferred until user is happy with the world. No network work.
+
+
+## Upper-body casting (UAL original)
+Character adds native SkeletonModifier3D CastLayer under imported Skeleton3D.
+Samples only ROTATION_3D tracks for spine_01 and descendants from original
+Spell_Simple_Shoot; never root/pelvis/legs, translation or scale. Native modifier
+influence fades .08s in/.14s out; 0.5s clip. Skeleton restores locomotion poses
+following modifier processing. Existing AnimationPlayer + footsteps clock unchanged.
+Pet.attack reserves one pending cast and cooldown0.85, emits cast_started to visual,
+then releases existing projectile/audio/pulse after0.16s physics windup using current
+pet/camera positions. No detached timer, rejected attacks don't restart animation.
+Both clocks pause with gameplay/warmup; pending cast owned by pet, freed with game.
+Unit tests check excluded bones, upper-body movement for idle/walk/run and return;
+HUD multitouch + fire lifecycle tests updated to assert windup, movement, release.
+Mobile render test compares actual skinned idle/run with casting and verifies
+pose restoration/native modifier callback; artifacts casting-screenshots.
+No target dummy/damage/multiplayer yet; one tested milestone at a time.

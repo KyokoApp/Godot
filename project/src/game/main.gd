@@ -62,6 +62,7 @@ func _ready() -> void:
 	_pet.player = _player
 	_pet.facing = _visual
 	_pet.camera = _orbit.camera
+	_pet.cast_started.connect(_visual.start_cast)
 	add_child(_pet)
 	_audio.follow_fire(_pet)
 	_nature = NatureField.new()

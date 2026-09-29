@@ -27,6 +27,7 @@ static func populate(stage: int, world: Node3D, game: Node3D) -> void:
 		var character := Character.new()
 		world.add_child(character)
 		character.update_motion(5)
+		character.start_cast()
 	elif stage == 12:
 		var field: Node3D = game.get("_grass")
 		_add_grass(world, field.get("_mesh"), field.get("_material"), Vector3.ZERO)

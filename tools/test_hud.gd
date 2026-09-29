@@ -50,7 +50,7 @@ func _run() -> void:
 	_touch(0, left, true)
 	_drag(0, left + Vector2(86, 0))
 	_touch(1, hit, true)
-	_check(pet.get("projectiles").size() == 1, "Jari kedua gagal attack sambil jalan")
+	_check(pet.get("casting"), "Jari kedua gagal casting sambil jalan")
 	_check(stick.get("direction").x > 0.9, "Attack menghentikan joystick")
 	_check(orbit.get("_touches").is_empty(), "Attack ikut memutar kamera")
 	pet.set("cooldown", 0.0)
@@ -60,11 +60,13 @@ func _run() -> void:
 	mouse.pressed = true
 	mouse.position = hit
 	root.push_input(mouse, true)
-	_check(pet.get("projectiles").size() == 1, "Emulasi mouse menggandakan serangan")
+	_check(pet.get("projectiles").is_empty() and pet.get("casting"),
+		"Emulasi mouse menggandakan/melewati windup")
 	var start := player.position
-	for frame in range(8):
+	for frame in range(12):
 		await physics_frame
 	_check(player.position.x > start.x + 0.2, "Karakter berhenti saat attack ditahan")
+	_check(pet.get("projectiles").size() == 1, "Casting bergerak gagal menembak")
 	var camera_point := root.get_visible_rect().size * Vector2(0.65, 0.45)
 	_touch(2, camera_point, true)
 	var yaw: float = orbit.get("yaw")
@@ -81,7 +83,7 @@ func _run() -> void:
 	_touch(4, hit, true)
 	_touch(5, left, true)
 	_drag(5, left + Vector2(86, 0))
-	_check(pet.get("projectiles").size() == 2, "Serangan berikutnya tidak bekerja")
+	_check(pet.get("casting"), "Serangan berikutnya tidak bekerja")
 	_check(stick.get("direction").x > 0.9, "Joystick gagal saat attack ditekan lebih dulu")
 	_touch(4, hit, false, true)
 	_touch(5, left, false)

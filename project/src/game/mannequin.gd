@@ -1,6 +1,7 @@
 extends Node3D
 ## Model dan mocap asli dari arsip project, tanpa sistem combat/skin lama.
 
+const CastLayer = preload("res://src/game/animation/cast_layer.gd")
 const MODEL = preload("res://assets/mannequin/UAL1_Standard.glb")
 const OUTLINE = preload("res://src/game/character_outline.gdshader")
 const IDLE := "Idle"
@@ -9,6 +10,7 @@ const RUN := "Jog_Fwd"
 const RUN_ON := 2.8
 const RUN_OFF := 2.4
 
+var cast_layer: CastLayer
 var animation: AnimationPlayer
 var state := IDLE
 
@@ -37,6 +39,16 @@ func _ready() -> void:
 			return
 		animation.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
 	animation.play(IDLE)
+	var skeleton := model.find_child("Skeleton3D", true, false) as Skeleton3D
+	if skeleton == null or not animation.has_animation(CastLayer.CLIP):
+		push_error("Mannequin: rig/klip casting hilang")
+		return
+	cast_layer = CastLayer.new()
+	cast_layer.name = "UpperBodyCast"
+	skeleton.add_child(cast_layer)
+	cast_layer.configure(animation.get_animation(CastLayer.CLIP))
+	if cast_layer.tracks.is_empty():
+		push_error("Mannequin: filter tulang casting kosong")
 
 
 func update_motion(speed: float) -> void:
@@ -57,3 +69,8 @@ func update_motion(speed: float) -> void:
 			animation.speed_scale = clampf(speed / 4.0, 0.6, 1.3)
 		_:
 			animation.speed_scale = 1.0
+
+
+func start_cast() -> void:
+	if cast_layer != null:
+		cast_layer.begin()

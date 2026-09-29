@@ -55,6 +55,10 @@ func _run() -> void:
 	_check(orbit.get("_touches").is_empty(), "Attack ikut memutar kamera")
 	_check(pet.attack(), "Serangan pertama gagal")
 	_check(not pet.attack(), "Cooldown tidak mencegah spam")
+	_check(pet.casting and pet.projectiles.is_empty(), "Windup casting dilewati")
+	for frame in range(12):
+		await physics_frame
+	_check(pet.projectiles.size() == 1, "Casting tidak melepas proyektil")
 	var shot: CharacterBody3D = pet.projectiles[0]
 	var wake := shot.get_node("FireWake") as GPUParticles3D
 	_check(not wake.local_coords, "Ekor api harus tertinggal di dunia")
@@ -78,6 +82,8 @@ func _run() -> void:
 	for index in range(4):
 		pet.cooldown = 0
 		pet.attack()
+		for frame in range(12):
+			await physics_frame
 	_check(pet.projectiles.size() <= Pet.MAX_PROJECTILES, "Batas proyektil terlampaui")
 	for index in range(5):
 		pet._on_impact(pet.global_position + Vector3(0, 0, -3), Vector3.UP)
