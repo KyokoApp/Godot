@@ -1,6 +1,6 @@
 extends SceneTree
 
-const Trail = preload("res://src/game/speed/afterimage_trail.gd")
+const Trail = preload("res://src/game/speed/speed_aura.gd")
 var _failures := 0
 
 
@@ -22,7 +22,7 @@ func _run() -> void:
 	var body: CharacterBody3D = game.get("_player")
 	var visual: Node3D = game.get("_visual")
 	var stick: Control = game.get("_joystick")
-	var trail: Trail = game.get("_afterimages")
+	var trail: Trail = game.get("_speed_aura")
 	for frame in range(30):
 		await physics_frame
 	var start := body.position
@@ -42,15 +42,15 @@ func _run() -> void:
 	var fast := Vector2(body.position.x - start.x, body.position.z - start.z).length()
 	_check(fast > normal * 2.7 and fast < normal * 3.3, "Speed bukan 3x: %f/%f" % [fast, normal])
 	_check(visual.get("animation").speed_scale < normal_rate * 0.4, "Animasi tidak diperlambat")
-	_check(trail.emitted > 0 and trail.ghosts.size() == 3, "Snapshot tidak aktif/terbatas")
+	_check(trail.strength > 0.5 and trail.paths.size() <= Trail.POINTS, "Aura/budget salah")
+	_check(trail.tint == Trail.COLORS["miku"], "Palet Miku bukan biru")
+	_check(trail.environment.glow_enabled and trail.wash.visible, "Bloom/wash speed mati")
 	stick.set("direction", Vector2.ZERO)
 	await physics_frame
-	var before := trail.emitted
-	for frame in range(30):
+	for frame in range(50):
 		await physics_frame
-	_check(trail.emitted == before, "Bayangan terus muncul saat diam")
-	for ghost in trail.ghosts:
-		_check(not ghost.visible, "Bayangan tidak memudar")
+	_check(trail.strength == 0 and not trail.wash.visible, "Aura tidak memudar")
+	_check(not trail.environment.glow_enabled, "Bloom tidak dipulihkan")
 	game._toggle_speed()
 	_check(not game.get("speed_boosted"), "Toggle normal gagal")
 	game.queue_free()

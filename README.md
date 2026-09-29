@@ -521,11 +521,14 @@ untuk skin rambut, palet serta tampak samping api wajib; FPS tetap diuji di HP.
 Tombol petir ×1/×3 di samping attack men-toggle kecepatan penuh5→15m/s,
 tetap analog dan collision-aware. Mode ×3 memperlambat playback locomotion ke
 0,35× (bukan attack/casting), sehingga satu langkah menempuh jarak jauh.
-Bayangan susulan adalah snapshot mesh+pose skin aktif, bukan menggandakan karakter
-hidup. Maks3 snapshot (Kanna2), interval0,10s, fade0,28s, mesh dibagi bersama,
-LOD bias0,08, tanpa tekstur/lampu/bayangan. Tidak emit saat diam/terhalang/di udara;
-switch/teleport membersihkan jejak lama. Ini bukan motion-blur layar atau cloth.
-Tetap perlu pengukuran FPS nyata, terutama Kanna; batas pool bukan jaminan60FPS.
+Aura speed sekarang berupa enam pita energi melengkung, transparan dan halus,
+ditambah halo lembut di tepi karakter (bukan salinan tubuh dan bukan petir).
+Warna efek dan wash pinggir layar mengikuti skin: Miku biru, Kanna oranye,
+mannequin ungu. Intensitas dan bloom naik pelan saat mulai berlari ×3,
+kemudian turun saat diam, terhalang, di udara atau kembali ×1. Bloom lingkungan
+dipulihkan ke nilai awal setelah aura hilang. Jejak dibatasi 24 sampel ×6 pita,
+tanpa tekstur, lampu, bayangan atau mesh karakter tambahan; teleport/ganti skin
+membersihkan jejak lama. Ini bukan blur frame penuh atau jaminan FPS60 pada HP.
 Nama karakter di kiri, portrait di kanan; tanpa panel/aksen berwarna/teks GANTI.
 Rune, analog dan garis HUD putih transparan; portrait tetap memakai warna aslinya.
-Warmup22 tahap serta gate speed/multitouch/render snapshot semua skin wajib.
+Warmup22 tahap serta gate speed/multitouch/render aura semua skin wajib.

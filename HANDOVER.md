@@ -465,15 +465,17 @@ annotations report min/max gaps, rest clearance, source swing and stamp count.
 SpeedButton uses existing per-finger RuneButton input; camera speed_exclusion,
 modal hiding, focus reset inherited. Desired move multiplier3; locomotion playback
 fixed.35 while moving; casting clock untouched. No auto-save: starts normal.
-AfterimageTrail captures final native Skeleton3D.skeleton_updated poses, after
-all modifiers and before skin upload/pose restoration (Godot4.5.2 source verified).
-Do not use CastLayer.modification_processed: it is inactive outside an attack. Shared mesh+Skin resources and cloned bare skeletons;
-no AnimationPlayers or cloned gameplay. Pool3/2Kanna, fade.28s quadratic opacity,
-.10s cadence, LOD bias.08, no textures/shadow/light. Geometry silhouettes, not textured
-copies; resource cost still scales with imported mesh LODs. Rebuild only on active
-skin change while boosting, old pool freed; clear teleport/skin, no emission idle.
+SpeedAura replaces frozen Skeleton3D character copies entirely: six flowing
+camera-facing 3D energy ribbons (24 position samples) + soft rim sphere,
+both additive and unlit. Screen-edge wash is a mouse-filter-ignore ColorRect,
+on CanvasLayer 0 under HUD layer1; it fades with aura. Skin tint: Miku blue,
+Kanna orange, mannequin purple. Environment glow enabled only when active,
+original enabled/strength/HDR threshold restored when stopped or freed. No
+textures, cloned skins, bones, projectiles, shadows or lights. Render cost still
+needs measurement on actual phone. Switch/teleport flushes history; idle, blocked
+or airborne fades out (not emitted). Warmup stage21 includes aura shader/glow.
 White/transparent cards retain same input rectangles: name left/portrait right.
 Settings/attack/speed/analog accents white; drawer neutral translucent for readability.
-Tests: test_speed (movement ratio, slowed playback, pool/idle), test_hud touch toggle
-and camera exclusion, test_motion_flair_render now renders all three frozen skins.
-Warmup22: actual skinned ghost shader included. No changes to keystore or main branch.
+Tests: test_speed (movement ratio, slowed playback, bounded aura/idle), test_hud touch toggle
+and camera exclusion, test_motion_flair_render now renders all three aura colors, bloom and fade.
+Warmup22: aura glow and wash shader included. No changes to keystore or main branch.

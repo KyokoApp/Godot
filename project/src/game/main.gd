@@ -2,7 +2,7 @@ extends Node3D
 ## Pulau 1 km + kamera sentuh, tetap memakai mannequin dan updater yang sama.
 
 const SpeedButton = preload("res://src/game/ui/speed_button.gd")
-const Afterimages = preload("res://src/game/speed/afterimage_trail.gd")
+const SpeedAura = preload("res://src/game/speed/speed_aura.gd")
 const FootFire = preload("res://src/game/foot_fire/foot_fire_trail.gd")
 const ShaderWarmup = preload("res://src/game/loading/shader_warmup.gd")
 const NatureField = preload("res://src/game/world/nature_field.gd")
@@ -36,7 +36,7 @@ var _audio: WorldAudio
 var _footsteps: Footsteps
 var _foot_fire: FootFire
 var _speed_button: SpeedButton
-var _afterimages: Afterimages
+var _speed_aura: SpeedAura
 var _pet: FirePet
 var _attack: RuneButton
 var _settings: RuneButton
@@ -76,9 +76,10 @@ func _ready() -> void:
 	_foot_fire.body = _player
 	_foot_fire.island = _island
 	add_child(_foot_fire)
-	_afterimages = Afterimages.new()
-	_afterimages.character = _visual
-	add_child(_afterimages)
+	_speed_aura = SpeedAura.new()
+	_speed_aura.character = _visual
+	_speed_aura.environment = get_node("NightEnvironment").environment
+	add_child(_speed_aura)
 	_pet = FirePet.new()
 	_pet.player = _player
 	_pet.facing = _visual
@@ -330,7 +331,7 @@ func _physics_process(delta: float) -> void:
 	_visual.update_motion(speed)
 	if speed_boosted and speed > 0.05:
 		_visual.animation.speed_scale = 0.35
-	_afterimages.update_motion(delta, speed, speed_boosted and _player.is_on_floor())
+	_speed_aura.update_motion(delta, speed, speed_boosted and _player.is_on_floor())
 	_footsteps.update_motion(delta, speed)
 	if movement.length_squared() > 0.001:
 		var target_yaw := atan2(-movement.x, -movement.z)

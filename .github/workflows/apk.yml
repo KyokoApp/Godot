@@ -149,7 +149,7 @@ jobs:
           fi
           grep -F '[motion-flair-test] HASIL: OK' motion-test.log
 
-      - name: Tes speed 3x, animasi lambat dan cleanup afterimage
+      - name: Tes speed 3x, animasi lambat dan aura halus
         run: |
           set +e
           timeout 120 ./godot --headless --path project \
@@ -279,7 +279,7 @@ jobs:
           fi
           grep -F '[cast-render-test] HASIL: OK' cast-render.log
 
-      - name: Render rambut dan api tapak 3D (Mobile Vulkan)
+      - name: Render aura speed, rambut dan api tapak 3D (Mobile Vulkan)
         run: |
           set +e
           timeout 180 xvfb-run -a env \
