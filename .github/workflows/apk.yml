@@ -474,7 +474,7 @@ jobs:
           STATUS=${PIPESTATUS[0]}
           set -e
           if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' build/incremental-test.log; then
-            tail -75 build/incremental-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            tail -10 build/incremental-test.log | while IFS= read -r line; do echo "::error::$line"; done
             exit 1
           fi
           grep -F '[incremental-export] HASIL: OK' build/incremental-test.log

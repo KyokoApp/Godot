@@ -34,10 +34,15 @@ try:
         def export():
             subprocess.run([str(root / 'godot'), '--headless', '--path', str(root / 'project'),
                             '--export-pack', 'Content', str(test_pack)], check=True,
-                           timeout=120)
+                           timeout=120, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         export()
         print('[incremental-export] repeat sha:', hashlib.sha256(test_pack.read_bytes()).hexdigest(), 'original:', manifest['sha256'])
-        assert test_pack.read_bytes() == pack, 'Repeat export is not deterministic'
+        if test_pack.read_bytes() != pack:
+            from chunk_content import file_ranges
+            a, b = pack, test_pack.read_bytes()
+            print('[incremental-export] repeat sizes:', len(a), len(b))
+            print('[incremental-export] first differences:', [i for i in range(min(len(a), len(b))) if a[i] != b[i]][:20])
+            raise AssertionError('Repeat export is not deterministic')
         script.write_text(original.replace('const MOVE_SPEED := 5.0', 'const MOVE_SPEED := 5.01'))
         export()
         changed = build(test_pack, root / 'build/probe-chunks', 'abcdef1')
