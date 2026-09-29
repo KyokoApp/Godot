@@ -187,7 +187,7 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 	_graphics_drawer.offset_left = -334
 	_graphics_drawer.offset_right = -24
 	_graphics_drawer.offset_top = 100
-	_graphics_drawer.offset_bottom = 450
+	_graphics_drawer.offset_bottom = 505
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 12)
 	_graphics_drawer.add_child(content)
@@ -199,6 +199,7 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 	_performance = PerformancePanel.new()
 	_performance.sun = _sun
 	_performance.grass = _grass
+	_performance.water = _island.water
 	content.add_child(_performance)
 	_graphics_drawer.hide()
 
@@ -244,7 +245,7 @@ func _physics_process(delta: float) -> void:
 	var before := _player.position
 	_player.move_and_slide()
 	# Belum ada berenang: berhenti di air dangkal, bukan tenggelam ke dasar laut.
-	if _island.surface_height(_player.position.x, _player.position.z) < 0.6:
+	if not _island.is_walkable_shore(_player.position.x, _player.position.z):
 		_player.position.x = before.x
 		_player.position.z = before.z
 		_player.velocity.x = 0

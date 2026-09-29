@@ -6,7 +6,8 @@ const Character = preload("res://src/game/mannequin.gd")
 const Spirit = preload("res://src/game/legacy_spirit/spirit_visual.gd")
 const Projectile = preload("res://src/game/fire_projectile.gd")
 const Burst = preload("res://src/game/fire_burst.gd")
-const STAGES := 16
+const WaterMaterial = preload("res://src/game/water/water_material.gd")
+const STAGES := 18
 
 
 static func populate(stage: int, world: Node3D, game: Node3D) -> void:
@@ -48,6 +49,16 @@ static func populate(stage: int, world: Node3D, game: Node3D) -> void:
 		burst.set_process(false)
 		burst.age = 0.22
 		burst._update_visuals()
+	elif stage >= 16:
+		var visual := MeshInstance3D.new()
+		var plane := PlaneMesh.new()
+		plane.size = Vector2(6, 6)
+		visual.mesh = plane
+		var material := WaterMaterial.create()
+		material.set_shader_parameter("ssr_enabled", stage == 17)
+		visual.material_override = material
+		visual.position.y = 0.2
+		world.add_child(visual)
 	else:
 		# Root world continues rendering behind the opaque loading UI: sky, terrain,
 		# sea, live character, current shadow/MSAA/scale settings, real viewport formats.

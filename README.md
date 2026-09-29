@@ -434,4 +434,23 @@ Ini upaya mengurangi first-use stutter, bukan peningkatan FPS rata-rata atau
 jaminan seluruh pipeline/shadow/setting masa depan sudah hangat. Diagnostik
 lokal: user://shader_warmup_last.json. Headless melewati render warmup.
 Tidak mengubah launcher/updater bawaan APK: tahap ini berada di konten PCK;
-boot marker dikonfirmasi setelah warmup/skip selesai. Sungai/danau belum dibuat.
+boot marker dikonfirmasi setelah warmup/skip selesai.
+
+
+### Danau & sungai malam
+Danau di timur spawn memiliki garis pantai berlekuk/teluk kecil, tersambung sungai
+berkelok ke laut tenggara. Terrain dan collider memakai cekungan yang sama;
+jalan tetap utuh, rumput/pohon/batu besar menjauhi tepian. Belum ada berenang:
+karakter ditahan sebelum masuk air, termasuk danau yang lebih tinggi dari laut.
+Shader adaptasi MIT Marcel Bankmann/GodotSSRWater: kedalaman transparan,
+refraction tipis, riak bergerak, busa tepian redup dan pantulan langit/bulan malam.
+Mode bawaan **Pantulan air: Ringan**. Pilihan **SSR (uji)** di pengaturan hanya
+untuk air pedalaman dekat kamera (<65m), max12 probe/18m; laut tetap fallback.
+SSR hanya bisa memantulkan opaque yang ada di layar, bukan semua pohon/partikel
+transparan atau benda di luar kamera; miss memakai warna air/langit, bukan hitam.
+Mesh dibagi tile40m agar frustum/terrain occlusion tetap bekerja; tanpa simulasi
+fluida, planar reflection, atau viewport refleksi tambahan. Warmup menjadi18 tahap,
+termasuk air ringan dan SSR. Gerbang headless + Mobile Vulkan menguji collision,
+vegetasi/jalan, depth/refraction, pantulan SSR nyata dan fallback. Ini bukan
+benchmark HP: biaya screen/depth copy dan overdraw tetap perlu diuji di perangkat.
+Update ini berupa PCK; launcher, keystore, package dan ikon tidak berubah.

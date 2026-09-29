@@ -47,7 +47,7 @@ func _run() -> void:
 				"Pemain bergerak selama loading")
 	_check(observed, "Tidak ada stage yang benar-benar dirender")
 	var report: Dictionary = game.get("warmup_report")
-	_check(report.get("stages", 0) > 0 and report.get("stages", 0) <= 16,
+	_check(report.get("stages", 0) > 0 and report.get("stages", 0) <= 18,
 		"Laporan tahap tidak valid")
 	_check(not FileAccess.file_exists("user://content_boot_pending"), "Boot marker belum dibersihkan")
 	_check(game.process_mode == Node.PROCESS_MODE_INHERIT, "Gameplay tidak dipulihkan")

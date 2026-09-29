@@ -2,6 +2,8 @@ extends Node3D
 ## Pulau deterministik 1 km, terrain ber-collision dengan jalan menyatu permukaan.
 ## 16 chunk, total 80.000 segitiga; tanpa shader/tekstur eksternal.
 
+const WaterShape = preload("res://src/game/water/water_shape.gd")
+const WaterSurfaces = preload("res://src/game/water/water_surfaces.gd")
 const TERRAIN_SHADER = preload("res://src/game/terrain.gdshader")
 const SIZE := 1000.0
 const STEP := 5.0
@@ -14,6 +16,8 @@ const CLIFF_COLOR := Color("777c7e")
 const SAND_COLOR := Color("c9ad72")
 
 ## Vector3(x, rayon_horizontal, z) untuk mengosongkan rumput di bawah batu.
+var water: WaterSurfaces
+
 var rock_clearances: Array[Vector3] = []
 
 var _terrain_material: ShaderMaterial
@@ -36,6 +40,9 @@ func _ready() -> void:
 			_build_chunk(x, z)
 	_build_sea()
 	_build_rocks()
+	water = WaterSurfaces.new()
+	water.island = self
+	add_child(water)
 
 
 static func road_x(z: float) -> float:
@@ -71,7 +78,7 @@ static func terrain_height(x: float, z: float) -> float:
 	var height := -7.0 + coast * (12.0 + hills + cliff + rolling)
 	var road_weight := 1.0 - smoothstep(13.0, 38.0, road_distance(x, z))
 	road_weight *= 1.0 - smoothstep(300.0, 350.0, absf(z))
-	return lerpf(height, road_height(z), road_weight)
+	return WaterShape.carve(x, z, lerpf(height, road_height(z), road_weight))
 
 
 func surface_height(x: float, z: float) -> float:
@@ -89,6 +96,13 @@ func surface_height(x: float, z: float) -> float:
 	if fx + fz <= 1.0:
 		return a + (b - a) * fx + (c - a) * fz
 	return d + (c - d) * (1.0 - fx) + (b - d) * (1.0 - fz)
+
+
+func is_walkable_shore(x: float, z: float) -> bool:
+	var water_level := SEA_LEVEL
+	if WaterShape.covers(x, z):
+		water_level = maxf(water_level, WaterShape.level(x, z))
+	return surface_height(x, z) >= water_level + 0.6
 
 
 func _height(x: int, z: int) -> float:
@@ -173,7 +187,7 @@ func _build_rocks() -> void:
 		var x := random.randf_range(-370, 370)
 		var z := random.randf_range(-370, 370)
 		var y := surface_height(x, z)
-		if y < 2.0 or road_distance(x, z) < 24.0:
+		if y < 2.0 or road_distance(x, z) < 24.0 or WaterShape.covers(x, z, 5.0):
 			continue
 		var rock := MeshInstance3D.new()
 		rock.mesh = rock_mesh

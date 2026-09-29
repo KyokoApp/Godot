@@ -5,10 +5,13 @@ const SETTINGS := "user://graphics.cfg"
 
 var sun: DirectionalLight3D
 var grass: Node3D
+var water: Node3D
+var water_ssr := false
 var light_mode := true
 var grass_enabled := true
 var shadows_enabled := false
 var uncapped := false
+var _water_button: Button
 var _quality: Button
 var _grass_button: Button
 var _shadows: Button
@@ -25,6 +28,7 @@ func _ready() -> void:
 	_grass_button = _button("", toggle_grass)
 	_shadows = _button("", toggle_shadows)
 	_limit = _button("", toggle_limit)
+	_water_button = _button("", toggle_water)
 	_stats = Label.new()
 	_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_stats.add_theme_font_size_override("font_size", 16)
@@ -61,6 +65,7 @@ func _load_settings() -> void:
 	grass_enabled = bool(config.get_value("graphics", "grass", true))
 	shadows_enabled = bool(config.get_value("graphics", "shadows", false))
 	uncapped = bool(config.get_value("graphics", "uncapped", false))
+	water_ssr = bool(config.get_value("graphics", "water_ssr", false))
 
 
 func _save_settings() -> void:
@@ -69,6 +74,7 @@ func _save_settings() -> void:
 	config.set_value("graphics", "grass", grass_enabled)
 	config.set_value("graphics", "shadows", shadows_enabled)
 	config.set_value("graphics", "uncapped", uncapped)
+	config.set_value("graphics", "water_ssr", water_ssr)
 	config.save(SETTINGS)
 
 
@@ -85,6 +91,9 @@ func apply_settings() -> void:
 	_grass_button.text = "Rumput: " + ("Nyala" if grass_enabled else "Mati (tes FPS)")
 	_shadows.text = "Bayangan: " + ("Nyala" if shadows_enabled else "Mati")
 	_limit.text = "Batas FPS: " + ("Bebas*" if uncapped else "60")
+	if water != null:
+		water.set_ssr(water_ssr)
+	_water_button.text = "Pantulan air: " + ("SSR (uji)" if water_ssr else "Ringan")
 	_frames.clear()
 	_elapsed = 0.0
 	_stats.text = "Mengukur frame…\n* Tetap mengikuti VSync / layar HP"
@@ -104,6 +113,12 @@ func toggle_grass() -> void:
 
 func toggle_shadows() -> void:
 	shadows_enabled = not shadows_enabled
+	apply_settings()
+	_save_settings()
+
+
+func toggle_water() -> void:
+	water_ssr = not water_ssr
 	apply_settings()
 	_save_settings()
 

@@ -79,7 +79,7 @@ func can_grow(x: float, z: float) -> bool:
 	if absf(x) > 495 or absf(z) > 495:
 		return false
 	var height := island.surface_height(x, z)
-	if height < 5.4:
+	if height < 5.4 or Island.WaterShape.covers(x, z, 1.5):
 		return false
 	# Margin tambahan menahan daun yang tertiup angin agar tidak masuk jalan.
 	if absf(z) < 340 and Island.road_distance(x, z) < 15.0:

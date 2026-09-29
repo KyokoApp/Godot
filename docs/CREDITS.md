@@ -153,3 +153,16 @@ Original glTF/bin geometry preserved; referenced PNGs resized to <=512px.
 `tools/fetch_nature_assets.py` reproduces retrieval and resizing.
 `grass_cards.png` and `meadow_cover.png` are original deterministic textures;
 regenerate with `tools/make_meadow_textures.py` (Pillow).
+
+
+## Water shader
+- Marcel Bankmann, **GodotSSRWater**, MIT ©2023–present.
+- https://godotshaders.com/shader/transparent-water-shader-supporting-ssr/
+- https://github.com/marcelb/GodotSSRWater
+- Source pinned at `391b2f9f9fc289c8ef0ccc2889cf53b5d3cfdaec` (`shaders/water.gdshader`).
+- License: `project/licenses/MarcelBankmann-Water-MIT.txt`.
+- Adapted projection/depth, wave/normal blend, refraction and SSR functions for
+  Godot4.5.2 Mobile: fixed12-probe loop, corrected normal spaces, reverse-Z
+  near/far-independent reconstruction, disabled/miss fallback and night palette.
+- Water maps and watershed geometry are original procedural work. No upstream
+  demo textures/models/media copied. Generator: `tools/make_water_textures.py`.

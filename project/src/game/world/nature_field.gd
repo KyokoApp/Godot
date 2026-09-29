@@ -46,7 +46,7 @@ func can_place(point: Vector2, tree: bool) -> bool:
 	if point.length() > 405 or absf(point.x) > 440 or absf(point.y) > 440:
 		return false
 	var height := island.surface_height(point.x, point.y)
-	if height < 5.5:
+	if height < 5.5 or Island.WaterShape.covers(point.x, point.y, 3.0):
 		return false
 	if absf(point.y) < 345 and Island.road_distance(point.x, point.y) < (17 if tree else 14):
 		return false

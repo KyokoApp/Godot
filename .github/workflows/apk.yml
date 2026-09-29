@@ -298,6 +298,32 @@ jobs:
           fi
           grep -F '[world-details-test] HASIL: OK' world-render.log
 
+      - name: Tes sungai danau, collision dan shader air (Mobile Vulkan)
+        run: |
+          timeout 120 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_water.gd"
+          set +e
+          timeout 240 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --audio-driver Dummy --resolution 480x270 \
+            --script "$GITHUB_WORKSPACE/tools/test_water.gd" -- --render 2>&1 | tee water-render.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' water-render.log; then
+            tail -60 water-render.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[water-test] HASIL: OK' water-render.log
+
+      - name: Simpan screenshot air
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: water-screenshots
+          path: ~/.local/share/godot/app_userdata/**/water-*-test.png
+          if-no-files-found: ignore
+
       - name: Simpan screenshot world
         if: always()
         uses: actions/upload-artifact@v4
