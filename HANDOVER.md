@@ -1,5 +1,14 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- Terbaru: swipe/pinch kamera kanan, default dekat 4 m, gerak relatif kamera.
+- Pulau prosedural 1.000 × 1.000 m (bentang terrain termasuk pesisir), perbukitan,
+  dataran tebing timur, batu collision, jalan tanah berliku dan laut. Warna terang.
+- Cakupan gabungan kamera + dunia diminta langsung pengguna. Belum ada berenang,
+  bangunan atau vegetasi detail. Pemain dibatasi di garis air dangkal.
+- Tes otomatis mencakup ray tanah, elevasi jalan, swipe/pinch, isolasi kiri-kanan,
+  dan SpringArm menghadapi tembok. Performa/tampilan tetap harus diuji di HP.
+
+
 - Permintaan terbaru: mannequin asli + idle/jalan/lari didahulukan (5A), analog
   transparan mengambang hanya saat disentuh di kiri layar. Kamera tetap dulu.
 - Aset UAL1 Standard diambil utuh dari archive (asal + hash di docs/CREDITS.md).

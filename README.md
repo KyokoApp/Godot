@@ -147,3 +147,23 @@ Periksa analog tak terlihat saat idle, muncul di titik sentuh kiri, transparan,
 hilang saat dilepas, dan jari kedua tidak merebut kontrol. CI mengecek klip impor,
 perubahan pose tulang, transisi state, dan aturan sentuhan; tampilan/performa tetap
 perlu tes di perangkat. Tetap jangan merge ke main.
+
+## Pulau 1K + kamera dekat (permintaan berikutnya)
+
+- Kamera default 4 m (sebelumnya offset sekitar 7,7 m), FOV 65 derajat.
+- Geser separuh kanan untuk orbit; dua jari yang mulai di kanan untuk zoom 2,4–8 m.
+  Joystick kiri tetap independen. Gerak mengikuti arah kamera. SpringArm dengan
+  sphere cast memendekkan jarak saat terhalang tanah/batu/tebing.
+- Terrain 1.000 × 1.000 meter: pulau berpantai tidak persegi, laut biru muda,
+  perbukitan, dataran tebing berbatu di timur, batu-batu, jalan tanah berliku.
+  Jalan menyatu dengan terrain dan dihaluskan elevasinya, bukan grid lurus.
+- Terrain deterministik dibagi 16 chunk, grid 5 m, 80.000 segitiga dengan collision.
+  Warna vertex tanpa shader khusus/tekstur; batu low-poly. Belum ada pohon/rumput
+  individual, ombak atau berenang. Pemain berhenti di air dangkal.
+- Perubahan dikirim melalui content pack; pengguna launcher 3A cukup buka ulang
+  online. HUD baru **PULAU 1K — kamera dekat**.
+
+Tes HP: swipe kanan sambil jalan dengan kiri, cubit kanan, lihat karakter dari
+berbagai sudut, mendekat ke tebing untuk uji kamera, jalan menanjak/menurun,
+jelajahi pantai, cek FPS dan durasi persiapan dunia. Belum diklaim performa stabil
+pada HP sebelum pengguna menguji. Main tetap tidak di-merge.

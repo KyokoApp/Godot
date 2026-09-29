@@ -1,31 +1,17 @@
 extends Node3D
-## MAIN SCENE — titik masuk game.
-##
-## MILESTONE 1 (2026-09-29): dunia paling sederhana yang masih berarti.
-## Tujuannya BUKAN cantik — tujuannya membuktikan satu hal: aplikasi ini
-## benar-benar bisa dibuka di HP dan menampilkan sesuatu.
-##
-## Semua di sini dibangun dari kode, tanpa file .tscn yang rumit, supaya
-## satu-satu bagian bisa ditambahkan dan diuji terpisah. Tidak ada shader
-## kustom di milestone ini: kalau ada yang salah, penyebabnya jelas —
-## bukan "entah shader mana".
-##
-## LANGKAH BERIKUTNYA (satu per satu, masing-masing diuji di HP):
-##   2. Bergerak        — WASD/joystick + kamera mengikut
-##   3. Delta update   — launcher mengunduh content pack
-##   4. Dunia           — tanah, rumput, jalan
-##   5. Karakter        — model + animasi
+## Pulau 1 km + kamera sentuh, tetap memakai mannequin dan updater yang sama.
 
 const Joystick = preload("res://src/game/virtual_joystick.gd")
 const Mannequin = preload("res://src/game/mannequin.gd")
 const MOVE_SPEED := 5.0
-const CAMERA_OFFSET := Vector3(0.0, 3.2, 7.0)
+const Island = preload("res://src/game/island.gd")
+const Orbit = preload("res://src/game/orbit_camera.gd")
 
-const GROUND_SIZE := 120.0
 const CHARACTER_HEIGHT := 1.8
 
 var _label: Label
-var _camera: Camera3D
+var _orbit: Orbit
+var _island: Island
 var _player: CharacterBody3D
 var _visual: Mannequin
 var _joystick: Joystick
@@ -37,7 +23,7 @@ func _ready() -> void:
 	_build_player()
 	_build_camera()
 	_build_hud()
-	print("[main] mannequin 5A siap")
+	print("[main] pulau 1K + kamera siap")
 	_confirm_boot.call_deferred()
 
 
@@ -71,27 +57,8 @@ func _build_environment() -> void:
 
 
 func _build_ground() -> void:
-	var plane := PlaneMesh.new()
-	plane.size = Vector2(GROUND_SIZE, GROUND_SIZE)
-
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.36, 0.56, 0.27)
-	mat.roughness = 1.0
-
-	var mesh := MeshInstance3D.new()
-	mesh.name = "Ground"
-	mesh.mesh = plane
-	mesh.material_override = mat
-	add_child(mesh)
-
-	# Collider infinite: selalu menyangga pemain, tak ada tepi yang bisa
-	# membuat pemain jatuh melewati batas.
-	var body := StaticBody3D.new()
-	body.collision_layer = 1
-	var shape := CollisionShape3D.new()
-	shape.shape = WorldBoundaryShape3D.new()
-	body.add_child(shape)
-	add_child(body)
+	_island = Island.new()
+	add_child(_island)
 
 
 # ------------------------------------------------------------- karakter ----
@@ -99,7 +66,9 @@ func _build_ground() -> void:
 func _build_player() -> void:
 	var body := CharacterBody3D.new()
 	body.name = "Player"
-	body.position.y = CHARACTER_HEIGHT / 2.0 + 0.02
+	body.position.y = _island.surface_height(0, 0) + CHARACTER_HEIGHT / 2.0 + 0.02
+	body.floor_snap_length = 1.0
+	body.floor_max_angle = deg_to_rad(45)
 	body.collision_layer = 2
 	body.collision_mask = 1
 
@@ -121,12 +90,9 @@ func _build_player() -> void:
 
 
 func _build_camera() -> void:
-	_camera = Camera3D.new()
-	_camera.name = "Camera"
-	_camera.position = Vector3(0.0, 3.0, 6.0)
-	_camera.current = true
-	_camera.fov = 70.0
-	add_child(_camera)
+	_orbit = Orbit.new()
+	add_child(_orbit)
+	_orbit.position = _player.position + Vector3(0, 0.55, 0)
 
 
 # ------------------------------------------------------------------ HUD ----
@@ -136,7 +102,7 @@ func _build_hud() -> void:
 	add_child(layer)
 
 	_label = Label.new()
-	_label.text = "MILESTONE 5A — mannequin"
+	_label.text = "PULAU 1K — kamera dekat"
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_label.add_theme_font_size_override("font_size", 26)
 	_label.add_theme_color_override("font_color", Color(1, 1, 1))
@@ -153,8 +119,8 @@ func _build_hud() -> void:
 
 func _physics_process(delta: float) -> void:
 	var stick := _joystick.direction
-	# Arah layar tetap: atas joystick = menjauh dari kamera (sumbu -Z).
-	var movement := Vector3(stick.x, 0.0, stick.y)
+	# Arah gerak mengikuti yaw kamera; joystick atas selalu maju di layar.
+	var movement := _orbit.movement_direction(stick)
 	_player.velocity.x = movement.x * MOVE_SPEED
 	_player.velocity.z = movement.z * MOVE_SPEED
 	if not _player.is_on_floor():
@@ -163,23 +129,28 @@ func _physics_process(delta: float) -> void:
 		_player.velocity.y = 0.0
 	var before := _player.position
 	_player.move_and_slide()
-	# Area uji masih berupa plane; jangan biarkan pemain keluar tanah terlihat.
-	var edge := GROUND_SIZE / 2.0 - 1.0
-	_player.position.x = clampf(_player.position.x, -edge, edge)
-	_player.position.z = clampf(_player.position.z, -edge, edge)
+	# Belum ada berenang: berhenti di air dangkal, bukan tenggelam ke dasar laut.
+	if _island.surface_height(_player.position.x, _player.position.z) < 0.6:
+		_player.position.x = before.x
+		_player.position.z = before.z
+		_player.velocity.x = 0
+		_player.velocity.z = 0
+	if _player.position.y < -15.0:
+		_player.position = Vector3(0, _island.surface_height(0, 0) + 1.0, 0)
+		_player.velocity = Vector3.ZERO
 	var travelled := _player.position - before
 	var speed := Vector2(travelled.x, travelled.z).length() / delta
 	_visual.update_motion(speed)
 	if movement.length_squared() > 0.001:
-		_visual.rotation.y = atan2(-movement.x, -movement.z)
+		var target_yaw := atan2(-movement.x, -movement.z)
+		_visual.rotation.y = lerp_angle(_visual.rotation.y, target_yaw, 1.0 - exp(-14.0 * delta))
+	_orbit.follow(_player.global_position + Vector3(0, 0.55, 0), delta)
 
 
 func _process(_delta: float) -> void:
-	_camera.position = _player.global_position + CAMERA_OFFSET
-	_camera.look_at(_player.global_position + Vector3(0, 0.5, 0), Vector3.UP)
 	_label.text = (
-		"MILESTONE 5A — mannequin + animasi\nFPS: %d | Posisi: %.1f, %.1f\n"
-		+ "Tahan kiri layar: tarik dekat = jalan, jauh = lari."
+		"PULAU 1K — kamera dekat\nFPS: %d | Posisi: %.1f, %.1f\n"
+		+ "Kiri: gerak | Geser kanan: kamera | Cubit kanan: zoom"
 	) % [Engine.get_frames_per_second(), _player.position.x, _player.position.z]
 
 

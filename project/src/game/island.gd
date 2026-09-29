@@ -1,0 +1,162 @@
+extends Node3D
+## Pulau deterministik 1 km, terrain ber-collision dengan jalan menyatu permukaan.
+## 16 chunk, total 80.000 segitiga; tanpa shader/tekstur eksternal.
+
+const SIZE := 1000.0
+const STEP := 5.0
+const CELLS := 200
+const CHUNK := 50
+const SEA_LEVEL := 0.0
+
+var _heights := PackedFloat32Array()
+
+
+func _ready() -> void:
+	name = "Island"
+	_heights.resize((CELLS + 1) * (CELLS + 1))
+	for z in range(CELLS + 1):
+		for x in range(CELLS + 1):
+			_heights[z * (CELLS + 1) + x] = terrain_height(x * STEP - 500, z * STEP - 500)
+	for z in range(0, CELLS, CHUNK):
+		for x in range(0, CELLS, CHUNK):
+			_build_chunk(x, z)
+	_build_sea()
+	_build_rocks()
+
+
+static func road_x(z: float) -> float:
+	return 65.0 * sin(z / 95.0) + 22.0 * sin(z / 43.0)
+
+
+static func road_height(z: float) -> float:
+	return 5.0 + 7.0 * (1.0 - cos(z / 110.0))
+
+
+static func terrain_height(x: float, z: float) -> float:
+	var angle := atan2(z, x)
+	var radius := 435.0 + 22.0 * sin(angle * 3.0) + 18.0 * cos(angle * 5.0)
+	var inland := radius - Vector2(x, z).length()
+	var coast := smoothstep(-20.0, 85.0, inland)
+	var hills := 48.0 * exp(-Vector2(x + 160, z + 110).length_squared() / 17000.0)
+	hills += 35.0 * exp(-Vector2(x - 120, z - 180).length_squared() / 12000.0)
+	# Dataran tinggi timur dengan sisi curam berbatu, bukan sekadar gundukan hijau.
+	var cliff := 44.0 * (1.0 - smoothstep(65.0, 92.0, Vector2(x - 230, z + 110).length()))
+	var rolling := 3.0 * sin(x / 48.0) * cos(z / 61.0)
+	var height := -7.0 + coast * (12.0 + hills + cliff + rolling)
+	var road_weight := 1.0 - smoothstep(12.0, 36.0, absf(x - road_x(z)))
+	road_weight *= 1.0 - smoothstep(300.0, 350.0, absf(z))
+	return lerpf(height, road_height(z), road_weight)
+
+
+func surface_height(x: float, z: float) -> float:
+	# Interpolasi segitiga SAMA dengan mesh collider, bukan fungsi halus perkiraan.
+	var gx := clampf((x + 500.0) / STEP, 0.0, CELLS - 0.001)
+	var gz := clampf((z + 500.0) / STEP, 0.0, CELLS - 0.001)
+	var ix := int(gx)
+	var iz := int(gz)
+	var fx := gx - ix
+	var fz := gz - iz
+	var a := _height(ix, iz)
+	var b := _height(ix + 1, iz)
+	var c := _height(ix, iz + 1)
+	var d := _height(ix + 1, iz + 1)
+	if fx + fz <= 1.0:
+		return a + (b - a) * fx + (c - a) * fz
+	return d + (c - d) * (1.0 - fx) + (b - d) * (1.0 - fz)
+
+
+func _height(x: int, z: int) -> float:
+	return _heights[clampi(z, 0, CELLS) * (CELLS + 1) + clampi(x, 0, CELLS)]
+
+
+func _color(x: float, z: float, height: float, normal: Vector3) -> Color:
+	var grass := Color("93b876").lerp(Color("b3c78a"), (sin(x / 23) * cos(z / 32) + 1) * 0.5)
+	var stone := Color("a7a4a0")
+	var color := grass.lerp(stone, 1.0 - smoothstep(0.65, 0.88, normal.y))
+	color = Color("e3d5ac").lerp(color, smoothstep(1.0, 5.0, height))
+	var road := 1.0 - smoothstep(8.0, 13.0, absf(x - road_x(z)))
+	road *= 1.0 - smoothstep(300.0, 335.0, absf(z))
+	return color.lerp(Color("c6aa88"), road)
+
+
+func _build_chunk(start_x: int, start_z: int) -> void:
+	var vertices := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var colors := PackedColorArray()
+	var indices := PackedInt32Array()
+	for z in range(start_z, start_z + CHUNK + 1):
+		for x in range(start_x, start_x + CHUNK + 1):
+			var point := Vector3(x * STEP - 500, _height(x, z), z * STEP - 500)
+			var normal := Vector3(_height(x - 1, z) - _height(x + 1, z), STEP * 2,
+				_height(x, z - 1) - _height(x, z + 1)).normalized()
+			vertices.append(point)
+			normals.append(normal)
+			colors.append(_color(point.x, point.z, point.y, normal))
+	for z in range(CHUNK):
+		for x in range(CHUNK):
+			var a := z * (CHUNK + 1) + x
+			var b := a + 1
+			var c := a + CHUNK + 1
+			var d := c + 1
+			indices.append_array(PackedInt32Array([a, b, c, b, d, c]))
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_COLOR] = colors
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var material := StandardMaterial3D.new()
+	material.vertex_color_use_as_albedo = true
+	material.roughness = 1.0
+	var visual := MeshInstance3D.new()
+	visual.mesh = mesh
+	visual.material_override = material
+	add_child(visual)
+	var body := StaticBody3D.new()
+	body.collision_layer = 1
+	var shape := CollisionShape3D.new()
+	shape.shape = mesh.create_trimesh_shape()
+	body.add_child(shape)
+	add_child(body)
+
+
+func _build_sea() -> void:
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(4000, 4000)
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color("65b9c8")
+	material.roughness = 0.28
+	var sea := MeshInstance3D.new()
+	sea.name = "Sea"
+	sea.mesh = plane
+	sea.material_override = material
+	sea.position.y = SEA_LEVEL
+	add_child(sea)
+
+
+func _build_rocks() -> void:
+	var random := RandomNumberGenerator.new()
+	random.seed = 42017
+	for index in range(60):
+		var x := random.randf_range(-370, 370)
+		var z := random.randf_range(-370, 370)
+		var y := surface_height(x, z)
+		if y < 2.0 or absf(x - road_x(z)) < 24.0:
+			continue
+		var rock := MeshInstance3D.new()
+		var mesh := SphereMesh.new()
+		mesh.radial_segments = 7
+		mesh.rings = 3
+		rock.mesh = mesh
+		var material := StandardMaterial3D.new()
+		material.albedo_color = Color("a9a7a0").lerp(Color("ccc5b5"), random.randf())
+		material.roughness = 1.0
+		rock.material_override = material
+		rock.position = Vector3(x, y, z)
+		rock.scale = Vector3(random.randf_range(3, 9), random.randf_range(2, 8),
+			random.randf_range(3, 9))
+		rock.rotation.y = random.randf_range(0, TAU)
+		add_child(rock)
+		rock.create_convex_collision()

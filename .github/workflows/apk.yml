@@ -122,6 +122,11 @@ jobs:
           timeout 60 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_mannequin.gd"
 
+      - name: Tes pulau, collision, kamera dan multitouch
+        run: |
+          timeout 90 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_island_camera.gd"
+
       - name: Tes validasi updater
         run: |
           timeout 60 ./godot --headless --path project \
