@@ -392,3 +392,11 @@ batas warnanya kini dihitung per-pixel, bukan blok warna antarsegitiga 5m.
 Lebar jalur mengikuti arah tikungan, dengan gelombang elevasi panjang/lembut;
 mesh dan collider tetap satu permukaan. Rumput, batu, dan foley memakai ukuran
 jalur yang sama. Budget terrain tetap 80k triangles, tanpa mesh jalan tumpang tindih.
+
+### Malam biru, bintang jarang, bulan kecil
+Environment malam statis: gradasi indigo/biru tua, horizon lembut, sedikit
+bintang tanpa kedip agresif, bulan kecil (~0.63 derajat) dengan halo tipis.
+Moonlight mengikuti posisi bulan; ambient biru dipisahkan dari sky agar jalan,
+rumput dan karakter tetap terbaca. Satu directional light yang sama, pengaturan
+shadow tetap berlaku. Tidak memasang color-reducer/post-process, kabut volumetrik,
+atau siklus siang-malam. UI, pet, outline, audio dan combat tidak diubah.

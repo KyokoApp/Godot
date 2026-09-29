@@ -135,3 +135,8 @@ created for A-Sekai, not copied from an icon pack or third-party image.
   `c74798f0bc905dc8aad6a429c683fe746373194d`, `sounds/critical.wav`.
   Full source hash, modifications and attribution: `licenses/Pet-Fire-CC0.txt`.
   `tools/prepare_pet_fire.py` rebuilds the 8-second crossfaded companion loop.
+
+### Night environment
+`environment/night_sky.gdshader`: original procedural sky for A-Sekai,
+seeded sparse stars, small moon with analytic crater marks and subtle halo.
+No downloaded sky image, shader-site code, or third-party celestial artwork.

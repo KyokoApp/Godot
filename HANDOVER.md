@@ -267,3 +267,17 @@ slope <.11 and curvature <.0025/m tested, existing mesh/collision interpolation
 still authoritative. No added geometry beyond existing 80k triangles.
 Tests: terrain shader/material colors, centerline/curvature/slope, grass bounds,
 pet outline budget, real Mobile Vulkan road color render and pet regressions.
+
+## Night scene milestone
+User declined color-reducer for now; requested beautiful night, sparse stars,
+small moon. `environment/night_environment.gd` is a shared static preset used
+by main and renderer test. `night_sky.gdshader` is original procedural art,
+no external textures, TIME, dynamic sky rebakes or additional world lights.
+Small 0.0055rad moon radius at (-.31,.24,-.92), faint halo/crater marks;
+sparse seeded stars, low horizon fade. Camera-facing sky directions are world-stable.
+Ambient COLOR .38 / blue .48,.57,.78 preserves navigation; directional moon
+energy .48, aligned to sky moon; existing shadows/graphics.cfg still work.
+`test_night.gd` real Vulkan: moon on/off pixel area, stars on/off sparse area,
+blue night tone, moonlight alignment and ground readability; saves screenshots.
+User approval of brightness still requires HP check. Approved pet/audio/road
+and clean UI remain untouched; no new color grading/post-process filter.

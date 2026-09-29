@@ -1,6 +1,7 @@
 extends Node3D
 ## Pulau 1 km + kamera sentuh, tetap memakai mannequin dan updater yang sama.
 
+const Night = preload("res://src/game/environment/night_environment.gd")
 const WorldAudio = preload("res://src/game/audio/world_audio.gd")
 const Footsteps = preload("res://src/game/audio/footsteps.gd")
 const RuneButton = preload("res://src/game/ui/rune_button.gd")
@@ -63,31 +64,13 @@ func _ready() -> void:
 # ---------------------------------------------------------------- dunia ----
 
 func _build_environment() -> void:
-	var env := Environment.new()
-	env.background_mode = Environment.BG_SKY
-	var sky := Sky.new()
-	var sky_mat := ProceduralSkyMaterial.new()
-	sky_mat.sky_top_color = Color(0.30, 0.52, 0.86)
-	sky_mat.sky_horizon_color = Color(0.78, 0.85, 0.92)
-	sky_mat.ground_bottom_color = Color(0.28, 0.34, 0.26)
-	sky_mat.ground_horizon_color = Color(0.62, 0.68, 0.58)
-	sky.sky_material = sky_mat
-	env.sky = sky
-	# Cerah agar bentuk-bentuk terbaca jelas di layar HP apa pun.
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.57
-	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-
-	var we := WorldEnvironment.new()
-	we.environment = env
-	add_child(we)
-
-	var sun := DirectionalLight3D.new()
-	_sun = sun
-	sun.rotation_degrees = Vector3(-52.0, 135.0, 0.0)
-	sun.light_energy = 0.98
-	sun.shadow_enabled = true
-	add_child(sun)
+	var world_environment := WorldEnvironment.new()
+	world_environment.name = "NightEnvironment"
+	world_environment.environment = Night.make_environment()
+	add_child(world_environment)
+	_sun = Night.make_moonlight()
+	add_child(_sun)
+	_sun.look_at_from_position(Vector3.ZERO, -Night.MOON_DIRECTION)
 
 
 func _build_ground() -> void:
