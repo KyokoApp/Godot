@@ -1,6 +1,7 @@
 extends Node3D
 ## Pulau 1 km + kamera sentuh, tetap memakai mannequin dan updater yang sama.
 
+const MoonRays = preload("res://src/game/god_rays/moon_rays.gd")
 const BattleArena = preload("res://src/game/arena/battle_arena.gd")
 const SpeedButton = preload("res://src/game/ui/speed_button.gd")
 const SpeedAura = preload("res://src/game/speed/speed_aura.gd")
@@ -33,6 +34,7 @@ var inside_arena := false
 var warmup_requested := false
 var warmup_complete := false
 var warmup_report: Dictionary = {}
+var _moon_rays: MoonRays
 var _nature: NatureField
 var _stone_path: StonePath
 var _previous_occlusion := false
@@ -67,6 +69,10 @@ func _ready() -> void:
 	_build_ground()
 	_build_player()
 	_build_camera()
+	_moon_rays = MoonRays.new()
+	_moon_rays.camera = _orbit.camera
+	_moon_rays.player = _player
+	_orbit.camera.add_child(_moon_rays)
 	_audio = WorldAudio.new()
 	_audio.listener = _orbit.camera
 	add_child(_audio)
@@ -257,6 +263,7 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 	_credits_button.pressed.connect(_toggle_credits)
 	content.add_child(_credits_button)
 	_performance = PerformancePanel.new()
+	_performance.rays = _moon_rays
 	_performance.sun = _sun
 	_performance.grass = _grass
 	_performance.water = _island.water
@@ -264,7 +271,7 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 	_credits = CreditsPanel.new()
 	content.add_child(_credits)
 	_credits.hide()
-	_graphics_drawer.offset_bottom = 565
+	_graphics_drawer.offset_bottom = 615
 	_graphics_drawer.hide()
 
 

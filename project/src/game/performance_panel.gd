@@ -3,6 +3,8 @@ extends VBoxContainer
 
 const SETTINGS := "user://graphics.cfg"
 
+var rays: MeshInstance3D
+var rays_enabled := true
 var sun: DirectionalLight3D
 var grass: Node3D
 var water: Node3D
@@ -11,6 +13,7 @@ var light_mode := true
 var grass_enabled := true
 var shadows_enabled := false
 var uncapped := false
+var _rays_button: Button
 var _water_button: Button
 var _quality: Button
 var _grass_button: Button
@@ -29,6 +32,7 @@ func _ready() -> void:
 	_shadows = _button("", toggle_shadows)
 	_limit = _button("", toggle_limit)
 	_water_button = _button("", toggle_water)
+	_rays_button = _button("", toggle_rays)
 	_stats = Label.new()
 	_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_stats.add_theme_font_size_override("font_size", 16)
@@ -65,6 +69,7 @@ func _load_settings() -> void:
 	grass_enabled = bool(config.get_value("graphics", "grass", true))
 	shadows_enabled = bool(config.get_value("graphics", "shadows", false))
 	uncapped = bool(config.get_value("graphics", "uncapped", false))
+	rays_enabled = bool(config.get_value("graphics", "moon_rays", true))
 	water_ssr = bool(config.get_value("graphics", "water_ssr", false))
 
 
@@ -75,6 +80,7 @@ func _save_settings() -> void:
 	config.set_value("graphics", "shadows", shadows_enabled)
 	config.set_value("graphics", "uncapped", uncapped)
 	config.set_value("graphics", "water_ssr", water_ssr)
+	config.set_value("graphics", "moon_rays", rays_enabled)
 	config.save(SETTINGS)
 
 
@@ -94,6 +100,9 @@ func apply_settings() -> void:
 	if water != null:
 		water.set_ssr(water_ssr)
 	_water_button.text = "Pantulan air: " + ("SSR (uji)" if water_ssr else "Ringan")
+	if rays != null:
+		rays.set("enabled", rays_enabled)
+	_rays_button.text = "Sinar bulan: " + ("Nyala" if rays_enabled else "Mati (tes FPS)")
 	_frames.clear()
 	_elapsed = 0.0
 	_stats.text = "Mengukur frame…\n* Tetap mengikuti VSync / layar HP"
@@ -152,3 +161,9 @@ func _process(delta: float) -> void:
 func _exit_tree() -> void:
 	Engine.max_fps = 0
 	get_viewport().scaling_3d_scale = 1.0
+
+
+func toggle_rays() -> void:
+	rays_enabled = not rays_enabled
+	apply_settings()
+	_save_settings()

@@ -510,3 +510,13 @@ Native arena render checks exterior, partial edge, interior occlusion, and exit.
   Aurora tetap ada dan digambar setelah asap. Environment dunia normal tidak diubah.
 - Efek speed luar arena mengembalikan versi pose echoes + asap ff178b2 (bukan kabel
   terang atau bola). Shader warmup kini 23 tahap. Tes batas, speed/HUD dan render wajib.
+
+
+## Sinar bulan screen-space
+Adaptasi metode radial scattering Qtan1 (CC0), bukan volumetric fog. Memakai
+kedalaman layar reverse-Z, 16 sampel, tanpa render ulang seluruh dunia lewat
+SubViewport. Warna biru pucat halus mengikuti arah bulan di sky. Otomatis mati
+saat bulan di belakang/luar kamera atau pemain di dalam arena. Efek berada di
+bawah HUD dan transparansi, tidak menerangi terrain/karakter. Objek transparan
+atau di luar layar tidak ikut menghalangi sinar. Toggle tersimpan “Sinar bulan”
+ada di Grafik untuk tes A/B HP; tidak menjamin FPS. Renderer target Mobile 4.5.2.

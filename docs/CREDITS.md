@@ -235,3 +235,12 @@ baru mengikuti hak karya orisinal proyek; tidak menyalin efek Genshin/HSR.
 ## HUD and arena fog
 Original project work: HUD styling, rocky arena, procedural grey-white
 boundary aurora and localized fog. No external texture or audio added.
+
+
+### Screen-space moon rays
+- Method reference: Qtan1, Screen Space God Rays (Godot 4.3),
+- User supplied page: https://godotshaders.com/shader/screen-space-god-rays-godot-4-3/
+- Page declares code CC0. No preview images/assets copied. Our implementation uses
+  an original reverse-Z depth-mask shader with 16 radial samples instead of the
+  article's second scene-render SubViewport. Credit identifies method inspiration,
+  not a verbatim copy or performance guarantee.
