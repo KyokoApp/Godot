@@ -64,7 +64,7 @@ func _test_contacts() -> void:
 	stick.set("direction", Vector2.UP)
 	for frame in range(180):
 		await physics_frame
-	_check(trail.emitted >= 2, "Kontak kaki bergerak tidak menyalakan api")
+	_check(trail.emitted >= 5, "Kontak langkah berulang kurang: %d" % trail.emitted)
 	var count := trail.emitted
 	stick.set("direction", Vector2.ZERO)
 	for frame in range(100):
@@ -80,7 +80,11 @@ func _test_contacts() -> void:
 	var material := trail.stamps[0].material_override as ShaderMaterial
 	_check(material.get_shader_parameter("middle") == Trail.PALETTES["miku"][1],
 		"Palet Miku tidak terpasang")
-	trail.clear()
+	trail.set_physics_process(true)
+	var player: Node3D = game.get("_player")
+	player.position.x += 50
+	for frame in range(3):
+		await physics_frame
 	for stamp in trail.stamps:
 		_check(not stamp.visible, "Clear teleport meninggalkan api")
 	game.queue_free()

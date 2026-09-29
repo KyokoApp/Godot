@@ -160,13 +160,16 @@ func foot_pose(left: bool) -> Transform3D:
 	var pose := skeleton.global_transform * skeleton.get_bone_global_pose(bone)
 	var tip := skeleton.find_bone(toe)
 	var forward := -global_basis.z
+	var sole_scale := 1.0
 	if tip >= 0:
 		var end := skeleton.global_transform * skeleton.get_bone_global_pose(tip)
 		forward = end.origin - pose.origin
+		sole_scale = clampf(forward.length() * 1.65 + 0.035, 0.20, 0.34) / 0.275
 	forward.y = 0
 	if forward.length_squared() > 0.00001:
 		forward = forward.normalized()
-		pose.basis = Basis(forward.cross(Vector3.UP), Vector3.UP, -forward)
+		pose.basis = Basis(forward.cross(Vector3.UP) * sole_scale, Vector3.UP,
+			-forward * sole_scale)
 	return pose
 
 

@@ -51,7 +51,8 @@ func _physics_process(delta: float) -> void:
 		if ages[index] >= LIFETIME:
 			stamps[index].hide()
 		else:
-			stamps[index].material_override.set_shader_parameter("age", ages[index] / LIFETIME)
+			var material := stamps[index].material_override as ShaderMaterial
+			material.set_shader_parameter("age", ages[index] / LIFETIME)
 	for side in range(2):
 		_cooldowns[side] = maxf(0, _cooldowns[side] - delta)
 	if body == null or character == null or island == null:
@@ -97,8 +98,10 @@ func _sample(side: int) -> void:
 	forward = forward.slide(normal).normalized()
 	if forward.length_squared() < 0.5:
 		return
-	pose.basis = Basis(forward.cross(normal).normalized(), normal, -forward)
-	pose.origin = point + normal * 0.014
+	var sole_scale := pose.basis.get_scale().x
+	pose.basis = Basis(forward.cross(normal).normalized() * sole_scale, normal,
+		-forward * sole_scale)
+	pose.origin = point + normal * 0.014 + forward * (0.045 * sole_scale)
 	add_stamp(pose, character.skin_id, side == 0)
 
 
