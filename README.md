@@ -559,3 +559,15 @@ CI memeriksa format manifest, checksum, kerusakan, deduplikasi, retry, rollback,
 APK seed/duplikasi aset, ekspor ulang deterministik, dan ukuran perubahan script
 pada PCK asli. Cold boot dari aset APK saja belum diuji otomatis; perlu uji perangkat sebelum
 menyatakan migrasi HP tervalidasi. Tidak mengklaim delta per-baris atau selalu ukuran KB.
+
+
+## Koreksi batas arena (30 September 2026)
+- Koreksi instruksi sebelumnya: speed ×3 tersedia hanya di luar arena. Saat melewati
+  lingkaran aurora, boost dibatalkan, tombol disembunyikan, asap/pose echoes dibersihkan;
+  gerak arena normal 5 m/s. Keluar: tombol kembali, boost harus diaktifkan manual.
+- Kabut baru mulai setelah masuk footprint aurora, penuh 5 m ke dalam, nol di luar.
+  Dua dinding asap berjarak 12/15 m di luar ring; tanpa dome putih yang menutup langit.
+  Noise lembut abu-putih di belakang aurora, fade vertikal, bukan layar putih polos.
+  Aurora tetap ada dan digambar setelah asap. Environment dunia normal tidak diubah.
+- Efek speed luar arena mengembalikan versi pose echoes + asap ff178b2 (bukan kabel
+  terang atau bola). Shader warmup kini 23 tahap. Tes batas, speed/HUD dan render wajib.

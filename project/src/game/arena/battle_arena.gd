@@ -27,6 +27,7 @@ func _ready() -> void:
 	visual.mesh = mesh
 	var material := ShaderMaterial.new()
 	material.shader = SHADER
+	material.render_priority = 2 # Draw the aurora in front of transparent smoke.
 	visual.material_override = material
 	visual.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	visual.visibility_range_end = 240

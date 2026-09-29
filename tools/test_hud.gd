@@ -61,9 +61,14 @@ func _run() -> void:
 	_check(pet.get_instance_id() == pet_id, "Switch membuat pet duplikat")
 	_check(attack.offset_right <= -120 and attack.offset_bottom <= -110,
 		"Attack masih terlalu menempel sudut")
-	_check(game.get_node_or_null("SpeedBoost") == null, "Tombol speed masih ada")
-	_check(not game.get_property_list().any(func(item: Dictionary) -> bool:
-		return item.name == "speed_boosted"), "Boost tersembunyi masih aktif")
+	var speed_button: Control = game.get("_speed_button")
+	_touch(9, speed_button.get_global_rect().get_center(), true)
+	_touch(9, speed_button.get_global_rect().get_center(), false)
+	_check(game.get("speed_boosted"), "Tombol speed tidak aktif")
+	_check(orbit.get("_touches").is_empty(), "Tombol speed ikut mengorbit kamera")
+	_touch(9, speed_button.get_global_rect().get_center(), true)
+	_touch(9, speed_button.get_global_rect().get_center(), false)
+	_check(not game.get("speed_boosted"), "Speed tidak kembali normal")
 	var left := root.get_visible_rect().size * Vector2(0.22, 0.66)
 	var hit := attack.get_global_rect().get_center()
 	_check(attack.size.is_equal_approx(Vector2(128, 128)), "Attack tidak bulat 128px")

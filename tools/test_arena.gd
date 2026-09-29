@@ -71,10 +71,19 @@ func _run() -> void:
 		await process_frame
 	await RenderingServer.frame_post_draw
 	var outside := root.get_texture().get_image()
+	# Just outside and ON every irregular aurora boundary: absolutely no white fog.
+	for step in range(16):
+		var angle := float(step) * TAU / 16.0
+		var radial := Vector2(cos(angle), sin(angle))
+		var point := center + radial * (Arena.Shape.radius_at(angle) + 0.05)
+		fog.update_for_position(Vector3(point.x, 9, point.y), 1.0)
+		_check(fog.fog_amount == 0, "Kabut mulai sebelum melewati aurora")
+	_check(fog._shells.size() == 2, "Dome putih menutup langit arena")
+	_check(fog.WALL_OFFSET > 8, "Kabut berada di depan aurora/kamera")
 	fog.update_for_position(Vector3.ZERO, 1.0)
 	_check(fog.fog_amount == 0 and not fog._shells[0].visible,
 		"Kabut aktif di luar arena")
-	fog.update_for_position(Vector3(center.x + 35, 9, center.y), 1.0)
+	fog.update_for_position(Vector3(center.x + Arena.Shape.radius_at(0) - 2.5, 9, center.y), 1.0)
 	var edge := fog.fog_amount
 	_check(edge > 0 and edge < 1, "Transisi masuk arena terputus")
 	fog.update_for_position(Vector3(center.x, 9, center.y), 4.0)
@@ -93,7 +102,12 @@ func _run() -> void:
 			if Vector3(a.r - b.r, a.g - b.g, a.b - b.b).length() > 0.12:
 				changed += 1
 	_check(changed > 200, "Kabut arena tidak menutup horizon")
-	fog.update_for_position(Vector3.ZERO, 4.0)
+	# Render-order guard: translucent smoke cannot paint over the aurora.
+	var ring_material := arena.get_child(0).material_override as ShaderMaterial
+	_check(ring_material.render_priority > fog._materials[0].render_priority,
+		"Kabut menimpa lingkaran aurora")
+	fog.update_for_position(Vector3(center.x + Arena.Shape.radius_at(0) + 0.05,
+		9, center.y), 1.0 / 60.0)
 	_check(fog.fog_amount < 0.002 and not fog._shells[0].visible,
 		"Kabut tidak hilang setelah keluar arena")
 	grass.free()
