@@ -311,3 +311,22 @@ safe placement, tile budgets/teleport cleanup, occluder containment, haze and PC
   exit within180s on Mesa. Add explicit scene teardown before quit and simplify
   shared nature materials to vertex lighting / no specular or normal map, keeping
   original base textures/colors/alpha cutout. Do not bypass renderer gate.
+
+## Shader/material warmup experiment
+User approved trying precompile before rivers/lake work. No water changes.
+main._confirm_boot now optionally runs ShaderWarmup after two frames if this is
+SceneTree.current_scene (normal launcher entry) or warmup_requested test flag.
+Headless skips GPU work; existing isolated unit setups keep previous timing.
+Production Vulkan test forces warmup and checks boot marker/lifecycle/skip.
+CanvasLayer100 ALWAYS overrides disabled gameplay process mode; HUD hidden,
+input ownership reset, audio streams paused/restored. Existing launcher loading
+art reused dynamically if available; no dependency on it in standalone PCK.
+16 real rendered stages via 320x180 own-world SubViewport; same current MSAA,
+scale and shadows. Character/grass/combat first; nature afterward. Root scene
+continues rendering below cover to warm actual viewport sky/terrain variants.
+4 post-draw frames per stage; user skip +20s SOFT deadline between stages, not a
+hard GPU watchdog. Native driver compile may block a frame beyond this limit.
+Stages/elapsed/partial/skipped/draw-pipeline-counter delta logged and saved to
+user://shader_warmup_last.json. No persistent skip flag; no shader cache deletion,
+no claim cache can be shipped universally to different GPUs. Shadow/quality
+changes can still compile new variants. Confirm perceived improvement on phone.

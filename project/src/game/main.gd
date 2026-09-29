@@ -1,6 +1,7 @@
 extends Node3D
 ## Pulau 1 km + kamera sentuh, tetap memakai mannequin dan updater yang sama.
 
+const ShaderWarmup = preload("res://src/game/loading/shader_warmup.gd")
 const NatureField = preload("res://src/game/world/nature_field.gd")
 const StonePath = preload("res://src/game/world/stone_path.gd")
 const TerrainOcclusion = preload("res://src/game/world/terrain_occlusion.gd")
@@ -19,6 +20,9 @@ const Orbit = preload("res://src/game/orbit_camera.gd")
 
 const CHARACTER_HEIGHT := 1.8
 
+var warmup_requested := false
+var warmup_complete := false
+var warmup_report: Dictionary = {}
 var _nature: NatureField
 var _stone_path: StonePath
 var _previous_occlusion := false
@@ -266,6 +270,14 @@ func _process(_delta: float) -> void:
 func _confirm_boot() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
+	# Production scene launch only; isolated tests retain their existing setup.
+	if DisplayServer.get_name() != "headless" and (
+			get_tree().current_scene == self or warmup_requested):
+		var warmup := ShaderWarmup.new()
+		add_child(warmup)
+		warmup_report = await warmup.run(self)
+		warmup.queue_free()
+	warmup_complete = true
 	# Launcher memakai marker ini untuk mendeteksi boot konten yang terputus.
 	DirAccess.remove_absolute("user://content_boot_pending")
 

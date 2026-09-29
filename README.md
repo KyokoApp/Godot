@@ -419,3 +419,19 @@ atau siklus siang-malam. UI, pet, outline, audio dan combat tidak diubah.
 - Kabut depth ringan32–230m, langit/bulan tidak ditutupi, tanpa volumetric fog.
   Tes aset/mask/budget/determinisme/cleanup/occluder/PCK + Mobile Vulkan wajib;
   FPS/overdraw/CPU occlusion tetap perlu pengukuran HP nyata.
+
+### Percobaan warmup shader/material saat loading
+Saat gameplay dibuka oleh launcher, overlay loading menyiapkan resource lewat
+render nyata di SubViewport kecil: karakter berskin, rumput/MultiMesh, partikel
+api/impact, lalu seluruh variasi aset alam. World asli juga dirender di belakang
+UI agar pipeline sky/terrain sesuai viewport aktual. Input, simulasi dan audio
+sementara ditahan, lalu dipulihkan; objek uji tidak tinggal di world.
+Bar menunjukkan tahap material (bukan persentase semua shader GPU). Ada tombol
+"Lanjut tanpa menunggu" dan batas lunak20s, diperiksa antartahap; kompilasi driver
+sinkron tetap dapat membuat satu tahap lebih lama. Tidak ada cache flag palsu
+"sudah compile semua"; Godot/driver mengelola cache perangkat sendiri.
+Ini upaya mengurangi first-use stutter, bukan peningkatan FPS rata-rata atau
+jaminan seluruh pipeline/shadow/setting masa depan sudah hangat. Diagnostik
+lokal: user://shader_warmup_last.json. Headless melewati render warmup.
+Tidak mengubah launcher/updater bawaan APK: tahap ini berada di konten PCK;
+boot marker dikonfirmasi setelah warmup/skip selesai. Sungai/danau belum dibuat.
