@@ -198,3 +198,20 @@ Core/shellshader sekarang disalin utuh ke src/game/legacy_spirit; visualcontroll
 porttyped. Anchor terbaru tetap terpisah dari bahu; OmniLight lama tidak dibawa.
 Attack/ledakan belum dipindah dari archive. HUD spirit api lama, uji shaderVulkan
 wajib karena transparansi/noise berbeda. Tunggu screenshot sebelum revisi lain.
+
+## Combat VFX v2 (2026-09-29)
+- User rejected prior projectile/burst, not just pet: replace orb beads/lobes
+  with archived core/shell velocity trail and dual-shell fire volume.
+- `attack_fx/`: shared resource factory, GDQuest MIT billboard shader (noise
+  erosion), exact archived shockwave. Runtime-generated noise and masks only;
+  no third-party demo artwork. MIT notice exported; `test_pack` verifies it.
+- Gameplay/aim/swept collision unchanged; expired projectiles stop collisions
+  and emissions, hide meshes, then retain particles 0.7s before freeing.
+- Budget: 26 particles/projectile, 50/impact, max 3 shots/2 bursts. Impact TTL
+  1.9s, 2 shell draws hidden by 0.9s, one shadowless flash hidden at 0.28s.
+  No new glow/post-processing, no pet/grass/lighting/icon changes.
+- Added isolated Mobile Vulkan `test_fire_render.gd` + screenshot artifact;
+  lifecycle tests include normal-aligned shockwave, tail retirement and budgets.
+- Verify on phone: fire while moving/turning, near ground and cliff impacts,
+  fast repeat attacks, disappearing sparks, readability on grass, mean/P95 FPS.
+  CI shader success/pixel tests are NOT visual approval or a 60FPS guarantee.

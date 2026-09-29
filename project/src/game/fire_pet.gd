@@ -87,8 +87,9 @@ func _on_impact(point: Vector3, normal: Vector3) -> void:
 	if bursts.size() >= MAX_BURSTS:
 		bursts.pop_front().queue_free()
 	var burst := Burst.new()
+	burst.surface_normal = normal
+	burst.position = (get_parent() as Node3D).to_local(point + normal * 0.02)
 	get_parent().add_child(burst)
-	burst.global_position = point + normal * 0.8
 	bursts.append(burst)
 
 

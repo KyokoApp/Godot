@@ -12,6 +12,10 @@ func _run() -> void:
 		push_error("Pack gagal dipasang")
 		quit(1)
 		return
+	if not FileAccess.file_exists("res://licenses/GDQuest-MIT.txt"):
+		push_error("Lisensi shader partikel tidak ikut content pack")
+		quit(1)
+		return
 	var scene: PackedScene = load("res://src/game/main.tscn")
 	if scene == null or not scene.can_instantiate():
 		quit(1)

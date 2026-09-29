@@ -342,3 +342,14 @@ permintaan terbaru (arsip terakhir mendekatkannya ke bahu). Attack/proyektil/
 ledakan tetap versi saat ini; ronde ini hanya mengoreksi visual pet. Tidak membawa
 sistem combat, dunia, atau shader lainnya dari archive. HUD **spirit api lama**.
 Hasil layar/FPS harus diuji kembali; glow lingkungan lama tidak ikut diaktifkan.
+
+### Combat VFX v2 — ekor api + impact berlapis
+Projectile memakai core/shell asli archive, ekor mengikuti kecepatan, 10 partikel
+api world-space dan 16 sparks. Ekor tidak terpotong ketika membentur terrain.
+Impact: dua selubung api berputar berlawanan, 18 flame petals GDQuest/MIT,
+24 sparks, 8 bara, shockwave sesuai normal permukaan, flash tanpa shadow 0.28s.
+Tidak ada lagi deretan bola / delapan lobe + torus padat. Pet tidak diubah.
+TTL impact 1.9s, ekor 0.7s; cap tetap 3 proyektil / 2 impact, cooldown 0.85s.
+HUD: **PULAU 1K — api v2 — trail + impact**. Update via restart online/PCK.
+Tes Mobile Vulkan sekarang memeriksa pixel projectile, volume impact, peluruhan,
+cleanup, dan menyimpan screenshot CI. Kualitas visual/FPS tetap perlu uji HP.
