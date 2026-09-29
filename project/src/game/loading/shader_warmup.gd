@@ -52,8 +52,10 @@ func _build_ui() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	cover.add_child(title)
 	title.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	title.position = -Vector2(180, 40)
-	title.size = Vector2(360, 70)
+	title.offset_left = -180
+	title.offset_right = 180
+	title.offset_top = -40
+	title.offset_bottom = 30
 	var bottom := VBoxContainer.new()
 	cover.add_child(bottom)
 	bottom.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
