@@ -14,13 +14,15 @@ pack = (root / 'build/content.pck').read_bytes()
 joined = b''.join((root / 'build/chunks' / (c['sha256'] + '.bin')).read_bytes()
                   for c in manifest['chunks'])
 assert joined == pack
+print('[incremental-export] blocks reassembled')
 with zipfile.ZipFile(root / 'build/asekai.apk') as apk:
     seed = apk.getinfo('assets/bootstrap/base.pck')
     assert seed.compress_type == zipfile.ZIP_STORED, 'Seed must support efficient Android seeks'
+    print('[incremental-export] APK seed ZIP method:', seed.compress_type)
     assert apk.read(seed) == pack, 'APK seed differs from published content'
     assert json.loads(apk.read('assets/bootstrap/base.json')) == manifest
-    assert not any(n.startswith('assets/src/game/') for n in apk.namelist()), 'Duplicate gameplay'
-    assert not any(n.startswith('assets/assets/') for n in apk.namelist()), 'Duplicate large assets'
+    assert not any(n.startswith('assets/src/game/') for n in apk.namelist()), 'Duplicate gameplay: ' + str([n for n in apk.namelist() if n.startswith('assets/src/game/')][:10])
+    assert not any(n.startswith('assets/assets/') for n in apk.namelist()), 'Duplicate large assets: ' + str([n for n in apk.namelist() if n.startswith('assets/assets/')][:10])
     apk.extractall(root / 'build/apk-test')
 
 # Export same commit again and then a tiny gameplay change. Never publish these test builds.
@@ -34,6 +36,7 @@ try:
                             '--export-pack', 'Content', str(test_pack)], check=True,
                            timeout=120)
         export()
+        print('[incremental-export] repeat sha:', hashlib.sha256(test_pack.read_bytes()).hexdigest(), 'original:', manifest['sha256'])
         assert test_pack.read_bytes() == pack, 'Repeat export is not deterministic'
         script.write_text(original.replace('const MOVE_SPEED := 5.0', 'const MOVE_SPEED := 5.01'))
         export()

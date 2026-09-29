@@ -469,7 +469,16 @@ jobs:
             2>&1 | tee build/export.log
           test -f build/asekai.apk || { echo "::error::APK tidak terbentuk"; exit 1; }
           ls -la build/asekai.apk
-          python3 tools/test_incremental_export.py
+          set +e
+          python3 -u tools/test_incremental_export.py 2>&1 | tee build/incremental-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' build/incremental-test.log; then
+            tail -75 build/incremental-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[incremental-export] HASIL: OK' build/incremental-test.log
+          grep -F '[incremental-export] script-only delta:' build/incremental-test.log | while IFS= read -r line; do echo "::notice::$line"; done
 
       - name: Terbitkan build ke GitHub Release
         env:
