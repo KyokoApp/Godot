@@ -182,3 +182,11 @@ func foot_clearance(left: bool) -> float:
 		name = "DEF-Left ankle" if left else "DEF-Right ankle"
 	var rest := skeleton.get_bone_global_rest(skeleton.find_bone(name))
 	return clampf(rest.origin.y * skeleton.global_basis.get_scale().y, 0.06, 0.18)
+
+
+func foot_stride_lift(left: bool) -> float:
+	# Mocap swing must re-arm contact even when a shorter retargeted leg remains
+	# close to the floor throughout its cycle. Final placement still uses its own foot.
+	var bone := source_skeleton.find_bone("foot_l" if left else "foot_r")
+	return source_skeleton.get_bone_global_pose(bone).origin.y \
+		- source_skeleton.get_bone_global_rest(bone).origin.y

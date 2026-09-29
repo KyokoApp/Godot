@@ -448,3 +448,11 @@ per-stamp captured palette (Miku bluewhitepurple/Kanna gold/UAL violetcyan).
 No billboarding, lights, shadows, physics actors, sounds or damage. Clear teleport.
 Tests test_motion_flair + test_motion_flair_render, screenshot motion-flair-screenshots.
 Warmup21 stages. Existing pet/attack/casting/credits/updater remain unchanged.
+
+Contact follow-up: all-three-rig repeated-walk gate found Kanna never re-armed
+from ankle-height hysteresis alone (shorter retarget proportions). Re-arm additionally
+uses actual source mocap foot lift (.075m swing/.04m stance). Destination ankle/toe
+pose + ground ray still determine placement and contact proximity, not body-centered
+phase stamps. Sole length scales from each rig's ankle-to-toe distance (20–34cm),
+with center shifted toward toe, so heel is not centered on ankle. Keep all-three
+repeat-contact/idle/teleport integration gates; do not weaken their >=5-step check.
