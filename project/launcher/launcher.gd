@@ -38,10 +38,10 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
-	var background := ColorRect.new()
-	background.color = Color("172440")
-	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var background := Control.new()
+	background.set_script(preload("res://launcher/backdrop.gd"))
 	add_child(background)
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var title := Label.new()
 	title.text = "A - S E K A I"
 	title.add_theme_font_size_override("font_size", 64)
@@ -127,7 +127,8 @@ func _manifest_done(
 		_offer("Pembaruan tidak kompatibel. Gunakan versi tersimpan; cek release APK terbaru.")
 		return
 	_remote = data
-	if _active.get("sha256", "") == _remote["sha256"]:
+	if (_active.get("sha256", "") == _remote["sha256"]
+		and Policy.verified(_pack_path(_active), _active)):
 		_launch()
 		return
 	_request.request_completed.disconnect(_manifest_done)
