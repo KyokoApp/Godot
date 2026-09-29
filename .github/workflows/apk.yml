@@ -253,6 +253,43 @@ jobs:
           fi
           grep -F '[cast-render-test] HASIL: OK' cast-render.log
 
+      - name: Tes spring rambut dan kontak jejak api
+        run: |
+          set +e
+          timeout 120 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_motion_flair.gd" 2>&1 | tee motion-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' motion-test.log; then
+            tail -60 motion-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[motion-flair-test] HASIL: OK' motion-test.log
+
+      - name: Render rambut dan api tapak 3D (Mobile Vulkan)
+        run: |
+          set +e
+          timeout 180 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --audio-driver Dummy --resolution 480x270 \
+            --script "$GITHUB_WORKSPACE/tools/test_motion_flair_render.gd" 2>&1 | tee motion-render.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' motion-render.log; then
+            tail -60 motion-render.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[motion-flair-render-test] HASIL: OK' motion-render.log
+
+      - name: Simpan screenshot motion flair
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: motion-flair-screenshots
+          path: ~/.local/share/godot/app_userdata/**/motion-*-test.png
+          if-no-files-found: ignore
+
       - name: Simpan screenshot casting
         if: always()
         uses: actions/upload-artifact@v4

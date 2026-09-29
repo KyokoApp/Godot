@@ -12,7 +12,8 @@ retarget and Mobile Vulkan casting/HUD tests passed in Actions36562331346. Runti
 Original mesh, skin weights, bones and morph geometry retained. Base-color maps
 resized to <=1024px; materials changed to a lightweight lit/toon preset. Rig
 motion uses a rest-space retarget from the CC0 UAL mannequin. No VRM spring-bone
-simulation is imported. Portrait comes from this model's embedded thumbnail.
+simulation is imported. A project-original bounded angular spring now animates
+the two existing long hair chains; this is not per-strand cloth or full body collision. Portrait comes from this model's embedded thumbnail.
 The redundant root upload was removed after import/render tests passed, as
 requested by the owner. Original upload commit: c95925e9ec3fcd63e7db74c5715cdce052b1b176.
 The converted in-project model remains; this does not erase historical Git blobs.

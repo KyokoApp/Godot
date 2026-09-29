@@ -429,3 +429,22 @@ not a portrait. Replaced wrong preview with offline orthographic render of
 actual skinned bind-pose mesh/base textures (tools/render_character_portrait.py).
 prepare_miku.py --skin kanna invokes renderer; requires numpy + Pillow. No new
 runtime viewport or frame cost. Miku keeps its valid embedded author thumbnail.
+
+
+## Motion flair (Miku hair + per-skin 3D footprints)
+HairSpring native SkeletonModifier on Miku destination skeleton only. Actual
+J_Sec_Hair1..8_07/_08 (16 joints; tips9 follow), local rest rotations plus bounded
+angular spring chain. Head-world horizontal velocity/acceleration + signed turn
+feed drive; 120Hz substeps capped.067s, angularlimit.11rad, damping9. Anchor hitch
+>.12s/teleport>2.5m and skin switch reset history. No positional stretch. NOT a
+full VRM spring-bone importer or body/world collision solver; extreme clips remain.
+Cast render regression explicitly disables secondary motion to isolate its pose
+restoration assertion; separate motion renderer checks live hair deformation.
+FootFireTrail separate from unchanged audio contacts. Two ankle/toe bone poses,
+terrain/body raymask1, sole rest-height threshold+hysteresis and per-foot.18s rate.
+Actual horizontal travel/floor gates prevent startup fall/idle/air spam; wet guard.
+Shared original shoe+5 volumetric tongue mesh, 16 preallocated stamps, 1.15s life,
+per-stamp captured palette (Miku bluewhitepurple/Kanna gold/UAL violetcyan).
+No billboarding, lights, shadows, physics actors, sounds or damage. Clear teleport.
+Tests test_motion_flair + test_motion_flair_render, screenshot motion-flair-screenshots.
+Warmup21 stages. Existing pet/attack/casting/credits/updater remain unchanged.

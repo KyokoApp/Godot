@@ -7,7 +7,8 @@ const Spirit = preload("res://src/game/legacy_spirit/spirit_visual.gd")
 const Projectile = preload("res://src/game/fire_projectile.gd")
 const Burst = preload("res://src/game/fire_burst.gd")
 const WaterMaterial = preload("res://src/game/water/water_material.gd")
-const STAGES := 20
+const FootFire = preload("res://src/game/foot_fire/foot_fire_trail.gd")
+const STAGES := 21
 
 
 static func populate(stage: int, world: Node3D, game: Node3D) -> void:
@@ -50,6 +51,12 @@ static func populate(stage: int, world: Node3D, game: Node3D) -> void:
 		burst.set_process(false)
 		burst.age = 0.22
 		burst._update_visuals()
+	elif stage == 20:
+		var fire := FootFire.new()
+		world.add_child(fire)
+		fire.add_stamp(Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 4),
+			Vector3(0, 0.5, 0)), "miku")
+		fire.set_physics_process(false)
 	elif stage >= 18:
 		var character := Character.new()
 		world.add_child(character)

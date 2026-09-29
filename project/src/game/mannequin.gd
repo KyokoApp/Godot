@@ -3,6 +3,7 @@ extends Node3D
 
 signal skin_changed(skin_id: String)
 
+const HairSpring = preload("res://src/game/animation/hair_spring.gd")
 const KannaRig = preload("res://src/game/animation/kanna_rig.gd")
 const MikuRig = preload("res://src/game/animation/miku_rig.gd")
 const KANNA := "kanna"
@@ -19,6 +20,7 @@ const RUN := "Jog_Fwd"
 const RUN_ON := 2.8
 const RUN_OFF := 2.4
 
+var hair: HairSpring
 var skin_id := MANNEQUIN
 var skin: Node3D
 var retarget: Retarget
@@ -112,6 +114,9 @@ func set_skin(selected: String) -> bool:
 		skin = _skins[selected]
 		retarget = _retargets[selected]
 		retarget.transfer()
+	if hair != null:
+		hair.reset_motion()
+		hair.active = selected == MIKU
 	skin_id = selected
 	skin_changed.emit(skin_id)
 	return true
@@ -131,6 +136,46 @@ func _load_skin(selected: String) -> bool:
 		driver.queue_free()
 		model.queue_free()
 		return false
+	if selected == MIKU:
+		hair = HairSpring.new()
+		hair.name = "MikuHairSpring"
+		destination.add_child(hair)
+		hair.configure()
 	_skins[selected] = model
 	_retargets[selected] = driver
 	return true
+
+
+func foot_pose(left: bool) -> Transform3D:
+	var skeleton := source_skeleton if skin_id == MANNEQUIN else retarget.target
+	var ankle := "foot_l" if left else "foot_r"
+	var toe := "ball_l" if left else "ball_r"
+	if skin_id == MIKU:
+		ankle = "J_Bip_L_Foot" if left else "J_Bip_R_Foot"
+		toe = "J_Bip_L_ToeBase" if left else "J_Bip_R_ToeBase"
+	elif skin_id == KANNA:
+		ankle = "DEF-Left ankle" if left else "DEF-Right ankle"
+		toe = "DEF-Left toe" if left else "DEF-Right toe"
+	var bone := skeleton.find_bone(ankle)
+	var pose := skeleton.global_transform * skeleton.get_bone_global_pose(bone)
+	var tip := skeleton.find_bone(toe)
+	var forward := -global_basis.z
+	if tip >= 0:
+		var end := skeleton.global_transform * skeleton.get_bone_global_pose(tip)
+		forward = end.origin - pose.origin
+	forward.y = 0
+	if forward.length_squared() > 0.00001:
+		forward = forward.normalized()
+		pose.basis = Basis(forward.cross(Vector3.UP), Vector3.UP, -forward)
+	return pose
+
+
+func foot_clearance(left: bool) -> float:
+	var skeleton := source_skeleton if skin_id == MANNEQUIN else retarget.target
+	var name := "foot_l" if left else "foot_r"
+	if skin_id == MIKU:
+		name = "J_Bip_L_Foot" if left else "J_Bip_R_Foot"
+	elif skin_id == KANNA:
+		name = "DEF-Left ankle" if left else "DEF-Right ankle"
+	var rest := skeleton.get_bone_global_rest(skeleton.find_bone(name))
+	return clampf(rest.origin.y * skeleton.global_basis.get_scale().y, 0.06, 0.18)

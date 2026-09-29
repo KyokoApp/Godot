@@ -58,6 +58,8 @@ func _run() -> void:
 	character.cast_layer.modification_processed.connect(func() -> void: _processed += 1)
 	for skin in [Character.MANNEQUIN, Character.MIKU, Character.KANNA]:
 		_check(character.set_skin(skin), "Skin gagal dimuat: " + skin)
+		if character.hair != null:
+			character.hair.active = false # isolate casting restoration from secondary motion
 		await _test_skin(character, skin)
 	_check(_processed > 0, "Native skeleton modifier tidak pernah diproses")
 	world.queue_free()

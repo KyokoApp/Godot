@@ -1,6 +1,7 @@
 extends Node3D
 ## Pulau 1 km + kamera sentuh, tetap memakai mannequin dan updater yang sama.
 
+const FootFire = preload("res://src/game/foot_fire/foot_fire_trail.gd")
 const ShaderWarmup = preload("res://src/game/loading/shader_warmup.gd")
 const NatureField = preload("res://src/game/world/nature_field.gd")
 const StonePath = preload("res://src/game/world/stone_path.gd")
@@ -30,6 +31,7 @@ var _stone_path: StonePath
 var _previous_occlusion := false
 var _audio: WorldAudio
 var _footsteps: Footsteps
+var _foot_fire: FootFire
 var _pet: FirePet
 var _attack: RuneButton
 var _settings: RuneButton
@@ -64,6 +66,11 @@ func _ready() -> void:
 	_footsteps.island = _island
 	_footsteps.visual = _visual
 	add_child(_footsteps)
+	_foot_fire = FootFire.new()
+	_foot_fire.character = _visual
+	_foot_fire.body = _player
+	_foot_fire.island = _island
+	add_child(_foot_fire)
 	_pet = FirePet.new()
 	_pet.player = _player
 	_pet.facing = _visual

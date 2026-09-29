@@ -221,3 +221,12 @@ Retarget 52 tulang berangkat dari metode Kanna proyek lama: delta rest-space,
 koreksi arah 180°Y, panjang tulang target dipertahankan. Simulasi spring-bone
 VRM belum disertakan. Desain kartu switch dan ilustrasi portrait mannequin
 adalah karya baru untuk proyek; tidak menyalin UI/icon dari Genshin atau HSR.
+
+
+## Rambut sekunder & api tapak kaki
+`animation/hair_spring.gd`: solver pegas rotasi orisinal proyek pada tulang twintail
+Miku yang sudah ada; bukan plugin VRM atau simulasi tiap helai. Tidak mengganti
+lisensi model Naxzed. Tidak menambah aset model/tekstur rambut eksternal.
+`foot_fire/`: geometri tapak/lidah api3D dan shader prosedural orisinal, dengan
+arah visual terinspirasi pet proyek sendiri. Palet perkarakter dan seluruh kode
+baru mengikuti hak karya orisinal proyek; tidak menyalin efek Genshin/HSR.

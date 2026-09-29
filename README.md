@@ -497,3 +497,21 @@ Tes aset/matematika offline: `tools/test_miku_asset.py`. Pengukuran HP tetap per
 Pemilik telah mengizinkan push dan build HP. Unggahan VRM duplikat di root dihapus
 setelah import/render lolos; sumber historis ada di commit upload `c95925e`.
 Aset runtime dalam `project/assets/characters/` dan kredit/lisensi tetap disertakan.
+
+
+### Spring rambut Miku & jejak api tapak
+Dua twintail Miku memakai16 sendi sekunder dengan pegas rotasi teredam, mengikuti
+kecepatan, percepatan dan belokan. Panjang tulang asli tetap; ujung merespons
+bertahap. Substep120Hz, batas sudut6,3°/sendi, reset saat teleport/hitch/switch.
+Ini gerak sekunder stylized ringan, bukan simulasi tiap helai atau cloth penuh;
+belum ada solver collision rambut-badan/lingkungan, clipping ekstrem masih mungkin.
+Kanna/mannequin tidak diberi simulasi rambut Miku.
+
+Jejak memakai pose ankle/toe skin aktif, ray lantai dan hysteresis kontak kaki.
+Tidak muncul ketika diam, melayang, atau di air. Bentuk tapak asimetris dan lima
+lidah mesh api3D (bukan billboard/decal saja), mengikuti arah kaki dan normal tanah.
+Miku biru-putih-ungu, Kanna emas-kuning, mannequin ungu-cyan. Maks16 cap, lifetime
+1,15s, tanpa lampu, bayangan, damage, atau suara tambahan; skin switch tidak
+mewarnai ulang jejak lama. Teleport membersihkan cap. Suara langkah lama tetap.
+Warmup21 tahap mencakup shader tapak api. Tes kontak/decay/pool dan Mobile Vulkan
+untuk skin rambut, palet serta tampak samping api wajib; FPS tetap diuji di HP.
