@@ -473,5 +473,29 @@ Fog opacity ramps spatially between 8m outside and 10m inside boundary, then
 exponentially across time; outside it becomes invisible and has no global fog
 setting changes. Exposed update_for_position for rendered transition tests;
 warmup stage21 renders the new shader. Neither the sky nor ordinary island fog
-is modified, world normal outside arena. Updater unchanged (full content pack).
+is modified, world normal outside arena. Updater now uses incremental v2 (see below).
 Native arena render checks exterior, partial edge, interior occlusion, and exit.
+
+
+## Incremental updater v2 (launcher APK migration required)
+- launcher.gd uses chunk_policy.gd/chunk_store.gd; legacy update_policy.gd remains
+  for v1 compatibility tests. Old content.json/PCK still published unchanged.
+- Content exported first, unencrypted PCK v2/v3 directory parsed by chunk_content.py.
+  File-aligned blocks (large files >=64KiB, max1MiB blocks) hashed and published
+  as SHA.bin in SAME immutable commit release. No chains or dependency on old releases.
+- APK export scenes-only launcher; include bootstrap/base.pck + base.json. Same
+  tested content export is embedded once; raw gameplay/assets must not be duplicated.
+  Generated bootstrap ignored. version/code5, existing keystore preserved.
+- Store stages whole packs in user://updates-v2; reads at most1MiB per frame while
+  planning/assembling. Never mount chunks or load gameplay before choosing pack.
+  SHA+size each chunk AND whole pack; atomic active.json with previous.json rollback.
+  PENDING boot marker only for downloaded packs, main clears after warmup as before.
+- Failed requests retain good cache blocks, retry recalculates plan. Partial current
+  chunk discarded. Source corruption makes blocks missing, not blindly reused.
+  Cleanup keeps active+previous packs, up to256MiB .bin cache; legacy data untouched.
+- No runtime launcher updates via PCK. User must install APK once over old app.
+  APK seed reused without network; subsequent updates fetch only missing blocks.
+- Tests: Python synthetic PCK split/rebuild/stability; GDScript store corruption,
+  retry and rollback; actual repeat export and script-only delta <=4MiB gate;
+  APK ZIP stored seed, no duplicated assets; cold boot seed and new assembled PCK
+  using only extracted exported APK files in fresh processes.

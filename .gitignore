@@ -13,3 +13,6 @@ __pycache__/
 
 # OS
 .DS_Store
+
+# Generated APK seed, rebuilt from the tested content export
+project/bootstrap/

@@ -1,11 +1,10 @@
 extends Control
-## Launcher bawaan APK tidak termasuk content pack. Tidak preload kode gameplay.
-
-const Policy = preload("res://launcher/update_policy.gd")
-const MANIFEST_URL := "https://github.com/KyokoApp/Godot/releases/latest/download/content.json"
-const ACTIVE := "user://content.json"
+## Launcher v2. Network blocks are never mounted; only a verified complete pack is.
+const Policy = preload("res://launcher/chunk_policy.gd")
+const Store = preload("res://launcher/chunk_store.gd")
+const MANIFEST_URL := "https://github.com/KyokoApp/Godot/releases/latest/download/content-v2.json"
 const PENDING := "user://content_boot_pending"
-const TEMP := "user://download.part"
+const TEMP := Store.ROOT + "download.part"
 const GAME := "res://src/game/main.tscn"
 
 var _status: Label
@@ -13,26 +12,33 @@ var _bar: ProgressBar
 var _buttons: HBoxContainer
 var _request: HTTPRequest
 var _active: Dictionary = {}
+var _seed: Dictionary = {}
 var _remote: Dictionary = {}
+var _store: Store
 var _downloading := false
+var _busy := false
 var _recovery := false
+var _received := 0
+var _next := 0
 
 
 func _ready() -> void:
 	_build_ui()
+	DirAccess.make_dir_recursive_absolute(Store.ROOT)
 	_recovery = FileAccess.file_exists(PENDING)
 	if _recovery:
+		Store.rollback()
 		DirAccess.remove_absolute(PENDING)
-		DirAccess.remove_absolute(ACTIVE)
-	else:
-		_active = _read_manifest(ACTIVE)
+	_active = Store.read_index(Store.ACTIVE)
+	_seed = Store.read_index(Store.SEED_INDEX)
+	if not _recovery:
+		Store.cleanup()
 	_request = HTTPRequest.new()
-	_request.timeout = 20.0
-	_request.body_size_limit = 65536
+	_request.accept_gzip = false # Hashes and byte counts cover exact published bytes.
 	add_child(_request)
 	_request.request_completed.connect(_manifest_done)
 	if _recovery:
-		_offer("Konten sebelumnya gagal dibuka. Masuk versi bawaan atau coba lagi.")
+		_offer("Boot sebelumnya terputus. Versi sebelumnya tersedia; coba lagi atau main offline.")
 	else:
 		_check_update()
 
@@ -99,21 +105,15 @@ func _build_ui() -> void:
 	_buttons.hide()
 
 
-func _read_manifest(path: String) -> Dictionary:
-	if not FileAccess.file_exists(path):
-		return {}
-	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if data is Dictionary and Policy.valid_manifest(data):
-		return data
-	return {}
-
-
 func _check_update() -> void:
+	if _busy:
+		return
+	_busy = true
 	_buttons.hide()
 	_bar.value = 3
 	_status.text = "Memeriksa pembaruan…"
 	_request.download_file = ""
-	_request.body_size_limit = 65536
+	_request.body_size_limit = Policy.MAX_MANIFEST
 	_request.timeout = 20.0
 	if _request.request(MANIFEST_URL) != OK:
 		_offer("Tidak dapat terhubung. Versi tersimpan masih bisa dimainkan.")
@@ -123,91 +123,128 @@ func _manifest_done(
 	result: int, code: int, _headers: PackedStringArray, body: PackedByteArray
 ) -> void:
 	if result != HTTPRequest.RESULT_SUCCESS or code != 200:
-		_offer("Pembaruan belum tersedia / koneksi gagal. Coba lagi atau main offline.")
+		_offer("Koneksi gagal. Coba lagi atau main offline.")
 		return
 	var data: Variant = JSON.parse_string(body.get_string_from_utf8())
-	if not data is Dictionary or not Policy.valid_manifest(data):
-		_offer("Pembaruan tidak kompatibel. Gunakan versi tersimpan; cek release APK terbaru.")
+	if not data is Dictionary or not Policy.valid(data):
+		_offer("Manifest tidak kompatibel. Main offline atau periksa APK terbaru.")
 		return
 	_remote = data
-	if (_active.get("sha256", "") == _remote["sha256"]
-		and Policy.verified(_pack_path(_active), _active)):
+	if _matching_local():
+		_busy = false
 		_launch()
 		return
+	_status.text = "Memeriksa data tersimpan—hanya bagian berubah yang diunduh…"
+	_store = Store.new()
+	_store.add_source(Store.pack_path(_active), _active)
+	var previous := Store.read_index(Store.PREVIOUS)
+	_store.add_source(Store.pack_path(previous), previous)
+	_store.add_source(Store.SEED, _seed)
+	await _store.plan(_remote, get_tree())
+	_received = 0
+	_next = 0
 	_request.request_completed.disconnect(_manifest_done)
 	_request.request_completed.connect(_download_done)
+	await _download_next()
+
+
+func _matching_local() -> bool:
+	if _active.get("sha256", "") == _remote.sha256 \
+			and Policy.verified(Store.pack_path(_active), _active):
+		return true
+	# A newly installed APK already contains this exact build. Do not redownload it.
+	if _seed.get("sha256", "") == _remote.sha256 and Policy.verified(Store.SEED, _seed):
+		_active = {}
+		DirAccess.remove_absolute(Store.ACTIVE)
+		DirAccess.remove_absolute(Store.PREVIOUS)
+		return true
+	return false
+
+
+func _download_next() -> void:
+	if _next >= _store.missing.size():
+		_reset_request()
+		_status.text = "Menyusun dan memverifikasi pembaruan…"
+		_bar.value = 92
+		if not await _store.assemble(_remote, get_tree()) or not Store.activate(_remote):
+			_offer("Penyimpanan/verifikasi gagal. Data lama aman. Coba lagi atau main offline.")
+			return
+		_active = _remote
+		_busy = false
+		_launch()
+		return
+	var chunk: Dictionary = _store.missing[_next]
 	_request.download_file = TEMP
-	_request.body_size_limit = int(_remote["bytes"])
-	_request.timeout = 180.0
+	_request.body_size_limit = int(chunk.bytes)
+	_request.timeout = 90.0
 	_downloading = true
-	if _request.request(_remote["url"]) != OK:
+	if _request.request(Policy.chunk_url(_remote, chunk)) != OK:
 		_download_done(HTTPRequest.RESULT_CANT_CONNECT, 0, PackedStringArray(), PackedByteArray())
-
-
-func _process(_delta: float) -> void:
-	if _downloading:
-		var received := _request.get_downloaded_bytes()
-		var total: int = int(_remote["bytes"])
-		_bar.value = 5.0 + 85.0 * clampf(float(received) / total, 0.0, 1.0)
-		_status.text = "Mengunduh konten — %d%%  (%.1f / %.1f MB)" % [
-			int(100.0 * received / total), received / 1048576.0, total / 1048576.0]
 
 
 func _download_done(
 	result: int, code: int, _headers: PackedStringArray, _body: PackedByteArray
 ) -> void:
 	_downloading = false
+	var chunk: Dictionary = _store.missing[_next]
+	if result != HTTPRequest.RESULT_SUCCESS or code != 200 or not _store.accept_chunk(TEMP, chunk):
+		DirAccess.remove_absolute(TEMP)
+		_reset_request()
+		_offer("Unduhan terputus/rusak. Blok yang selesai disimpan; data lama tetap aman.")
+		return
+	_received += int(chunk.bytes)
+	_next += 1
+	await _download_next()
+
+
+func _reset_request() -> void:
+	_downloading = false
 	_request.request_completed.disconnect(_download_done)
 	_request.request_completed.connect(_manifest_done)
-	_status.text = "Memverifikasi konten…"
-	_bar.value = 92
-	if result != HTTPRequest.RESULT_SUCCESS or code != 200 or not Policy.verified(TEMP, _remote):
-		DirAccess.remove_absolute(TEMP)
-		_offer("Unduhan gagal / tidak utuh. Konten lama tetap aman. Coba lagi atau main offline.")
-		return
-	var destination := _pack_path(_remote)
-	if DirAccess.rename_absolute(TEMP, destination) != OK:
-		_offer("Tidak dapat menyimpan konten. Periksa ruang penyimpanan.")
-		return
-	var file := FileAccess.open(ACTIVE + ".tmp", FileAccess.WRITE)
-	if file == null:
-		_offer("Tidak dapat menyimpan versi konten.")
-		return
-	file.store_string(JSON.stringify(_remote))
-	file.close()
-	if DirAccess.rename_absolute(ACTIVE + ".tmp", ACTIVE) != OK:
-		_offer("Tidak dapat mengaktifkan versi konten.")
-		return
-	_active = _remote
-	_launch()
 
 
-func _pack_path(manifest: Dictionary) -> String:
-	return "user://content-%s.pck" % str(manifest.get("sha256", ""))
+func _process(_delta: float) -> void:
+	if _downloading:
+		var received := _received + _request.get_downloaded_bytes()
+		var total := maxi(1, _store.download_bytes)
+		_bar.value = 5 + 85 * clampf(float(received) / total, 0, 1)
+		_status.text = "Bagian berubah — %.1f / %.1f MB" % [
+			received / 1048576.0, total / 1048576.0]
 
 
 func _offer(message: String) -> void:
+	_busy = false
 	_status.text = message
 	_buttons.show()
 
 
 func _launch() -> void:
+	if _busy:
+		return
+	_busy = true
 	_buttons.hide()
 	_status.text = "Membuka dunia…"
 	_bar.value = 96
 	await get_tree().process_frame
-	if not _active.is_empty() and Policy.verified(_pack_path(_active), _active):
-		var marker := FileAccess.open(PENDING, FileAccess.WRITE)
-		if marker == null:
-			_offer("Tidak dapat menyiapkan pemulihan. Periksa penyimpanan.")
+	var path := Store.pack_path(_active)
+	var downloaded := Policy.verified(path, _active)
+	if not downloaded:
+		path = Store.SEED
+		if not _seed.is_empty() and not Policy.verified(path, _seed):
+			_offer("Data bawaan rusak. Pasang ulang APK tanpa menghapus data aplikasi.")
 			return
-		marker.store_string("pending")
-		marker.close()
-		if not ProjectSettings.load_resource_pack(_pack_path(_active), true):
-			DirAccess.remove_absolute(PENDING)
-			DirAccess.remove_absolute(ACTIVE)
+	if FileAccess.file_exists(path):
+		if downloaded:
+			var marker := FileAccess.open(PENDING, FileAccess.WRITE)
+			if marker == null:
+				_offer("Tidak dapat menyiapkan pemulihan. Periksa ruang penyimpanan.")
+				return
+			marker.store_string(str(_active.sha256))
+			marker.close()
+		if not ProjectSettings.load_resource_pack(path, true):
+			_status.text = "Paket gagal dibuka. Tutup dan buka aplikasi untuk pemulihan."
+			return # Never mix a partially mounted pack with another build in this process.
 	_bar.value = 100
-	# Muat setelah pack dipasang; launcher tidak menyimpan cache scene gameplay.
-	var error := get_tree().change_scene_to_file(GAME)
-	if error != OK:
-		_status.text = "Konten gagal dibuka. Tutup dan buka aplikasi untuk pemulihan otomatis."
+	# Editor/tests may use unpacked gameplay; production APK has only the bundled seed.
+	if get_tree().change_scene_to_file(GAME) != OK:
+		_status.text = "Konten gagal dibuka. Tutup dan buka aplikasi untuk pemulihan."

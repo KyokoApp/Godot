@@ -530,4 +530,32 @@ tepi hingga penuh 10m dalam tepi; dua lapis tembok kabut di batas dan kubah
 kabut di atasnya menutup panorama luar. Di luar arena kabut ini tidak dirender;
 keluar arena memudarkannya lagi. Lantai, karakter dan pertarungan tetap terlihat.
 Dinding kabut hanya visual, bukan collision atau sistem teleport/musuh.
-Updater masih memakai full content.pck; belum ada incremental/delta download.
+Updater v2 kini memakai blok inkremental; lihat bagian berikut.
+
+
+## Updater inkremental v2
+**Pasang APK v0.5 sekali di atas aplikasi lama, jangan uninstall.** Launcher lama
+tertanam di APK dan tidak bisa diperbarui oleh content.pck. Keystore tetap sama.
+APK baru berisi data awal yang sama dengan release; tidak perlu mengunduh data
+itu lagi setelah instalasi. Sesudahnya hanya blok yang berubah/hilang/rusak yang
+diunduh, bukan seluruh 47–50 MB. Ukuran update tergantung perubahan; perubahan
+model besar tetap bisa besar. Launcher lama tetap dilayani content.json/PCK penuh.
+
+`content-v2.json` memetakan urutan blok SHA-256 dari PCK yang diekspor. Blok aset
+besar dipotong pada batas file dan maksimal 1 MiB agar perubahan script kecil
+tidak menggeser blok model. Launcher memakai ulang blok dari APK, versi aktif,
+versi sebelumnya dan cache unduhan yang sudah lolos checksum. Blok baru berasal
+dari URL release commit yang tetap. Progress menunjukkan byte yang perlu diunduh.
+
+PCK baru disusun lokal dengan buffer maksimal 1 MiB; ukuran dan SHA-256 seluruh
+PCK diverifikasi sebelum aktivasi atomik. Satu versi sebelumnya dipertahankan
+untuk rollback saat boot terputus. Download putus: blok selesai tetap tersimpan,
+blok yang sedang terputus diulang (bukan HTTP range resume). Main offline memakai
+versi aktif yang valid atau data bawaan. Butuh ruang untuk paket baru + versi lama
++ cache, walau unduhan jaringan kecil. Cache dibatasi 256 MiB; pack selain aktif
+atau rollback dibersihkan pada start berikutnya. Data legacy v1 tidak dihapus.
+
+CI memeriksa format manifest, checksum, kerusakan, deduplikasi, retry, rollback,
+APK seed/duplikasi aset, ekspor ulang deterministik, dan ukuran perubahan script
+pada PCK asli. Cold boot dijalankan dari aset APK tanpa source project: versi
+bawaan dan hasil update. Tidak mengklaim delta per-baris atau selalu ukuran KB.

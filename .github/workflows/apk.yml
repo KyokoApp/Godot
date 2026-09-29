@@ -49,6 +49,7 @@ jobs:
           # yang muncul di device adalah 'Cannot infer the type of ...'.
           python3 tools/check_scripts.py .
           python3 tools/sync_credits.py --check
+          python3 tools/test_chunk_content.py
 
       # --- 2. dependensi + Godot ----------------------------------------
       - name: Dependensi sistem
@@ -444,6 +445,8 @@ jobs:
           timeout 60 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_update.gd"
           timeout 60 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_chunks.gd"
+          timeout 60 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_launcher.gd"
 
       - name: Export content pack
@@ -452,6 +455,7 @@ jobs:
           ./godot --headless --path project --export-pack "Content" \
             "$GITHUB_WORKSPACE/build/content.pck"
           python3 tools/make_manifest.py
+          python3 tools/chunk_content.py
           mkdir -p build/pack-test
           timeout 60 ./godot --headless --path build/pack-test \
             --script "$GITHUB_WORKSPACE/tools/test_pack.gd" -- "$GITHUB_WORKSPACE/build/content.pck"
@@ -465,6 +469,7 @@ jobs:
             2>&1 | tee build/export.log
           test -f build/asekai.apk || { echo "::error::APK tidak terbentuk"; exit 1; }
           ls -la build/asekai.apk
+          python3 tools/test_incremental_export.py
 
       - name: Terbitkan build ke GitHub Release
         env:
@@ -476,6 +481,7 @@ jobs:
           {
             echo "## A-Sekai — build \`$(git rev-parse --short HEAD)\`"
             echo
+            echo "Updater v2: pasang APK ini sekali menimpa app lama (jangan uninstall). Update berikutnya hanya blok berubah."
             echo "Install: unduh \`asekai.apk\` -> izinkan sumber tak dikenal -> buka."
             echo
             echo '```'
@@ -483,9 +489,9 @@ jobs:
             echo '```'
           } > build/NOTES.md
           gh release create "$TAG" build/asekai.apk build/asekai.apk.sha256 \
-            build/content.pck build/content.json \
+            build/content.pck build/content.json build/content-v2.json build/chunks/*.bin \
             --target "$GITHUB_SHA" --title "A-Sekai $TAG" \
             --notes-file build/NOTES.md \
             || gh release upload "$TAG" build/asekai.apk build/asekai.apk.sha256 \
-              build/content.pck build/content.json --clobber
+              build/content.pck build/content.json build/content-v2.json build/chunks/*.bin --clobber
           echo "rilis: $TAG"
