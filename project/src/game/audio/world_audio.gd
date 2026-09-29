@@ -4,6 +4,7 @@ extends Node3D
 const Voice = preload("res://src/game/audio/sound_voice.gd")
 const SHOOT = preload("res://assets/audio/fire_shoot.wav")
 const EXPLODE = preload("res://assets/audio/fire_explode.wav")
+const PET_FIRE = preload("res://assets/audio/pet_crackle.wav")
 const FIRE = preload("res://assets/audio/fire_loop.wav")
 const BUS := "WorldSFX"
 const MAX_VOICES := 16
@@ -15,6 +16,7 @@ var _last: Dictionary[String, int] = {}
 var _random := RandomNumberGenerator.new()
 var _occlusion_clock := 0.0
 var _owns_bus := false
+var _pet_loop: AudioStreamWAV
 var _loop: AudioStreamWAV
 
 
@@ -34,6 +36,10 @@ func _ready() -> void:
 	_loop.loop_mode = AudioStreamWAV.LOOP_FORWARD
 	_loop.loop_begin = 0
 	_loop.loop_end = int(_loop.get_length() * _loop.mix_rate)
+	_pet_loop = PET_FIRE.duplicate() as AudioStreamWAV
+	_pet_loop.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	_pet_loop.loop_begin = 0
+	_pet_loop.loop_end = int(_pet_loop.get_length() * _pet_loop.mix_rate)
 	for kind in ["grass", "dirt", "stone"]:
 		var bank: Array[AudioStream] = []
 		for index in range(4):
@@ -99,7 +105,8 @@ func explode(point: Vector3) -> void:
 
 
 func follow_fire(source: Node3D, flying := false) -> void:
-	var voice := play_at(_loop, source.global_position, -24 if flying else -32, 28)
+	var voice := play_at(_loop if flying else _pet_loop, source.global_position,
+		-24 if flying else -22, 28 if flying else 18)
 	if voice == null:
 		return
 	voice.source = source

@@ -80,6 +80,14 @@ func _run() -> void:
 	var source := Node3D.new()
 	world.add_child(source)
 	_audio.follow_fire(source)
+	var pet_voice: AudioStreamPlayer3D
+	for voice in _audio.voices:
+		if voice.following and voice.source == source:
+			pet_voice = voice
+	_check(pet_voice != null, "Loop pet tidak dimulai")
+	if pet_voice != null:
+		_check(pet_voice.stream.get_length() > 7, "Pet masih memakai dengung peluru")
+		_check(pet_voice.volume_db == -22, "Level crackle pet berubah")
 	source.queue_free()
 	await process_frame
 	_audio._physics_process(0.15)

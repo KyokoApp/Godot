@@ -374,3 +374,13 @@ Tes audio merekam output mixer untuk membandingkan dekat/jauh dan kiri/kanan;
 cek occlusion, variasi langkah, pool, cleanup, serta audio dalam PCK.
 Tanpa musik/reverb indoor atau simulasi akustik penuh. Penyetelan akhir tetap
 perlu didengar di speaker HP dan earphone; bukan klaim suara foto-realistis.
+
+### Pet lebih terbaca sebagai api — visual dan suara
+Pet kini memakai siluet lidah api tinggi, tiga ujung bergerak independen,
+inti panas cyan-putih dan tepian ungu, tanpa bola padat. Bentuk menghadap kamera,
+meruncing/terkoyak ke atas dan condong mengikuti gerakan; lima bara tetap ringan.
+Posisi/jarak bahu, attack, projectile, explosion, UI dan langkah tidak berubah.
+Pet memakai loop crackling CC0 terpisah selama 8 detik, lebih terdengar daripada
+loop sintetis lama: -22dB, jangkauan18m, tetap spatial/occluded. Peluru tetap
+memakai loop lamanya. Uji render mencakup pet dari depan/samping serta animasi;
+uji audio/PCK memeriksa loop pet baru. Tampilan/mix akhir perlu konfirmasi HP.

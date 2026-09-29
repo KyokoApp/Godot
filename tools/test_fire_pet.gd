@@ -24,8 +24,10 @@ func _run() -> void:
 	var pet: Pet = game.get("_pet")
 	var spirit: Node3D = pet.get("_body")
 	_check(spirit.name == "LegacyFireSpirit", "Visual pet lama belum dipasang")
-	_check(spirit.get_node_or_null("FireCore") != null, "Inti api lama hilang")
-	_check(spirit.get_node_or_null("FireShell") != null, "Selubung api lama hilang")
+	_check(spirit.get_node_or_null("FireCore") == null, "Inti bola padat masih dipakai")
+	var tongues := spirit.get_node("FireTongues") as MeshInstance3D
+	_check(tongues.mesh is QuadMesh, "Siluet lidah api belum dipasang")
+	_check(tongues.mesh.size.y > tongues.mesh.size.x, "Api harus lebih tinggi daripada lebar")
 	var embers := spirit.get_node("SpiritEmbers") as GPUParticles3D
 	_check(embers.amount == 5, "Budget percikan lama berubah")
 	spirit.set("external_velocity", Vector3(5, 0, 0))

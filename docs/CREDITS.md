@@ -124,3 +124,14 @@ created for A-Sekai, not copied from an icon pack or third-party image.
   Converted/downmixed/trimmed/gain-adjusted by `tools/prepare_footsteps.py`.
   Dirt is a designed blend of these recordings, not a separate dirt recording.
   Attribution/provenance also exported in `licenses/Kenney-Impact.txt`.
+
+### Pet flame correction (visual + sound)
+- `legacy_spirit/pet_flame.gdshader`: original pet-only tapered flame silhouette,
+  three independently moving tongues, rising noise erosion, small cyan-hot center.
+  No opaque sphere; shared archived projectile/explosion shaders unchanged.
+- `assets/audio/pet_crackle.wav`: adapted **Fire Crackling**, AntumDeluge, CC0.
+  https://opengameart.org/content/fire-crackling . Retrieved from the explicitly
+  credited mirror `pawelkwaczynski/coffee-paladin`, commit
+  `c74798f0bc905dc8aad6a429c683fe746373194d`, `sounds/critical.wav`.
+  Full source hash, modifications and attribution: `licenses/Pet-Fire-CC0.txt`.
+  `tools/prepare_pet_fire.py` rebuilds the 8-second crossfaded companion loop.

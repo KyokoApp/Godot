@@ -1,0 +1,13 @@
+Fire Crackling — AntumDeluge, CC0 1.0 Universal.
+https://opengameart.org/content/fire-crackling
+https://creativecommons.org/publicdomain/zero/1.0/
+Source: fire-1.wav (mono 44100 Hz).
+Retrieved from pawelkwaczynski/coffee-paladin, sounds/critical.wav,
+commit c74798f0bc905dc8aad6a429c683fe746373194d; sounds/LICENSES.md
+explicitly attributes this file to the above work and license.
+SHA256: 7cd334b23351add2bf7c8e4f544844a9bf29b9050125090650a58cd48dff6889
+
+Modifications: mono 22050 Hz, DC removal, three subtly retimed takes,
+crossfaded joins and loop boundary, peak normalized to 0.72.
+Reproducible via tools/prepare_pet_fire.py. Used only for the companion;
+projectile/explosion sound samples and their mix remain unchanged.

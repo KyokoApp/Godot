@@ -16,7 +16,7 @@ func _run() -> void:
 		push_error("Lisensi shader partikel tidak ikut content pack")
 		quit(1)
 		return
-	for path in ["fire_shoot", "fire_explode", "fire_loop", "step_grass_0",
+	for path in ["fire_shoot", "fire_explode", "fire_loop", "pet_crackle", "step_grass_0",
 			"step_dirt_0", "step_stone_0"]:
 		var sound: AudioStream = load("res://assets/audio/" + path + ".wav")
 		if sound == null or sound.get_length() <= 0:

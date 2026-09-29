@@ -1,12 +1,10 @@
 extends Node3D
-## Port visual fire_spirit dari Unity/archive. Core/shell shader disalin utuh.
+## Pet-only tapered flame; archived combat core/shell remain unchanged.
 ## Anchor diatur controller pet baru; tidak membawa sistem combat lama.
 
-const CORE = preload("res://src/game/legacy_spirit/fireball_core.gdshader")
-const SHELL = preload("res://src/game/legacy_spirit/fireball_shell.gdshader")
+const FLAME = preload("res://src/game/legacy_spirit/pet_flame.gdshader")
 
 var external_velocity := Vector3.ZERO
-var _core: ShaderMaterial
 var _shell: ShaderMaterial
 var _time := 0.0
 var _pulse := 0.0
@@ -15,19 +13,21 @@ var _trail := Vector3.ZERO
 
 func _ready() -> void:
 	name = "LegacyFireSpirit"
-	_core = ShaderMaterial.new()
-	_core.shader = CORE
-	_core.set_shader_parameter("intensity", 2.1)
-	_core.set_shader_parameter("turbulence", 0.6)
-	_sphere("FireCore", 0.042, 10, 5, _core)
 	_shell = ShaderMaterial.new()
-	_shell.shader = SHELL
-	_shell.set_shader_parameter("intensity", 1.15)
-	_shell.set_shader_parameter("rise", 0.30)
-	_sphere("FireShell", 0.068, 12, 6, _shell)
+	_shell.shader = FLAME
+	var flame := MeshInstance3D.new()
+	flame.name = "FireTongues"
+	var card := QuadMesh.new()
+	card.size = Vector2(0.58, 0.78)
+	flame.mesh = card
+	flame.material_override = _shell
+	flame.position.y = 0.22
+	flame.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	flame.extra_cull_margin = 0.5
+	add_child(flame)
 	var halo := MeshInstance3D.new()
 	halo.name = "SoftHalo"
-	halo.mesh = _quad(0.17, Color(0.55, 0.35, 1.0, 0.5), false)
+	halo.mesh = _quad(0.24, Color(0.45, 0.35, 1.0, 0.16), false)
 	halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(halo)
 	_build_embers()
@@ -48,26 +48,8 @@ func _process(delta: float) -> void:
 	scale = Vector3.ONE * (1.0 + sin(_time * 5.0) * 0.035 + _pulse * 0.3)
 	var target := (-external_velocity * 0.018).limit_length(0.20)
 	_trail = _trail.lerp(target, 1.0 - exp(-9.0 * delta))
-	_shell.set_shader_parameter("trail", global_basis.inverse() * _trail)
-	_shell.set_shader_parameter("flow_offset",
-		Vector3(sin(_time * 0.4), _time * 0.6, cos(_time * 0.5)) * 0.22 + _trail * 0.4)
-	_core.set_shader_parameter("flow_offset",
-		Vector3(sin(_time * 0.5), _time * 0.5, cos(_time * 0.4)) * 0.18)
-
-
-func _sphere(label: String, radius: float, segments: int, rings: int, mat: Material) -> void:
-	var visual := MeshInstance3D.new()
-	visual.name = label
-	var mesh := SphereMesh.new()
-	mesh.radius = radius
-	mesh.height = radius * 2
-	mesh.radial_segments = segments
-	mesh.rings = rings
-	visual.mesh = mesh
-	visual.material_override = mat
-	visual.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	visual.extra_cull_margin = 1.5
-	add_child(visual)
+	_shell.set_shader_parameter("trail", _trail)
+	_shell.set_shader_parameter("pulse", _pulse)
 
 
 func _quad(size: float, tint: Color, particles: bool) -> QuadMesh:
@@ -102,7 +84,8 @@ func _build_embers() -> void:
 	var embers := GPUParticles3D.new()
 	embers.name = "SpiritEmbers"
 	embers.amount = 5
-	embers.lifetime = 0.7
+	embers.lifetime = 0.9
+	embers.position.y = 0.18
 	embers.local_coords = false
 	embers.randomness = 0.5
 	embers.fixed_fps = 60
@@ -114,8 +97,8 @@ func _build_embers() -> void:
 	material.emission_sphere_radius = 0.05
 	material.direction = Vector3.UP
 	material.spread = 35.0
-	material.initial_velocity_min = 0.10
-	material.initial_velocity_max = 0.30
+	material.initial_velocity_min = 0.25
+	material.initial_velocity_max = 0.50
 	material.gravity = Vector3(0, 0.3, 0)
 	material.damping_min = 0.3
 	material.damping_max = 0.7

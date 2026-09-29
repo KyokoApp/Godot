@@ -243,3 +243,15 @@ use designed dirt blend; steep/raised rock uses stone; other land grass.
 Kenney CC0 recordings (4 per bank) + original archived procedural fire samples.
 No new HUD, music or indoor reverb. Phone speaker/headphone listening still
 required; CI validates routing and relative levels, not subjective realism.
+
+## Pet flame correction — both visuals AND sound
+User clarified via choice that both aspects felt unlike fire. Pet-only changes:
+- New original `legacy_spirit/pet_flame.gdshader` on one 0.58x0.78m facing card;
+  three tapered tongues, upward contour erosion, hot cyan core, movement lean.
+  Opaque orb removed; halo reduced, 5 rising embers retained. Shoulder gap same.
+- 8s crossfaded CC0 AntumDeluge crackling loop, distinct from projectile loop,
+  -22dB/18m range vs previous -32dB/28m. Source hash + license exported.
+- Do not alter approved projectile/impact shaders, audio or clean HUD.
+- New render tests front/side/time; audio test checks pet-specific loop/level;
+  pack boot test loads it. Pixel/mixer tests do not constitute visual/listening
+  approval: ask user to compare still pet and moving pet on phone.

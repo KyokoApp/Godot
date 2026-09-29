@@ -1,6 +1,7 @@
 extends SceneTree
 ## Render terisolasi: shader proyektil DAN impact harus terlihat, bukan hanya compile.
 
+const Spirit = preload("res://src/game/legacy_spirit/spirit_visual.gd")
 const Projectile = preload("res://src/game/fire_projectile.gd")
 const Burst = preload("res://src/game/fire_burst.gd")
 var _failures := 0
@@ -80,6 +81,25 @@ func _run() -> void:
 	burst._process(0.01)
 	var cleared: Image = await _capture()
 	_check(_changed(background, cleared) == 0, "Visual impact masih tertinggal setelah cleanup")
+	await _test_pet(world, camera, background)
 	print("[fire-render-test] area peak: ", area)
 	print("[fire-render-test] HASIL: ", "OK" if _failures == 0 else "GAGAL")
 	quit(0 if _failures == 0 else 1)
+
+
+func _test_pet(world: Node3D, camera: Camera3D, background: Image) -> void:
+	var spirit := Spirit.new()
+	world.add_child(spirit)
+	camera.look_at(Vector3(0, 0.22, 0))
+	var front: Image = await _capture()
+	_check(_changed(background, front) > 40, "Lidah api pet tidak terlihat")
+	front.save_png("user://fire-pet-front-test.png")
+	await create_timer(0.3).timeout
+	var animated: Image = await _capture()
+	_check(_changed(front, animated) > 10, "Kobaran pet tidak bergerak")
+	camera.position = Vector3(6, 1.8, 0)
+	camera.look_at(Vector3(0, 0.22, 0))
+	var side: Image = await _capture()
+	_check(_changed(background, side) > 40, "Api pet hilang saat kamera di samping")
+	side.save_png("user://fire-pet-side-test.png")
+	spirit.queue_free()
