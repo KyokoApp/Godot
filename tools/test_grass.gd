@@ -2,6 +2,7 @@ extends SceneTree
 ## Digunakan dua kali: logika headless dan render Mobile/Vulkan via Mesa/Xvfb.
 
 const Island = preload("res://src/game/island.gd")
+const Character = preload("res://src/game/mannequin.gd")
 const Grass = preload("res://src/game/grass_field.gd")
 var _failures := 0
 
@@ -25,6 +26,9 @@ func _run() -> void:
 	var player := Node3D.new()
 	player.position = Vector3(45, island.surface_height(45, 0) + 0.9, 0)
 	world.add_child(player)
+	var character := Character.new()
+	character.position = player.position - Vector3(0, 0.9, 0)
+	world.add_child(character)
 	var field := Grass.new()
 	field.island = island
 	field.player = player

@@ -43,3 +43,18 @@ Semua kode dalam repo ini ditulis khusus untuk project ini.
   normalisasi aman, batas jarak dengan penyusutan opaque, material matte untuk
   mobile. Noise Perlin dibuat dalam kode; mesh tiga helai dan streaming tile
   dibuat khusus proyek ini. Tidak menyalin model/tekstur demo.
+
+## Ikon dan ilustrasi loading A-Sekai
+
+`project/launcher/art/icon*.png` dan `loading.jpg` adalah ilustrasi AI orisinal
+untuk proyek ini, bukan karakter/aset resmi Genshin/HoYoverse. Adaptasi ukuran
+ikon Android dibuat dari ilustrasi yang sama; background adaptive berupa warna
+teal polos. Tidak mengambil gambar Pinterest langsung untuk didistribusikan.
+
+Penelusuran referensi visual yang diminta pengguna:
+- https://pinterest.com/pin/582512533028994284
+- https://www.pinterest.com/animae_jw/blue-pfp/
+
+Referensi tersebut bukan sumber aset yang dibundel; izin redistribusinya belum
+terverifikasi. Jangan menyebut ilustrasi AI ini sebagai karya seniman Pinterest
+atau mengklaimnya berlisensi CC0. Shader outline mannequin ditulis untuk proyek.

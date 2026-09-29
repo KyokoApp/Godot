@@ -23,6 +23,8 @@ func _run() -> void:
 	root.add_child(launcher)
 	current_scene = launcher
 	await process_frame
+	var art := launcher.find_child("LoadingArt", true, false) as TextureRect
+	_check(art != null and art.texture != null, "Ilustrasi loading tidak terbaca")
 	_check(not FileAccess.file_exists("user://content_boot_pending"), "Marker tidak pulih")
 	var buttons: HBoxContainer = launcher.get("_buttons")
 	_check(buttons.visible, "Pilihan pemulihan tidak tampil")

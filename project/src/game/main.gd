@@ -48,7 +48,7 @@ func _build_environment() -> void:
 	env.sky = sky
 	# Cerah agar bentuk-bentuk terbaca jelas di layar HP apa pun.
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.65
+	env.ambient_light_energy = 0.57
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 
 	var we := WorldEnvironment.new()
@@ -57,7 +57,7 @@ func _build_environment() -> void:
 
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-52.0, 135.0, 0.0)
-	sun.light_energy = 1.1
+	sun.light_energy = 0.98
 	sun.shadow_enabled = true
 	add_child(sun)
 
@@ -108,7 +108,7 @@ func _build_hud() -> void:
 	add_child(layer)
 
 	_label = Label.new()
-	_label.text = "PULAU 1K — padang lebat v3"
+	_label.text = "PULAU 1K — soft light + outline"
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_label.add_theme_font_size_override("font_size", 26)
 	_label.add_theme_color_override("font_color", Color(1, 1, 1))
@@ -155,7 +155,7 @@ func _physics_process(delta: float) -> void:
 
 func _process(_delta: float) -> void:
 	_label.text = (
-		"PULAU 1K — padang lebat v3\nFPS: %d | Posisi: %.1f, %.1f\n"
+		"PULAU 1K — soft light + outline\nFPS: %d | Posisi: %.1f, %.1f\n"
 		+ "Kiri: gerak | Geser kanan: kamera | Cubit kanan: zoom"
 	) % [Engine.get_frames_per_second(), _player.position.x, _player.position.z]
 

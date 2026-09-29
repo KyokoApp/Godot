@@ -2,6 +2,7 @@ extends Node3D
 ## Model dan mocap asli dari arsip project, tanpa sistem combat/skin lama.
 
 const MODEL = preload("res://assets/mannequin/UAL1_Standard.glb")
+const OUTLINE = preload("res://src/game/character_outline.gdshader")
 const IDLE := "Idle"
 const WALK := "Walk"
 const RUN := "Jog_Fwd"
@@ -23,6 +24,9 @@ func _ready() -> void:
 		var material := StandardMaterial3D.new()
 		material.albedo_color = Color(0.68, 0.58, 0.84)
 		material.roughness = 0.85
+		var outline := ShaderMaterial.new()
+		outline.shader = OUTLINE
+		material.next_pass = outline
 		mesh.material_override = material
 	if animation == null:
 		push_error("Mannequin: AnimationPlayer hilang")

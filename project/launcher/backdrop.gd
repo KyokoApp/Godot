@@ -1,30 +1,29 @@
 extends Control
-## Lanskap ringan tanpa aset luar; bar dan teks tetap kontras di atasnya.
+## Ilustrasi orisinal + vignette UI; tetap memakai loading bar nyata dari launcher.
+
+const ART = preload("res://launcher/art/loading.jpg")
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	resized.connect(queue_redraw)
-
-
-func _draw() -> void:
-	var upper := Color("172440")
-	var lower := Color("79658e")
-	for band in range(64):
-		var fraction := float(band) / 63.0
-		draw_rect(Rect2(0, size.y * band / 64.0, size.x, size.y / 64.0 + 1),
-			upper.lerp(lower, fraction))
-	draw_circle(Vector2(size.x * 0.76, size.y * 0.34), size.y * 0.10, Color("d9c7bc"))
-	_landscape(0.62, Color("4c4b70"), 0.0)
-	_landscape(0.77, Color("343d5c"), 1.8)
-	_landscape(0.91, Color("202e48"), 3.0)
-
-
-func _landscape(height: float, color: Color, phase: float) -> void:
-	var points := PackedVector2Array([Vector2(0, size.y)])
-	for step in range(33):
-		var x := float(step) / 32.0
-		var y := height + sin(x * 9.0 + phase) * 0.06 + sin(x * 21.0 + phase) * 0.015
-		points.append(Vector2(x * size.x, y * size.y))
-	points.append(Vector2(size.x, size.y))
-	draw_colored_polygon(points, color)
+	var picture := TextureRect.new()
+	picture.name = "LoadingArt"
+	picture.texture = ART
+	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(picture)
+	picture.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var gradient := Gradient.new()
+	gradient.offsets = PackedFloat32Array([0.0, 0.55, 1.0])
+	gradient.colors = PackedColorArray([Color(0.04, 0.06, 0.12, 0.12),
+		Color(0.04, 0.06, 0.12, 0.06), Color(0.04, 0.06, 0.12, 0.72)])
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill_from = Vector2(0.5, 0)
+	texture.fill_to = Vector2(0.5, 1)
+	var shade := TextureRect.new()
+	shade.texture = texture
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(shade)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

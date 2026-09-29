@@ -45,6 +45,8 @@ func _build_ui() -> void:
 	var title := Label.new()
 	title.text = "A - S E K A I"
 	title.add_theme_font_size_override("font_size", 64)
+	title.add_theme_color_override("font_shadow_color", Color(0.03, 0.05, 0.10, 0.8))
+	title.add_theme_constant_override("shadow_offset_y", 3)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	title.position = Vector2(-320, -100)
@@ -53,7 +55,7 @@ func _build_ui() -> void:
 	var subtitle := Label.new()
 	subtitle.text = "S E B U A H   D U N I A   B A R U"
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.add_theme_color_override("font_color", Color("bcb3df"))
+	subtitle.add_theme_color_override("font_color", Color("ece6ff"))
 	subtitle.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	subtitle.position = Vector2(-320, 10)
 	subtitle.size.x = 640
@@ -69,6 +71,7 @@ func _build_ui() -> void:
 	_status = Label.new()
 	_status.text = "Menyiapkan perjalanan…"
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_status.add_theme_color_override("font_shadow_color", Color.BLACK)
 	bottom.add_child(_status)
 	_bar = ProgressBar.new()
 	_bar.custom_minimum_size.y = 6

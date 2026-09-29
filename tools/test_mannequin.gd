@@ -18,6 +18,11 @@ func _run() -> void:
 	var character := Character.new()
 	root.add_child(character)
 	await process_frame
+	for node in character.find_children("*", "MeshInstance3D", true, false):
+		var mesh := node as MeshInstance3D
+		var material := mesh.material_override as StandardMaterial3D
+		_check(material != null and material.next_pass is ShaderMaterial,
+			"Outline mannequin hilang")
 	var animation := character.animation
 	var skeleton := character.find_child("Skeleton3D", true, false) as Skeleton3D
 	_check(animation != null and skeleton != null, "Rig/AnimationPlayer hilang")

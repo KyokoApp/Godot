@@ -229,3 +229,23 @@ CI mencakup tes sampel cakupan penutup tanah dekat (target >=95% area hijau yang
 disampel), streaming, batas geometri, dan render pencahayaan dua sisi. Ini bukan
 jaminan tidak ada satu pixel celah dari semua sudut. HUD **PULAU 1K — padang lebat v3**.
 Update lewat launcher, tidak perlu APK baru.
+
+## Soft light + outline, ikon anime dan loading art
+
+- Cahaya dunia diredupkan sedikit: ambient 0,65→0,57; matahari 1,10→0,98.
+  Kepadatan rumput v3 dan warna hijau tetap.
+- Mannequin mendapat outline inverted-hull tipis (6 mm), mengikuti rig/animasi.
+  Tidak memberi outline ke seluruh rumput agar tidak menggandakan draw rumput.
+- Ikon Android anime orisinal (legacy + adaptive) dan ilustrasi pulau aesthetic
+  baru di loading. Art dibuat AI; Pinterest hanya referensi, bukan aset salinan.
+- Loading mempertahankan status/progres unduhan nyata serta retry/offline.
+- **Perlu update APK satu kali** untuk ikon dan loading (keduanya di launcher).
+  Install di atas aplikasi lama: package ID/keystore sama; version code kini 2.
+  Dunia soft light + outline tetap tersedia lewat PCK untuk launcher lama.
+- HUD **PULAU 1K — soft light + outline**. Tetap jangan merge main.
+
+Shader compilation = menyiapkan kode efek grafis/pipeline agar sesuai GPU/driver.
+Cache/pre-warm dapat mengurangi stutter saat efek pertama digunakan. CI render
+Mobile/Vulkan mengecek shader dapat dirender, tetapi hasil compile di CI bukan
+cache untuk GPU HP. Build ini tidak menambah layar/progres compile shader palsu;
+perilaku precompilation/cache tetap mengikuti Godot dan driver perangkat.

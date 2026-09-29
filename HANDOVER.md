@@ -148,3 +148,12 @@ User ingin tanah tak terlihat di antara rumput (screenshot v2: 36 FPS). Near gri
 Far grid20 subset gridnear; fade detail8–11m, rumputdasar16–23m. Budget20.800rumpun,
 112k tris; jangan klaim FPS naik. Tes cakupan near>=95% sampel + Vulkan tetap wajib.
 HUD `padang lebat v3`; tunggu screenshot/FPS sebelum menambah fitur lain.
+
+## Terbaru: soft light + outline + identitas launcher
+
+User meminta sedikit lebih gelap, outline tipis, ikon anime, gambar loading,
+dan penjelasan compile shaders. Ambient0,57/sun0,98; mannequin outline 6mm.
+Shader dirender bersama mannequin pada tes Vulkan rumput, tes rig tetap jalan.
+Art loading/ikon AI orisinal setelah penelusuran Pinterest; sumber di CREDITS.
+APK version code2 diperlukan untuk art/ikon launcher, PCK visual tetap kompatibel
+launcher1. Keystore tidak berubah. Tidak ada progress compile shader buatan.
