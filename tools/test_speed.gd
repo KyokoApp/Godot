@@ -1,6 +1,6 @@
 extends SceneTree
 
-const Shape = preload("res://src/game/arena/arena_Shape.gd")
+const Shape = preload("res://src/game/arena/arena_shape.gd")
 const Trail = preload("res://src/game/speed/speed_aura.gd")
 var _failures := 0
 
