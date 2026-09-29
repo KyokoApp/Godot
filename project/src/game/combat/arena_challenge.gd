@@ -81,7 +81,7 @@ func nearby() -> bool:
 func start() -> void:
 	if active or finishing or not nearby() or game._graphics_drawer.visible:
 		return
-	if not Character.FightLibrary.available(game._visual.animation):
+	if not game._visual.prepare_fight():
 		return
 	active = true
 	player_hp = MAX_HP
@@ -100,7 +100,9 @@ func start() -> void:
 	enemy.position = Vector3(Shape.CENTER.x + 5, Shape.HEIGHT + 0.1, Shape.CENTER.y)
 	enemy_visual = Character.new()
 	enemy.add_child(enemy_visual)
-	Character.FightLibrary.available(enemy_visual.animation)
+	if not enemy_visual.prepare_fight():
+		reset()
+		return
 	artifact.hide()
 	prompt.hide()
 	status.show()
@@ -182,9 +184,9 @@ func _physics_process(delta: float) -> void:
 		_enemy_hit = -1
 		status.text = "Tantangan selesai!" if enemy_hp == 0 else "Coba lagi — dekati artefak"
 		if enemy_hp == 0:
-			enemy_visual.play_fight(FightLibrary.DEATH)
+			enemy_visual.play_fight(FightLibrary.HIT)
 		else:
-			game._visual.play_fight(FightLibrary.DEATH)
+			game._visual.play_fight(FightLibrary.HIT)
 
 
 func movement_locked() -> bool:

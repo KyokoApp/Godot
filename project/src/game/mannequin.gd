@@ -30,6 +30,7 @@ var source_skeleton: Skeleton3D
 var cast_layer: CastLayer
 var animation: AnimationPlayer
 var state := IDLE
+var _fight_driver: FightLibrary
 var _skins: Dictionary[String, Node3D] = {}
 var _retargets: Dictionary[String, Retarget] = {}
 var _source_meshes: Array[MeshInstance3D] = []
@@ -196,10 +197,33 @@ func foot_stride_lift(left: bool) -> float:
 		- source_skeleton.get_bone_global_rest(bone).origin.y
 
 
+func prepare_fight() -> bool:
+	if _fight_driver != null:
+		return true
+	if source_skeleton == null:
+		return false
+	_fight_driver = FightLibrary.new()
+	_fight_driver.name = "UAL2FightDriver"
+	add_child(_fight_driver)
+	if not _fight_driver.setup(source_skeleton):
+		_fight_driver.queue_free()
+		_fight_driver = null
+		return false
+	return true
+
+
 func play_fight(clip: String) -> float:
-	var length := FightLibrary.play(animation, clip, cast_layer)
-	if length == 0.0:
+	if not prepare_fight() or not _fight_driver.has_clip(clip):
 		return 0.0
+	var length := _fight_driver.play(clip)
+	if length <= 0.0:
+		return 0.0
+	if cast_layer != null:
+		cast_layer.playing = false
+		cast_layer.active = false
+		cast_layer.influence = 0.0
+	animation.pause()
+	_fight_driver.sync_pose()
 	action_time = length
 	return length
 
@@ -207,13 +231,20 @@ func play_fight(clip: String) -> float:
 func cancel_fight() -> void:
 	action_time = 0.0
 	state = IDLE
-	animation.speed_scale = 1.0
-	animation.play(IDLE, 0.12)
+	if _fight_driver != null:
+		_fight_driver.stop()
+	if animation != null:
+		animation.speed_scale = 1.0
+		animation.play(IDLE, 0.12)
 
 
 func _physics_process(delta: float) -> void:
 	if action_time <= 0:
 		return
+	if _fight_driver != null:
+		_fight_driver.advance(delta)
 	action_time = maxf(0.0, action_time - delta)
 	if action_time == 0:
 		state = "" # Allow the next motion update to leave the one-shot pose.
+		if _fight_driver != null:
+			_fight_driver.stop()
