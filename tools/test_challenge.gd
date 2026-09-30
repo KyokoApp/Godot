@@ -52,8 +52,8 @@ func _run() -> void:
 	_check(challenge.player_hp_bar is ProgressBar, "Bar HP pemain tidak ada")
 	_check(challenge.enemy_hp_bar is ProgressBar, "Bar HP musuh tidak ada")
 	_check(challenge.enemy_hp_bar.custom_minimum_size.y <= 8, "Boss bar musuh terlalu tebal")
-	var boss_rect := challenge.enemy_hp_bar.get_global_rect()
-	var viewport_rect := game.get_viewport().get_visible_rect()
+	var boss_rect: Rect2 = challenge.enemy_hp_bar.get_global_rect()
+	var viewport_rect: Rect2 = game.get_viewport().get_visible_rect()
 	_check(is_equal_approx(boss_rect.get_center().x, viewport_rect.size.x * 0.5),
 		"Boss bar tidak di tengah layar")
 	_check(boss_rect.position.y < 40, "Boss bar tidak berada di bagian atas layar")
