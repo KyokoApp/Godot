@@ -1,19 +1,93 @@
 extends Node
-## Drives UAL2 clips on their imported rig, then copies the pose to the game rig.
-## This keeps every AnimationPlayer track path inside its original GLB scene.
+## Drives clips on the imported UAL2 rig and copies poses to a matching game rig.
+## Names are taken from UAL2_Standard.glb's glTF animation list.
 const MODEL = preload("res://assets/combat/UAL2_Standard.glb")
+
+# Backwards-compatible defaults used by the original arena challenge and tests.
 const MELEE := "Melee_Hook"
 const PUNCH := MELEE
 const SWORD := "Sword_Regular_Combo"
 const HIT := "Hit_Knockback"
+
+# UAL2 unarmed attacks and their transition/recovery.
+const MELEE_HOOK := "Melee_Hook"
+const MELEE_HOOK_RECOVERY := "Melee_Hook_Rec"
+const ZOMBIE_SCRATCH := "Zombie_Scratch"
+const OVERHAND_THROW := "OverhandThrow"
+
+# UAL2 sword attacks, combo links, and defensive actions.
+const SWORD_REGULAR_COMBO := "Sword_Regular_Combo"
+const SWORD_REGULAR_A := "Sword_Regular_A"
+const SWORD_REGULAR_A_RECOVERY := "Sword_Regular_A_Rec"
+const SWORD_REGULAR_B := "Sword_Regular_B"
+const SWORD_REGULAR_B_RECOVERY := "Sword_Regular_B_Rec"
+const SWORD_REGULAR_C := "Sword_Regular_C"
+const SWORD_HEAVY_COMBO := "Sword_Heavy_Combo"
+const SWORD_BLOCK := "Sword_Block"
+const SWORD_DASH := "Sword_Dash"
+
+# UAL2 shield actions. (The arena uses them for the opponent's guard/dash moves.)
+const SHIELD_DASH := "Shield_Dash"
+const SHIELD_ONE_SHOT := "Shield_OneShot"
+const IDLE_SHIELD_BREAK := "Idle_Shield_Break"
+const IDLE_SHIELD_LOOP := "Idle_Shield_Loop"
+
+# UAL2 movement/evasion and get-up/reaction animations.
+const SLIDE_START := "Slide_Start"
+const SLIDE_LOOP := "Slide_Loop"
+const SLIDE_EXIT := "Slide_Exit"
+const NINJA_JUMP_START := "NinjaJump_Start"
+const NINJA_JUMP_IDLE_LOOP := "NinjaJump_Idle_Loop"
+const NINJA_JUMP_LAND := "NinjaJump_Land"
+const ZOMBIE_IDLE_LOOP := "Zombie_Idle_Loop"
+const ZOMBIE_WALK_LOOP := "Zombie_Walk_Fwd_Loop"
+const HIT_KNOCKBACK := "Hit_Knockback"
+const LAY_TO_IDLE := "LayToIdle"
+
+## Every combat, combat-reaction, and combat-mobility clip in the shipped UAL2 file.
+## Deliberately excludes unrelated farming, climbing, and emote clips.
 const REQUIRED_CLIPS := [
-	"Melee_Hook",
-	"Hit_Knockback",
-	"Sword_Regular_Combo",
-	"Zombie_Scratch",
-	"Slide_Start",
-	"NinjaJump_Start",
+	HIT_KNOCKBACK,
+	IDLE_SHIELD_BREAK,
+	IDLE_SHIELD_LOOP,
+	LAY_TO_IDLE,
+	MELEE_HOOK,
+	MELEE_HOOK_RECOVERY,
+	OVERHAND_THROW,
+	NINJA_JUMP_IDLE_LOOP,
+	NINJA_JUMP_LAND,
+	NINJA_JUMP_START,
+	SHIELD_DASH,
+	SHIELD_ONE_SHOT,
+	SLIDE_EXIT,
+	SLIDE_LOOP,
+	SLIDE_START,
+	SWORD_BLOCK,
+	SWORD_DASH,
+	SWORD_HEAVY_COMBO,
+	SWORD_REGULAR_A,
+	SWORD_REGULAR_A_RECOVERY,
+	SWORD_REGULAR_B,
+	SWORD_REGULAR_B_RECOVERY,
+	SWORD_REGULAR_C,
+	SWORD_REGULAR_COMBO,
+	ZOMBIE_IDLE_LOOP,
+	ZOMBIE_SCRATCH,
+	ZOMBIE_WALK_LOOP,
 ]
+
+const MELEE_CLIPS := [MELEE_HOOK, ZOMBIE_SCRATCH]
+const RANGED_ATTACK_CLIPS := [OVERHAND_THROW]
+const SWORD_ATTACK_CLIPS := [
+	SWORD_REGULAR_COMBO,
+	SWORD_REGULAR_A,
+	SWORD_REGULAR_B,
+	SWORD_REGULAR_C,
+	SWORD_HEAVY_COMBO,
+]
+const SWORD_RECOVERY_CLIPS := [SWORD_REGULAR_A_RECOVERY, SWORD_REGULAR_B_RECOVERY]
+const EVADE_CLIPS := [SLIDE_START, NINJA_JUMP_START]
+const FIGHT_REACTION_CLIPS := [HIT_KNOCKBACK, IDLE_SHIELD_BREAK, LAY_TO_IDLE]
 
 var animation: AnimationPlayer
 var source_skeleton: Skeleton3D
@@ -66,6 +140,21 @@ func has_clip(clip: String) -> bool:
 	return animation != null and not imported.is_empty() and animation.has_animation(imported)
 
 
+func missing_required_clips() -> PackedStringArray:
+	var missing := PackedStringArray()
+	for clip: String in REQUIRED_CLIPS:
+		if not has_clip(clip):
+			missing.append(clip)
+	return missing
+
+
+func clip_length(clip: String) -> float:
+	var imported := _resolve_clip(clip)
+	if animation == null or imported.is_empty() or not animation.has_animation(imported):
+		return 0.0
+	return animation.get_animation(imported).length
+
+
 func play(clip: String) -> float:
 	var imported := _resolve_clip(clip)
 	if animation == null or imported.is_empty() or not animation.has_animation(imported):
@@ -74,6 +163,17 @@ func play(clip: String) -> float:
 	animation.play(imported, 0.12)
 	animation.advance(0.0)
 	return animation.get_animation(imported).length
+
+
+func play_loop(clip: String) -> bool:
+	var imported := _resolve_clip(clip)
+	if animation == null or imported.is_empty() or not animation.has_animation(imported):
+		return false
+	animation.get_animation(imported).loop_mode = Animation.LOOP_LINEAR
+	animation.speed_scale = 1.0
+	animation.play(imported, 0.12)
+	animation.advance(0.0)
+	return true
 
 
 func _resolve_clip(clip: String) -> String:

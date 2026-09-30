@@ -32,6 +32,10 @@ func _run() -> void:
 		var driver = game._visual._fight_driver
 		for clip in FightLibrary.REQUIRED_CLIPS:
 			_check(driver.has_clip(clip), "Klip UAL2 hilang: " + clip)
+			if skin == Character.MANNEQUIN:
+				var clip_duration: float = driver.play(clip)
+				_check(clip_duration > 0.0, "Klip UAL2 tidak bisa dimainkan: " + clip)
+				driver.stop()
 		var duration: float = game._visual.play_fight(FightLibrary.MELEE)
 		_check(duration > 0, "Melee_Hook tidak bisa dimainkan")
 		_manual_character_frames(game._visual, 8)
@@ -49,6 +53,15 @@ func _run() -> void:
 	_check(challenge.enemy_hud.visible, "Boss bar musuh tidak muncul")
 	_check(challenge.player_hud.visible, "HUD HP pemain tidak muncul")
 	_check(challenge.style_button.visible, "Tombol gaya fight tidak muncul")
+	_check(challenge.evade_button.visible, "Tombol menghindar tidak muncul")
+	_check(challenge.combat_fx is Node3D, "Sistem VFX arena tidak dibuat")
+	var effects_before: int = challenge.combat_fx.get_child_count()
+	challenge.combat_fx.call("play_swing", game._visual.global_position,
+		challenge.enemy.global_position, Color(0.36, 0.82, 1.0), 1.0)
+	challenge.combat_fx.call("spawn_impact",
+		challenge.enemy.global_position + Vector3.UP, Color(0.36, 0.82, 1.0), 25)
+	_check(challenge.combat_fx.get_child_count() == effects_before + 2,
+		"VFX tebasan dan benturan tidak muncul")
 	_check(challenge.player_hp_bar is ProgressBar, "Bar HP pemain tidak ada")
 	_check(challenge.enemy_hp_bar is ProgressBar, "Bar HP musuh tidak ada")
 	_check(challenge.enemy_hp_bar.custom_minimum_size.y <= 8, "Boss bar musuh terlalu tebal")
@@ -60,6 +73,10 @@ func _run() -> void:
 	_check(is_instance_valid(challenge.enemy), "Musuh tidak ada")
 	_check(challenge.enemy_visual._fight_driver.has_clip(FightLibrary.MELEE),
 		"Musuh tidak memakai klip UAL2")
+	_check(challenge.enemy_visual.play_fight_loop(FightLibrary.ZOMBIE_IDLE_LOOP),
+		"Loop idle UAL2 tidak dapat dimainkan")
+	_check(challenge.enemy_visual.fight_loop, "Loop UAL2 tidak tetap aktif")
+	challenge.enemy_visual.cancel_fight()
 	# Double-start must be ignored.
 	var id: int = challenge.enemy.get_instance_id()
 	challenge.start()
@@ -82,6 +99,7 @@ func _run() -> void:
 	challenge.attack()
 	_check(game._visual._fight_driver.animation.current_animation == FightLibrary.SWORD,
 		"Sword_Regular_Combo tidak dimainkan")
+	_check(challenge.combat_callout.visible, "Nama gerakan arena tidak ditampilkan")
 	var sword_pose_start := _pose_snapshot(game._visual.source_skeleton)
 	var sword_skin_start := _pose_snapshot(game._visual.retarget.target)
 	_check(challenge.enemy_hp == 100, "Hit jarak jauh langsung")
@@ -94,9 +112,34 @@ func _run() -> void:
 	_check(challenge.enemy_hp == 100, "Hit jarak jauh terlambat")
 	game._visual.cancel_fight()
 	challenge.player_cooldown = 0.0
+	challenge.attack()
+	_check(game._visual._fight_driver.animation.current_animation
+		== FightLibrary.SWORD_REGULAR_A, "Combo pedang A dari UAL2 tidak dimainkan")
+	game._visual.cancel_fight()
+	challenge.player_cooldown = 0.0
+	challenge._player_followups.clear()
+	challenge.evade()
+	_check(game._visual._fight_driver.animation.current_animation
+		== FightLibrary.SWORD_BLOCK, "Parry pedang UAL2 tidak dimainkan")
+	game._visual.cancel_fight()
+	challenge.player_cooldown = 0.0
+	challenge._player_followups.clear()
+	challenge._player_hit = -1.0
 	challenge.toggle_attack_style()
 	_check(not challenge.sword_mode, "Mode melee tidak aktif")
 	_check(not game._visual.fight_sword_visible(), "Pedang tertinggal di mode melee")
+	challenge.evade()
+	_check(game._visual._fight_driver.animation.current_animation
+		== FightLibrary.SLIDE_START, "Slide_Start UAL2 tidak dimainkan")
+	game._visual.cancel_fight()
+	challenge.player_cooldown = 0.0
+	challenge._player_followups.clear()
+	challenge.evade()
+	_check(game._visual._fight_driver.animation.current_animation
+		== FightLibrary.NINJA_JUMP_START, "NinjaJump_Start UAL2 tidak dimainkan")
+	game._visual.cancel_fight()
+	challenge.player_cooldown = 0.0
+	challenge._player_followups.clear()
 
 	# A close-range melee attack deals 25 damage only after its windup.
 	challenge.enemy.position = game._player.position + Vector3(1.5, 0, 0)
