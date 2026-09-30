@@ -20,6 +20,9 @@ const Footsteps = preload("res://src/game/audio/footsteps.gd")
 const CharacterSwitcher = preload("res://src/game/ui/character_switcher.gd")
 const CreditsPanel = preload("res://src/game/ui/credits_panel.gd")
 const RuneButton = preload("res://src/game/ui/rune_button.gd")
+const FIRE_ICON = preload("res://src/game/ui/flame.svg")
+const MELEE_ICON = preload("res://src/game/ui/fist.svg")
+const SWORD_ICON = preload("res://src/game/ui/sword.svg")
 const FirePet = preload("res://src/game/fire_pet.gd")
 const PerformancePanel = preload("res://src/game/performance_panel.gd")
 const Joystick = preload("res://src/game/virtual_joystick.gd")
@@ -210,7 +213,7 @@ func _build_hud() -> void:
 	_orbit.input_exclusion = _settings
 	_attack = RuneButton.new()
 	_attack.name = "FireAttack"
-	_attack.glyph = preload("res://src/game/ui/flame.svg")
+	_attack.glyph = FIRE_ICON
 	_attack.tooltip_text = "Serangan api"
 	layer.add_child(_attack)
 	_attack.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
@@ -398,8 +401,16 @@ func _attack_action() -> void:
 
 func _process(_delta: float) -> void:
 	_attack.cooldown_fraction = clampf(_pet.cooldown / FirePet.COOLDOWN, 0, 1)
-	if _challenge.active:
+	var icon: Texture2D = FIRE_ICON
+	var tooltip := "Serangan api"
+	if _challenge.active and not _challenge.finishing:
 		_attack.cooldown_fraction = clampf(_challenge.player_cooldown, 0, 1)
+		icon = SWORD_ICON if _challenge.sword_mode else MELEE_ICON
+		tooltip = "Serangan pedang" if _challenge.sword_mode else "Serangan melee"
+	if _attack.glyph != icon:
+		_attack.glyph = icon
+	if _attack.tooltip_text != tooltip:
+		_attack.tooltip_text = tooltip
 	_attack.queue_redraw()
 
 

@@ -32,12 +32,13 @@ func _run() -> void:
 		var driver = game._visual._fight_driver
 		for clip in FightLibrary.REQUIRED_CLIPS:
 			_check(driver.has_clip(clip), "Klip UAL2 hilang: " + clip)
-		var duration: float = game._visual.play_fight(FightLibrary.PUNCH)
+		var duration: float = game._visual.play_fight(FightLibrary.MELEE)
 		_check(duration > 0, "Melee_Hook tidak bisa dimainkan")
 		_manual_character_frames(game._visual, 8)
 		game._visual.cancel_fight()
 	_check(game._visual.set_skin(Character.MANNEQUIN), "Gagal kembali ke mannequin")
 
+	_check(game._visual.set_skin(Character.MIKU), "Gagal pilih Miku untuk pedang")
 	game._player.position = Vector3(-145, 9.1, 140)
 	game._update_arena_state()
 	await _frames(3)
@@ -45,11 +46,14 @@ func _run() -> void:
 	_check(challenge.artifact.visible, "Artefak tidak terlihat")
 	challenge.start()
 	_check(challenge.active, "Tantangan tidak mulai")
-	_check(challenge.hud_panel.visible, "HUD tantangan tidak muncul")
+	_check(challenge.enemy_hud.visible, "Boss bar musuh tidak muncul")
+	_check(challenge.player_hud.visible, "HUD HP pemain tidak muncul")
+	_check(challenge.style_button.visible, "Tombol gaya fight tidak muncul")
 	_check(challenge.player_hp_bar is ProgressBar, "Bar HP pemain tidak ada")
 	_check(challenge.enemy_hp_bar is ProgressBar, "Bar HP musuh tidak ada")
+	_check(challenge.enemy_hp_bar.custom_minimum_size.y <= 8, "Boss bar musuh terlalu tebal")
 	_check(is_instance_valid(challenge.enemy), "Musuh tidak ada")
-	_check(challenge.enemy_visual._fight_driver.has_clip(FightLibrary.PUNCH),
+	_check(challenge.enemy_visual._fight_driver.has_clip(FightLibrary.MELEE),
 		"Musuh tidak memakai klip UAL2")
 	# Double-start must be ignored.
 	var id: int = challenge.enemy.get_instance_id()
@@ -60,16 +64,35 @@ func _run() -> void:
 	challenge.set_physics_process(false)
 	challenge.enemy.position = game._player.position + Vector3(20, 0, 0)
 	challenge.enemy_cooldown = 100.0
+	challenge.toggle_attack_style()
+	_check(challenge.sword_mode, "Mode pedang tidak aktif")
+	_check(game._visual.fight_sword_visible(), "Pedang tidak muncul saat mode pedang")
+	_check(game._visual._fight_sword_attachments[Character.MIKU].get_parent()
+		== game._visual.retarget.target, "Pedang tidak terpasang ke rig Miku aktif")
+	_check(game._visual.set_skin(Character.KANNA), "Gagal mengganti skin saat sword mode")
+	_check(game._visual.fight_sword_visible(), "Pedang hilang saat memakai Kanna")
+	_check(game._visual._fight_sword_attachments[Character.KANNA].get_parent()
+		== game._visual.retarget.target, "Pedang tidak terpasang ke rig Kanna aktif")
+	_check(game._visual.set_skin(Character.MIKU), "Gagal kembali ke skin Miku")
 	challenge.attack()
+	_check(game._visual._fight_driver.animation.current_animation == FightLibrary.SWORD,
+		"Sword_Regular_Combo tidak dimainkan")
 	_check(challenge.enemy_hp == 100, "Hit jarak jauh langsung")
 	_step_challenge(challenge, game, 60)
 	_check(challenge.enemy_hp == 100, "Hit jarak jauh terlambat")
+	game._visual.cancel_fight()
+	challenge.player_cooldown = 0.0
+	challenge.toggle_attack_style()
+	_check(not challenge.sword_mode, "Mode melee tidak aktif")
+	_check(not game._visual.fight_sword_visible(), "Pedang tertinggal di mode melee")
 
-	# A close-range attack deals 25 damage only after its windup.
+	# A close-range melee attack deals 25 damage only after its windup.
 	challenge.enemy.position = game._player.position + Vector3(1.5, 0, 0)
 	challenge.player_cooldown = 0.0
 	challenge.enemy_cooldown = 100.0
 	challenge.attack()
+	_check(game._visual._fight_driver.animation.current_animation == FightLibrary.MELEE,
+		"Melee_Hook tidak dimainkan")
 	_check(challenge.player_cooldown > 0, "Cooldown tidak aktif")
 	_check(challenge.enemy_hp == 100, "Damage terjadi sebelum windup")
 	_step_challenge(challenge, game, 200)
@@ -88,6 +111,8 @@ func _run() -> void:
 	challenge.enemy_hp = 0
 	challenge._physics_process(0.016)
 	_check(challenge.finishing, "Kemenangan tidak terdeteksi")
+	_check(not challenge.enemy_hud.visible and not challenge.player_hud.visible
+		and not challenge.style_button.visible, "HUD tidak dibersihkan setelah tantangan")
 	_step_challenge(challenge, game, 200)
 	_check(not challenge.active and challenge.enemy == null, "Pemenangan tidak bersih")
 
@@ -98,7 +123,9 @@ func _run() -> void:
 	game._update_arena_state()
 	challenge._physics_process(0.016)
 	_check(not challenge.active, "Musuh bertahan setelah keluar arena")
-	_check(not challenge.hud_panel.visible, "HUD tertinggal setelah keluar arena")
+	_check(not challenge.enemy_hud.visible and not challenge.player_hud.visible,
+		"Bar HP tertinggal setelah keluar arena")
+	_check(not challenge.style_button.visible, "Tombol gaya tertinggal setelah keluar arena")
 	_check(game._visual.action_time == 0, "Action lock tertinggal")
 	game.queue_free()
 	await process_frame

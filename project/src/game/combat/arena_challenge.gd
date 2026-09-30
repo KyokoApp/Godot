@@ -11,15 +11,17 @@ var active := false
 var finishing := false
 var player_hp := MAX_HP
 var enemy_hp := MAX_HP
+var sword_mode := false
 var enemy: CharacterBody3D
 var enemy_visual: Character
 var prompt: Rune
-var hud_panel: PanelContainer
+var style_button: Rune
+var enemy_hud: Control
+var player_hud: PanelContainer
 var status: Label
 var player_hp_bar: ProgressBar
 var enemy_hp_bar: ProgressBar
 var player_hp_value: Label
-var enemy_hp_value: Label
 var artifact: Node3D
 var player_cooldown := 0.0
 var enemy_cooldown := 1.0
@@ -66,78 +68,98 @@ func _ready() -> void:
 	prompt.offset_bottom = 26
 	prompt.pressed.connect(start)
 	game._orbit.interact_exclusion = prompt
-	hud_panel = PanelContainer.new()
-	hud_panel.name = "ChallengeHUD"
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.025, 0.035, 0.07, 0.9)
-	panel_style.border_color = Color("83dce8")
-	panel_style.set_border_width_all(1)
-	panel_style.set_corner_radius_all(12)
-	panel_style.content_margin_left = 14
-	panel_style.content_margin_right = 14
-	panel_style.content_margin_top = 8
-	panel_style.content_margin_bottom = 8
-	hud_panel.add_theme_stylebox_override("panel", panel_style)
-	layer.add_child(hud_panel)
-	hud_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	hud_panel.position = Vector2(-230, 24)
-	hud_panel.size = Vector2(460, 128)
-	hud_panel.custom_minimum_size = hud_panel.size
-	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation", 3)
-	hud_panel.add_child(content)
+	enemy_hud = Control.new()
+	enemy_hud.name = "EnemyBossHealth"
+	layer.add_child(enemy_hud)
+	enemy_hud.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	enemy_hud.position = Vector2(-260, 14)
+	enemy_hud.size = Vector2(520, 34)
 	status = Label.new()
-	status.text = "TANTANGAN ARENA"
+	status.text = "MANNEQUIN"
 	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	status.add_theme_font_size_override("font_size", 14)
-	status.add_theme_color_override("font_color", Color("f1dba9"))
-	content.add_child(status)
-	content.add_child(_make_hp_row("KAMU", Color("70dfce"), true))
-	content.add_child(_make_hp_row("MANNEQUIN", Color("f1a77e"), false))
+	status.add_theme_font_size_override("font_size", 13)
+	status.add_theme_color_override("font_color", Color("f1e7d1"))
+	enemy_hud.add_child(status)
+	status.position = Vector2.ZERO
+	status.size = Vector2(520, 18)
+	enemy_hp_bar = _make_health_bar(Color("bd3948"), Color(0.10, 0.07, 0.09, 0.9), 6)
+	enemy_hp_bar.position = Vector2(0, 23)
+	enemy_hp_bar.size = Vector2(520, 6)
+	enemy_hud.add_child(enemy_hp_bar)
+	_make_player_hud(layer)
+	style_button = Rune.new()
+	style_button.name = "FightStyleToggle"
+	style_button.rectangular = true
+	style_button.text = "Mode: Melee"
+	style_button.add_theme_font_size_override("font_size", 14)
+	layer.add_child(style_button)
+	style_button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	style_button.offset_left = -406
+	style_button.offset_right = -270
+	style_button.offset_top = -205
+	style_button.offset_bottom = -163
+	style_button.pressed.connect(toggle_attack_style)
+	game._orbit.combat_style_exclusion = style_button
 	prompt.hide()
-	hud_panel.hide()
+	enemy_hud.hide()
+	player_hud.hide()
+	style_button.hide()
 	_update_health_bars()
 
 
-func _make_hp_row(caption: String, fill_color: Color, player: bool) -> VBoxContainer:
-	var row := VBoxContainer.new()
-	row.add_theme_constant_override("separation", 1)
+func _make_player_hud(layer: CanvasLayer) -> void:
+	player_hud = PanelContainer.new()
+	player_hud.name = "PlayerHealth"
+	var panel := StyleBoxFlat.new()
+	panel.bg_color = Color(0.025, 0.035, 0.07, 0.86)
+	panel.border_color = Color(0.44, 0.84, 0.78, 0.7)
+	panel.set_border_width_all(1)
+	panel.set_corner_radius_all(8)
+	panel.content_margin_left = 9
+	panel.content_margin_right = 9
+	panel.content_margin_top = 5
+	panel.content_margin_bottom = 5
+	player_hud.add_theme_stylebox_override("panel", panel)
+	layer.add_child(player_hud)
+	player_hud.position = Vector2(24, 210)
+	player_hud.size = Vector2(176, 44)
+	player_hud.custom_minimum_size = player_hud.size
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 2)
+	player_hud.add_child(content)
 	var heading := HBoxContainer.new()
 	var name_label := Label.new()
-	name_label.text = caption
+	name_label.text = "KAMU"
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_label.add_theme_font_size_override("font_size", 11)
 	name_label.add_theme_color_override("font_color", Color("e4e9f3"))
 	heading.add_child(name_label)
-	var value_label := Label.new()
-	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	value_label.add_theme_font_size_override("font_size", 11)
-	value_label.add_theme_color_override("font_color", Color("f3f5fa"))
-	heading.add_child(value_label)
-	row.add_child(heading)
+	player_hp_value = Label.new()
+	player_hp_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	player_hp_value.add_theme_font_size_override("font_size", 11)
+	player_hp_value.add_theme_color_override("font_color", Color("f3f5fa"))
+	heading.add_child(player_hp_value)
+	content.add_child(heading)
+	player_hp_bar = _make_health_bar(Color("70dfce"), Color(0.11, 0.13, 0.19, 1.0), 5)
+	content.add_child(player_hp_bar)
+
+
+func _make_health_bar(fill_color: Color, track_color: Color, thickness: float) -> ProgressBar:
 	var bar := ProgressBar.new()
 	bar.min_value = 0
 	bar.max_value = MAX_HP
 	bar.value = MAX_HP
 	bar.show_percentage = false
-	bar.custom_minimum_size = Vector2(0, 10)
-	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.custom_minimum_size = Vector2(0, thickness)
 	var background := StyleBoxFlat.new()
-	background.bg_color = Color(0.11, 0.13, 0.19, 1.0)
-	background.set_corner_radius_all(5)
+	background.bg_color = track_color
+	background.set_corner_radius_all(2)
 	bar.add_theme_stylebox_override("background", background)
 	var fill := StyleBoxFlat.new()
 	fill.bg_color = fill_color
-	fill.set_corner_radius_all(5)
+	fill.set_corner_radius_all(2)
 	bar.add_theme_stylebox_override("fill", fill)
-	row.add_child(bar)
-	if player:
-		player_hp_bar = bar
-		player_hp_value = value_label
-	else:
-		enemy_hp_bar = bar
-		enemy_hp_value = value_label
-	return row
+	return bar
 
 
 func _update_health_bars() -> void:
@@ -146,8 +168,6 @@ func _update_health_bars() -> void:
 	player_hp_bar.value = player_hp
 	enemy_hp_bar.value = enemy_hp
 	player_hp_value.text = "%d / %d" % [player_hp, MAX_HP]
-	enemy_hp_value.text = "%d / %d" % [enemy_hp, MAX_HP]
-
 
 func nearby() -> bool:
 	return game.inside_arena and game._player.position.distance_to(
@@ -160,6 +180,9 @@ func start() -> void:
 	if not game._visual.prepare_fight():
 		return
 	active = true
+	sword_mode = false
+	game._visual.set_fight_sword(false)
+	style_button.text = "Mode: Melee"
 	player_hp = MAX_HP
 	enemy_hp = MAX_HP
 	player_cooldown = 0.0
@@ -181,8 +204,10 @@ func start() -> void:
 		return
 	artifact.hide()
 	prompt.hide()
-	status.text = "TANTANGAN ARENA"
-	hud_panel.show()
+	status.text = "MANNEQUIN"
+	enemy_hud.show()
+	player_hud.show()
+	style_button.show()
 	_update_health_bars()
 
 
@@ -197,12 +222,23 @@ func _add_collision() -> void:
 	enemy.add_child(collider)
 
 
+func toggle_attack_style() -> void:
+	if not active or finishing or game._visual.action_time > 0:
+		return
+	sword_mode = not sword_mode
+	style_button.text = "Mode: Pedang" if sword_mode else "Mode: Melee"
+	game._visual.set_fight_sword(sword_mode)
+
+
 func attack() -> void:
 	if not active or finishing or player_cooldown > 0 or game._graphics_drawer.visible:
 		return
 	var direction: Vector3 = enemy.position - game._player.position
 	game._visual.rotation.y = atan2(-direction.x, -direction.z)
-	var length: float = game._visual.play_fight(FightLibrary.PUNCH)
+	var clip := FightLibrary.SWORD if sword_mode else FightLibrary.MELEE
+	var length: float = game._visual.play_fight(clip)
+	if length <= 0:
+		return
 	player_cooldown = maxf(length + 0.2, 0.8)
 	_player_hit = length * 0.45
 
@@ -238,7 +274,7 @@ func _physics_process(delta: float) -> void:
 	enemy.move_and_slide()
 	enemy_visual.update_motion(Vector2(velocity.x, velocity.z).length())
 	if distance <= REACH and enemy_cooldown == 0:
-		var length := enemy_visual.play_fight(FightLibrary.PUNCH)
+		var length := enemy_visual.play_fight(FightLibrary.MELEE)
 		enemy_cooldown = maxf(1.7, length + 0.5)
 		_enemy_hit = length * 0.55
 	if _player_hit >= 0:
@@ -260,6 +296,9 @@ func _physics_process(delta: float) -> void:
 		_player_hit = -1
 		_enemy_hit = -1
 		status.text = "Tantangan selesai!" if enemy_hp == 0 else "Coba lagi — dekati artefak"
+		enemy_hud.hide()
+		player_hud.hide()
+		style_button.hide()
 		if enemy_hp == 0:
 			enemy_visual.play_fight(FightLibrary.HIT)
 		else:
@@ -280,4 +319,8 @@ func reset() -> void:
 	enemy = null
 	enemy_visual = null
 	game._visual.cancel_fight()
-	hud_panel.hide()
+	game._visual.set_fight_sword(false)
+	sword_mode = false
+	enemy_hud.hide()
+	player_hud.hide()
+	style_button.hide()

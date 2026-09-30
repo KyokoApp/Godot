@@ -13,6 +13,7 @@ var input_exclusion: Control
 var attack_exclusion: Control
 var speed_exclusion: Control
 var character_exclusion: Control
+var combat_style_exclusion: Control
 var yaw := 0.0
 var pitch := 0.30
 var distance := DEFAULT_DISTANCE
@@ -56,7 +57,7 @@ func _input(event: InputEvent) -> void:
 			_touches.erase(touch.index)
 		elif touch.position.x >= get_viewport().get_visible_rect().size.x * 0.5:
 			for control in [interact_exclusion, input_exclusion, attack_exclusion,
-					speed_exclusion, character_exclusion]:
+					speed_exclusion, character_exclusion, combat_style_exclusion]:
 				if is_instance_valid(control) and control.is_visible_in_tree():
 					if control.get_global_rect().has_point(touch.position):
 						return

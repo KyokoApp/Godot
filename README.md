@@ -530,6 +530,18 @@ tepi hingga penuh 10m dalam tepi; dua lapis tembok kabut di batas dan kubah
 kabut di atasnya menutup panorama luar. Di luar arena kabut ini tidak dirender;
 keluar arena memudarkannya lagi. Lantai, karakter dan pertarungan tetap terlihat.
 Dinding kabut hanya visual, bukan collision atau sistem teleport/musuh.
+
+### Tantangan melee & pedang
+Tantangan hanya dimulai lewat artefak di dalam arena. Bar HP musuh berupa garis
+ramping di tengah atas; HP pemain berada di bawah minimap. Gaya bawaan **Melee**
+memainkan klip UAL2 Standard non-root-motion `Melee_Hook` dengan reaksi `Hit_Knockback`;
+gaya **Pedang** memainkan
+`Sword_Regular_Combo`. Pedang latihan low-poly dibuat prosedural dan dipasang ke
+tulang tangan kanan rig skin yang sedang aktif—hanya terlihat saat gaya Pedang
+dipilih. Musuh dan damage hanya ada selama tantangan, tanpa gore; saat menang,
+kalah, atau keluar arena, HUD dan pedang dibersihkan. Tombol gaya tidak memulai
+geseran kamera sentuh.
+
 Updater v2 kini memakai blok inkremental; lihat bagian berikut.
 
 

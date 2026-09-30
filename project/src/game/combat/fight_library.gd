@@ -2,7 +2,9 @@ extends Node
 ## Drives UAL2 clips on their imported rig, then copies the pose to the game rig.
 ## This keeps every AnimationPlayer track path inside its original GLB scene.
 const MODEL = preload("res://assets/combat/UAL2_Standard.glb")
-const PUNCH := "Melee_Hook"
+const MELEE := "Melee_Hook"
+const PUNCH := MELEE
+const SWORD := "Sword_Regular_Combo"
 const HIT := "Hit_Knockback"
 const REQUIRED_CLIPS := [
 	"Melee_Hook",

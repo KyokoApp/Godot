@@ -31,6 +31,9 @@ var cast_layer: CastLayer
 var animation: AnimationPlayer
 var state := IDLE
 var _fight_driver: FightLibrary
+var _fight_sword_attachments: Dictionary[String, BoneAttachment3D] = {}
+var _fight_sword_meshes: Dictionary[String, Array] = {}
+var _fight_sword_enabled := false
 var _skins: Dictionary[String, Node3D] = {}
 var _retargets: Dictionary[String, Retarget] = {}
 var _source_meshes: Array[MeshInstance3D] = []
@@ -123,6 +126,7 @@ func set_skin(selected: String) -> bool:
 		hair.reset_motion()
 		hair.active = selected == MIKU
 	skin_id = selected
+	_update_fight_sword()
 	skin_changed.emit(skin_id)
 	return true
 
@@ -195,6 +199,100 @@ func foot_stride_lift(left: bool) -> float:
 	var bone := source_skeleton.find_bone("foot_l" if left else "foot_r")
 	return source_skeleton.get_bone_global_pose(bone).origin.y \
 		- source_skeleton.get_bone_global_rest(bone).origin.y
+
+
+func set_fight_sword(enabled: bool) -> void:
+	_fight_sword_enabled = enabled
+	_update_fight_sword()
+
+
+func _update_fight_sword() -> void:
+	for pieces in _fight_sword_meshes.values():
+		for piece in pieces:
+			if is_instance_valid(piece):
+				piece.visible = false
+	if not _fight_sword_enabled:
+		return
+	var skeleton := source_skeleton
+	var bone_name := "hand_r"
+	if skin_id != MANNEQUIN:
+		if retarget == null:
+			return
+		skeleton = retarget.target
+		bone_name = "J_Bip_R_Hand" if skin_id == MIKU else "DEF-Right wrist"
+	if skeleton == null or skeleton.find_bone(bone_name) < 0:
+		return
+	var attachment := _fight_sword_attachments.get(skin_id) as BoneAttachment3D
+	if not is_instance_valid(attachment) or attachment.get_parent() != skeleton:
+		attachment = BoneAttachment3D.new()
+		attachment.name = "ArenaSwordAttachment_" + skin_id
+		attachment.bone_name = bone_name
+		skeleton.add_child(attachment)
+		_fight_sword_attachments[skin_id] = attachment
+		_fight_sword_meshes[skin_id] = _build_fight_sword(attachment)
+	for piece in _fight_sword_meshes[skin_id]:
+		if is_instance_valid(piece):
+			piece.visible = true
+
+
+func fight_sword_visible() -> bool:
+	for piece in _fight_sword_meshes.get(skin_id, []):
+		if is_instance_valid(piece) and piece.visible:
+			return true
+	return false
+
+
+func _build_fight_sword(parent: Node3D) -> Array[MeshInstance3D]:
+	var sword := Node3D.new()
+	sword.name = "OriginalTrainingSword"
+	parent.add_child(sword)
+	var pieces: Array[MeshInstance3D] = []
+	var steel := StandardMaterial3D.new()
+	steel.albedo_color = Color("dbe8f5")
+	steel.metallic = 0.72
+	steel.roughness = 0.24
+	steel.emission_enabled = true
+	steel.emission = Color("536a8c")
+	steel.emission_energy_multiplier = 0.16
+	var gold := StandardMaterial3D.new()
+	gold.albedo_color = Color("d8b36b")
+	gold.metallic = 0.64
+	gold.roughness = 0.31
+	var grip := StandardMaterial3D.new()
+	grip.albedo_color = Color("433956")
+	grip.roughness = 0.78
+	var blade := BoxMesh.new()
+	blade.size = Vector3(0.075, 0.72, 0.035)
+	pieces.append(_add_fight_weapon_piece(sword, blade, steel, Vector3(0, 0.53, 0)))
+	var tip := CylinderMesh.new()
+	tip.top_radius = 0.002
+	tip.bottom_radius = 0.038
+	tip.height = 0.16
+	tip.radial_segments = 4
+	pieces.append(_add_fight_weapon_piece(sword, tip, steel, Vector3(0, 0.97, 0)))
+	var guard := BoxMesh.new()
+	guard.size = Vector3(0.29, 0.045, 0.07)
+	pieces.append(_add_fight_weapon_piece(sword, guard, gold, Vector3(0, 0.15, 0)))
+	var handle := CylinderMesh.new()
+	handle.top_radius = 0.033
+	handle.bottom_radius = 0.033
+	handle.height = 0.24
+	pieces.append(_add_fight_weapon_piece(sword, handle, grip, Vector3(0, 0.02, 0)))
+	var pommel := SphereMesh.new()
+	pommel.radius = 0.052
+	pommel.height = 0.104
+	pieces.append(_add_fight_weapon_piece(sword, pommel, gold, Vector3(0, -0.12, 0)))
+	return pieces
+
+
+func _add_fight_weapon_piece(parent: Node3D, mesh: Mesh, material: Material,
+		local_position: Vector3) -> MeshInstance3D:
+	var piece := MeshInstance3D.new()
+	piece.mesh = mesh
+	piece.material_override = material
+	piece.position = local_position
+	parent.add_child(piece)
+	return piece
 
 
 func prepare_fight() -> bool:
