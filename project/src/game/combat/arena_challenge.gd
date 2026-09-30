@@ -413,7 +413,7 @@ func _start_player_dodge_motion(duration: float, peak_speed: float) -> void:
 
 
 func _start_enemy_dodge_motion(duration: float, peak_speed: float) -> void:
-	var direction := enemy.global_position - game._player.global_position
+	var direction: Vector3 = enemy.global_position - game._player.global_position
 	direction.y = 0.0
 	if direction.length_squared() < 0.0001:
 		direction = enemy_visual.global_basis.z
@@ -728,7 +728,7 @@ func _physics_process(delta: float) -> void:
 	var direction: Vector3 = game._player.position - enemy.position
 	var distance := Vector2(direction.x, direction.z).length()
 	var turn_weight := 1.0 - exp(-16.0 * delta)
-	var player_facing := enemy.position - game._player.position
+	var player_facing: Vector3 = enemy.position - game._player.position
 	player_facing.y = 0.0
 	if player_facing.length_squared() > 0.001:
 		var player_yaw := atan2(-player_facing.x, -player_facing.z)
