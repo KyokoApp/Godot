@@ -72,8 +72,10 @@ func _ready() -> void:
 	enemy_hud.name = "EnemyBossHealth"
 	layer.add_child(enemy_hud)
 	enemy_hud.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	enemy_hud.position = Vector2(-260, 14)
-	enemy_hud.size = Vector2(520, 34)
+	enemy_hud.offset_left = -260
+	enemy_hud.offset_right = 260
+	enemy_hud.offset_top = 14
+	enemy_hud.offset_bottom = 48
 	status = Label.new()
 	status.text = "MANNEQUIN"
 	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
