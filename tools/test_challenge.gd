@@ -52,6 +52,11 @@ func _run() -> void:
 	_check(challenge.player_hp_bar is ProgressBar, "Bar HP pemain tidak ada")
 	_check(challenge.enemy_hp_bar is ProgressBar, "Bar HP musuh tidak ada")
 	_check(challenge.enemy_hp_bar.custom_minimum_size.y <= 8, "Boss bar musuh terlalu tebal")
+	var boss_rect := challenge.enemy_hp_bar.get_global_rect()
+	var viewport_rect := game.get_viewport().get_visible_rect()
+	_check(is_equal_approx(boss_rect.get_center().x, viewport_rect.size.x * 0.5),
+		"Boss bar tidak di tengah layar")
+	_check(boss_rect.position.y < 40, "Boss bar tidak berada di bagian atas layar")
 	_check(is_instance_valid(challenge.enemy), "Musuh tidak ada")
 	_check(challenge.enemy_visual._fight_driver.has_clip(FightLibrary.MELEE),
 		"Musuh tidak memakai klip UAL2")
@@ -77,8 +82,15 @@ func _run() -> void:
 	challenge.attack()
 	_check(game._visual._fight_driver.animation.current_animation == FightLibrary.SWORD,
 		"Sword_Regular_Combo tidak dimainkan")
+	var sword_pose_start := _pose_snapshot(game._visual.source_skeleton)
+	var sword_skin_start := _pose_snapshot(game._visual.retarget.target)
 	_check(challenge.enemy_hp == 100, "Hit jarak jauh langsung")
 	_step_challenge(challenge, game, 60)
+	game._visual.retarget.transfer()
+	_check(_pose_changed(game._visual.source_skeleton, sword_pose_start),
+		"Pose rig UAL2 tidak berubah pada Sword_Regular_Combo")
+	_check(_pose_changed(game._visual.retarget.target, sword_skin_start),
+		"Pose skin aktif tidak berubah pada Sword_Regular_Combo")
 	_check(challenge.enemy_hp == 100, "Hit jarak jauh terlambat")
 	game._visual.cancel_fight()
 	challenge.player_cooldown = 0.0
@@ -93,9 +105,18 @@ func _run() -> void:
 	challenge.attack()
 	_check(game._visual._fight_driver.animation.current_animation == FightLibrary.MELEE,
 		"Melee_Hook tidak dimainkan")
+	var melee_pose_start := _pose_snapshot(game._visual.source_skeleton)
+	var melee_skin_start := _pose_snapshot(game._visual.retarget.target)
 	_check(challenge.player_cooldown > 0, "Cooldown tidak aktif")
 	_check(challenge.enemy_hp == 100, "Damage terjadi sebelum windup")
-	_step_challenge(challenge, game, 200)
+	_step_challenge(challenge, game, 12)
+	game._visual.retarget.transfer()
+	_check(_pose_changed(game._visual.source_skeleton, melee_pose_start),
+		"Pose rig UAL2 tidak berubah pada Melee_Hook")
+	_check(_pose_changed(game._visual.retarget.target, melee_skin_start),
+		"Pose skin aktif tidak berubah pada Melee_Hook")
+	_check(challenge.enemy_hp == 100, "Damage terjadi sebelum windup")
+	_step_challenge(challenge, game, 188)
 	_check(challenge.enemy_hp == 75, "Damage salah: %d" % challenge.enemy_hp)
 	_check(is_equal_approx(challenge.enemy_hp_bar.value, 75), "Bar HP musuh tidak diperbarui")
 
@@ -142,6 +163,22 @@ func _frames(count: int) -> void:
 func _manual_character_frames(character: Node, count: int) -> void:
 	for i in range(count):
 		character._physics_process(1.0 / 60.0)
+
+
+func _pose_snapshot(skeleton: Skeleton3D) -> Array[Quaternion]:
+	var poses: Array[Quaternion] = []
+	for bone in range(skeleton.get_bone_count()):
+		poses.append(skeleton.get_bone_pose_rotation(bone))
+	return poses
+
+
+func _pose_changed(skeleton: Skeleton3D, before: Array[Quaternion]) -> bool:
+	if before.size() != skeleton.get_bone_count():
+		return true
+	for bone in range(skeleton.get_bone_count()):
+		if not before[bone].is_equal_approx(skeleton.get_bone_pose_rotation(bone)):
+			return true
+	return false
 
 
 func _step_challenge(challenge: Node, game: Node, count: int) -> void:
