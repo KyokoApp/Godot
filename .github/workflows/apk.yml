@@ -10,7 +10,7 @@ name: apk
 
 on:
   push:
-    branches: [main, arena/01a0eaf5-godot]
+    branches: [main, "arena/**"]
   workflow_dispatch:
 
 concurrency: apk
