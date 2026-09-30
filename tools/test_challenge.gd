@@ -142,11 +142,12 @@ func _run() -> void:
 	_check(challenge.player_movement_velocity().length() > 1.0,
 		"Slide dodge tidak menghasilkan gerakan menjauh")
 	challenge._enemy_dash_cooldown = 100.0
-	var slide_origin: Vector3 = game._player.global_position
+	var slide_origin: Vector3 = game._player.position
 	await _frames(8)
-	_check(Vector2(game._player.position.x - slide_origin.x,
-		game._player.position.z - slide_origin.z).length() > 0.15,
-		"Slide dodge tidak menggerakkan badan pemain")
+	var slide_distance := Vector2(game._player.position.x - slide_origin.x,
+		game._player.position.z - slide_origin.z).length()
+	_check(slide_distance > 0.15,
+		"Slide dodge tidak menggerakkan badan pemain (%.3fm)" % slide_distance)
 	var slide_followups: Array[String] = [FightLibrary.SLIDE_LOOP, FightLibrary.SLIDE_EXIT]
 	_check(challenge._followup_duration(game._visual._fight_driver, slide_followups) < 1.0,
 		"Slide_Loop masih ditahan sebagai klip dua detik")
