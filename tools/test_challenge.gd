@@ -143,10 +143,7 @@ func _run() -> void:
 		"Slide dodge tidak menghasilkan gerakan menjauh")
 	challenge._enemy_dash_cooldown = 100.0
 	var slide_origin: Vector3 = game._player.global_position
-	for frame in range(8):
-		game._physics_process(1.0 / 60.0)
-		game._visual._physics_process(1.0 / 60.0)
-		challenge._physics_process(1.0 / 60.0)
+	await _frames(8)
 	_check(Vector2(game._player.position.x - slide_origin.x,
 		game._player.position.z - slide_origin.z).length() > 0.15,
 		"Slide dodge tidak menggerakkan badan pemain")
