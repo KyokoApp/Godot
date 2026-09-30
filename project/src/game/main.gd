@@ -355,11 +355,15 @@ func _physics_process(delta: float) -> void:
 	var stick := _joystick.direction
 	# Arah gerak mengikuti yaw kamera; joystick atas selalu maju di layar.
 	var movement := _orbit.movement_direction(stick)
+	var combat_velocity: Vector3 = _challenge.player_movement_velocity()
 	if _challenge.movement_locked():
 		movement = Vector3.ZERO
 	var move_speed := MOVE_SPEED * (3.0 if speed_boosted else 1.0)
-	_player.velocity.x = movement.x * move_speed
-	_player.velocity.z = movement.z * move_speed
+	var movement_velocity := movement * move_speed
+	if combat_velocity.length_squared() >= 0.0001:
+		movement_velocity = combat_velocity
+	_player.velocity.x = movement_velocity.x
+	_player.velocity.z = movement_velocity.z
 	if not _player.is_on_floor():
 		_player.velocity += _player.get_gravity() * delta
 	else:
@@ -377,8 +381,8 @@ func _physics_process(delta: float) -> void:
 		_player.velocity = Vector3.ZERO
 	_update_arena_state() # Crossing the boundary cancels boost and VFX this same frame.
 	if inside_arena:
-		_player.velocity.x = movement.x * MOVE_SPEED
-		_player.velocity.z = movement.z * MOVE_SPEED
+		_player.velocity.x = movement_velocity.x
+		_player.velocity.z = movement_velocity.z
 	var travelled := _player.position - before
 	var speed := Vector2(travelled.x, travelled.z).length() / delta
 	_visual.update_motion(speed)

@@ -9,6 +9,14 @@ const REACH := 2.5
 const MAX_HP := 100
 const COMBO_WINDOW := 3.0
 const MAX_COMBO := 4
+# Keep imported loop clips looped briefly between their authored start/exit poses.
+const SLIDE_LOOP_HOLD := 0.36
+const JUMP_LOOP_HOLD := 0.24
+const GUARD_LOOP_HOLD := 0.38
+const PLAYER_SLIDE_PEAK_SPEED := 3.2
+const PLAYER_JUMP_PEAK_SPEED := 2.3
+const ENEMY_SLIDE_PEAK_SPEED := 3.0
+const ENEMY_JUMP_PEAK_SPEED := 2.2
 const ZOMBIE_ATTACK_CLIPS := [
 	FightLibrary.MELEE_HOOK,
 	FightLibrary.ZOMBIE_SCRATCH,
@@ -74,6 +82,14 @@ var _enemy_evade_cooldown := 0.0
 var _next_player_evade := false
 var _player_followups: Array[String] = []
 var _enemy_followups: Array[String] = []
+var _player_dodge_direction := Vector3.ZERO
+var _player_dodge_time := 0.0
+var _player_dodge_duration := 0.0
+var _player_dodge_peak_speed := 0.0
+var _enemy_dodge_direction := Vector3.ZERO
+var _enemy_dodge_time := 0.0
+var _enemy_dodge_duration := 0.0
+var _enemy_dodge_peak_speed := 0.0
 var _rng := RandomNumberGenerator.new()
 var _finish_time := 0.0
 var _time := 0.0
@@ -290,6 +306,14 @@ func start() -> void:
 	_callout_time = 0.0
 	_player_invulnerable = 0.0
 	_enemy_invulnerable = 0.0
+	_player_dodge_direction = Vector3.ZERO
+	_player_dodge_time = 0.0
+	_player_dodge_duration = 0.0
+	_player_dodge_peak_speed = 0.0
+	_enemy_dodge_direction = Vector3.ZERO
+	_enemy_dodge_time = 0.0
+	_enemy_dodge_duration = 0.0
+	_enemy_dodge_peak_speed = 0.0
 	_enemy_guarding = false
 	_enemy_zombie_style = _rng.randf() < 0.35
 	_enemy_locomotion_clip = ""
@@ -361,8 +385,75 @@ func _valid_followups(driver: FightLibrary, clips: Array[String]) -> Array[Strin
 func _followup_duration(driver: FightLibrary, clips: Array[String]) -> float:
 	var total := 0.0
 	for clip in clips:
-		total += driver.clip_length(clip)
+		match clip:
+			FightLibrary.SLIDE_LOOP:
+				total += SLIDE_LOOP_HOLD
+			FightLibrary.NINJA_JUMP_IDLE_LOOP:
+				total += JUMP_LOOP_HOLD
+			FightLibrary.IDLE_SHIELD_LOOP:
+				total += GUARD_LOOP_HOLD
+			_:
+				total += driver.clip_length(clip)
 	return total
+
+
+func _start_player_dodge_motion(duration: float, peak_speed: float) -> void:
+	var direction := Vector3.ZERO
+	if game._joystick.direction.length_squared() > 0.04:
+		direction = game._orbit.movement_direction(game._joystick.direction)
+	else:
+		direction = game._player.global_position - enemy.global_position
+	direction.y = 0.0
+	if direction.length_squared() < 0.0001:
+		direction = game._visual.global_basis.z
+	_player_dodge_direction = direction.normalized()
+	_player_dodge_duration = duration
+	_player_dodge_time = duration
+	_player_dodge_peak_speed = peak_speed
+
+
+func _start_enemy_dodge_motion(duration: float, peak_speed: float) -> void:
+	var direction := enemy.global_position - game._player.global_position
+	direction.y = 0.0
+	if direction.length_squared() < 0.0001:
+		direction = enemy_visual.global_basis.z
+	_enemy_dodge_direction = direction.normalized()
+	_enemy_dodge_duration = duration
+	_enemy_dodge_time = duration
+	_enemy_dodge_peak_speed = peak_speed
+
+
+func _dodge_velocity(direction: Vector3, time_left: float, duration: float,
+		peak_speed: float) -> Vector3:
+	if time_left <= 0.0 or duration <= 0.0:
+		return Vector3.ZERO
+	var progress := clampf(1.0 - time_left / duration, 0.0, 1.0)
+	var speed := peak_speed * pow(1.0 - progress, 1.5)
+	return direction * speed
+
+
+func player_movement_velocity() -> Vector3:
+	return _dodge_velocity(_player_dodge_direction, _player_dodge_time,
+		_player_dodge_duration, _player_dodge_peak_speed)
+
+
+func _advance_action_followup(character: Character, followups: Array[String]) -> void:
+	if character.action_time > 0.0 or followups.is_empty():
+		return
+	var clip: String = followups.pop_front()
+	var loop_duration := 0.0
+	match clip:
+		FightLibrary.SLIDE_LOOP:
+			loop_duration = SLIDE_LOOP_HOLD
+		FightLibrary.NINJA_JUMP_IDLE_LOOP:
+			loop_duration = JUMP_LOOP_HOLD
+		FightLibrary.IDLE_SHIELD_LOOP:
+			loop_duration = GUARD_LOOP_HOLD
+	if loop_duration > 0.0:
+		if not character.play_fight_loop_for(clip, loop_duration):
+			followups.clear()
+	elif character.play_fight(clip) <= 0.0:
+		followups.clear()
 
 
 func _attack_tint(clip: String) -> Color:
@@ -395,8 +486,6 @@ func attack() -> void:
 		return
 	if game._visual.action_time > 0:
 		return
-	var direction: Vector3 = enemy.position - game._player.position
-	game._visual.rotation.y = atan2(-direction.x, -direction.z)
 	if _time - _last_player_attack > COMBO_WINDOW:
 		_player_combo = 0
 
@@ -470,6 +559,13 @@ func evade() -> void:
 	var length: float = game._visual.play_fight(clip)
 	if length <= 0:
 		return
+	if not sword_mode:
+		if clip == FightLibrary.SLIDE_START:
+			_start_player_dodge_motion(length + SLIDE_LOOP_HOLD,
+				PLAYER_SLIDE_PEAK_SPEED)
+		else:
+			_start_player_dodge_motion(length + JUMP_LOOP_HOLD,
+				PLAYER_JUMP_PEAK_SPEED)
 	var evade_point: Vector3 = game._visual.global_position + Vector3.UP * 1.05
 	if sword_mode:
 		combat_fx.call("spawn_guard", evade_point, Color(0.48, 0.86, 1.0), "PARRY")
@@ -488,21 +584,12 @@ func evade() -> void:
 
 
 func _advance_player_followup() -> void:
-	if game._visual.action_time > 0.0 or _player_followups.is_empty():
-		return
-	var clip: String = _player_followups.pop_front()
-	if game._visual.play_fight(clip) <= 0.0:
-		_player_followups.clear()
+	_advance_action_followup(game._visual, _player_followups)
 
 
 func _advance_enemy_followup() -> void:
-	if not is_instance_valid(enemy_visual):
-		return
-	if enemy_visual.action_time > 0.0 or _enemy_followups.is_empty():
-		return
-	var clip: String = _enemy_followups.pop_front()
-	if enemy_visual.play_fight(clip) <= 0.0:
-		_enemy_followups.clear()
+	if is_instance_valid(enemy_visual):
+		_advance_action_followup(enemy_visual, _enemy_followups)
 
 
 func _choose_enemy_attack() -> String:
@@ -566,6 +653,12 @@ func _try_enemy_evade(distance: float) -> bool:
 		return false
 	_enemy_followups = _valid_followups(enemy_visual._fight_driver, followups)
 	_enemy_guarding = is_guard
+	if not is_guard:
+		var loop_hold := SLIDE_LOOP_HOLD if clip == FightLibrary.SLIDE_START \
+			else JUMP_LOOP_HOLD
+		var dodge_speed := ENEMY_SLIDE_PEAK_SPEED if clip == FightLibrary.SLIDE_START \
+			else ENEMY_JUMP_PEAK_SPEED
+		_start_enemy_dodge_motion(length + loop_hold, dodge_speed)
 	var evade_duration := length + _followup_duration(
 		enemy_visual._fight_driver, _enemy_followups)
 	_enemy_invulnerable = evade_duration
@@ -601,6 +694,8 @@ func _physics_process(delta: float) -> void:
 	enemy_cooldown = maxf(0.0, enemy_cooldown - delta)
 	_enemy_invulnerable = maxf(0.0, _enemy_invulnerable - delta)
 	_player_invulnerable = maxf(0.0, _player_invulnerable - delta)
+	_player_dodge_time = maxf(0.0, _player_dodge_time - delta)
+	_enemy_dodge_time = maxf(0.0, _enemy_dodge_time - delta)
 	_enemy_dash_cooldown = maxf(0.0, _enemy_dash_cooldown - delta)
 	_enemy_evade_cooldown = maxf(0.0, _enemy_evade_cooldown - delta)
 	if _time - _last_player_attack > COMBO_WINDOW:
@@ -632,7 +727,17 @@ func _physics_process(delta: float) -> void:
 
 	var direction: Vector3 = game._player.position - enemy.position
 	var distance := Vector2(direction.x, direction.z).length()
-	enemy_visual.rotation.y = atan2(-direction.x, -direction.z)
+	var turn_weight := 1.0 - exp(-16.0 * delta)
+	var player_facing := enemy.position - game._player.position
+	player_facing.y = 0.0
+	if player_facing.length_squared() > 0.001:
+		var player_yaw := atan2(-player_facing.x, -player_facing.z)
+		game._visual.rotation.y = lerp_angle(game._visual.rotation.y, player_yaw, turn_weight)
+	var enemy_facing := direction
+	enemy_facing.y = 0.0
+	if enemy_facing.length_squared() > 0.001:
+		var enemy_yaw := atan2(-enemy_facing.x, -enemy_facing.z)
+		enemy_visual.rotation.y = lerp_angle(enemy_visual.rotation.y, enemy_yaw, turn_weight)
 	if _enemy_dashing and enemy_visual.action_time <= 0.0:
 		_enemy_dashing = false
 	if distance > 4.5 and _enemy_dash_cooldown <= 0.0 \
@@ -653,12 +758,16 @@ func _physics_process(delta: float) -> void:
 			combat_fx.call("spawn_dodge", enemy_visual.global_position,
 				_attack_tint(dash_clip))
 
-	var can_move := distance > 1.9 and _enemy_hit < 0.0 \
+	var can_approach := distance > 1.9 and _enemy_hit < 0.0 \
 			and (enemy_visual.action_time <= 0.0 or _enemy_dashing)
+	var can_move := can_approach or _enemy_dodge_time > 0.0
 	var move_speed := 2.7
 	if _enemy_dashing:
 		move_speed = 4.2
-	var velocity := direction.normalized() * move_speed if can_move else Vector3.ZERO
+	var velocity := direction.normalized() * move_speed if can_approach else Vector3.ZERO
+	if _enemy_dodge_time > 0.0:
+		velocity = _dodge_velocity(_enemy_dodge_direction, _enemy_dodge_time,
+			_enemy_dodge_duration, _enemy_dodge_peak_speed)
 	enemy.velocity.x = velocity.x
 	enemy.velocity.z = velocity.z
 	enemy.velocity.y = 0.0 if enemy.is_on_floor() else enemy.velocity.y - 24.0 * delta
@@ -790,6 +899,14 @@ func reset() -> void:
 	_enemy_attack_range = REACH
 	_player_invulnerable = 0.0
 	_enemy_invulnerable = 0.0
+	_player_dodge_direction = Vector3.ZERO
+	_player_dodge_time = 0.0
+	_player_dodge_duration = 0.0
+	_player_dodge_peak_speed = 0.0
+	_enemy_dodge_direction = Vector3.ZERO
+	_enemy_dodge_time = 0.0
+	_enemy_dodge_duration = 0.0
+	_enemy_dodge_peak_speed = 0.0
 	_player_followups.clear()
 	_enemy_followups.clear()
 	_enemy_guarding = false

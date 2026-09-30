@@ -329,6 +329,16 @@ func play_fight(clip: String) -> float:
 
 
 func play_fight_loop(clip: String) -> bool:
+	return _play_fight_loop(clip, 0.0)
+
+
+func play_fight_loop_for(clip: String, duration: float) -> bool:
+	if duration <= 0.0:
+		return false
+	return _play_fight_loop(clip, duration)
+
+
+func _play_fight_loop(clip: String, duration: float) -> bool:
 	if not prepare_fight() or not _fight_driver.play_loop(clip):
 		return false
 	if cast_layer != null:
@@ -337,7 +347,7 @@ func play_fight_loop(clip: String) -> bool:
 		cast_layer.influence = 0.0
 	animation.pause()
 	fight_loop = true
-	action_time = 0.0
+	action_time = duration
 	_fight_driver.sync_pose()
 	return true
 
@@ -363,5 +373,6 @@ func _physics_process(delta: float) -> void:
 	action_time = maxf(0.0, action_time - delta)
 	if action_time == 0:
 		state = "" # Allow the next motion update to leave the one-shot pose.
+		fight_loop = false # Timed combat loops hand off cleanly to their exit clip.
 		if _fight_driver != null:
 			_fight_driver.stop()

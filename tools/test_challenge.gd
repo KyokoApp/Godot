@@ -77,6 +77,14 @@ func _run() -> void:
 		"Loop idle UAL2 tidak dapat dimainkan")
 	_check(challenge.enemy_visual.fight_loop, "Loop UAL2 tidak tetap aktif")
 	challenge.enemy_visual.cancel_fight()
+	_check(game._visual.play_fight_loop_for(FightLibrary.SLIDE_LOOP, 0.24),
+		"Slide_Loop bertimer tidak dapat dimainkan")
+	_check(game._visual.fight_loop and game._visual.action_time > 0.0,
+		"Slide_Loop tidak masuk mode loop bertimer")
+	_manual_character_frames(game._visual, 20)
+	_check(not game._visual.fight_loop and game._visual.action_time == 0.0,
+		"Slide_Loop tidak selesai bersih setelah durasi pendek")
+	game._visual.cancel_fight()
 	# Double-start must be ignored.
 	var id: int = challenge.enemy.get_instance_id()
 	challenge.start()
@@ -131,7 +139,22 @@ func _run() -> void:
 	challenge.evade()
 	_check(game._visual._fight_driver.animation.current_animation
 		== FightLibrary.SLIDE_START, "Slide_Start UAL2 tidak dimainkan")
+	_check(challenge.player_movement_velocity().length() > 1.0,
+		"Slide dodge tidak menghasilkan gerakan menjauh")
+	challenge._enemy_dash_cooldown = 100.0
+	var slide_origin: Vector3 = game._player.global_position
+	for frame in range(8):
+		game._physics_process(1.0 / 60.0)
+		game._visual._physics_process(1.0 / 60.0)
+		challenge._physics_process(1.0 / 60.0)
+	_check(Vector2(game._player.position.x - slide_origin.x,
+		game._player.position.z - slide_origin.z).length() > 0.15,
+		"Slide dodge tidak menggerakkan badan pemain")
+	var slide_followups: Array[String] = [FightLibrary.SLIDE_LOOP, FightLibrary.SLIDE_EXIT]
+	_check(challenge._followup_duration(game._visual._fight_driver, slide_followups) < 1.0,
+		"Slide_Loop masih ditahan sebagai klip dua detik")
 	game._visual.cancel_fight()
+	challenge._player_dodge_time = 0.0
 	challenge.player_cooldown = 0.0
 	challenge._player_followups.clear()
 	challenge.evade()
