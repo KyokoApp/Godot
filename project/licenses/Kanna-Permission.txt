@@ -1,0 +1,33 @@
+Kanna — archived character model
+Original author account embedded in the supplied VRM: Animeit.
+Original archive: https://github.com/KyokoApp/Unity/tree/archive
+Paths: google_drive/OC-Kanna.vrm; project/packs/char_assets/mannequin/kanna.glb
+Both source files have git blob 070e57256db556c2611d074d7d285d825c2788de.
+Runtime derivative: assets/characters/kanna/kanna.glb
+
+The original metadata permits avatar, commercial and violent use and labels
+redistribution "Redistribution_Prohibited". It is retained in GLB asset.extras.
+No claim that Kanna is CC0 or that the project owns this model is made.
+
+ADDITIONAL PROJECT-SPECIFIC PERMISSION REPORTED BY THE OWNER
+The project owner relayed this follow-up from the account previously identified
+in the conversation as Naxzed:
+「カンナというキャラクターについても許可します。ライセンスまたはクレジットに私のアカウント名を含めてください。」
+Translation: I also permit the character called Kanna. Please include my
+account name in the license or credits.
+
+Permission-account credit: Naxzed
+https://hub.vroid.com/en/users/43470460
+Original model metadata credit: Animeit (preserved, not replaced).
+The account-to-author relationship has not been independently verified by the
+coding assistant. This records the permission and attribution instruction as
+reported by the owner, not a new public license. The owner should retain the
+original conversation. Unrestricted sublicensing or store rights are not granted
+by this notice. The owner explicitly requested publishing this prototype build.
+
+Changes: repackaged VRM as native GLB; base-color maps <=1024px; soft lit/toon
+materials; rest-space retarget from UAL animations including casting. Original
+geometry/skinning retained. No VRM spring-bone simulation. Portrait is rendered offline from the actual model/texture data with
+tools/render_character_portrait.py (the archive thumbnail index incorrectly
+points to a body texture atlas, not a face). Kanna is heavier than the other skins
+(194,476 triangles, 43 materials); phone performance must be measured.

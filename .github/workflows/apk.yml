@@ -1,0 +1,555 @@
+name: apk
+# Build APK A-Sekai.
+# Gerbang WAJIB di urutan ini:
+#   1. lint sintaks + cek inferensi tipe (cepat, tanpa Godot)
+#   2. import proyek  (Godot mengisi cache .godot/)
+#   3. UJI COMPILE    (SEMUA .gd, dengan engine sungguhan)
+#   4. baru ekspor APK
+# Langkah 3 dulu tidak ada, dan itulah sebabnya bug "layar biru" lolos
+# sampai ke HP pengguna. Jangan dihapus.
+
+on:
+  push:
+    branches: [main, arena/01a0eaf5-godot]
+  workflow_dispatch:
+
+concurrency: apk
+
+permissions:
+  contents: write
+
+env:
+  GVER: 4.5.2
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # --- 1. lint + cek tipe -------------------------------------------
+      - name: Lint GDScript (gdparse)
+        run: |
+          pip install -q gdtoolkit
+          FAIL=0
+          for f in $(find project tools -name "*.gd"); do
+            if ! out=$(gdparse "$f" 2>&1); then
+              echo "::error::parse error di $f :: $(echo "$out" | head -5 | tr '\n' ' ')"
+              FAIL=1
+            fi
+          done
+          [ "$FAIL" = 0 ] && echo "semua .gd lolos parse" || exit 1
+          gdlint project tools
+          # Cek inferensi tipe. gdparse hanya cek sintaks, dan kelas bug
+          # yang muncul di device adalah 'Cannot infer the type of ...'.
+          python3 tools/check_scripts.py .
+          python3 tools/sync_credits.py --check
+          python3 tools/test_chunk_content.py
+
+      # --- 2. dependensi + Godot ----------------------------------------
+      - name: Dependensi sistem
+        run: |
+          sudo apt-get update -qq || true
+          sudo apt-get install -y -qq --no-install-recommends \
+            libx11-6 libxkbcommon0 libxinerama1 libxcursor1 libxi6 \
+            libxrandr2 libxext6 libxrender1 libgl1 libegl1 libasound2 \
+            fontconfig libfontconfig1 unzip zip xvfb xauth mesa-vulkan-drivers
+
+      - name: Unduh Godot 4.5.2
+        run: |
+          curl -sL -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GVER}-stable/Godot_v${GVER}-stable_linux.x86_64.zip"
+          unzip -qo godot.zip
+          mv Godot_v${GVER}-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Siapkan keystore debug
+        run: |
+          mkdir -p "$HOME/.config/godot" build
+          # Keystore PERMANEN ikut repo. Kalau di-generate tiap build, tiap
+          # APK punya kunci berbeda dan Android menolak install di atas app
+          # lama -> "bentrok"/konflik, user tidak bisa update.
+          if [ ! -f "keystore/debug.keystore" ]; then
+            echo "::error::keystore/debug.keystore hilang — signature akan berubah"
+            exit 1
+          fi
+          JAVA_DIR="$(dirname "$(dirname "$(readlink -f "$(which java)")")")"
+          cat > "$HOME/.config/godot/editor_settings-4.5.tres" <<SEOF
+          [gd_resource type="EditorSettings" format=1]
+
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_SDK_ROOT"
+          export/android/java_sdk_path = "$JAVA_DIR"
+          export/android/debug_keystore = "$GITHUB_WORKSPACE/keystore/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          SEOF
+
+      - name: Unduh template ekspor Android
+        run: |
+          curl -fL -o templates.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GVER}-stable/Godot_v${GVER}-stable_export_templates.tpz"
+          mkdir -p "$HOME/.local/share/godot/export_templates/${GVER}.stable"
+          unzip -jo templates.tpz templates/android_debug.apk \
+            -d "$HOME/.local/share/godot/export_templates/${GVER}.stable"
+
+      - name: Import proyek
+        run: ./godot --headless --path project --import --editor --quit
+
+      # --- 3. GERBANG: compile semua skrip ------------------------------
+      - name: "Uji COMPILE semua skrip (gerbang wajib)"
+        run: |
+          timeout 300 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/compile_check.gd" 2>&1 | tee compile.log
+          if ! grep -q "HASIL: OK" compile.log; then
+            echo "::error::compile check GAGAL"
+            grep -E "SCRIPT ERROR|Parse Error|compile-check|at:" compile.log | head -60 \
+              | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          echo "semua skrip lolos kompilasi engine"
+
+      - name: Tes artefak arena dan combat UAL2
+        run: |
+          set +e
+          timeout 180 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_challenge.gd" 2>&1 | tee challenge.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' challenge.log; then
+            grep -E "\[[0-9]+\]|ERROR|signal|HASIL|UAL2|Challenge|Fight|Missing" challenge.log | head -10 | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[challenge-test] HASIL: OK' challenge.log
+
+      - name: Tes joystick dan gerak (headless)
+        run: |
+          timeout 60 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_movement.gd"
+
+      - name: Tes mannequin dan animasi tulang
+        run: |
+          timeout 60 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_mannequin.gd"
+
+      - name: Tes retarget Miku, casting dan switch
+        run: |
+          set +e
+          timeout 120 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_skin_switch.gd" 2>&1 | tee skin-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' skin-test.log; then
+            exit 1
+          fi
+          grep -F '[skin-switch-test] HASIL: OK' skin-test.log
+
+      - name: Tes spring rambut dan kontak jejak api
+        run: |
+          set +e
+          timeout 120 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_motion_flair.gd" 2>&1 | tee motion-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' motion-test.log; then
+            tail -60 motion-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[motion-flair-test] HASIL: OK' motion-test.log
+
+      - name: Tes mannequin dan kontrol performa
+        run: |
+          set +e
+          timeout 90 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_performance.gd" 2>&1 | tee performance-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' performance-test.log; then
+            tail -40 performance-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[performance-test] HASIL: OK' performance-test.log
+
+      - name: Tes pet api, attack, collision dan cleanup
+        run: |
+          set +e
+          timeout 90 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_fire_pet.gd" 2>&1 | tee fire-pet-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' fire-pet-test.log; then
+            tail -40 fire-pet-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[fire-pet-test] HASIL: OK' fire-pet-test.log
+
+      - name: Tes pulau, collision, kamera dan multitouch
+        run: |
+          timeout 90 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_island_camera.gd"
+
+      - name: Tes mask dan streaming rumput
+        run: |
+          set +e
+          timeout 90 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_grass.gd" 2>&1 | tee grass-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' grass-test.log; then
+            tail -40 grass-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[grass-test] HASIL: OK' grass-test.log
+
+      - name: Render shader rumput (Mobile Vulkan software)
+        run: |
+          set +e
+          timeout 180 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --audio-driver Dummy --resolution 480x270 \
+            --script "$GITHUB_WORKSPACE/tools/test_grass.gd" -- --render 2>&1 | tee grass-render.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' grass-render.log; then
+            tail -40 grass-render.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[grass-test] HASIL: OK' grass-render.log
+
+      - name: Render projectile dan impact (Mobile Vulkan software)
+        run: |
+          set +e
+          timeout 120 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --audio-driver Dummy --resolution 480x270 \
+            --script "$GITHUB_WORKSPACE/tools/test_fire_render.gd" 2>&1 | tee fire-render.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' fire-render.log; then
+            tail -40 fire-render.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[fire-render-test] HASIL: OK' fire-render.log
+
+      - name: Simpan screenshot regresi VFX
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fire-render-screenshots
+          path: ~/.local/share/godot/app_userdata/**/fire-*-test.png
+          if-no-files-found: ignore
+
+      - name: Tes HUD dan multitouch jalan + attack (Mobile Vulkan)
+        run: |
+          set +e
+          timeout 180 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --audio-driver Dummy --resolution 640x360 \
+            --script "$GITHUB_WORKSPACE/tools/test_hud.gd" -- --render 2>&1 | tee hud-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' hud-test.log; then
+            echo "::error::HUD engine exit status: $STATUS"
+            tail -50 hud-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[hud-test] HASIL: OK' hud-test.log
+
+      - name: Render casting upper-body dan pemulihan pose (Mobile Vulkan)
+        run: |
+          set +e
+          timeout 180 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --audio-driver Dummy --resolution 480x270 \
+            --script "$GITHUB_WORKSPACE/tools/test_cast_render.gd" 2>&1 | tee cast-render.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' cast-render.log; then
+            tail -60 cast-render.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[cast-render-test] HASIL: OK' cast-render.log
+
+      - name: Render rambut dan api tapak 3D (Mobile Vulkan)
+        run: |
+          set +e
+          timeout 180 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --audio-driver Dummy --resolution 480x270 \
+            --script "$GITHUB_WORKSPACE/tools/test_motion_flair_render.gd" 2>&1 | tee motion-render.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' motion-render.log; then
+            tail -60 motion-render.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[motion-flair-render-test] HASIL: OK' motion-render.log
+
+      - name: Tes speed hanya di luar arena
+        run: |
+          set +e
+          timeout 120 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_speed.gd" 2>&1 | tee speed-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' speed-test.log; then
+            tail -10 speed-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[speed-test] HASIL: OK' speed-test.log
+
+      - name: Render sinar bulan dan occlusion (Mobile Vulkan)
+        run: |
+          set +e
+          timeout 180 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --audio-driver Dummy --resolution 480x270 \
+            --script "$GITHUB_WORKSPACE/tools/test_god_rays.gd" 2>&1 | tee god-rays.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' god-rays.log; then
+            tail -60 god-rays.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[god-rays-test] HASIL: OK' god-rays.log
+
+      - name: Simpan screenshot sinar bulan
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: moon-rays-screenshots
+          path: ~/.local/share/godot/app_userdata/**/moon-rays-test.png
+
+      - name: Render arena, collision dan vegetation (Mobile Vulkan)
+        run: |
+          set +e
+          timeout 180 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --audio-driver Dummy --resolution 480x270 \
+            --script "$GITHUB_WORKSPACE/tools/test_arena.gd" 2>&1 | tee arena-render.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' arena-render.log; then
+            tail -60 arena-render.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[arena-test] HASIL: OK' arena-render.log
+
+      - name: Simpan screenshot motion flair
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: motion-flair-screenshots
+          path: ~/.local/share/godot/app_userdata/**/motion-*-test.png
+          if-no-files-found: ignore
+
+      - name: Simpan screenshot casting
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: casting-screenshots
+          path: ~/.local/share/godot/app_userdata/**/casting-*-test.png
+          if-no-files-found: ignore
+
+      - name: Simpan screenshot HUD
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hud-screenshots
+          path: ~/.local/share/godot/app_userdata/**/hud-*-test.png
+          if-no-files-found: ignore
+
+      - name: Tes audio mixer, jarak, panning, occlusion dan langkah
+        run: |
+          set +e
+          timeout 120 ./godot --headless --audio-driver Dummy --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_audio.gd" 2>&1 | tee audio-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' audio-test.log; then
+            tail -50 audio-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[audio-test] HASIL: OK' audio-test.log
+
+      - name: Render malam, bintang, bulan dan keterbacaan tanah (Mobile Vulkan)
+        run: |
+          set +e
+          timeout 120 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --audio-driver Dummy --resolution 480x270 \
+            --script "$GITHUB_WORKSPACE/tools/test_night.gd" 2>&1 | tee night-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' night-test.log; then
+            tail -50 night-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[night-test] HASIL: OK' night-test.log
+
+      - name: Simpan screenshot malam
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: night-screenshots
+          path: ~/.local/share/godot/app_userdata/**/night-*-test.png
+          if-no-files-found: ignore
+
+      - name: Tes aset alam, LOD rumput, occlusion dan streaming
+        run: |
+          set +e
+          timeout 180 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_world_details.gd" 2>&1 | tee world-details.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' world-details.log; then
+            tail -50 world-details.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[world-details-test] HASIL: OK' world-details.log
+
+      - name: Render world nature + grass LOD (Mobile Vulkan)
+        run: |
+          set +e
+          timeout 240 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --audio-driver Dummy --resolution 480x270 \
+            --script "$GITHUB_WORKSPACE/tools/test_world_details.gd" -- --render 2>&1 | tee world-render.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' world-render.log; then
+            tail -50 world-render.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[world-details-test] HASIL: OK' world-render.log
+
+      - name: Tes sungai danau, collision dan shader air (Mobile Vulkan)
+        run: |
+          timeout 120 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_water.gd"
+          set +e
+          timeout 240 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --audio-driver Dummy --resolution 480x270 \
+            --script "$GITHUB_WORKSPACE/tools/test_water.gd" -- --render 2>&1 | tee water-render.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' water-render.log; then
+            tail -60 water-render.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[water-test] HASIL: OK' water-render.log
+
+      - name: Simpan screenshot air
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: water-screenshots
+          path: ~/.local/share/godot/app_userdata/**/water-*-test.png
+          if-no-files-found: ignore
+
+      - name: Simpan screenshot world
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: world-screenshots
+          path: ~/.local/share/godot/app_userdata/**/world-*-test.png
+          if-no-files-found: ignore
+
+      - name: Tes warmup GPU, skip, boot marker dan cleanup (Mobile Vulkan)
+        run: |
+          set +e
+          timeout 240 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --audio-driver Dummy --resolution 480x270 \
+            --script "$GITHUB_WORKSPACE/tools/test_warmup.gd" 2>&1 | tee warmup-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' warmup-test.log; then
+            tail -60 warmup-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[warmup-test] HASIL: OK' warmup-test.log
+          grep -F '[warmup-test] report=' warmup-test.log | while IFS= read -r line; do echo "::notice::$line"; done
+
+      - name: Tes validasi updater
+        run: |
+          timeout 60 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_update.gd"
+          timeout 60 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_chunks.gd"
+          timeout 60 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_launcher.gd"
+
+      - name: Export content pack
+        run: |
+          mkdir -p build
+          ./godot --headless --path project --export-pack "Content" \
+            "$GITHUB_WORKSPACE/build/content.pck"
+          python3 tools/make_manifest.py
+          python3 tools/chunk_content.py
+          mkdir -p build/pack-test
+          timeout 60 ./godot --headless --path build/pack-test \
+            --script "$GITHUB_WORKSPACE/tools/test_pack.gd" -- "$GITHUB_WORKSPACE/build/content.pck"
+
+      # --- 4. ekspor ---------------------------------------------------
+      - name: Export APK
+        run: |
+          mkdir -p build
+          ./godot --headless --path project \
+            --export-debug "Android" "$GITHUB_WORKSPACE/build/asekai.apk" \
+            2>&1 | tee build/export.log
+          test -f build/asekai.apk || { echo "::error::APK tidak terbentuk"; exit 1; }
+          ls -la build/asekai.apk
+          set +e
+          python3 -u tools/test_incremental_export.py 2>&1 | tee build/incremental-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' build/incremental-test.log; then
+            tail -10 build/incremental-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[incremental-export] HASIL: OK' build/incremental-test.log
+          grep -F '[incremental-export] script-only delta:' build/incremental-test.log | while IFS= read -r line; do echo "::notice::$line"; done
+
+      - name: Terbitkan build ke GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA=$(sha256sum build/asekai.apk | cut -d' ' -f1)
+          echo "$SHA  asekai.apk" > build/asekai.apk.sha256
+          TAG="build-$(git rev-parse --short HEAD)"
+          {
+            echo "## A-Sekai — build \`$(git rev-parse --short HEAD)\`"
+            echo
+            echo "Updater v2: pasang APK ini sekali menimpa app lama (jangan uninstall). Update berikutnya hanya blok berubah."
+            echo "Install: unduh \`asekai.apk\` -> izinkan sumber tak dikenal -> buka."
+            echo
+            echo '```'
+            echo "$SHA  asekai.apk"
+            echo '```'
+          } > build/NOTES.md
+          gh release create "$TAG" build/asekai.apk build/asekai.apk.sha256 \
+            build/content.pck build/content.json build/content-v2.json build/chunks/*.bin \
+            --target "$GITHUB_SHA" --title "A-Sekai $TAG" \
+            --notes-file build/NOTES.md \
+            || gh release upload "$TAG" build/asekai.apk build/asekai.apk.sha256 \
+              build/content.pck build/content.json build/content-v2.json build/chunks/*.bin --clobber
+          echo "rilis: $TAG"
