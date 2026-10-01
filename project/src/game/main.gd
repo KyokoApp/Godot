@@ -153,6 +153,7 @@ func _build_hud() -> void:
 	_joystick = Joystick.new()
 	layer.add_child(_joystick)
 	_joystick.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_player.joystick = _joystick
 	_banner = ClipBanner.new()
 	_banner.character = _visual
 	_banner.extra = "geser kiri = jalan · tombol LOMPAT/JONGKOK"

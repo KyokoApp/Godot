@@ -117,6 +117,20 @@ jobs:
           fi
           echo "semua skrip lolos kompilasi engine"
 
+      - name: Uji 85 klip animasi ada di berkas GLB (headless)
+        run: |
+          set +e
+          timeout 90 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_clips.gd" 2>&1 | tee clips-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' clips-test.log; then
+            grep -E "::error::|ERROR|clips-test" clips-test.log | head -30 \
+              | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[clips-test] HASIL: OK' clips-test.log
+
       - name: Tes joystick dan gerak (headless)
         run: |
           set +e
