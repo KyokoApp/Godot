@@ -3,6 +3,7 @@ extends SceneTree
 ## semuanya lewat viewport supaya urutan _input/GUI asli ikut diuji.
 
 var _failures := 0
+var _fingers: Dictionary = {}
 
 
 func _init() -> void:
@@ -28,6 +29,23 @@ func _touch(index: int, point: Vector2, pressed: bool, canceled := false) -> voi
 	event.pressed = pressed
 	event.canceled = canceled
 	root.push_input(event, true)
+	# Di HP sungguhan Godot mengubah sentuhan jari PERTAMA menjadi mouse emulasi.
+	# Button bawaan (jongkok, lompat, katalog, TUTUP) hanya bereaksi pada event itu,
+	# sedangkan kontrol sentuh sendiri (analog, rune, orbit) justru mengabaikan
+	# emulasi — persis seperti yang diuji di sini.
+	var first_finger := _fingers.is_empty() and pressed and not canceled
+	var last_finger := _fingers.size() == 1 and not pressed and _fingers.has(index)
+	if first_finger or last_finger:
+		var mouse := InputEventMouseButton.new()
+		mouse.device = InputEvent.DEVICE_ID_EMULATION
+		mouse.button_index = MOUSE_BUTTON_LEFT
+		mouse.pressed = pressed
+		mouse.position = point
+		root.push_input(mouse, true)
+	if pressed and not canceled:
+		_fingers[index] = true
+	else:
+		_fingers.erase(index)
 
 
 func _drag(index: int, point: Vector2) -> void:
