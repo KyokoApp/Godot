@@ -183,7 +183,7 @@ created for A-Sekai, not copied from an icon pack or third-party image.
 seeded sparse stars, small moon with analytic crater marks and subtle halo.
 No downloaded sky image, shader-site code, or third-party celestial artwork.
 
-#### Archived nature and stone footpath
+#### Archived nature and stone footpath — riwayat, sudah dihapus
 Eleven actual glTF models from the user's `KyokoApp/Unity` archive
 `bca3e575fc26311ef5a43c0263e772a6d9fced20`,
 `project/packs/build_mode/objects/nature/`: trees, bushes, fern, flowers,
@@ -191,13 +191,19 @@ rocks, pebble and RockPath_Round_Wide. The archive credits identify these as
 **Quaternius Stylized Nature MegaKit, CC0**:
 https://quaternius.com/packs/stylizednaturemegakit.html .
 Full list/provenance: the Quaternius Nature notice below.
-Original glTF/bin geometry preserved; referenced PNGs resized to <=512px.
-`tools/fetch_nature_assets.py` reproduces retrieval and resizing.
-`grass_cards.png` and `meadow_cover.png` are original deterministic textures;
-regenerate with `tools/make_meadow_textures.py` (Pillow).
+Status: the eleven glTF/bin models, their model textures and
+`tools/fetch_nature_assets.py` were REMOVED from the repository in the
+100 m x 100 m grass-field milestone; they are no longer shipped in APK/PCK.
+The two files that remain in `project/assets/nature/` — `grass_cards.png`
+and `meadow_cover.png` — are original deterministic textures created for
+this project; regenerate with `tools/make_meadow_textures.py` (Pillow).
 
 
-### Water shader
+### Water shader — riwayat, sudah dihapus
+Status: `project/src/game/water/`, `project/assets/water/` dan generator
+`tools/make_water_textures.py` DIHAPUS pada milestone padang rumput 100 m.
+Tidak ada kode atau aset turunan GodotSSRWater yang dikirim lagi; notice MIT
+di bawah dipertahankan hanya sebagai riwayat provenance.
 - Marcel Bankmann, **GodotSSRWater**, MIT ©2023–present.
 - https://godotshaders.com/shader/transparent-water-shader-supporting-ssr/
 - https://github.com/marcelb/GodotSSRWater
@@ -210,7 +216,12 @@ regenerate with `tools/make_meadow_textures.py` (Pillow).
   demo textures/models/media copied. Generator: `tools/make_water_textures.py`.
 
 
-### Miku — skin prototipe / izin khusus
+### Miku — skin prototipe / izin khusus (riwayat, sudah dihapus)
+Status: model, portrait, retarget dan UI switch Miku DIHAPUS dari repository
+pada milestone padang rumput 100 m; tidak ada lagi `project/assets/characters/`,
+`tools/prepare_miku.py` atau `tools/render_character_portrait.py`. Catatan izin
+di bawah dipertahankan sebagai riwayat dan tidak lagi berlaku pada aset yang
+dikirim, karena tidak ada berkas Miku yang disertakan.
 - Pembuat: **Naxzed**; karakter Hatsune Miku milik Crypton Future Media, INC.
 - Link model yang diberikan pemilik proyek:
   https://hub.vroid.com/en/characters/2683662322917339267/models/691279642315813628
@@ -224,7 +235,10 @@ regenerate with `tools/make_meadow_textures.py` (Pillow).
   Simpan percakapan asli. Integrasi skin telah lolos import/compile, retarget,
   serta tes casting dan HUD Mobile Vulkan; FPS perangkat tetap harus diukur.
 
-### Kanna — skin dari arsip proyek lama
+### Kanna — skin dari arsip proyek lama (riwayat, sudah dihapus)
+Status: `kanna.glb`, portrait dan retarget Kanna DIHAPUS dari repository pada
+milestone padang rumput 100 m. Catatan izin di bawah dipertahankan sebagai
+riwayat; tidak ada berkas Kanna yang dikirim lagi.
 Sumber: `KyokoApp/Unity:archive`, `google_drive/OC-Kanna.vrm` dan
 `project/packs/char_assets/mannequin/kanna.glb` (blob yang sama
 `070e57256db556c2611d074d7d285d825c2788de`). Metadata menyebut **Animeit**,
@@ -247,14 +261,17 @@ Pemberitahuan komponen pihak ketiga engine:
 https://github.com/godotengine/godot/blob/4.5.2-stable/COPYRIGHT.txt
 
 ### Status penggunaan
-Karakter pilihan: Miku, Kanna, mannequin UAL. Aset nature/stone path aktif.
-Paket bangunan belum aktif. Model sumber tetap mengikuti ketentuan masing-masing.
+Karakter: mannequin UAL saja (Miku dan Kanna sudah dihapus). Dunia: padang
+rumput 100 m x 100 m dengan pagar batas; aset nature model, stone path, air,
+arena dan minimap sudah dihapus dan tidak dikirim. Yang masih dipakai dari
+folder nature hanya dua tekstur rumput orisinal. Paket bangunan belum aktif.
+Model sumber tetap mengikuti ketentuan masing-masing sepanjang masih dikirim.
 Sumber ikon unggahan tetap belum terverifikasi lisensinya; pemberitahuan hak
 cipta game tidak menghapus ketidakpastian tersebut.
 
 
-#### Perubahan model Miku & UI switch
-`tools/prepare_miku.py` mengemas VRM unggahan menjadi GLB dengan geometri/rig
+#### Perubahan model Miku & UI switch — riwayat, sudah dihapus
+`tools/prepare_miku.py` (sudah dihapus) mengemas VRM unggahan menjadi GLB dengan geometri/rig
 asli, mengecilkan base-color maps ke <=1024px, dan menyalin thumbnail asli
 sebagai portrait. Metadata hak model tetap disimpan dalam GLB `asset.extras`.
 Retarget 52 tulang berangkat dari metode Kanna proyek lama: delta rest-space,
@@ -267,14 +284,17 @@ adalah karya baru untuk proyek; tidak menyalin UI/icon dari Genshin atau HSR.
 `animation/hair_spring.gd`: solver pegas rotasi orisinal proyek pada tulang twintail
 Miku yang sudah ada; bukan plugin VRM atau simulasi tiap helai. Tidak mengganti
 lisensi model Naxzed. Tidak menambah aset model/tekstur rambut eksternal.
+Status: solver rambut DIHAPUS bersama model Miku; tidak lagi ada di repository.
 `foot_fire/`: geometri tapak/lidah api3D dan shader prosedural orisinal, dengan
 arah visual terinspirasi pet proyek sendiri. Palet perkarakter dan seluruh kode
 baru mengikuti hak karya orisinal proyek; tidak menyalin efek Genshin/HSR.
 
 
-### HUD and arena fog
+### HUD and arena fog — riwayat, arena sudah dihapus
 Original project work: HUD styling, rocky arena, procedural grey-white
 boundary aurora and localized fog. No external texture or audio added.
+Status: arena, aurora dan fog lokal DIHAPUS pada milestone padang rumput;
+yang tersisa hanya styling HUD orisinal dan pagar batas padang.
 
 
 #### Screen-space moon rays
@@ -290,6 +310,8 @@ boundary aurora and localized fog. No external texture or audio added.
 - Quaternius, CC0 1.0; the upstream notice and full CC0 legal code are reproduced below.
 - Source: `Universal Animation Library 2[Standard]/Unreal-Godot/UAL2_Standard.glb`.
 - Runtime: `project/assets/combat/UAL2_Standard.glb`, non-root-motion original.
+  Milestone padang rumput memakai SELURUH 43 klip UAL2 (dan 43 klip UAL1) lewat
+  katalog animasi `project/src/game/animation/catalog.gd` pada satu AnimationPlayer.
 - Combat library includes punches, hit, shield, sword combos, zombie attacks,
   slide and ninja jump variants. First encounter uses unarmed hook + hit reaction;
   weapon clips are available, not falsely presented as equipped weapons.

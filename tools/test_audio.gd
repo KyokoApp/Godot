@@ -123,10 +123,14 @@ func _test_steps() -> void:
 	for frame in range(20):
 		await physics_frame
 	_check(footsteps.get("emitted") == walking, "Langkah tidak berhenti")
-	_check(footsteps.surface_at(Vector3(0, 5, 0), Vector3.UP) == "stone",
-		"Setapak batu masih berbunyi tanah")
-	_check(footsteps.surface_at(Vector3(4, 5, 0), Vector3.UP) == "dirt",
-		"Bahu jalan bukan tanah")
-	_check(footsteps.surface_at(Vector3(0, 20, 0), Vector3.UP) == "stone", "Batu bukan stone")
+	# Padang 100 m: tengah = rumput, tepi pagar = tanah, lereng curam = batu.
+	_check(footsteps.surface_at(Vector3(0, 5, 0), Vector3.UP) == "grass",
+		"Tengah padang bukan rumput")
+	_check(footsteps.surface_at(Vector3(4, 5, 0), Vector3.UP) == "grass",
+		"Dekat tengah sudah berubah jadi tanah")
+	_check(footsteps.surface_at(Vector3(48, 5, 0), Vector3.UP) == "dirt",
+		"Tepi pagar bukan tanah")
+	_check(footsteps.surface_at(Vector3(0, 5, 0), Vector3(0, 0.3, 1)) == "stone",
+		"Lereng curam bukan batu")
 	game.queue_free()
 	await process_frame

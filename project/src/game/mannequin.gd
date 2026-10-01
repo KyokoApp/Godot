@@ -1,76 +1,114 @@
 extends Node3D
-## Model dan mocap asli dari arsip project, tanpa sistem combat/skin lama.
+## Mannequin UAL — satu-satunya karakter. Satu skeleton, dua perpustakaan animasi
+## (UAL1 + UAL2 = 85 klip) yang dimuat ke SATU AnimationPlayer, jadi transisi,
+## cross-fade, dan lapisan tubuh atas berjalan di clock yang sama.
+##
+## Perbaikan animasi yang dikerjakan di sini:
+##  1. Tidak ada lagi rig bayangan + penyalinan pose tiap frame (dulu UAL2 diputar
+##     di model tersembunyi lalu pose-nya disalin manual — lambat dan patah).
+##  2. Mode loop tiap klip disetel benar dari katalog (loop vs sekali vs tahan).
+##  3. Kecepatan main dicocokkan dengan langkah hasil ukur (tidak meluncur).
+##  4. Offset tanah per klip menjaga kaki tidak tenggelam di klip rendah.
 
-signal skin_changed(skin_id: String)
+signal clip_changed(clip: String)
 
-const FightLibrary = preload("res://src/game/combat/fight_library.gd")
-const HairSpring = preload("res://src/game/animation/hair_spring.gd")
-const KannaRig = preload("res://src/game/animation/kanna_rig.gd")
-const MikuRig = preload("res://src/game/animation/miku_rig.gd")
-const KANNA := "kanna"
-const Retarget = preload("res://src/game/animation/skin_retarget.gd")
-const MikuVisual = preload("res://src/game/animation/miku_visual.gd")
-const MANNEQUIN := "mannequin"
-const MIKU := "miku"
-const CastLayer = preload("res://src/game/animation/cast_layer.gd")
+enum Mode { LOCOMOTION, ACTION, SHOWCASE, HELD }
+
 const MODEL = preload("res://assets/mannequin/UAL1_Standard.glb")
+const COMBAT_MODEL = preload("res://assets/combat/UAL2_Standard.glb")
 const OUTLINE = preload("res://src/game/character_outline.gdshader")
-const IDLE := "Idle"
-const WALK := "Walk"
-const RUN := "Jog_Fwd"
-const RUN_ON := 2.8
-const RUN_OFF := 2.4
+const CastLayer = preload("res://src/game/animation/cast_layer.gd")
+const Catalog = preload("res://src/game/animation/catalog.gd")
+const Metrics = preload("res://src/game/animation/anim_metrics.gd")
+const IDLE := "Idle_Loop"
+const COMBAT_LIBRARY := "ual2"
+const FADE := 0.18
+const OFFSET_SPEED := 6.0
 
-var action_time := 0.0
-var fight_loop := false
-var hair: HairSpring
-var skin_id := MANNEQUIN
-var skin: Node3D
-var retarget: Retarget
-var source_skeleton: Skeleton3D
-var cast_layer: CastLayer
 var animation: AnimationPlayer
-var state := IDLE
-var _fight_driver: FightLibrary
-var _fight_sword_attachments: Dictionary[String, BoneAttachment3D] = {}
-var _fight_sword_meshes: Dictionary[String, Array] = {}
-var _fight_sword_enabled := false
-var _skins: Dictionary[String, Node3D] = {}
-var _retargets: Dictionary[String, Retarget] = {}
-var _source_meshes: Array[MeshInstance3D] = []
+var skeleton: Skeleton3D
+var cast_layer: CastLayer
+var metrics: Dictionary = {}
+var mode := Mode.LOCOMOTION
+var clip := IDLE
+var gait := IDLE
+var ground_offset := 0.0
+var playback_scale := 1.0
+var _hold_after := false
+var _action_left := 0.0
+var _model: Node3D
+var _library: AnimationLibrary
 
 
 func _ready() -> void:
 	var model: Node3D = MODEL.instantiate()
-	# Koreksi arah model yang digunakan pada mannequin project lama.
+	# Koreksi arah model yang dipakai project lama (menghadap -Z Godot).
 	model.rotation.y = PI
 	add_child(model)
+	_model = model
 	animation = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
-	for node in model.find_children("*", "MeshInstance3D", true, false):
+	skeleton = model.find_child("Skeleton3D", true, false) as Skeleton3D
+	if animation == null or skeleton == null:
+		push_error("Mannequin: AnimationPlayer/Skeleton3D hilang")
+		return
+	_merge_combat_library()
+	_apply_material()
+	_configure_clips()
+	metrics = Metrics.measure_catalog(animation, skeleton, Catalog)
+	animation.play(IDLE, 0.0)
+	animation.advance(0.0)
+	_setup_cast_layer()
+	print("[mannequin] %d klip dimuat, %d metrik terukur" % [
+		animation.get_animation_list().size(), metrics.size()])
+
+
+func _merge_combat_library() -> void:
+	# UAL2 punya tulang, rest pose, dan mesh yang sama; pustakanya dipindah ke
+	# AnimationPlayer utama supaya semua klip berbagi satu clock animasi.
+	var source: Node3D = COMBAT_MODEL.instantiate()
+	var source_player := source.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if source_player == null:
+		push_error("Mannequin: UAL2 tidak punya AnimationPlayer")
+		source.free()
+		return
+	_library = source_player.get_animation_library("")
+	if _library == null:
+		push_error("Mannequin: pustaka UAL2 kosong")
+		source.free()
+		return
+	animation.add_animation_library(COMBAT_LIBRARY, _library)
+	source.free()
+
+
+func _apply_material() -> void:
+	const MATERIAL := Color(0.68, 0.58, 0.84)
+	for node in _model.find_children("*", "MeshInstance3D", true, false):
 		var mesh := node as MeshInstance3D
-		_source_meshes.append(mesh)
 		var material := StandardMaterial3D.new()
-		material.albedo_color = Color(0.68, 0.58, 0.84)
+		material.albedo_color = MATERIAL
 		material.roughness = 0.85
 		var outline := ShaderMaterial.new()
 		outline.shader = OUTLINE
 		material.next_pass = outline
 		mesh.material_override = material
-	if animation == null:
-		push_error("Mannequin: AnimationPlayer hilang")
+
+
+func _configure_clips() -> void:
+	for entry in Catalog.entries():
+		var name: String = entry["name"]
+		var play_name: String = Catalog.play_name(name)
+		if not animation.has_animation(play_name):
+			push_error("Mannequin: klip hilang dari berkas: " + play_name)
+			continue
+		var source := animation.get_animation(play_name)
+		source.loop_mode = Animation.LOOP_LINEAR if Catalog.is_loop(name) \
+			else Animation.LOOP_NONE
+
+
+func _setup_cast_layer() -> void:
+	if not animation.has_animation(CastLayer.CLIP):
+		push_error("Mannequin: klip casting hilang")
 		return
-	for clip in [IDLE, WALK, RUN]:
-		if not animation.has_animation(clip):
-			push_error("Mannequin: klip hilang: " + clip)
-			return
-		animation.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
-	animation.play(IDLE)
-	animation.advance(0)
-	var skeleton := model.find_child("Skeleton3D", true, false) as Skeleton3D
-	if skeleton == null or not animation.has_animation(CastLayer.CLIP):
-		push_error("Mannequin: rig/klip casting hilang")
-		return
-	source_skeleton = skeleton
 	cast_layer = CastLayer.new()
 	cast_layer.name = "UpperBodyCast"
 	skeleton.add_child(cast_layer)
@@ -79,26 +117,105 @@ func _ready() -> void:
 		push_error("Mannequin: filter tulang casting kosong")
 
 
-func update_motion(speed: float) -> void:
-	if action_time > 0 or fight_loop:
+# ------------------------------------------------------------- lokomosi ----
+
+func natural_speed(name: String) -> float:
+	var measured: Dictionary = metrics.get(name, {})
+	var speed := float(measured.get("natural_speed", 0.0))
+	return speed if speed > 0.05 else 1.0
+
+
+func set_locomotion(name: String, playback_speed := 1.0) -> void:
+	if mode != Mode.LOCOMOTION:
+		# Klip pilihan panel atau aksi sekali jalan tidak boleh ditimpa pemain.
+		gait = name
 		return
+	gait = name
+	mode = Mode.LOCOMOTION
+	if name != clip:
+		_play(name, FADE, playback_speed)
+	else:
+		animation.speed_scale = clampf(playback_speed, 0.1, 3.0)
+
+
+func set_air_clip(name: String, playback_speed := 1.0) -> void:
+	# Klip udara dipilih pemain (lompat), bukan dari band kecepatan.
+	mode = Mode.LOCOMOTION
+	gait = name
+	if name != clip:
+		_play(name, 0.1, playback_speed)
+	else:
+		animation.speed_scale = clampf(playback_speed, 0.1, 3.0)
+
+
+func play_action(name: String) -> float:
+	var measured: Dictionary = metrics.get(name, {})
+	var length := float(measured.get("length", 0.0))
+	if length <= 0.0 or not animation.has_animation(Catalog.play_name(name)):
+		return 0.0
+	_hold_after = Catalog.holds_last_frame(name)
+	mode = Mode.ACTION
+	_action_left = length
+	_play(name, FADE, 1.0)
+	return length
+
+
+func play_showcase(name: String) -> void:
+	# Dipilih manual dari panel animasi: loop klip loop, tahan klip sekali.
+	_hold_after = Catalog.holds_last_frame(name)
+	mode = Mode.SHOWCASE if Catalog.is_loop(name) else Mode.ACTION
+	_action_left = length_of(name)
+	_play(name, FADE, 1.0)
+
+
+func return_to_locomotion() -> void:
+	_hold_after = false
+	_action_left = 0.0
+	mode = Mode.LOCOMOTION
+	_play(gait, 0.24, 1.0)
+
+
+func freeze_at_last_frame() -> void:
+	mode = Mode.HELD
+	_hold_after = true
+
+
+func current_label() -> String:
+	return Catalog.label_for(clip)
+
+
+func length_of(name: String) -> float:
+	var measured: Dictionary = metrics.get(name, {})
+	return float(measured.get("length", 0.0))
+
+
+func description_of(name: String) -> String:
+	var entry := Catalog.find(name)
+	return str(entry.get("desc", "")) if not entry.is_empty() else ""
+
+
+func set_playback_scale(value: float) -> void:
+	playback_scale = clampf(value, 0.1, 2.0)
+	# Hanya klip tampilan yang ikut lambat; lokomosi tetap sinkron dengan badan.
+	if animation != null and (mode == Mode.ACTION or mode == Mode.SHOWCASE):
+		animation.speed_scale = playback_scale
+
+
+func clip_length() -> float:
 	if animation == null:
-		return
-	var next := WALK
-	if speed < 0.05:
-		next = IDLE
-	elif speed >= RUN_ON or (state == RUN and speed >= RUN_OFF):
-		next = RUN
-	if next != state:
-		state = next
-		animation.play(state, 0.18)
-	match state:
-		WALK:
-			animation.speed_scale = clampf(speed / 1.8, 0.25, 1.5)
-		RUN:
-			animation.speed_scale = clampf(speed / 4.0, 0.6, 1.3)
-		_:
-			animation.speed_scale = 1.0
+		return 0.0
+	return animation.current_animation_length
+
+
+func progress() -> float:
+	var length := clip_length()
+	if length <= 0.0:
+		return 0.0
+	return clampf(animation.current_animation_position / length, 0.0, 1.0)
+
+
+func is_busy() -> bool:
+	return mode == Mode.ACTION or mode == Mode.SHOWCASE
 
 
 func start_cast() -> void:
@@ -106,273 +223,57 @@ func start_cast() -> void:
 		cast_layer.begin()
 
 
-func set_skin(selected: String) -> bool:
-	if selected not in [MANNEQUIN, MIKU, KANNA] or source_skeleton == null:
-		return false
-	if selected == skin_id:
-		return true
-	if selected != MANNEQUIN and not _skins.has(selected):
-		if not _load_skin(selected):
-			return false
-	for mesh in _source_meshes:
-		mesh.visible = selected == MANNEQUIN
-	for id: String in _skins:
-		_skins[id].visible = selected == id
-		_retargets[id].active = selected == id
-	if selected != MANNEQUIN:
-		skin = _skins[selected]
-		retarget = _retargets[selected]
-		retarget.transfer()
-	if hair != null:
-		hair.reset_motion()
-		hair.active = selected == MIKU
-	skin_id = selected
-	_update_fight_sword()
-	skin_changed.emit(skin_id)
-	return true
-
-
-func _load_skin(selected: String) -> bool:
-	var model := MikuVisual.create(self, source_skeleton, selected == KANNA)
-	if model == null:
-		return false
-	var driver := Retarget.new()
-	driver.name = "FinalPoseRetarget_" + selected
-	# Every retarget reads after CastLayer; only the selected driver stays active.
-	source_skeleton.add_child(driver)
-	var destination := model.find_child("Skeleton3D", true, false) as Skeleton3D
-	var mapping: Array = KannaRig.PAIRS if selected == KANNA else MikuRig.PAIRS
-	if not driver.configure(destination, mapping):
-		driver.queue_free()
-		model.queue_free()
-		return false
-	if selected == MIKU:
-		hair = HairSpring.new()
-		hair.name = "MikuHairSpring"
-		destination.add_child(hair)
-		hair.configure()
-	_skins[selected] = model
-	_retargets[selected] = driver
-	return true
-
-
-func foot_pose(left: bool) -> Transform3D:
-	var skeleton := source_skeleton if skin_id == MANNEQUIN else retarget.target
-	var ankle := "foot_l" if left else "foot_r"
-	var toe := "ball_l" if left else "ball_r"
-	if skin_id == MIKU:
-		ankle = "J_Bip_L_Foot" if left else "J_Bip_R_Foot"
-		toe = "J_Bip_L_ToeBase" if left else "J_Bip_R_ToeBase"
-	elif skin_id == KANNA:
-		ankle = "DEF-Left ankle" if left else "DEF-Right ankle"
-		toe = "DEF-Left toe" if left else "DEF-Right toe"
-	var bone := skeleton.find_bone(ankle)
-	var pose := skeleton.global_transform * skeleton.get_bone_global_pose(bone)
-	var tip := skeleton.find_bone(toe)
-	var forward := -global_basis.z
-	var sole_scale := 1.0
-	if tip >= 0:
-		var end := skeleton.global_transform * skeleton.get_bone_global_pose(tip)
-		forward = end.origin - pose.origin
-		sole_scale = clampf(forward.length() * 1.65 + 0.035, 0.20, 0.34) / 0.275
-	forward.y = 0
-	if forward.length_squared() > 0.00001:
-		forward = forward.normalized()
-		pose.basis = Basis(forward.cross(Vector3.UP) * sole_scale, Vector3.UP,
-			-forward * sole_scale)
-	return pose
-
-
-func foot_clearance(left: bool) -> float:
-	var skeleton := source_skeleton if skin_id == MANNEQUIN else retarget.target
-	var name := "foot_l" if left else "foot_r"
-	if skin_id == MIKU:
-		name = "J_Bip_L_Foot" if left else "J_Bip_R_Foot"
-	elif skin_id == KANNA:
-		name = "DEF-Left ankle" if left else "DEF-Right ankle"
-	var rest := skeleton.get_bone_global_rest(skeleton.find_bone(name))
-	return clampf(rest.origin.y * skeleton.global_basis.get_scale().y, 0.06, 0.18)
-
-
-func foot_stride_lift(left: bool) -> float:
-	# Use the source foot's real stance/swing to gate retarget contact tolerance.
-	# Final placement and size still use the selected skin's own ankle/toe bones.
-	var bone := source_skeleton.find_bone("foot_l" if left else "foot_r")
-	return source_skeleton.get_bone_global_pose(bone).origin.y \
-		- source_skeleton.get_bone_global_rest(bone).origin.y
-
-
-func set_fight_sword(enabled: bool) -> void:
-	_fight_sword_enabled = enabled
-	_update_fight_sword()
-
-
-func _update_fight_sword() -> void:
-	for pieces in _fight_sword_meshes.values():
-		for piece in pieces:
-			if is_instance_valid(piece):
-				piece.visible = false
-	if not _fight_sword_enabled:
-		return
-	var skeleton := source_skeleton
-	var bone_name := "hand_r"
-	if skin_id != MANNEQUIN:
-		if retarget == null:
-			return
-		skeleton = retarget.target
-		bone_name = "J_Bip_R_Hand" if skin_id == MIKU else "DEF-Right wrist"
-	if skeleton == null or skeleton.find_bone(bone_name) < 0:
-		return
-	var attachment := _fight_sword_attachments.get(skin_id) as BoneAttachment3D
-	if not is_instance_valid(attachment) or attachment.get_parent() != skeleton:
-		attachment = BoneAttachment3D.new()
-		attachment.name = "ArenaSwordAttachment_" + skin_id
-		attachment.bone_name = bone_name
-		skeleton.add_child(attachment)
-		_fight_sword_attachments[skin_id] = attachment
-		_fight_sword_meshes[skin_id] = _build_fight_sword(attachment)
-	for piece in _fight_sword_meshes[skin_id]:
-		if is_instance_valid(piece):
-			piece.visible = true
-
-
-func fight_sword_visible() -> bool:
-	for piece in _fight_sword_meshes.get(skin_id, []):
-		if is_instance_valid(piece) and piece.visible:
-			return true
-	return false
-
-
-func _build_fight_sword(parent: Node3D) -> Array[MeshInstance3D]:
-	var sword := Node3D.new()
-	sword.name = "OriginalTrainingSword"
-	parent.add_child(sword)
-	var pieces: Array[MeshInstance3D] = []
-	var steel := StandardMaterial3D.new()
-	steel.albedo_color = Color("dbe8f5")
-	steel.metallic = 0.72
-	steel.roughness = 0.24
-	steel.emission_enabled = true
-	steel.emission = Color("536a8c")
-	steel.emission_energy_multiplier = 0.16
-	var gold := StandardMaterial3D.new()
-	gold.albedo_color = Color("d8b36b")
-	gold.metallic = 0.64
-	gold.roughness = 0.31
-	var grip := StandardMaterial3D.new()
-	grip.albedo_color = Color("433956")
-	grip.roughness = 0.78
-	var blade := BoxMesh.new()
-	blade.size = Vector3(0.075, 0.72, 0.035)
-	pieces.append(_add_fight_weapon_piece(sword, blade, steel, Vector3(0, 0.53, 0)))
-	var tip := CylinderMesh.new()
-	tip.top_radius = 0.002
-	tip.bottom_radius = 0.038
-	tip.height = 0.16
-	tip.radial_segments = 4
-	pieces.append(_add_fight_weapon_piece(sword, tip, steel, Vector3(0, 0.97, 0)))
-	var guard := BoxMesh.new()
-	guard.size = Vector3(0.29, 0.045, 0.07)
-	pieces.append(_add_fight_weapon_piece(sword, guard, gold, Vector3(0, 0.15, 0)))
-	var handle := CylinderMesh.new()
-	handle.top_radius = 0.033
-	handle.bottom_radius = 0.033
-	handle.height = 0.24
-	pieces.append(_add_fight_weapon_piece(sword, handle, grip, Vector3(0, 0.02, 0)))
-	var pommel := SphereMesh.new()
-	pommel.radius = 0.052
-	pommel.height = 0.104
-	pieces.append(_add_fight_weapon_piece(sword, pommel, gold, Vector3(0, -0.12, 0)))
-	return pieces
-
-
-func _add_fight_weapon_piece(parent: Node3D, mesh: Mesh, material: Material,
-		local_position: Vector3) -> MeshInstance3D:
-	var piece := MeshInstance3D.new()
-	piece.mesh = mesh
-	piece.material_override = material
-	piece.position = local_position
-	parent.add_child(piece)
-	return piece
-
-
-func prepare_fight() -> bool:
-	if _fight_driver != null:
-		return true
-	if source_skeleton == null:
-		return false
-	_fight_driver = FightLibrary.new()
-	_fight_driver.name = "UAL2FightDriver"
-	add_child(_fight_driver)
-	if not _fight_driver.setup(source_skeleton):
-		_fight_driver.queue_free()
-		_fight_driver = null
-		return false
-	return true
-
-
-func play_fight(clip: String) -> float:
-	if not prepare_fight() or not _fight_driver.has_clip(clip):
-		return 0.0
-	var length := _fight_driver.play(clip)
-	if length <= 0.0:
-		return 0.0
-	fight_loop = false
-	if cast_layer != null:
-		cast_layer.playing = false
-		cast_layer.active = false
-		cast_layer.influence = 0.0
-	animation.pause()
-	_fight_driver.sync_pose()
-	action_time = length
-	return length
-
-
-func play_fight_loop(clip: String) -> bool:
-	return _play_fight_loop(clip, 0.0)
-
-
-func play_fight_loop_for(clip: String, duration: float) -> bool:
-	if duration <= 0.0:
-		return false
-	return _play_fight_loop(clip, duration)
-
-
-func _play_fight_loop(clip: String, duration: float) -> bool:
-	if not prepare_fight() or not _fight_driver.play_loop(clip):
-		return false
-	if cast_layer != null:
-		cast_layer.playing = false
-		cast_layer.active = false
-		cast_layer.influence = 0.0
-	animation.pause()
-	fight_loop = true
-	action_time = duration
-	_fight_driver.sync_pose()
-	return true
-
-
-func cancel_fight() -> void:
-	action_time = 0.0
-	fight_loop = false
-	state = IDLE
-	if _fight_driver != null:
-		_fight_driver.stop()
-	if animation != null:
-		animation.speed_scale = 1.0
-		animation.play(IDLE, 0.12)
+func _play(name: String, fade: float, playback_speed: float) -> void:
+	clip = name
+	var scale := playback_speed
+	if mode == Mode.ACTION or mode == Mode.SHOWCASE:
+		scale *= playback_scale
+	animation.speed_scale = clampf(scale, 0.1, 3.0)
+	animation.play(Catalog.play_name(name), fade)
+	animation.advance(0.0)
+	clip_changed.emit(clip)
 
 
 func _physics_process(delta: float) -> void:
-	if action_time <= 0:
-		if fight_loop and _fight_driver != null:
-			_fight_driver.advance(delta)
+	if animation == null:
 		return
-	if _fight_driver != null:
-		_fight_driver.advance(delta)
-	action_time = maxf(0.0, action_time - delta)
-	if action_time == 0:
-		state = "" # Allow the next motion update to leave the one-shot pose.
-		fight_loop = false # Timed combat loops hand off cleanly to their exit clip.
-		if _fight_driver != null:
-			_fight_driver.stop()
+	# Timer sendiri, bukan sinyal: deterministik di headless dan tidak bisa
+	# terlewat saat klip diganti cepat dari panel.
+	if mode == Mode.ACTION and _action_left > 0.0:
+		_action_left = maxf(0.0, _action_left - delta * maxf(animation.speed_scale, 0.01))
+		if _action_left <= 0.0:
+			if _hold_after:
+				mode = Mode.HELD
+				animation.pause()
+			else:
+				return_to_locomotion()
+	# Offset tanah halus: klip rendah (guling, meluncur) tidak menenggelamkan kaki.
+	var measured: Dictionary = metrics.get(clip, {})
+	var target := float(measured.get("ground_offset", 0.0))
+	ground_offset = lerpf(ground_offset, target, 1.0 - exp(-OFFSET_SPEED * delta))
+	_model.position.y = ground_offset
+
+
+# ----------------------------------------------- kontak kaki untuk efek ----
+
+func foot_pose(left: bool) -> Transform3D:
+	var bone := skeleton.find_bone("foot_l" if left else "foot_r")
+	if bone < 0:
+		return global_transform
+	return skeleton.global_transform * skeleton.get_bone_global_pose(bone)
+
+
+func foot_clearance(left: bool) -> float:
+	var bone := skeleton.find_bone("foot_l" if left else "foot_r")
+	if bone < 0:
+		return 0.1
+	var rest := skeleton.get_bone_global_rest(bone)
+	return clampf(rest.origin.y, 0.06, 0.18)
+
+
+func foot_stride_lift(left: bool) -> float:
+	var bone := skeleton.find_bone("foot_l" if left else "foot_r")
+	if bone < 0:
+		return 0.0
+	return skeleton.get_bone_global_pose(bone).origin.y \
+		- skeleton.get_bone_global_rest(bone).origin.y

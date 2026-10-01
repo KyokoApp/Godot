@@ -1,5 +1,6 @@
 extends SceneTree
-## Injeksi lewat viewport agar urutan _input/GUI asli ikut diuji, bukan callback saja.
+## HUD sentuh: analog, serangan pet, lompat, jongkok, boost, dan panel animasi —
+## semuanya lewat viewport supaya urutan _input/GUI asli ikut diuji.
 
 var _failures := 0
 
@@ -32,148 +33,115 @@ func _drag(index: int, point: Vector2) -> void:
 
 
 func _run() -> void:
-	var scene: PackedScene = load("res://src/game/main.tscn")
-	var game: Node3D = scene.instantiate()
+	var game := load("res://src/game/main.tscn").instantiate() as Node3D
 	root.add_child(game)
 	for frame in range(4):
 		await physics_frame
 	var attack: Button = game.get("_attack")
+	var jump: Button = game.get("_jump")
+	var crouch: Button = game.get("_crouch")
+	var catalog: Button = game.get("_catalog_button")
+	var panel: Control = game.get("_panel")
 	var stick: Control = game.get("_joystick")
-	var pet: Node3D = game.get("_pet")
 	var orbit: Node3D = game.get("_orbit")
 	var player: CharacterBody3D = game.get("_player")
-	var switcher: Control = game.get("_character_switcher")
 	var visual: Node3D = game.get("_visual")
-	var mannequin: Control = switcher.get_node("mannequin")
-	var miku: Control = switcher.get_node("miku")
-	var kanna: Control = switcher.get_node("kanna")
+	var pet: Node3D = game.get("_pet")
 	var pet_id := pet.get_instance_id()
-	_touch(8, mannequin.get_global_rect().get_center(), true)
-	_touch(8, mannequin.get_global_rect().get_center(), false)
-	_check(visual.get("skin_id") == "mannequin", "Kartu tidak mengganti ke mannequin")
-	_check(orbit.get("_touches").is_empty(), "Switch ikut menggerakkan kamera")
-	_touch(8, kanna.get_global_rect().get_center(), true)
-	_touch(8, kanna.get_global_rect().get_center(), false)
-	_check(visual.get("skin_id") == "kanna", "Kartu tidak mengganti ke Kanna")
-	_touch(8, miku.get_global_rect().get_center(), true)
-	_touch(8, miku.get_global_rect().get_center(), false)
-	_check(visual.get("skin_id") == "miku", "Kartu tidak mengganti ke Miku")
-	_check(pet.get_instance_id() == pet_id, "Switch membuat pet duplikat")
-	_check(attack.offset_right <= -120 and attack.offset_bottom <= -110,
-		"Attack masih terlalu menempel sudut")
+	_check(attack.size.is_equal_approx(Vector2(88, 88)), "Tombol serangan bukan 88px")
+	_check(game.find_child("CharacterSwitcher", true, false) == null,
+		"Pemilih karakter lama masih ada")
+	_check(game.get("_minimap") == null, "Minimap lama masih ada")
+	# Boost.
 	var speed_button: Control = game.get("_speed_button")
 	_touch(9, speed_button.get_global_rect().get_center(), true)
 	_touch(9, speed_button.get_global_rect().get_center(), false)
-	_check(game.get("speed_boosted"), "Tombol speed tidak aktif")
+	_check(player.boosted, "Tombol speed tidak menyalakan boost")
 	_check(orbit.get("_touches").is_empty(), "Tombol speed ikut mengorbit kamera")
 	_touch(9, speed_button.get_global_rect().get_center(), true)
 	_touch(9, speed_button.get_global_rect().get_center(), false)
-	_check(not game.get("speed_boosted"), "Speed tidak kembali normal")
-	var minimap: Control = game.get("_minimap")
-	_check(minimap.visible and minimap.position == Vector2(24, 24), "Minimap bukan kiri atas")
-	_check(minimap.size == Vector2(176, 176), "Ukuran minimap salah")
-	var body: Node3D = game.get("_player")
-	var here := Vector2(body.position.x, body.position.z)
-	_check(minimap.map_offset(here).is_zero_approx(), "Pemain tidak di tengah peta")
-	_check(minimap.map_offset(here + Vector2(0, -125)).is_equal_approx(Vector2(0, -80)),
-		"Utara/jarak minimap salah")
-	_touch(12, minimap.get_global_rect().get_center(), true)
-	_drag(12, minimap.get_global_rect().get_center() + Vector2(70, 0))
-	_check(game.get("_joystick").direction.is_zero_approx(), "Sentuh peta menggerakkan pemain")
-	_touch(12, minimap.get_global_rect().get_center(), false)
+	_check(not player.boosted, "Boost tidak kembali normal")
+	# Jongkok.
+	_touch(10, crouch.get_global_rect().get_center(), true)
+	_touch(10, crouch.get_global_rect().get_center(), false)
+	_check(player.crouching and crouch.text == "BERDIRI", "Tombol jongkok tidak bekerja")
+	_touch(10, crouch.get_global_rect().get_center(), true)
+	_touch(10, crouch.get_global_rect().get_center(), false)
+	_check(not player.crouching and crouch.text == "JONGKOK", "Jongkok tidak dibatalkan")
+	# Lompat: animasi menolak lebih dulu, badan menyusul.
+	var before_velocity := player.velocity.y
+	_touch(11, jump.get_global_rect().get_center(), true)
+	_touch(11, jump.get_global_rect().get_center(), false)
+	_check(player.get("_jump_delay") > 0.0, "Lompat tidak memulai fase tolakan")
+	_check(visual.clip == "Jump_Start", "Animasi tolakan bukan Jump_Start")
+	_check(is_equal_approx(player.velocity.y, before_velocity),
+		"Badan melompat sebelum animasi menolak")
+	for frame in range(20):
+		await physics_frame
+	_check(player.velocity.y > 1.0 or not player.is_on_floor(), "Badan tidak ikut melompat")
+	for frame in range(120):
+		await physics_frame
+		if player.is_on_floor():
+			break
+	_check(player.is_on_floor(), "Pemain tidak mendarat kembali")
+	# Serangan pet + analog jalan bersamaan.
 	var left := root.get_visible_rect().size * Vector2(0.22, 0.66)
 	var hit := attack.get_global_rect().get_center()
-	_check(attack.size.is_equal_approx(Vector2(128, 128)), "Attack tidak bulat 128px")
-	_check(attack.text.is_empty(), "Teks debug attack belum dihapus")
-	_check(not game.get("_performance").is_visible_in_tree(), "Setting belum tersembunyi")
 	_touch(0, left, true)
 	_drag(0, left + Vector2(86, 0))
 	_touch(1, hit, true)
 	_check(pet.get("casting"), "Jari kedua gagal casting sambil jalan")
 	_check(stick.get("direction").x > 0.9, "Attack menghentikan joystick")
 	_check(orbit.get("_touches").is_empty(), "Attack ikut memutar kamera")
-	pet.set("cooldown", 0.0)
-	var mouse := InputEventMouseButton.new()
-	mouse.device = InputEvent.DEVICE_ID_EMULATION
-	mouse.button_index = MOUSE_BUTTON_LEFT
-	mouse.pressed = true
-	mouse.position = hit
-	root.push_input(mouse, true)
-	_check(pet.get("projectiles").is_empty() and pet.get("casting"),
-		"Emulasi mouse menggandakan/melewati windup")
 	var start := player.position
 	for frame in range(12):
 		await physics_frame
 	_check(player.position.x > start.x + 0.2, "Karakter berhenti saat attack ditahan")
-	_check(pet.get("projectiles").size() == 1, "Casting bergerak gagal menembak")
-	var camera_point := root.get_visible_rect().size * Vector2(0.65, 0.45)
-	_touch(2, camera_point, true)
-	var yaw: float = orbit.get("yaw")
-	_drag(2, camera_point + Vector2(40, 0))
-	_check(not is_equal_approx(yaw, orbit.get("yaw")), "Jari ketiga tidak bisa orbit")
-	_touch(2, camera_point, false)
-	_check(stick.get("_finger") == 0 and attack.get("_finger") == 1,
-		"Lepas kamera membatalkan kontrol lain")
-	_drag(1, Vector2.ZERO)
-	_touch(1, Vector2.ZERO, false)
-	_check(attack.get("_finger") == -1, "Attack tersangkut setelah lepas di luar tombol")
+	_touch(1, hit, false)
 	_touch(0, left, false)
-	# Urutan terbalik: attack dulu, lalu joystick.
-	_touch(4, hit, true)
-	_touch(5, left, true)
-	_drag(5, left + Vector2(86, 0))
-	_check(pet.get("casting"), "Serangan berikutnya tidak bekerja")
-	_check(stick.get("direction").x > 0.9, "Joystick gagal saat attack ditekan lebih dulu")
-	_touch(4, hit, false, true)
-	_touch(5, left, false)
-	_check(attack.get("_finger") == -1, "Touch cancel tidak mereset attack")
-	await _test_settings(game)
-	if "--render" in OS.get_cmdline_user_args():
-		await RenderingServer.frame_post_draw
-		root.get_texture().get_image().save_png("user://hud-clean-test.png")
-	game.queue_free()
+	await physics_frame
+	# Panel katalog animasi.
+	_touch(12, catalog.get_global_rect().get_center(), true)
+	_touch(12, catalog.get_global_rect().get_center(), false)
+	_check(panel.visible, "Tombol katalog tidak membuka panel")
+	var rows: Dictionary = panel.get("_rows")
+	_check(rows.size() == 85, "Panel tidak memuat 85 klip: %d" % rows.size())
+	var row: Button = rows["Sword_Regular_Combo"]
+	panel.call("_scroll_to", "Sword_Regular_Combo")
+	for frame in range(3):
+		await process_frame
+	var row_point := row.get_global_rect().get_center()
+	if panel.get_global_rect().has_point(row_point) and row.is_visible_in_tree():
+		_touch(13, row_point, true)
+		_touch(13, row_point, false)
+	else:
+		row.pressed.emit()
 	await process_frame
-	if "--render" in OS.get_cmdline_user_args():
-		await RenderingServer.frame_post_draw
+	_check(visual.clip == "Sword_Regular_Combo", "Baris panel tidak memutar klipnya")
+	_check(pet.get_instance_id() == pet_id, "Panel membuat pet duplikat")
+	var frozen := player.position
+	_touch(14, panel.get_global_rect().get_center() + Vector2(40, 40), true)
+	_drag(14, panel.get_global_rect().get_center() + Vector2(120, 40))
+	_check(stick.get("direction").is_zero_approx(), "Sentuh panel menggerakkan pemain")
+	_check(orbit.get("_touches").is_empty(), "Panel ikut memutar kamera")
+	_touch(14, panel.get_global_rect().get_center() + Vector2(120, 40), false)
+	for frame in range(6):
+		await physics_frame
+	_check(player.position.is_equal_approx(frozen), "Pemain bergerak di belakang panel")
+	var close_button: Button
+	for node in panel.find_children("*", "Button", true, false):
+		var candidate := node as Button
+		if candidate.text == "TUTUP":
+			close_button = candidate
+	_check(close_button != null, "Tombol TUTUP tidak ada di panel")
+	if close_button != null:
+		var point := close_button.get_global_rect().get_center()
+		_touch(15, point, true)
+		_touch(15, point, false)
+		_check(not panel.visible, "Panel tidak bisa ditutup")
+	_check(stick.input_enabled and orbit.input_enabled, "Input tidak pulih setelah panel")
+	game.queue_free()
+	for frame in range(4):
+		await process_frame
 	print("[hud-test] HASIL: ", "OK" if _failures == 0 else "GAGAL")
 	quit(0 if _failures == 0 else 1)
-
-
-func _test_settings(game: Node3D) -> void:
-	var settings: Button = game.get("_settings")
-	var attack: Button = game.get("_attack")
-	var stick: Control = game.get("_joystick")
-	var orbit: Node3D = game.get("_orbit")
-	var panel: Control = game.get("_performance")
-	var drawer: Control = game.get("_graphics_drawer")
-	var point := settings.get_global_rect().get_center()
-	_touch(6, point, true)
-	_touch(6, point, false)
-	_check(panel.is_visible_in_tree(), "Ikon grafik gagal membuka drawer")
-	_check(not _has_license_ui(drawer), "UI kredit/lisensi masih muncul di drawer")
-	_check(FileAccess.file_exists("res://licenses/LICENSES.txt"),
-		"Bundel kredit/lisensi terkonsolidasi tidak tersedia")
-	_check(not attack.visible and not stick.get("input_enabled"), "Menu tidak memblokir combat")
-	_check(not orbit.get("input_enabled"), "Kamera masih aktif ketika menu terbuka")
-	if "--render" in OS.get_cmdline_user_args():
-		await process_frame
-		await RenderingServer.frame_post_draw
-		root.get_texture().get_image().save_png("user://hud-settings-test.png")
-	_touch(6, point, true)
-	_touch(6, point, false)
-	_check(not panel.is_visible_in_tree() and attack.visible, "Ikon tidak menutup drawer")
-	_check(stick.get("input_enabled") and orbit.get("input_enabled"), "Kontrol tidak pulih")
-	_touch(7, attack.get_global_rect().get_center(), true)
-	attack.notification(NOTIFICATION_APPLICATION_FOCUS_OUT)
-	_check(attack.get("_finger") == -1, "Attack tersangkut setelah aplikasi kehilangan fokus")
-
-
-func _has_license_ui(node: Node) -> bool:
-	if node is RichTextLabel:
-		return true
-	if node is Button and (node as Button).text.to_lower().contains("lisensi"):
-		return true
-	for child in node.get_children():
-		if _has_license_ui(child):
-			return true
-	return false

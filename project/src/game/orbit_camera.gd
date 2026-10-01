@@ -8,13 +8,9 @@ const MIN_PITCH := 0.10
 const MAX_PITCH := 1.15
 
 var input_enabled := true
-var interact_exclusion: Control
-var input_exclusion: Control
-var attack_exclusion: Control
-var speed_exclusion: Control
-var character_exclusion: Control
-var combat_style_exclusion: Control
-var evasion_exclusion: Control
+## Kontrol yang menangkap sentuhan lebih dulu (panel, tombol); sentuhan di
+## atasnya tidak boleh memutar kamera.
+var exclusions: Array[Control] = []
 var yaw := 0.0
 var pitch := 0.30
 var distance := DEFAULT_DISTANCE
@@ -61,12 +57,11 @@ func _input(event: InputEvent) -> void:
 		if not touch.pressed or touch.canceled:
 			_touches.erase(touch.index)
 		elif touch.position.x >= get_viewport().get_visible_rect().size.x * 0.5:
-			for control in [interact_exclusion, input_exclusion, attack_exclusion,
-					speed_exclusion, character_exclusion, combat_style_exclusion,
-					evasion_exclusion]:
-				if is_instance_valid(control) and control.is_visible_in_tree():
-					if control.get_global_rect().has_point(touch.position):
-						return
+			for control in exclusions:
+				if not is_instance_valid(control) or not control.is_visible_in_tree():
+					continue
+				if control.get_global_rect().has_point(touch.position):
+					return
 			if _touches.size() < 2:
 				_touches[touch.index] = touch.position
 	elif event is InputEventScreenDrag:

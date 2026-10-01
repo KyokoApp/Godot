@@ -55,8 +55,7 @@ func placements_for(key: Vector2i) -> Array[Transform3D]:
 			var point := Vector2(key.x * TILE, key.y * TILE) + local
 			if not field.can_grow(point.x, point.y):
 				continue
-			var island: Node3D = field.get("island")
-			var height: float = island.surface_height(point.x, point.y)
+			var height: float = field.ground.surface_height(point.x, point.y)
 			var pose := Basis(Vector3.UP, random.randf_range(0, TAU))
 			result.append(Transform3D(pose, Vector3(local.x, height - 0.02, local.y)))
 	return result

@@ -32,7 +32,12 @@ func _input(event: InputEvent) -> void:
 			reset()
 		elif touch.pressed and _finger == -1:
 			if is_instance_valid(input_exclusion) and input_exclusion.is_visible_in_tree():
-				if input_exclusion.contains_point(touch.position):
+				var blocked := false
+				if input_exclusion.has_method("contains_point"):
+					blocked = bool(input_exclusion.call("contains_point", touch.position))
+				else:
+					blocked = input_exclusion.get_global_rect().has_point(touch.position)
+				if blocked:
 					return
 			var local := get_global_transform_with_canvas().affine_inverse() * touch.position
 			if Rect2(Vector2.ZERO, Vector2(size.x * 0.5, size.y)).has_point(local):

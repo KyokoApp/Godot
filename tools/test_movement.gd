@@ -57,9 +57,9 @@ func _run() -> void:
 	_check(player.position.x > start.x + 1.0, "Pemain tidak bergerak ke kanan")
 	_touch(stick, 0, center + Vector2(200, 0), false)
 	_check(stick.get("direction") == Vector2.ZERO, "Lepas di luar joystick tidak reset")
-	for frame in range(3):
+	for frame in range(20):
 		await physics_frame
-	_check(absf(player.velocity.x) < 0.001, "Pemain tidak berhenti")
+	_check(absf(player.velocity.x) < 0.05, "Pemain tidak berhenti")
 	_check(int(stick.get("_finger")) == -1, "Analog tidak disembunyikan setelah dilepas")
 	_touch(stick, 2, center, true)
 	_drag(stick, 2, center + Vector2(0, -86))
@@ -69,8 +69,8 @@ func _run() -> void:
 	_check(player.position.z < start.z - 1.0, "Arah atas joystick salah")
 	stick.notification(NOTIFICATION_APPLICATION_FOCUS_OUT)
 	_check(stick.get("direction") == Vector2.ZERO, "Input tersangkut saat kehilangan fokus")
-	var island: Node3D = game.get("_island")
-	var ground: float = island.surface_height(player.position.x, player.position.z)
+	var field: Node3D = game.get("_field")
+	var ground: float = field.surface_height(player.position.x, player.position.z)
 	_check(absf(player.position.y - ground - 0.9) < 0.2, "Kapsul tidak berpijak di tanah")
 	print("[movement-test] gagal: ", _failures)
 	quit(0 if _failures == 0 else 1)

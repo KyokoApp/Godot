@@ -599,3 +599,30 @@ dan lingkaran arena saat seluruhnya dalam jangkauan. Radius pandang 125m.
 Tekstur 256px dibuat sekali dari terrain aktual; update posisi 10Hz, tanpa kamera
 3D tambahan. Sentuhan peta tidak mengaktifkan joystick. Belum ada peta fullscreen,
 quest marker atau teleport. HUD mengikuti skala viewport seperti kontrol lain.
+
+## Padang 100 m + mannequin only + katalog 85 animasi (2026-10-01)
+
+Permintaan pengguna: bangun ulang dunia jadi padang 100 m × 100 m berumput,
+hapus karakter lain (Miku/Kanna), dan pakai SEMUA animasi yang tersedia dengan
+animasi yang benar-benar diperbaiki.
+
+- **Dunia**: `world/field.gd` (100 m × 100 m, gelombang ≤ 0,9 m, shader tanah +
+  penutup rumput), `world/boundary_fence.gd`, `grass_field.gd` (tile 12 m,
+  LOD grid 40/20, batas 25 tile hidup). Rumput hanya di dalam pagar.
+- **Karakter**: hanya `mannequin.gd`. Miku, Kanna, skin switcher, kartu karakter,
+  portrait, retarget, hair spring, minimap, arena, air, jalan batu dan model
+  nature dihapus dari repo.
+- **Animasi**: satu AnimationPlayer memuat UAL1 (43 klip) + pustaka `ual2` dari
+  UAL2 (43 klip) = 85 nama di `animation/catalog.gd`, lengkap dengan label dan
+  keterangan Indonesia serta flag loop/once/hold/gait.
+- **Perbaikan animasi**: mode loop per klip disetel dari katalog; kecepatan main
+  klip dicocokkan dengan langkah hasil ukur `animation/anim_metrics.gd` sehingga
+  kaki tidak meluncur; offset tanah per klip menjaga pose rendah; cross-fade antar
+  klip; aksi sekali jalan pakai timer `_action_left` (deterministik di headless).
+- **Gerbang baru tanpa engine**: `python3 tools/check_animation_catalog.py`
+  memverifikasi 85 klip ada di GLB, sumber & flag benar, lalu mengukur ulang
+  langkah tiap klip gait (m/s) dan membandingkannya dengan rentang yang dijaga.
+- **Tes engine** yang relevan: `test_mannequin` (katalog + state machine + casting),
+  `test_movement`, `test_grass` (LOD + dua sisi terang), `test_hud`, `test_speed`
+  (boost 1,35× + anti meluncur), `test_motion_flair` (tapak api), `test_night`,
+  `test_audio`, `test_pack` (85 klip + lisensi di PCK). Belum diuji di HP.

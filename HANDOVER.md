@@ -1,35 +1,28 @@
 # STATUS TERBARU — prioritas dari pengguna
 
-- Terbaru: swipe/pinch kamera kanan, default dekat 4 m, gerak relatif kamera.
-- Pulau prosedural 1.000 × 1.000 m (bentang terrain termasuk pesisir), perbukitan,
-  dataran tebing timur, batu collision, jalan tanah berliku dan laut. Warna terang.
-- Cakupan gabungan kamera + dunia diminta langsung pengguna. Belum ada berenang,
-  bangunan atau vegetasi detail. Pemain dibatasi di garis air dangkal.
-- Tes otomatis mencakup ray tanah, elevasi jalan, swipe/pinch, isolasi kiri-kanan,
-  dan SpringArm menghadapi tembok. Performa/tampilan tetap harus diuji di HP.
+- Terbaru (2026-10-01): dunia dirombak jadi **padang rumput 100 m × 100 m**
+  (`world/field.gd` + `grass_field.gd` + `world/boundary_fence.gd`). Pulau 1 km,
+  laut, sungai, arena, jalan batu dan aset nature model DIHAPUS dari repo.
+- Karakter hanya **mannequin UAL**. Miku, Kanna, skin switcher, kartu karakter,
+  portrait, retarget, hair spring, minimap dan combat library dihapus.
+- Animasi: SATU AnimationPlayer memuat UAL1 (43 klip) + pustaka `ual2`
+  (43 klip) = 85 nama di `animation/catalog.gd` (label + keterangan Indonesia,
+  flag loop/once/hold/gait). Semua klip bisa diputar dari panel "ANIMASI (85)".
+- Perbaikan animasi: mode loop per klip dari katalog, kecepatan klip dicocokkan
+  dengan langkah hasil ukur `animation/anim_metrics.gd` (anti kaki meluncur),
+  offset tanah per klip untuk pose rendah, transisi cross-fade, dan aksi sekali
+  jalan memakai timer `_action_left` (bukan sinyal) supaya deterministik.
+- Gerbang tanpa engine baru: `python3 tools/check_animation_catalog.py` — 85 klip
+  wajib ada, sumber/flag benar, dan langkah tiap klip gait diukur ulang.
+- Perubahan sesi ini tetap di branch sesi (sekarang `arena/01a0f97d-godot`);
+  integrasi ke main tidak dilakukan dari sesi ini.
+- Perubahan gameplay dikirim lewat PCK yang kompatibel launcher 1; jangan minta
+  install APK lagi kalau launcher 3A sudah terpasang.
+- Keystore debug permanen: jangan regenerate.
+- Semua gerbang lokal (gdparse/gdlint, `check_scripts.py`, `check_license_bundle.py`,
+  `test_chunk_content.py`, `check_animation_catalog.py`) BERSIH. **Belum diuji di HP**:
+  yang menunggu adalah tes perangkat, bukan fitur baru.
 
-
-- Permintaan terbaru: mannequin asli + idle/jalan/lari didahulukan (5A), analog
-  transparan mengambang hanya saat disentuh di kiri layar. Kamera tetap dulu.
-- Aset UAL1 Standard diambil utuh dari archive (asal + hash di
-  `project/licenses/LICENSES.txt`).
-- Perubahan gameplay ini dikirim melalui PCK kompatibel launcher 1; jangan
-  meminta install APK lagi jika launcher 3A sudah terpasang.
-- Menunggu tes HP: update otomatis benar masuk, arah hadap, kaki tidak meluncur,
-  idle/walk/run, analog muncul/hilang. Jangan lanjut fitur lain sebelum tes.
-
-
-- Perubahan sesi ini tetap di `arena/01a0f421-godot`; integrasi ke main tidak
-  dilakukan dari sesi ini.
-- Milestone 2A joystick sudah dibuat; tes otomatis lolos, hasil tes HP belum dicatat.
-- Pengguna mendahulukan launcher/update dalam game sebelum swipe kamera 2B.
-- Implementasi 3A: launcher bawaan APK, manifest release, PCK gameplay tervalidasi,
-  loading bar tipis bawah, retry/offline, marker pemulihan boot. Lihat README.
-- Satu update APK diperlukan untuk memasang launcher. Update berikutnya yang
-  kompatibel bisa lewat PCK; bukan janji semua perubahan bebas update APK.
-- Konfirmasi tes HP dan uji dua versi konten sebelum lanjut milestone lain.
-
----
 
 # SERAH TERIMA — untuk sesi AI berikutnya
 

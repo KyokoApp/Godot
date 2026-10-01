@@ -26,11 +26,8 @@ func _run() -> void:
 	world.add_child(camera)
 	camera.current = true
 	camera.look_at(Rays.Night.MOON_DIRECTION)
-	var player := Node3D.new()
-	world.add_child(player)
 	var rays := Rays.new()
 	rays.camera = camera
-	rays.player = player
 	camera.add_child(rays)
 	for frame in range(4):
 		await process_frame
@@ -56,11 +53,6 @@ func _run() -> void:
 	await process_frame
 	_check(not rays.visible, "Rays visible behind camera")
 	camera.look_at(Rays.Night.MOON_DIRECTION)
-	player.position = Vector3(-145, 9, 140)
-	await process_frame
-	await process_frame
-	_check(not rays.visible, "Rays leaking into arena")
-	player.position = Vector3.ZERO
 	# Fully blocking geometry must suppress the radial light source.
 	var wall := MeshInstance3D.new()
 	var box := BoxMesh.new()

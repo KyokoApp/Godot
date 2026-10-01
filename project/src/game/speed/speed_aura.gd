@@ -5,13 +5,12 @@ const Character = preload("res://src/game/mannequin.gd")
 const Ghosts = preload("res://src/game/speed/afterimage_trail.gd")
 const SMOKE = preload("res://src/game/speed/smoke.gdshader")
 const WASH = preload("res://src/game/speed/speed_wash.gdshader")
-const COLORS := {"miku": Color("409fff"), "kanna": Color("ff8a36"),
-	"mannequin": Color("ae65ff")}
+const TINT := Color("ae65ff")
 const PUFFS := 10
 var character: Character
 var environment: Environment
 var strength := 0.0
-var tint := Color("409fff")
+var tint := TINT
 var wash: ColorRect
 var ghosts: Ghosts
 var _puffs: Array[MeshInstance3D] = []
@@ -21,7 +20,6 @@ var _clock := 0.0
 var _next := 0
 var _wash_material: ShaderMaterial
 var _previous := Vector3.ZERO
-var _skin := ""
 var _time := 0.0
 var _glow_before := false
 var _glow_strength_before := 0.0
@@ -75,11 +73,10 @@ func clear() -> void:
 
 func update_motion(delta: float, speed: float, boosted: bool) -> void:
 	var origin := character.global_position
-	if origin.distance_to(_previous) > 3.0 or character.skin_id != _skin:
+	if origin.distance_to(_previous) > 3.0:
 		clear()
 	_previous = origin
-	_skin = character.skin_id
-	tint = COLORS.get(_skin, COLORS["mannequin"])
+	tint = TINT
 	_time += delta
 	var target := 1.0 if boosted and speed > 0.3 else 0.0
 	strength = lerpf(strength, target, 1.0 - exp(-delta * (8.0 if target > 0 else 11.0)))
