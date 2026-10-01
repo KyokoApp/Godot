@@ -256,6 +256,8 @@ const GROUPS := [
 ]
 
 const LOOPS := ["loop", "gait"]
+# Akhiran yang dibuang importer glTF dari nama animasi (lihat play_name()).
+const LOOP_SUFFIX := "_Loop"
 const HOLDS := ["hold"]
 
 
@@ -321,8 +323,12 @@ static func is_gait(clip: String) -> bool:
 
 
 static func play_name(clip: String) -> String:
-	# Klip UAL2 berada di pustaka bernama "ual2" pada AnimationPlayer yang sama.
+	# Importer glTF Godot mengenali kata "loop"/"cycle" pada nama animasi, menyalakan
+	# loop-nya, lalu MEMBUANG kata itu dari nama di AnimationPlayer. Jadi nama runtime
+	# selalu lebih pendek dari nama di berkas GLB: "Walk_Loop" -> "Walk".
+	# Klip UAL2 tinggal di pustaka bernama "ual2" pada AnimationPlayer yang sama.
+	var runtime := clip.trim_suffix(LOOP_SUFFIX)
 	var entry := find(clip)
 	if entry.is_empty() or entry["source"] == UAL1:
-		return clip
-	return "ual2/" + clip
+		return runtime
+	return "ual2/" + runtime

@@ -71,7 +71,8 @@ func _test_catalog(character: Character, animation: AnimationPlayer,
 	_check(missing.is_empty(), "Klip katalog hilang: " + ", ".join(missing))
 	# Nama mentah kedua berkas harus benar-benar terpakai.
 	_check(animation.has_animation("ual2/Sword_Regular_Combo"), "Pustaka UAL2 tidak tergabung")
-	_check(animation.has_animation("Walk_Loop") and animation.has_animation("Zombie_Scratch"),
+	_check(animation.has_animation(Catalog.play_name("Walk_Loop"))
+		and animation.has_animation(Catalog.play_name("Zombie_Scratch")),
 		"Gabungan pustaka UAL1+UAL2 tidak lengkap")
 	_check(character.description_of("Roll").length() > 10, "Keterangan klip kosong")
 	_check(character.length_of("Walk_Loop") > 1.2 and character.length_of("Walk_Loop") < 1.5,

@@ -28,6 +28,12 @@ BANDS = {
     "Swim_Fwd_Loop": (0.02, 2.0),
 }
 SAMPLE_RATE = 30.0
+# Akhiran yang dibuang importer glTF dari nama animasi di AnimationPlayer.
+LOOP_SUFFIX = "_Loop"
+# Klip ber-flag loop/gait yang namanya TIDAK berakhiran "_Loop" (loop-nya harus
+# dinyalakan manual oleh mannequin.gd::_configure_clips).
+SILENT_LOOPS = ["A_TPose", "Sword_Idle", "Pistol_Aim_Down", "Pistol_Aim_Neutral",
+                "Pistol_Aim_Up"]
 
 COMPONENTS = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4}
 FORMATS = {5120: "b", 5121: "B", 5122: "h", 5123: "H", 5125: "I", 5126: "f"}
@@ -247,6 +253,24 @@ def main():
             problems.append("label/keterangan terlalu pendek: " + entry["name"])
     by_source = {source: [c.name for c in clips[source]] for source in GLB}
     entry_source = {entry["name"]: entry["source"] for entry in entries}
+    # Importer glTF Godot membuang kata "loop"/"cycle" di akhir nama animasi, jadi
+    # nama di AnimationPlayer = nama berkas tanpa "_Loop". Nama runtime itu WAJIB
+    # unik: kalau dua klip menyusut jadi nama sama, satu klip akan hilang.
+    runtime = {}
+    for name in names:
+        short = name[:-len(LOOP_SUFFIX)] if name.endswith(LOOP_SUFFIX) else name
+        runtime.setdefault(short, []).append(name)
+    for short in sorted(runtime):
+        if len(runtime[short]) > 1:
+            problems.append("nama runtime bentrok setelah sufiks dibuang: %s -> %s"
+                            % (short, ", ".join(runtime[short])))
+    # Klip yang loop-nya tidak ditandai "_Loop" harus disetel eksplisit di kode
+    # (_configure_clips), jadi pastikan daftarnya tetap kecil dan terpantau.
+    silent_loops = [e["name"] for e in entries
+                    if e["flags"] in ("loop", "gait") and not e["name"].endswith(LOOP_SUFFIX)]
+    if silent_loops != SILENT_LOOPS:
+        problems.append("klip loop tanpa sufiks berubah: %s (harus %s)"
+                        % (", ".join(silent_loops), ", ".join(SILENT_LOOPS)))
     for source in GLB:
         for clip in by_source[source]:
             if clip not in entry_source:

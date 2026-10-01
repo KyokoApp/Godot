@@ -45,14 +45,21 @@ func _run() -> void:
 		print("[clips-test] %s: %d klip" % [source, names.size()])
 		_check(names.size() >= EXPECTED_PER_FILE,
 			"%s hanya %d klip, minimal %d" % [source, names.size(), EXPECTED_PER_FILE])
+	# Importer glTF membuang akhiran "_Loop" dari nama di AnimationPlayer, jadi yang
+	# harus ada di sana adalah Catalog.play_name(), bukan nama mentah dari berkas GLB.
+	var seen: Dictionary = {}
 	for clip: String in Catalog.names():
 		var entry: Dictionary = Catalog.find(clip)
 		var source: String = entry["source"]
+		var runtime: String = Catalog.play_name(clip).trim_prefix("ual2/")
 		var names: PackedStringArray = available[source]
-		if names.has(clip):
-			continue
-		_check(false, "klip hilang: %s tidak ada di %s" % [clip, source])
-		print("[clips-test] daftar ", source, ": ", ", ".join(names))
+		if not names.has(runtime):
+			_check(false, "klip hilang: %s (runtime %s) tidak ada di %s" % [
+				clip, runtime, source])
+			print("[clips-test] daftar ", source, ": ", ", ".join(names))
+		if seen.has(Catalog.play_name(clip)):
+			_check(false, "nama runtime bentrok: " + Catalog.play_name(clip))
+		seen[Catalog.play_name(clip)] = clip
 	print("[clips-test] katalog %d klip, gagal: %d" % [Catalog.clip_count(), _failures])
 	if _failures == 0:
 		print("[clips-test] HASIL: OK")
