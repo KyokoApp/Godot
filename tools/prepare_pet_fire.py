@@ -1,4 +1,4 @@
-"""Prepare the pet-only CC0 crackle loop (stdlib only, source cached outside Git)."""
+"""Prepare the CC0 crackle loop; attribution/terms: project/licenses/LICENSES.txt."""
 import array
 import base64
 import hashlib

@@ -18,7 +18,6 @@ const Night = preload("res://src/game/environment/night_environment.gd")
 const WorldAudio = preload("res://src/game/audio/world_audio.gd")
 const Footsteps = preload("res://src/game/audio/footsteps.gd")
 const CharacterSwitcher = preload("res://src/game/ui/character_switcher.gd")
-const CreditsPanel = preload("res://src/game/ui/credits_panel.gd")
 const RuneButton = preload("res://src/game/ui/rune_button.gd")
 const FIRE_ICON = preload("res://src/game/ui/flame.svg")
 const MELEE_ICON = preload("res://src/game/ui/fist.svg")
@@ -55,9 +54,6 @@ var _pet: FirePet
 var _attack: RuneButton
 var _settings: RuneButton
 var _character_switcher: CharacterSwitcher
-var _credits: CreditsPanel
-var _credits_button: Button
-var _drawer_title: Label
 var _graphics_drawer: PanelContainer
 var _sun: DirectionalLight3D
 var _performance: PerformancePanel
@@ -273,22 +269,12 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 	title.add_theme_font_size_override("font_size", 20)
 	title.add_theme_color_override("font_color", Color.WHITE)
 	content.add_child(title)
-	_drawer_title = title
-	_credits_button = Button.new()
-	_credits_button.text = "Kredit & lisensi"
-	_credits_button.custom_minimum_size.y = 44
-	_credits_button.pressed.connect(_toggle_credits)
-	content.add_child(_credits_button)
 	_performance = PerformancePanel.new()
 	_performance.rays = _moon_rays
 	_performance.sun = _sun
 	_performance.grass = _grass
 	_performance.water = _island.water
 	content.add_child(_performance)
-	_credits = CreditsPanel.new()
-	content.add_child(_credits)
-	_credits.hide()
-	_graphics_drawer.offset_bottom = 615
 	_graphics_drawer.hide()
 
 
@@ -309,15 +295,6 @@ func _update_arena_state() -> void:
 	_speed_button.boosted = speed_boosted
 	_speed_button.visible = not inside_arena and not _graphics_drawer.visible
 	_speed_button.queue_redraw()
-
-
-func _toggle_credits() -> void:
-	var opened := not _credits.visible
-	_credits.visible = opened
-	_performance.visible = not opened
-	_drawer_title.text = "KREDIT & LISENSI" if opened else "GRAFIK"
-	_credits_button.text = "Kembali ke grafik" if opened else "Kredit & lisensi"
-	_graphics_drawer.offset_left = -660 if opened else -334
 
 
 func _toggle_graphics() -> void:

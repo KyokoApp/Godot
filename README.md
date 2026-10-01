@@ -4,7 +4,7 @@ Game 3D open-world untuk Android, dibangun dengan **Godot 4.5** (GDScript).
 
 Project ini **dimulai ulang dari nol** pada 2026-09-29. Versi lama masih
 tersimpan penuh di branch `archive` pada repo `KyokoApp/Unity` — tidak ada
-yang hilang, termasuk 176 model Medieval Village (CC0) dan seluruh sistem
+yang hilang, termasuk 176 model Medieval Village dan seluruh sistem
 delta-update.
 
 ## Kenapa dimulai ulang
@@ -78,8 +78,8 @@ Release dengan `asekai.apk` + SHA-256.
 
 ## Lisensi aset
 
-Model dari *Medieval Village MegaKit* oleh Quaternius (CC0 1.0).
-Detail atribusi di `docs/CREDITS.md`.
+Semua kredit, provenance, teks lisensi, dan catatan izin dikonsolidasikan dalam
+`project/licenses/LICENSES.txt`.
 
 ## Milestone 2A — joystick gerak (menunggu tes HP)
 
@@ -180,7 +180,8 @@ HUD: **PULAU 1K — hijau + tebing batu**. Warna akhir perlu konfirmasi ulang di
 
 ## Rumput tebal dengan angin (uji HP berikutnya)
 
-Adaptasi shader CC0 Malido dari referensi pengguna (kredit di docs/CREDITS.md).
+Adaptasi shader rumput dari referensi pengguna; sumber, atribusi dan ketentuan
+lisensinya tercatat di `project/licenses/LICENSES.txt`.
 Rumpun terdiri dari tiga helai meruncing, gradasi hijau, angin Perlin lembut dan
 reaksi menyingkir di sekitar kaki pemain. Tanpa texture alpha/transparency.
 
@@ -346,7 +347,7 @@ Hasil layar/FPS harus diuji kembali; glow lingkungan lama tidak ikut diaktifkan.
 ### Combat VFX v2 — ekor api + impact berlapis
 Projectile memakai core/shell asli archive, ekor mengikuti kecepatan, 10 partikel
 api world-space dan 16 sparks. Ekor tidak terpotong ketika membentur terrain.
-Impact: dua selubung api berputar berlawanan, 18 flame petals GDQuest/MIT,
+Impact: dua selubung api berputar berlawanan, 18 flame petals hasil adaptasi,
 24 sparks, 8 bara, shockwave sesuai normal permukaan, flash tanpa shadow 0.28s.
 Tidak ada lagi deretan bola / delapan lobe + torus padat. Pet tidak diubah.
 TTL impact 1.9s, ekor 0.7s; cap tetap 3 proyektil / 2 impact, cooldown 0.85s.
@@ -380,7 +381,7 @@ Pet kini memakai siluet lidah api tinggi, tiga ujung bergerak independen,
 inti panas cyan-putih dan tepian ungu, tanpa bola padat. Bentuk menghadap kamera,
 meruncing/terkoyak ke atas dan condong mengikuti gerakan; lima bara tetap ringan.
 Posisi/jarak bahu, attack, projectile, explosion, UI dan langkah tidak berubah.
-Pet memakai loop crackling CC0 terpisah selama 8 detik, lebih terdengar daripada
+Pet memakai loop crackling terpisah selama 8 detik, lebih terdengar daripada
 loop sintetis lama: -22dB, jangkauan18m, tetap spatial/occluded. Peluru tetap
 memakai loop lamanya. Uji render mencakup pet dari depan/samping serta animasi;
 uji audio/PCK memeriksa loop pet baru. Tampilan/mix akhir perlu konfirmasi HP.
@@ -442,7 +443,7 @@ Danau di timur spawn memiliki garis pantai berlekuk/teluk kecil, tersambung sung
 berkelok ke laut tenggara. Terrain dan collider memakai cekungan yang sama;
 jalan tetap utuh, rumput/pohon/batu besar menjauhi tepian. Belum ada berenang:
 karakter ditahan sebelum masuk air, termasuk danau yang lebih tinggi dari laut.
-Shader adaptasi MIT Marcel Bankmann/GodotSSRWater: kedalaman transparan,
+Shader air adaptasi dengan kedalaman transparan,
 refraction tipis, riak bergerak, busa tepian redup dan pantulan langit/bulan malam.
 Mode bawaan **Pantulan air: Ringan**. Pilihan **SSR (uji)** di pengaturan hanya
 untuk air pedalaman dekat kamera (<65m), max12 probe/18m; laut tetap fallback.
@@ -466,26 +467,22 @@ Tidak menambah target latihan, damage, senjata atau multiplayer pada tahap ini.
 
 
 ### Kredit, lisensi dan izin aset
-Karya orisinal A-Sekai: all rights reserved; lihat `LICENSE`. Ini bukan lisensi
-ulang atas aset pihak ketiga. Model, animasi, audio, shader dan engine tetap
-mengikuti ketentuan pembuatnya masing-masing. Daftar sumber/status di
-`docs/CREDITS.md`; salinan pemberitahuan di `project/licenses/` ikut APK/PCK.
-Di game: ikon grafik → **Kredit & lisensi**, pilih dokumen lalu scroll.
-Pembaca bekerja offline; URL sumber ditampilkan sebagai teks yang bisa disalin.
-Setelah mengedit kredit/hak orisinal, jalankan `python3 tools/sync_credits.py`.
-Catatan Miku merekam izin khusus yang dilaporkan pemilik, bukan lisensi bebas;
-skin tersebut terintegrasi dalam prototipe nonkomersial dengan kredit sumber. Izin tidak otomatis berlaku untuk
-Kanna, ikon, atau model lain. Simpan percakapan asli dengan pembuat.
+`project/licenses/LICENSES.txt` adalah satu-satunya berkas konsolidasi untuk
+hak karya orisinal, seluruh kredit/provenance, teks lisensi pihak ketiga, dan
+catatan izin khusus. Berkas ini ikut APK/PCK. Viewer kredit/lisensi di dalam
+game sengaja dihapus; bundling tidak menambah atau memperluas izin apa pun.
+Baca bagian dan syarat yang berlaku sebelum menggunakan aset. Jalankan
+`python3 tools/check_license_bundle.py` untuk memvalidasi bundel.
 
 
 ### Miku / Kanna / mannequin & HUD karakter
-Miku memakai animasi CC0 UAL melalui retarget52 tulang setelah layer casting.
+Miku memakai animasi UAL melalui retarget52 tulang setelah layer casting.
 Switch melalui tiga kartu portrait di kanan; sumber mannequin tetap berjalan
 tersembunyi, tidak membuat player/collider/pet baru dan tidak mereset cooldown.
 Kanna dari arsip proyek lama juga tersedia; 50 tulang dipetakan untuk rig Kanna.
 Miku menjadi pilihan awal gameplay; mannequin tetap tersedia sebagai fallback.
 Attack128px kini berjarak132px dari kanan dan120px dari bawah (basis1280x720).
-Kartu disembunyikan saat membuka grafik/kredit dan dikecualikan dari input kamera.
+Kartu disembunyikan saat membuka pengaturan grafik dan dikecualikan dari input kamera.
 Material mempertahankan tekstur model; tidak memakai plugin VRM atau physics
 rambut. Model42,674 tris/24 material, tekstur <=1024px; perlu tes kinerja HP.
 Warmup20 tahap mencakup Miku, Kanna, mannequin dan water.
@@ -496,7 +493,8 @@ multitouch, dan render skin Mobile Vulkan diuji oleh workflow sebelum export/ril
 Tes aset/matematika offline: `tools/test_miku_asset.py`. Pengukuran HP tetap perlu.
 Pemilik telah mengizinkan push dan build HP. Unggahan VRM duplikat di root dihapus
 setelah import/render lolos; sumber historis ada di commit upload `c95925e`.
-Aset runtime dalam `project/assets/characters/` dan kredit/lisensi tetap disertakan.
+Aset runtime dalam `project/assets/characters/` dan bundel
+`project/licenses/LICENSES.txt` tetap disertakan.
 
 
 ### Spring rambut Miku & jejak api tapak
@@ -586,7 +584,7 @@ menyatakan migrasi HP tervalidasi. Tidak mengklaim delta per-baris atau selalu u
 
 
 ## Sinar bulan screen-space
-Adaptasi metode radial scattering Qtan1 (CC0), bukan volumetric fog. Memakai
+Adaptasi metode radial scattering dari referensi pengguna, bukan volumetric fog. Memakai
 kedalaman layar reverse-Z, 16 sampel, tanpa render ulang seluruh dunia lewat
 SubViewport. Warna biru pucat halus mengikuti arah bulan di sky. Otomatis mati
 saat bulan di belakang/luar kamera atau pemain di dalam arena. Efek berada di

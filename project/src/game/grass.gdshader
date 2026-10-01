@@ -1,7 +1,7 @@
 shader_type spatial;
 render_mode cull_disabled, world_vertex_coords, diffuse_burley, specular_disabled;
-// Adaptasi CC0 @_Malido / Malidos: Stylized Multimesh Grass Shader.
-// Sumber dan perubahan tercatat di docs/CREDITS.md.
+// Adaptasi shader rumput untuk vegetasi runtime.
+// Sumber, atribusi, lisensi, dan perubahan: project/licenses/LICENSES.txt.
 // Mesh buatan proyek: UV.y = 1 di akar dan 0 di ujung.
 
 uniform vec3 top_color : source_color = vec3(0.38, 0.65, 0.24);

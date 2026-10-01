@@ -33,6 +33,11 @@ def load(path):
 source, old_bin, original = load(ROOT/'868295879255555982.vrm')
 model, binary, packed = load(ROOT/'project/assets/characters/miku/miku.glb')
 assert model['asset']['extras']['source_sha256'] == hashlib.sha256(original).hexdigest()
+assert model['asset']['extras']['permissions'] == (
+    'See licenses/LICENSES.txt for the Miku permission record; not a free asset license.')
+kanna, _, _ = load(ROOT/'project/assets/characters/kanna/kanna.glb')
+assert kanna['asset']['extras']['permissions'] == (
+    'See licenses/LICENSES.txt for the Kanna permission record; not a free asset license.')
 assert model['nodes'] == source['nodes']
 assert model['skins'] == source['skins']
 assert model['meshes'] == source['meshes']
@@ -94,7 +99,9 @@ for a, b in pairs:
     yaw = np.diag([-1,1,-1])
     result = yaw @ src[a][:3,:3] @ np.linalg.inv(src[a][:3,:3]) @ yaw @ dst[b][:3,:3]
     assert np.allclose(result, dst[b][:3,:3], atol=1e-5)
-assert (ROOT/'project/licenses/Miku-Naxzed-Permission.txt').exists()
+notices = (ROOT/'project/licenses/LICENSES.txt').read_text()
+assert 'Hatsune Miku -NXZ-' in notices
+assert 'I permit it as long as you include my license in your project.' in notices
 print('Miku asset OK: geometry/skin byte-identical; 52 bones; 24 maps <=1024; rest-space correction OK')
 
 # Exercise the same rest-delta mapping with actual sampled UAL animation data.

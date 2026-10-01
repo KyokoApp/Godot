@@ -11,14 +11,16 @@
 
 - Permintaan terbaru: mannequin asli + idle/jalan/lari didahulukan (5A), analog
   transparan mengambang hanya saat disentuh di kiri layar. Kamera tetap dulu.
-- Aset UAL1 Standard diambil utuh dari archive (asal + hash di docs/CREDITS.md).
+- Aset UAL1 Standard diambil utuh dari archive (asal + hash di
+  `project/licenses/LICENSES.txt`).
 - Perubahan gameplay ini dikirim melalui PCK kompatibel launcher 1; jangan
   meminta install APK lagi jika launcher 3A sudah terpasang.
 - Menunggu tes HP: update otomatis benar masuk, arah hadap, kaki tidak meluncur,
   idle/walk/run, analog muncul/hilang. Jangan lanjut fitur lain sebelum tes.
 
 
-- Jangan push/merge ke main. Kerja di `arena/01a0eaf5-godot`.
+- Perubahan sesi ini tetap di `arena/01a0f421-godot`; integrasi ke main tidak
+  dilakukan dari sesi ini.
 - Milestone 2A joystick sudah dibuat; tes otomatis lolos, hasil tes HP belum dicatat.
 - Pengguna mendahulukan launcher/update dalam game sebelum swipe kamera 2B.
 - Implementasi 3A: launcher bawaan APK, manifest release, PCK gameplay tervalidasi,
@@ -127,7 +129,8 @@ Tidak mengubah bentuk pulau/kontrol. Tunggu screenshot/konfirmasi HP.
 ## Tahap rumput (permintaan terbaru)
 
 Rumput rapat/angin diadaptasi dari shader CC0 Malido yang dikirim pengguna.
-Shader + streaming ada di src/game/grass*; sumber/lisensi di docs/CREDITS.md.
+Shader + streaming ada di src/game/grass*; sumber/lisensi di
+`project/licenses/LICENSES.txt`.
 Maksimal 25 tile / 10k rumpun, satu tile/frame, fade geometris 16–23 m,
 mask jalan/pantai/tebing/batu. Tidak mengubah launcher atau kontrol. Tes render
 CI memakai Mobile Vulkan/Mesa (bukan dummy headless). Tunggu hasil FPS/visual HP
@@ -154,7 +157,8 @@ HUD `padang lebat v3`; tunggu screenshot/FPS sebelum menambah fitur lain.
 User meminta sedikit lebih gelap, outline tipis, ikon anime, gambar loading,
 dan penjelasan compile shaders. Ambient0,57/sun0,98; mannequin outline 6mm.
 Shader dirender bersama mannequin pada tes Vulkan rumput, tes rig tetap jalan.
-Art loading/ikon AI orisinal setelah penelusuran Pinterest; sumber di CREDITS.
+Art loading/ikon AI orisinal setelah penelusuran Pinterest; sumber dicatat di
+bundel LICENSES.
 APK version code2 diperlukan untuk art/ikon launcher, PCK visual tetap kompatibel
 launcher1. Keystore tidak berubah. Tidak ada progress compile shader buatan.
 
@@ -163,7 +167,8 @@ launcher1. Keystore tidak berubah. Tidak ada progress compile shader buatan.
 File root `547d844ffaca3a9b862a3c20e929770d.jpg` diupload pada commit eea852f,
 sudah dibaca dan digunakan untuk ikon 512/192/adaptive432. APK code4/name0.4.2-user-icon.
 Loading art dan gameplay tidak diubah. Kredit sumber/izin belum terverifikasi
-tercatat di docs/CREDITS.md. Keystore tetap; jangan merge main.
+tercatat di `project/licenses/LICENSES.txt`. Keystore tetap; arahan integrasi
+main pada milestone lama ini bersifat historis.
 
 ## Skin jubah api biru (permintaan terbaru)
 
@@ -372,17 +377,13 @@ pose restoration/native modifier callback; artifacts casting-screenshots.
 No target dummy/damage/multiplayer yet; one tested milestone at a time.
 
 
-## Rights / credits work (local only, not released)
-User chose original work reserved, NOT MIT. Root LICENSE and exported
-A-Sekai-Rights exclude all third-party works and preserve MIT/CC0 permissions.
-Added offline graphics drawer CreditsPanel, source/status inventory and exact
-MIT/CC0 notices. sync_credits.py --check enforces docs/export parity; pack/HUD
-tests extended. Miku creator replies relayed in chat are recorded as reported,
-not independently authenticated. Download-link attribution included; no general
-redistribution/commercial license invented. Miku/Kanna are not playable yet.
-Keep no-push/no-public-release decision until user explicitly authorizes a new
-release path. Current GitHub repo is public. Uploaded root VRM is not deleted.
-Engine/HUD/PCK verification must pass before claiming these local edits shipped.
+## Rights / credits work (historical first implementation; superseded)
+User chose original work reserved, NOT MIT. The earlier version kept separate root
+and exported notices, added an offline CreditsPanel and sync_credits.py parity check.
+That UI and multi-file layout have since been removed; current design and bundle
+validation are documented in the final “Consolidated notices” entry below. The
+Miku/Kanna replies remain reported by the owner, not independently authenticated;
+no general redistribution/commercial license was invented.
 
 
 ## Miku skin / party switch prototype (local, not engine-verified)
@@ -402,9 +403,9 @@ Warmup19 includes Miku; test_cast_render now both skins; newtest_skin_switch plu
 HUD/PCK assertions. test_miku_asset.py verifies byte-preserved geometry, textures,
 rest correction and sampled idle/walk/jog/cast math. These are NOT engine proof.
 Local download attempts from SourceForge and official object storage failed TLS35.
-No push/release. Existing credits/license edits remain local. Do NOT delete root
-VRM until actual Godot import/compile/headless/render gates pass. Preserve model
-permission scope and source links. Need engine-enabled validation next.
+Historical note: the local-only restriction and root-VRM warning below were
+superseded by later user authorization and successful engine validation (see the
+following entries). Preserve model permission scope and source links.
 
 
 ## Kanna + publishing authorization (2026-09-29)
@@ -447,7 +448,8 @@ Shared original shoe+5 volumetric tongue mesh, 16 preallocated stamps, 1.15s lif
 per-stamp captured palette (Miku bluewhitepurple/Kanna gold/UAL violetcyan).
 No billboarding, lights, shadows, physics actors, sounds or damage. Clear teleport.
 Tests test_motion_flair + test_motion_flair_render, screenshot motion-flair-screenshots.
-Warmup21 stages. Existing pet/attack/casting/credits/updater remain unchanged.
+Warmup21 stages. Existing pet/attack/casting/updater remain unchanged; the
+in-game notice viewer is handled in the final entry.
 
 Contact follow-up: all-three-rig repeated-walk gate found Kanna's .035m stance
 band too strict: its jog ankle is .135-.156m high versus .074m rest height,
@@ -531,3 +533,17 @@ North is -Z. 125m radius, 176px at (24,24), center follows player at 10Hz; chara
 arrow and camera cone independent. Joystick excludes circular minimap touches.
 Original visual treatment, no Genshin assets. HUD regression includes center/north,
 layout and touch-exclusion assertions. No fullscreen map/teleport introduced.
+
+
+## Consolidated notices and removal of in-game viewer (2026-10-01)
+The user chose to remove the in-game “Kredit & lisensi” panel and keep one
+consolidated notice file. `project/licenses/LICENSES.txt` now holds the original
+rights notice, project credits/provenance, full third-party license texts, and
+reported Miku/Kanna permission records with their conditions. The APK/PCK filter
+continues to include this file. No third-party terms or permissions were removed;
+metadata, source tools, tests, export checks and docs point to the bundle.
+The offline CreditsPanel script and former separate notice files are removed.
+Run `python3 tools/check_license_bundle.py` for the repository-side bundle gate;
+Godot pack tests verify the bundle is present in the exported PCK. This consolidates
+notices; it does not relicense third-party assets or grant broad redistribution
+rights.

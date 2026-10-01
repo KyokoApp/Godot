@@ -1,5 +1,6 @@
 shader_type spatial;
-// Original depth-mask adaptation of Qtan1's CC0 screen-space radial scattering approach.
+// Original depth-mask adaptation of a radial-scattering method.
+// Attribution and license terms: project/licenses/LICENSES.txt.
 // No SubViewport / duplicate world render. Reverse-Z, Godot 4.3+ Mobile / Forward+.
 render_mode unshaded, blend_add, cull_disabled, depth_draw_never, depth_test_disabled,
 	shadows_disabled, fog_disabled;

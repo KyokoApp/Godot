@@ -145,19 +145,14 @@ func _test_settings(game: Node3D) -> void:
 	var stick: Control = game.get("_joystick")
 	var orbit: Node3D = game.get("_orbit")
 	var panel: Control = game.get("_performance")
+	var drawer: Control = game.get("_graphics_drawer")
 	var point := settings.get_global_rect().get_center()
 	_touch(6, point, true)
 	_touch(6, point, false)
 	_check(panel.is_visible_in_tree(), "Ikon grafik gagal membuka drawer")
-	game._toggle_credits()
-	var credits: Control = game.get("_credits")
-	_check(credits.is_visible_in_tree() and not panel.visible, "Kredit tidak terbuka")
-	var body: RichTextLabel = credits.get("_body")
-	_check(body.text.contains("Quaternius") and body.text.contains("Naxzed"),
-		"Kredit/sumber model hilang dari viewer")
-	_check(not orbit.get("input_enabled"), "Kamera ikut bergerak saat membaca kredit")
-	game._toggle_credits()
-	_check(panel.is_visible_in_tree() and not credits.visible, "Grafik tidak pulih")
+	_check(not _has_license_ui(drawer), "UI kredit/lisensi masih muncul di drawer")
+	_check(FileAccess.file_exists("res://licenses/LICENSES.txt"),
+		"Bundel kredit/lisensi terkonsolidasi tidak tersedia")
 	_check(not attack.visible and not stick.get("input_enabled"), "Menu tidak memblokir combat")
 	_check(not orbit.get("input_enabled"), "Kamera masih aktif ketika menu terbuka")
 	if "--render" in OS.get_cmdline_user_args():
@@ -171,3 +166,14 @@ func _test_settings(game: Node3D) -> void:
 	_touch(7, attack.get_global_rect().get_center(), true)
 	attack.notification(NOTIFICATION_APPLICATION_FOCUS_OUT)
 	_check(attack.get("_finger") == -1, "Attack tersangkut setelah aplikasi kehilangan fokus")
+
+
+func _has_license_ui(node: Node) -> bool:
+	if node is RichTextLabel:
+		return true
+	if node is Button and (node as Button).text.to_lower().contains("lisensi"):
+		return true
+	for child in node.get_children():
+		if _has_license_ui(child):
+			return true
+	return false
