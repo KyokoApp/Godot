@@ -69,10 +69,18 @@ func _test_contacts() -> void:
 	_check(trail.emitted - before >= 3,
 		"Kontak langkah berulang kurang: %d" % (trail.emitted - before))
 	stick.set("direction", Vector2.ZERO)
-	await physics_frame
+	# Pemain masih melambat setelah jari diangkat, dan selama benar-benar bergerak
+	# tapak kaki baru memang wajar. Tunggu sampai diam dulu, baru hitung.
+	for frame in range(90):
+		await physics_frame
+		if float(player.get("move_speed")) < 0.05:
+			break
+	_check(float(player.get("move_speed")) < 0.05, "Pemain tidak berhenti saat diam")
 	var count := trail.emitted
 	for frame in range(100):
 		await physics_frame
+	print("::notice::tapak saat melambat=", count - before, " tambahan setelah diam=",
+		trail.emitted - count)
 	_check(trail.emitted == count, "Api baru tetap muncul setelah berhenti")
 	for stamp in trail.stamps:
 		_check(not stamp.visible, "Api tidak habis sesuai lifetime")
