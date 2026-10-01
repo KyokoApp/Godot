@@ -55,7 +55,7 @@ func _ready() -> void:
 	_apply_material()
 	_configure_clips()
 	metrics = Metrics.measure_catalog(animation, skeleton, Catalog)
-	animation.play(IDLE, 0.0)
+	animation.play(Catalog.play_name(IDLE), 0.0)
 	animation.advance(0.0)
 	_setup_cast_layer()
 	print("[mannequin] %d klip dimuat, %d metrik terukur" % [

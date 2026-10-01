@@ -1,6 +1,7 @@
 extends SceneTree
 ## Exercise native post-animation modifier + skinning, not just manually sampled bones.
 
+const Catalog = preload("res://src/game/animation/catalog.gd")
 const Character = preload("res://src/game/mannequin.gd")
 const Night = preload("res://src/game/environment/night_environment.gd")
 var _failures := 0
@@ -71,7 +72,7 @@ func _run() -> void:
 
 func _test_clip(character: Character) -> void:
 	for motion in ["Idle_Loop", "Jog_Fwd_Loop"]:
-		character.animation.play(motion, 0)
+		character.animation.play(Catalog.play_name(motion), 0)
 		character.animation.advance(0.2)
 		var before: Image = await _capture(character)
 		character.start_cast()

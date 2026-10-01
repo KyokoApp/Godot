@@ -156,7 +156,7 @@ func _test_cast(character: Character, skeleton: Skeleton3D) -> void:
 			and not name.contains("foot") and name != "root" and name != "pelvis",
 			"Casting mengambil alih kaki/root: " + name)
 	for motion in ["Idle_Loop", "Walk_Loop", "Jog_Fwd_Loop"]:
-		character.animation.play(motion, 0)
+		character.animation.play(Catalog.play_name(motion), 0)
 		character.animation.advance(0.2)
 		var original: Array[Quaternion] = []
 		for bone in range(skeleton.get_bone_count()):
@@ -173,8 +173,8 @@ func _test_cast(character: Character, skeleton: Skeleton3D) -> void:
 				_check(not differs, "Casting mengubah tulang locomotion: "
 					+ skeleton.get_bone_name(bone))
 		_check(changed > 10, "Pose upper-body tidak berubah pada " + motion)
-		_check(character.animation.current_animation == motion,
-			"Casting mengganti clock langkah")
+		_check(character.animation.current_animation == Catalog.play_name(motion),
+			"Casting mengganti clock langkah: " + motion)
 		layer._physics_process(0.4)
 		_check(not layer.playing and not layer.active and layer.influence == 0,
 			"Casting tidak kembali ke locomotion")
