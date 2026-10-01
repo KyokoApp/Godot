@@ -1,3 +1,38 @@
+name: apk
+# Build APK A-Sekai.
+# Gerbang WAJIB di urutan ini:
+#   1. lint sintaks + cek inferensi tipe (cepat, tanpa Godot)
+#   2. import proyek  (Godot mengisi cache .godot/)
+#   3. UJI COMPILE    (SEMUA .gd, dengan engine sungguhan)
+#   4. baru ekspor APK
+# Langkah 3 dulu tidak ada, dan itulah sebabnya bug "layar biru" lolos
+# sampai ke HP pengguna. Jangan dihapus.
+
+on:
+  push:
+    branches: [main, "arena/**"]
+  workflow_dispatch:
+
+concurrency: apk
+
+permissions:
+  contents: write
+
+env:
+  GVER: 4.5.2
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # --- 1. lint + cek tipe -------------------------------------------
       - name: Lint GDScript (gdparse)
         run: |
           pip install -q gdtoolkit
@@ -15,7 +50,7 @@
           python3 tools/check_scripts.py .
           python3 tools/check_license_bundle.py
           python3 tools/test_chunk_content.py
-          # Gerbang tanpa engine: 85 klip UAL + ukur ulang langkah kaki (anti meluncur).
+          # Gerbang tanpa engine: 85 klip UAL + ukur ulang langkah kaki.
           python3 tools/check_animation_catalog.py
 
       # --- 2. dependensi + Godot ----------------------------------------
