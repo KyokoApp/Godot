@@ -43,7 +43,8 @@ func _run() -> void:
 	_check(game._visual.set_skin(Character.MANNEQUIN), "Gagal kembali ke mannequin")
 
 	_check(game._visual.set_skin(Character.MIKU), "Gagal pilih Miku untuk pedang")
-	game._player.position = Vector3(-145, 9.1, 140)
+	var arena_ground: float = game._island.surface_height(-145, 140)
+	game._player.position = Vector3(-145, arena_ground + 0.92, 140)
 	game._update_arena_state()
 	await _frames(3)
 	_check(challenge.prompt.visible, "Prompt tidak muncul")
