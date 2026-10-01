@@ -14,12 +14,17 @@ var attack_exclusion: Control
 var speed_exclusion: Control
 var character_exclusion: Control
 var combat_style_exclusion: Control
+var evasion_exclusion: Control
 var yaw := 0.0
 var pitch := 0.30
 var distance := DEFAULT_DISTANCE
 var arm: SpringArm3D
 var camera: Camera3D
 var _touches: Dictionary[int, Vector2] = {}
+var _shake_duration := 0.0
+var _shake_total := 0.0
+var _shake_intensity := 0.0
+var _shake_phase := 0.0
 
 
 func _ready() -> void:
@@ -57,7 +62,8 @@ func _input(event: InputEvent) -> void:
 			_touches.erase(touch.index)
 		elif touch.position.x >= get_viewport().get_visible_rect().size.x * 0.5:
 			for control in [interact_exclusion, input_exclusion, attack_exclusion,
-					speed_exclusion, character_exclusion, combat_style_exclusion]:
+					speed_exclusion, character_exclusion, combat_style_exclusion,
+					evasion_exclusion]:
 				if is_instance_valid(control) and control.is_visible_in_tree():
 					if control.get_global_rect().has_point(touch.position):
 						return
@@ -92,6 +98,28 @@ func _pinch_length() -> float:
 func follow(target: Vector3, delta: float) -> void:
 	global_position = global_position.lerp(target, 1.0 - exp(-18.0 * delta))
 	_apply_orbit()
+	_update_combat_shake(delta)
+
+
+func combat_shake(intensity: float, duration: float = 0.14) -> void:
+	_shake_intensity = clampf(_shake_intensity + intensity, 0.0, 0.18)
+	_shake_duration = maxf(_shake_duration, duration)
+	_shake_total = maxf(_shake_total, _shake_duration)
+
+
+func _update_combat_shake(delta: float) -> void:
+	if camera == null:
+		return
+	_shake_duration = maxf(0.0, _shake_duration - delta)
+	if _shake_duration <= 0.0:
+		camera.position = Vector3.ZERO
+		_shake_intensity = 0.0
+		_shake_total = 0.0
+		return
+	_shake_phase += delta * 47.0
+	var fade := pow(_shake_duration / maxf(_shake_total, 0.001), 1.6)
+	var offset := Vector3(sin(_shake_phase), cos(_shake_phase * 1.31), 0.0)
+	camera.position = offset * (_shake_intensity * fade)
 
 
 func _apply_orbit() -> void:

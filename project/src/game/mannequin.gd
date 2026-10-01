@@ -22,6 +22,7 @@ const RUN_ON := 2.8
 const RUN_OFF := 2.4
 
 var action_time := 0.0
+var fight_loop := false
 var hair: HairSpring
 var skin_id := MANNEQUIN
 var skin: Node3D
@@ -79,7 +80,7 @@ func _ready() -> void:
 
 
 func update_motion(speed: float) -> void:
-	if action_time > 0:
+	if action_time > 0 or fight_loop:
 		return
 	if animation == null:
 		return
@@ -316,6 +317,7 @@ func play_fight(clip: String) -> float:
 	var length := _fight_driver.play(clip)
 	if length <= 0.0:
 		return 0.0
+	fight_loop = false
 	if cast_layer != null:
 		cast_layer.playing = false
 		cast_layer.active = false
@@ -326,8 +328,33 @@ func play_fight(clip: String) -> float:
 	return length
 
 
+func play_fight_loop(clip: String) -> bool:
+	return _play_fight_loop(clip, 0.0)
+
+
+func play_fight_loop_for(clip: String, duration: float) -> bool:
+	if duration <= 0.0:
+		return false
+	return _play_fight_loop(clip, duration)
+
+
+func _play_fight_loop(clip: String, duration: float) -> bool:
+	if not prepare_fight() or not _fight_driver.play_loop(clip):
+		return false
+	if cast_layer != null:
+		cast_layer.playing = false
+		cast_layer.active = false
+		cast_layer.influence = 0.0
+	animation.pause()
+	fight_loop = true
+	action_time = duration
+	_fight_driver.sync_pose()
+	return true
+
+
 func cancel_fight() -> void:
 	action_time = 0.0
+	fight_loop = false
 	state = IDLE
 	if _fight_driver != null:
 		_fight_driver.stop()
@@ -338,11 +365,14 @@ func cancel_fight() -> void:
 
 func _physics_process(delta: float) -> void:
 	if action_time <= 0:
+		if fight_loop and _fight_driver != null:
+			_fight_driver.advance(delta)
 		return
 	if _fight_driver != null:
 		_fight_driver.advance(delta)
 	action_time = maxf(0.0, action_time - delta)
 	if action_time == 0:
 		state = "" # Allow the next motion update to leave the one-shot pose.
+		fight_loop = false # Timed combat loops hand off cleanly to their exit clip.
 		if _fight_driver != null:
 			_fight_driver.stop()

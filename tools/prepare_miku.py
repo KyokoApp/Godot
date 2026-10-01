@@ -54,8 +54,8 @@ result.pop('extensionsRequired', None)
 result['asset']['extras'] = {
     'source_sha256': hashlib.sha256(source).hexdigest(),
     'original_vrm_meta': vrm['meta'],
-    'permissions': 'See licenses/' + ('Miku-Naxzed-Permission.txt' if args.skin == 'miku'
-                                    else 'Kanna-Permission.txt') + '; not a free asset license.',
+    'permissions': 'See licenses/LICENSES.txt for the ' + ('Miku' if args.skin == 'miku'
+                                    else 'Kanna') + ' permission record; not a free asset license.',
     'changes': 'Base color maps <=1024px; lit materials; no VRM spring-bone simulation.',
 }
 textures = []

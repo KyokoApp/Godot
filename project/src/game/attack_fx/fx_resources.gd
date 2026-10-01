@@ -1,5 +1,6 @@
 extends RefCounted
-## Resource bersama: core/shell archive + billboard api GDQuest (MIT).
+## Resource bersama: core/shell archive + shader billboard api.
+## Attribution/terms: project/licenses/LICENSES.txt.
 
 const CORE = preload("res://src/game/legacy_spirit/fireball_core.gdshader")
 const SHELL = preload("res://src/game/legacy_spirit/fireball_shell.gdshader")

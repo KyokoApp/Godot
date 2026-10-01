@@ -1,4 +1,5 @@
-// Adapted from Marcel Bankmann's GodotSSRWater (MIT, see licenses).
+// Adapted screen-space water shader.
+// Attribution and license terms: project/licenses/LICENSES.txt.
 // Projection/depth, two-wave blend, refraction, screen-edge fade and SSR retained.
 // Godot 4.5 Mobile reverse-Z; bounded optional SSR, proper normal spaces and miss fallback.
 shader_type spatial;

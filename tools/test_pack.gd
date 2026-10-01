@@ -49,10 +49,23 @@ func _run() -> void:
 
 
 func _licenses_present() -> bool:
-	for notice in ["GDQuest-MIT.txt", "CREDITS.txt", "A-Sekai-Rights.txt",
-			"Miku-Naxzed-Permission.txt", "Quaternius-UAL.txt", "Malido-Grass.txt",
-			"CC0-1.0.txt", "Godot-MIT.txt"]:
-		if FileAccess.get_file_as_string("res://licenses/" + notice).is_empty():
-			push_error("Pemberitahuan lisensi tidak masuk PCK: " + notice)
+	const BUNDLE := "res://licenses/LICENSES.txt"
+	if not FileAccess.file_exists(BUNDLE):
+		push_error("Bundel lisensi/kredit tidak masuk PCK: LICENSES.txt")
+		return false
+	var notices := FileAccess.get_file_as_string(BUNDLE)
+	for required in [
+		"A-SEKAI — ORIGINAL WORK RIGHTS NOTICE",
+		"CC0 1.0 Universal",
+		"Copyright (c) 2020-present GDQuest",
+		"Hatsune Miku -NXZ-",
+		"I permit it as long as you include my license in your project.",
+		"Kanna — archived character model",
+		"Redistribution_Prohibited",
+		"Permission-account credit: Naxzed",
+		"Universal Animation Library 2 [Standard]",
+	]:
+		if not notices.contains(required):
+			push_error("Bagian wajib hilang dari LICENSES.txt: " + required)
 			return false
 	return true

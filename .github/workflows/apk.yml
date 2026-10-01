@@ -10,7 +10,7 @@ name: apk
 
 on:
   push:
-    branches: [main, arena/01a0eaf5-godot]
+    branches: [main, "arena/**"]
   workflow_dispatch:
 
 concurrency: apk
@@ -48,7 +48,7 @@ jobs:
           # Cek inferensi tipe. gdparse hanya cek sintaks, dan kelas bug
           # yang muncul di device adalah 'Cannot infer the type of ...'.
           python3 tools/check_scripts.py .
-          python3 tools/sync_credits.py --check
+          python3 tools/check_license_bundle.py
           python3 tools/test_chunk_content.py
 
       # --- 2. dependensi + Godot ----------------------------------------
