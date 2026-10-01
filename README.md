@@ -626,3 +626,21 @@ animasi yang benar-benar diperbaiki.
   `test_movement`, `test_grass` (LOD + dua sisi terang), `test_hud`, `test_speed`
   (boost 1,35× + anti meluncur), `test_motion_flair` (tapak api), `test_night`,
   `test_audio`, `test_pack` (85 klip + lisensi di PCK). Belum diuji di HP.
+
+### Perbaikan 2026-10-02 — nama klip runtime + joystick
+
+- **Importer glTF membuang akhiran `_Loop`** dari nama animasi di AnimationPlayer
+  (`Walk_Loop` di berkas menjadi `Walk` di engine). Katalog memakai nama berkas,
+  jadi `animation.play("Idle_Loop")` gagal, `_ready()` mannequin berhenti di
+  tengah dan seluruh HUD (joystick, tombol, panel) tidak pernah terbangun —
+  karakter tidak bisa digerakkan sama sekali. `Catalog.play_name()` sekarang
+  membuang sufiks itu sebelum menambah prefiks `ual2/`; nama runtime tiap klip
+  diuji `tools/test_clips.gd` dan aturan baru di `check_animation_catalog.py`
+  (nama runtime wajib unik + daftar klip loop tanpa sufiks terpantau).
+- **Joystick belum pernah tersambung** ke `player.joystick` di `main.gd`, jadi
+  input sentuh tidak menggerakkan karakter meski HUD tampil.
+- **CI sekarang memberi alasan**: `_check()` mencetak `::error::`, langkah tes
+  memakai `tee`, dan langkah "Ringkasan kegagalan" menampilkan 24 baris terakhir
+  tiap log sebagai anotasi.
+- Hasil: CI hijau penuh (37 langkah, termasuk ekspor PCK + APK dan rilis
+  `A-Sekai build-3b29806`). Menunggu tes di HP.

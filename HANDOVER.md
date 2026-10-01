@@ -19,9 +19,23 @@
 - Perubahan gameplay dikirim lewat PCK yang kompatibel launcher 1; jangan minta
   install APK lagi kalau launcher 3A sudah terpasang.
 - Keystore debug permanen: jangan regenerate.
-- Semua gerbang lokal (gdparse/gdlint, `check_scripts.py`, `check_license_bundle.py`,
-  `test_chunk_content.py`, `check_animation_catalog.py`) BERSIH. **Belum diuji di HP**:
-  yang menunggu adalah tes perangkat, bukan fitur baru.
+- 2026-10-02 — **CI HIJAU PENUH** (run 36940453606, commit `3b29806`): 37 langkah
+  lulus, termasuk ekspor PCK + APK dan rilis `A-Sekai build-3b29806`
+  (`asekai.apk`, `content.pck`, potongan `.bin`, `content-v2.json`).
+  Yang menunggu sekarang hanya tes di HP, bukan fitur baru.
+- Dua bug besar yang membuat semuanya tampak mati sudah dibereskan:
+  1. **Importer glTF membuang akhiran `_Loop`** dari nama animasi di
+     AnimationPlayer (`Walk_Loop` -> `Walk`), sedangkan katalog memanggil nama
+     berkas. Akibatnya `animation.play("Idle_Loop")` gagal, `_ready()` mannequin
+     berhenti dan SELURUH HUD (joystick, tombol) tidak pernah terbangun.
+     `Catalog.play_name()` sekarang membuang sufiks itu; nama runtime diuji
+     `tools/test_clips.gd` + aturan baru di `check_animation_catalog.py`
+     (nama runtime wajib unik, klip loop tanpa sufiks terpantau).
+  2. **Joystick tidak pernah tersambung ke pemain** (`_player.joystick` tidak
+     pernah di-set di `main.gd`), jadi sentuhan tidak menggerakkan karakter.
+- Tes yang diperketat: `_check()` mencetak `::error::` supaya CI memberi alasan;
+  step tes memakai `tee` + langkah "Ringkasan kegagalan" menampilkan 24 baris
+  terakhir tiap log sebagai anotasi.
 
 
 # SERAH TERIMA — untuk sesi AI berikutnya
