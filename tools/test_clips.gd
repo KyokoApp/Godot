@@ -3,9 +3,10 @@ extends SceneTree
 ## Nama hasil impor engine yang dipakai di sini, bukan nama di dalam JSON GLB.
 
 const Catalog = preload("res://src/game/animation/catalog.gd")
+# Kunci mengikuti nilai di katalog ("ual1"/"ual2", huruf kecil).
 const MODELS := {
-	"UAL1": "res://assets/mannequin/UAL1_Standard.glb",
-	"UAL2": "res://assets/combat/UAL2_Standard.glb",
+	"ual1": "res://assets/mannequin/UAL1_Standard.glb",
+	"ual2": "res://assets/combat/UAL2_Standard.glb",
 }
 const EXPECTED_PER_FILE := 43
 
