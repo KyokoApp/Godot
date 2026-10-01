@@ -252,7 +252,7 @@ jobs:
       - name: Tes HUD dan multitouch jalan + attack (Mobile Vulkan)
         run: |
           set +e
-          timeout 180 xvfb-run -a env \
+          timeout 420 xvfb-run -a env \
             VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
             ./godot --path project --rendering-method mobile --rendering-driver vulkan \
             --audio-driver Dummy --resolution 640x360 \

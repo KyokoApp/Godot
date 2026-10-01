@@ -6,6 +6,11 @@ var _failures := 0
 
 
 func _init() -> void:
+	# Vulkan software di CI hanya sanggup beberapa frame per detik; tanpa ini
+	# engine cuma memajukan 8 tick fisika per frame sehingga 240 tick menunggu
+	# puluhan frame render (~2 menit). Batas ini hanya soal catch-up, fisika tetap
+	# satu tick per langkah.
+	Engine.max_physics_steps_per_frame = 32
 	call_deferred("_run")
 
 
@@ -82,7 +87,7 @@ func _run() -> void:
 	for frame in range(20):
 		await physics_frame
 	_check(player.velocity.y > 1.0 or not player.is_on_floor(), "Badan tidak ikut melompat")
-	for frame in range(120):
+	for frame in range(90):
 		await physics_frame
 		if player.is_on_floor():
 			break
