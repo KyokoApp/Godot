@@ -22,9 +22,12 @@ func _check(condition: bool, message: String) -> void:
 func _run() -> void:
 	var game := load("res://src/game/main.tscn").instantiate() as Node3D
 	root.add_child(game)
-	for frame in range(30):
-		await physics_frame
 	var player: CharacterBody3D = game.get("_player")
+	for frame in range(60):
+		await physics_frame
+		if player != null and player.is_on_floor():
+			break
+	_check(player != null and player.is_on_floor(), "Pemain tidak mendarat")
 	var visual: Node3D = game.get("_visual")
 	var stick: Control = game.get("_joystick")
 	var trail: Trail = game.get("_speed_aura")

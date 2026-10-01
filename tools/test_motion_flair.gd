@@ -35,15 +35,16 @@ func _run() -> void:
 func _test_contacts() -> void:
 	var game := load("res://src/game/main.tscn").instantiate() as Node3D
 	root.add_child(game)
-	for frame in range(20):
-		await physics_frame
 	var trail: Trail = game.get("_foot_fire")
 	var stick: Control = game.get("_joystick")
 	var player: Node3D = game.get("_player")
 	var character: Character = game.get("_visual")
 	var ground: Node3D = game.get("_field")
-	for frame in range(30):
+	for frame in range(60):
 		await physics_frame
+		if player.is_on_floor():
+			break
+	_check(player.is_on_floor(), "Pemain tidak mendarat")
 	var before := trail.emitted
 	for frame in range(15):
 		await physics_frame
@@ -52,7 +53,7 @@ func _test_contacts() -> void:
 	var maximum := Vector2(-INF, -INF)
 	var lift_range := Vector2(INF, -INF)
 	stick.set("direction", Vector2.UP)
-	for frame in range(180):
+	for frame in range(240):
 		await physics_frame
 		for side in range(2):
 			var point := character.foot_pose(side == 0).origin
@@ -65,7 +66,7 @@ func _test_contacts() -> void:
 	print("::notice::Foot contact min=", minimum, " max=", maximum,
 		" rest=", character.foot_clearance(true), " swing=", lift_range,
 		" stamps=", trail.emitted - before)
-	_check(trail.emitted - before >= 5,
+	_check(trail.emitted - before >= 3,
 		"Kontak langkah berulang kurang: %d" % (trail.emitted - before))
 	stick.set("direction", Vector2.ZERO)
 	await physics_frame

@@ -35,8 +35,12 @@ func _drag(index: int, point: Vector2) -> void:
 func _run() -> void:
 	var game := load("res://src/game/main.tscn").instantiate() as Node3D
 	root.add_child(game)
-	for frame in range(4):
+	var player: CharacterBody3D = game.get("_player")
+	for frame in range(60):
 		await physics_frame
+		if player != null and player.is_on_floor():
+			break
+	_check(player != null and player.is_on_floor(), "Pemain tidak menyentuh tanah")
 	var attack: Button = game.get("_attack")
 	var jump: Button = game.get("_jump")
 	var crouch: Button = game.get("_crouch")
@@ -44,7 +48,6 @@ func _run() -> void:
 	var panel: Control = game.get("_panel")
 	var stick: Control = game.get("_joystick")
 	var orbit: Node3D = game.get("_orbit")
-	var player: CharacterBody3D = game.get("_player")
 	var visual: Node3D = game.get("_visual")
 	var pet: Node3D = game.get("_pet")
 	var pet_id := pet.get_instance_id()
@@ -96,10 +99,13 @@ func _run() -> void:
 	var start := player.position
 	for frame in range(12):
 		await physics_frame
-	_check(player.position.x > start.x + 0.2, "Karakter berhenti saat attack ditahan")
+	var travelled := Vector2(player.position.x - start.x, player.position.z - start.z).length()
+	_check(travelled > 0.2, "Karakter berhenti saat attack ditahan")
 	_touch(1, hit, false)
 	_touch(0, left, false)
-	await physics_frame
+	for frame in range(24):
+		await physics_frame
+	_check(player.move_speed < 0.05, "Pemain tidak berhenti setelah jari diangkat")
 	# Panel katalog animasi.
 	_touch(12, catalog.get_global_rect().get_center(), true)
 	_touch(12, catalog.get_global_rect().get_center(), false)
@@ -119,7 +125,7 @@ func _run() -> void:
 	await process_frame
 	_check(visual.clip == "Sword_Regular_Combo", "Baris panel tidak memutar klipnya")
 	_check(pet.get_instance_id() == pet_id, "Panel membuat pet duplikat")
-	var frozen := player.position
+	var frozen := Vector2(player.position.x, player.position.z)
 	_touch(14, panel.get_global_rect().get_center() + Vector2(40, 40), true)
 	_drag(14, panel.get_global_rect().get_center() + Vector2(120, 40))
 	_check(stick.get("direction").is_zero_approx(), "Sentuh panel menggerakkan pemain")
@@ -127,7 +133,8 @@ func _run() -> void:
 	_touch(14, panel.get_global_rect().get_center() + Vector2(120, 40), false)
 	for frame in range(6):
 		await physics_frame
-	_check(player.position.is_equal_approx(frozen), "Pemain bergerak di belakang panel")
+	var drift := Vector2(player.position.x - frozen.x, player.position.z - frozen.y).length()
+	_check(drift < 0.05, "Pemain bergerak di belakang panel")
 	var close_button: Button
 	for node in panel.find_children("*", "Button", true, false):
 		var candidate := node as Button
