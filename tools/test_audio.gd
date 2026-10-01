@@ -110,6 +110,7 @@ func _test_steps() -> void:
 		await physics_frame
 	var footsteps: Node = game.get("_footsteps")
 	var stick: Control = game.get("_joystick")
+	var player: Node3D = game.get("_player")
 	var before: int = footsteps.get("emitted")
 	for frame in range(15):
 		await physics_frame
@@ -120,9 +121,17 @@ func _test_steps() -> void:
 	var walking: int = footsteps.get("emitted")
 	_check(walking > before and walking <= before + 7, "Cadence langkah tidak mengikuti gerak")
 	stick.set("direction", Vector2.ZERO)
+	# Pemain masih melambat setelah jari diangkat; langkah selama benar-benar
+	# bergerak itu wajar. Tunggu diam dulu, baru hitung.
+	for frame in range(90):
+		await physics_frame
+		if float(player.get("move_speed")) < 0.05:
+			break
+	_check(float(player.get("move_speed")) < 0.05, "Pemain tidak berhenti")
+	var stopped: int = footsteps.get("emitted")
 	for frame in range(20):
 		await physics_frame
-	_check(footsteps.get("emitted") == walking, "Langkah tidak berhenti")
+	_check(footsteps.get("emitted") == stopped, "Langkah tidak berhenti")
 	# Padang 100 m: tengah = rumput, tepi pagar = tanah, lereng curam = batu.
 	_check(footsteps.surface_at(Vector3(0, 5, 0), Vector3.UP) == "grass",
 		"Tengah padang bukan rumput")
