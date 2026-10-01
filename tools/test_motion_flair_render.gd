@@ -67,8 +67,14 @@ func _run() -> void:
 	side.save_png("user://motion-foot-side-test.png")
 	_check(_difference(side, empty) > 40, "Api tidak memiliki volume dari samping")
 	trail.clear()
+	# Kamera dikembalikan ke sudut awal dulu: pembandingnya (empty) diambil dari
+	# sudut depan, jadi latar harus sama sebelum menyimpulkan stamp masih ada.
+	camera.position = Vector3(0, 1.4, 2)
+	camera.look_at(Vector3(0, 0.2, 0))
 	var cleared: Image = await _capture()
-	_check(_difference(cleared, empty) < 30, "Stamp tidak hilang setelah clear")
+	var residual := _difference(cleared, empty)
+	print("[motion-flair-render-test] sisa setelah clear=", residual)
+	_check(residual < 30, "Stamp tidak hilang setelah clear")
 	world.queue_free()
 	for frame in range(5):
 		await process_frame
