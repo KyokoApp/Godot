@@ -259,13 +259,6 @@ const LOOPS := ["loop", "gait"]
 const HOLDS := ["hold"]
 
 
-static func clip_count() -> int:
-	var total := 0
-	for group: Dictionary in GROUPS:
-		total += (group["clips"] as Array).size()
-	return total
-
-
 static func entries() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	for group: Dictionary in GROUPS:
