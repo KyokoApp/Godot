@@ -147,7 +147,9 @@ func _run() -> void:
 	var slide_distance := Vector2(game._player.position.x - slide_origin.x,
 		game._player.position.z - slide_origin.z).length()
 	_check(slide_distance > 0.15,
-		"Slide dodge tidak menggerakkan badan pemain (%.3fm)" % slide_distance)
+		"Slide dodge tidak menggerakkan badan pemain (%.3fm; body %.2f, dodge %.2f, action %.2f)" % [
+			slide_distance, game._player.velocity.length(),
+			challenge.player_movement_velocity().length(), game._visual.action_time])
 	var slide_followups: Array[String] = [FightLibrary.SLIDE_LOOP, FightLibrary.SLIDE_EXIT]
 	_check(challenge._followup_duration(game._visual._fight_driver, slide_followups) < 1.0,
 		"Slide_Loop masih ditahan sebagai klip dua detik")
