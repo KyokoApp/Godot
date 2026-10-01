@@ -119,13 +119,29 @@ jobs:
 
       - name: Tes joystick dan gerak (headless)
         run: |
-          timeout 60 ./godot --headless --path project \
-            --script "$GITHUB_WORKSPACE/tools/test_movement.gd"
+          set +e
+          timeout 90 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_movement.gd" 2>&1 | tee movement-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' movement-test.log; then
+            grep -E "::error::|ERROR|movement-test" movement-test.log | head -10 \
+              | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
 
       - name: Tes mannequin dan animasi tulang
         run: |
-          timeout 60 ./godot --headless --path project \
-            --script "$GITHUB_WORKSPACE/tools/test_mannequin.gd"
+          set +e
+          timeout 120 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_mannequin.gd" 2>&1 | tee mannequin-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' mannequin-test.log; then
+            grep -E "::error::|ERROR|mannequin-test" mannequin-test.log | head -10 \
+              | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
 
       - name: Tes kontak tapak api 3D (headless)
         run: |
@@ -421,6 +437,15 @@ jobs:
           fi
           grep -F '[incremental-export] HASIL: OK' build/incremental-test.log
           grep -F '[incremental-export] script-only delta:' build/incremental-test.log | while IFS= read -r line; do echo "::notice::$line"; done
+
+      - name: Ringkasan kegagalan
+        if: failure()
+        run: |
+          for log in *.log build/*.log; do
+            [ -f "$log" ] || continue
+            echo "::error::--- $log"
+            tail -25 "$log" | while IFS= read -r line; do echo "::error::$line"; done
+          done
 
       - name: Terbitkan build ke GitHub Release
         env:
