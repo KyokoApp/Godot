@@ -934,3 +934,36 @@ tracing". Cicilan ini hanya suasana/pencahayaan.
   terbalik. Ini menangkap bug flip NDC Y dan salah baca reverse-Z.
 
 Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-03 — perbaikan bayangan karakter, sinar matahari shaft panjang, pohon raksasa
+
+Lanjutan umpan balik di HP: "bayangan karakter ada banyak amat", minta god rays
+mengikuti shader [Screen Space God Rays](https://godotshaders.com/shader/screen-space-god-rays-godot-4-3/),
+dan minta pohon raksasa realistis di tengah world.
+
+- `god_rays/contact_shadows.gdshader` — **batas dekat `min_distance = 8 m`**.
+  Kamera orbit default 4 m dan bisa dizoom sampai 0,35 m, jadi karakter (dan tanah
+  tepat di kakinya) ada di zona dekat. Tanpa batas ini setiap piksel badan
+  karakter menembakkan sinar ke arah matahari yang kena BADANNYA SENDIRI —
+  hasilnya karakter penuh tambalan bayangan kecil, dan bayangan tanahnya jadi
+  dobel (shadow map + contact shadow). Keduanya sudah dikerjakan shadow map, jadi
+  lapisan ini sekarang sengaja hanya mengisi jarak menengah (8–55 m).
+- `god_rays/sun_rays.gdshader` — shaft radial lembut, 40 sampel (dulu 16) dan
+  cakram matahari diperbesar (`light_scale 0,55`, `light_feather 0,45`) supaya
+  sinar memanjang ke seluruh langit, bukan cuma bercak di dekat matahari. Parameternya
+  diberi nama sama seperti shader yang diminta (Ray Length / Light Source Scale /
+  Light Source Feather).
+  **Tidak memakai SubViewport**: shader aslinya me-render scene KEDUA kali hanya
+  untuk occlusion mask dan memakai ~200 sampel (penulisnya sendiri memperingatkan
+  soal FPS). Proyek ini punya 400 ribu segitiga rumput, jadi mask dibaca dari
+  buffer kedalaman yang SUDAH ada dan cukup 40 sampel.
+- `world/world_tree.gd` (BARU) — pohon raksasa 28 m di (0, tanah, −95): batang
+  runcing + 5 cabang bercabang + 11 bola tajuk, semua dalam SATU ArrayMesh dengan
+  warna per vertex (gaya `scenery.gd`), ± 3 ribu segitiga. Dibangun **prosedural
+  karena di repo tidak ada aset model pohon sama sekali** — `project/assets` hanya
+  berisi dua GLB mannequin (UAL1/UAL2) dan dua tekstur nature. Kalau nanti ada GLB
+  pohon, node ini bisa diganti tanpa mengubah apa pun yang lain.
+- `tools/test_world_tree.gd` (gerbang baru) — pohon harus menempel tanah, berdiri
+  di darat, > 20 m, < 20 ribu segitiga, dan tajuknya harus terbaca HIJAU serta
+  tidak hitam pekat (winding segitiga terbalik = cahaya datang dari dalam = pohon
+  hitam, dan itu gampang terjadi saat menulis bola tangan pertama).

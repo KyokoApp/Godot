@@ -5,6 +5,7 @@ extends Node3D
 
 const Field = preload("res://src/game/world/field.gd")
 const Scenery = preload("res://src/game/world/scenery.gd")
+const WorldTree = preload("res://src/game/world/world_tree.gd")
 const Grass = preload("res://src/game/grass_field.gd")
 const Player = preload("res://src/game/player.gd")
 const Character = preload("res://src/game/mannequin.gd")
@@ -46,6 +47,7 @@ var warmup_report: Dictionary = {}
 var _previous_occlusion := false
 var _field: Field
 var _scenery: Scenery
+var _world_tree: WorldTree
 var _grass: Grass
 var _player: Player
 var _visual: Character
@@ -105,6 +107,11 @@ func _build_world() -> void:
 	# gameplay di pulau tidak berubah.
 	_scenery = Scenery.new()
 	add_child(_scenery)
+	# Pohon raksasa di pedalaman: penanda arah + peneduh besar. Dibangun
+	# prosedural (tidak ada aset model pohon di repo), jadi tidak menambah
+	# unduhan apa pun.
+	_world_tree = WorldTree.new()
+	add_child(_world_tree)
 
 
 func _build_player() -> void:

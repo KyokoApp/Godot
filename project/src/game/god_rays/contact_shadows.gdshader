@@ -31,6 +31,14 @@ uniform vec3 sun_direction_view = vec3(-0.94, 0.09, -0.32);
 // karakter, cukup pendek supaya 14 sampel tetap murah di HP.
 uniform float ray_length = 21.0;
 uniform float max_distance = 55.0;
+// Piksel yang LEBIH DEKAT dari ini dilewati. Kamera orbit default 4 m dan bisa
+// dizoom sampai 0,35 m, jadi karakter (dan tanah tepat di kakinya) ada di zona
+// ini. Tanpa batas ini setiap piksel badan karakter menembakkan sinar ke arah
+// matahari yang kena BADANNYA SENDIRI - hasilnya karakter penuh tambalan
+// bayangan kecil, dan bayangan tanahnya jadi dobel (shadow map + contact
+// shadow). Kedua urusan itu sudah dikerjakan shadow map, jadi lapisan ini
+// sengaja hanya mengisi jarak menengah.
+uniform float min_distance = 8.0;
 // Seberapa kuat warna bayangan dicampur ke layar (0,55 = separuh jalan).
 uniform float strength = 0.55;
 // Warna bayangan senja: ungu kebiruan yang dalam, bukan hitam datar.
@@ -53,8 +61,9 @@ void fragment() {
 		vec3 ndc = vec3(SCREEN_UV * 2.0 - 1.0, raw);
 		vec4 corner = INV_PROJECTION_MATRIX * vec4(ndc, 1.0);
 		vec3 origin = corner.xyz / corner.w;
+		float view_distance = length(origin);
 		// Jauh dari kamera kontaknya tidak terbaca lagi: hemat setengah layar.
-		if (length(origin) <= max_distance) {
+		if (view_distance > min_distance && view_distance <= max_distance) {
 			// Sinar ditembakkan ke arah matahari. Semua matriks bawaan Godot
 			// dipakai DI SINI (fragment), bukan di fungsi terpisah: Godot tidak
 			// mengenali VIEW_MATRIX di fungsi buatan sendiri. Tanpa 'return' dan

@@ -87,7 +87,9 @@ jobs:
                 tools/test_scenery.gd tools/test_island.gd \
                 tools/render_world.gd \
                 tools/test_contact_shadows.gd \
+                tools/test_world_tree.gd \
                 project/src/game/world/scenery.gd \
+                project/src/game/world/world_tree.gd \
                 project/src/game/world/water.gdshader \
                 project/src/game/mannequin.gd \
                 project/src/game/character/skin_shell.gd \
@@ -500,6 +502,22 @@ jobs:
           fi
           grep -F '[dusk-test] HASIL: OK' dusk-test.log
 
+      - name: "Render pohon raksasa: berdiri di darat, hijau, murah (Mobile Vulkan)"
+        run: |
+          set +e
+          timeout 180 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --audio-driver Dummy --resolution 480x270 \
+            --script "$GITHUB_WORKSPACE/tools/test_world_tree.gd" 2>&1 | tee world-tree.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' world-tree.log; then
+            tail -50 world-tree.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[world-tree-test] HASIL: OK' world-tree.log
+
       - name: Simpan screenshot sinar matahari
         if: always()
         uses: actions/upload-artifact@v4
@@ -512,6 +530,13 @@ jobs:
         with:
           name: contact-shadow-screenshots
           path: ~/.local/share/godot/app_userdata/**/contact-shadow-*.png
+          if-no-files-found: ignore
+      - name: Simpan screenshot pohon raksasa
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: world-tree-screenshots
+          path: ~/.local/share/godot/app_userdata/**/world-tree-test.png
           if-no-files-found: ignore
 
       - name: Simpan screenshot motion flair
@@ -987,7 +1012,7 @@ jobs:
               alllogs/*.log 2>/dev/null | tail -40
             grep -hE '\[scenery-test\]|\[world-render-test\]|\[island-test\]' \
               alllogs/*.log 2>/dev/null | tail -30
-            grep -hE '\[dusk-test\]|\[sun-rays-test\]|\[contact-test\]' \
+            grep -hE '\[dusk-test\]|\[sun-rays-test\]|\[contact-test\]|\[world-tree-test\]' \
               alllogs/*.log 2>/dev/null | tail -10
             echo '```'
             if [ -s alllogs/gate_fetch-assets.log ]; then

@@ -1,5 +1,28 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-03 (cicilan 9, umpan balik HP) — **BAYANGAN KARAKTER DIPERBAIKI, SINAR
+  MATAHARI JADI SHAFT PANJANG, POHON RAKSASA DI TENGAH WORLD**.
+  - `src/game/god_rays/contact_shadows.gdshader`: **`min_distance = 8.0`** baru.
+    Keluhan "bayangan karakter ada banyak amat" berasal dari self-shadowing:
+    kamera orbit default 4 m (zoom sampai 0,35 m), jadi piksel badan karakter
+    menembakkan sinar yang kena badan sendiri, DAN bayangan tanahnya dobel
+    (shadow map + contact shadow). Sekarang piksel 8–55 m saja yang diproses —
+    zona dekat sudah dikerjakan shadow map. Angka terukur tetap: 0,055 di
+    belakang balok vs 0,0002 di depan balok.
+  - `src/game/god_rays/sun_rays.gdshader`: 16 → **40 sampel**, cakram matahari
+    diperbesar (`light_scale 0,55` / `light_feather 0,45`) supaya keluar shaft
+    panjang seperti shader godotshaders.com yang diminta pengguna. SENGAJA tanpa
+    SubViewport dan tanpa ~200 sampel: render scene kedua akan membunuh FPS di HP
+    (400 ribu segitiga rumput), mask dibaca dari buffer kedalaman yang sudah ada.
+  - `src/game/world/world_tree.gd` BARU + dipasang di `main.gd::_build_world()`:
+    pohon 28 m di `(0, terrain_height, -95)`. Batang runcing, 5 cabang bercabang,
+    11 bola tajuk — satu ArrayMesh, warna per vertex, ± 3 ribu segitiga.
+    **Tidak ada aset model pohon di repo** (`project/assets` = 2 GLB mannequin +
+    2 tekstur nature), jadi dibangun prosedural; kalau nanti pengguna kirim GLB
+    pohon, node ini bisa diganti tanpa mengubah yang lain.
+  - `tools/test_world_tree.gd` gerbang baru (terdaftar di `apk.yml`: langkah
+    render, daftar berkas wajib, artefak screenshot, grep ringkasan commit).
+
 - 2026-10-02 (sesi ini, cicilan 8) — **SUASANA SENJA: GLOW, MATAHARI JINGGA,
   CONTACT SHADOW ALA RAY TRACING** (lanjutan "suasana senja dengan sinar cahaya
   dan kesan seperti ray tracing").
