@@ -15,13 +15,13 @@ shader_type spatial;
 
 render_mode cull_back, depth_draw_opaque, diffuse_burley, specular_schlick_ggx;
 
-uniform vec4 skin_dark : source_color = vec4(0.045, 0.055, 0.105, 1.0);
-uniform vec4 skin_light : source_color = vec4(0.145, 0.205, 0.325, 1.0);
+uniform vec4 skin_dark : source_color = vec4(0.060, 0.075, 0.140, 1.0);
+uniform vec4 skin_light : source_color = vec4(0.190, 0.260, 0.400, 1.0);
 uniform vec4 vein_color : source_color = vec4(0.36, 0.86, 0.92, 1.0);
 uniform vec4 rim_color : source_color = vec4(0.62, 0.78, 1.0, 1.0);
-uniform float vein_scale = 11.0;
+uniform float vein_scale = 16.5;
 uniform float vein_speed = 0.20;
-uniform float vein_width = 0.16;
+uniform float vein_width = 0.105;
 uniform float body_scale = 2.2;
 uniform float rim_power = 2.4;
 uniform float rim_strength = 0.55;
@@ -60,8 +60,8 @@ void fragment() {
 	float wave = 0.5 + 0.5 * sin(VERTEX.y * 6.0 - TIME * (2.0 + 4.0 * pulse));
 	float beat = mix(0.35, 1.0, wave) * (0.35 + 0.65 * pulse + 0.5 * charge);
 
-	vec3 albedo = mix(base, vein_color.rgb, vein * 0.55 * (0.5 + 0.5 * beat));
-	albedo += vein_color.rgb * vein * beat * 0.35;
+	vec3 albedo = mix(base, vein_color.rgb, vein * 0.42 * (0.5 + 0.5 * beat));
+	albedo += vein_color.rgb * vein * beat * 0.28;
 
 	// Percikan kecil tetap di permukaan supaya kulit tidak terlihat datar.
 	float sparkle = shell_hash(floor(flow_uv * 26.0)) * smoothstep(0.985, 1.0,
@@ -73,6 +73,8 @@ void fragment() {
 	ALBEDO = albedo;
 	ROUGHNESS = roughness;
 	METALLIC = metallic;
-	EMISSION = vein_color.rgb * (vein * 0.35 + rim * 0.15) * (0.25 + pulse * 0.5);
+	// Garis tepi yang menyala: siluet badan tetap terbaca walau di tempat gelap.
+	EMISSION = vein_color.rgb * (vein * 0.30 + rim * rim_strength * 0.35)
+		* (0.25 + pulse * 0.5);
 	SPECULAR = 0.35;
 }

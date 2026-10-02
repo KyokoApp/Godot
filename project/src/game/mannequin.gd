@@ -145,11 +145,14 @@ func visible_meshes() -> Array[MeshInstance3D]:
 func set_light_cloth(light: bool) -> void:
 	if _skin_material == null:
 		return
-	_skin_material.set_shader_parameter("vein_scale", 7.0 if light else 11.0)
-	_skin_material.set_shader_parameter("vein_width", 0.20 if light else 0.16)
+	# Mode ringan tetap memakai pola yang sama, hanya sedikit lebih kasar —
+	# kalau angkanya jauh berbeda, kulit terlihat berganti model saat setelan
+	# grafis diubah (band bawaan 15,5/0,115).
+	_skin_material.set_shader_parameter("vein_scale", 12.0 if light else 16.5)
+	_skin_material.set_shader_parameter("vein_width", 0.130 if light else 0.105)
 	if skin != null and skin.skin != null:
-		skin.skin.set_shader_parameter("vein_scale", 7.0 if light else 11.0)
-		skin.skin.set_shader_parameter("vein_width", 0.20 if light else 0.16)
+		skin.skin.set_shader_parameter("vein_scale", 12.0 if light else 16.5)
+		skin.skin.set_shader_parameter("vein_width", 0.130 if light else 0.105)
 
 
 func _configure_clips() -> void:
