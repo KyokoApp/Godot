@@ -45,9 +45,10 @@ func _run() -> void:
 	await _test_chunks()
 	_test_grass()
 	print("[island-test] gagal=%d" % _failures)
-	print("--- diagnostik ---")
+	# Awalan [island-test] dibuat sama supaya barisnya ikut terbawa ke komentar
+	# commit CI (pekerjaan `ringkasan` hanya menggrep awalan itu).
 	for note in _notes:
-		print(note)
+		print("[island-test] ", note)
 	quit(0 if _failures == 0 else 1)
 
 

@@ -825,4 +825,8 @@ adalah cicilan berikutnya — belum dikerjakan).
   Gerbang lama diperbarui (test_scenery/test_grass/test_audio/render_world) dan
   satu langkah CI baru menambahkan tes pulau ke `gate`.
 
-Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+Hasil CI (run `37011157491`, 7/7 pekerjaan hijau, push → selesai 4 menit 30 s):
+gate 104 s (termasuk tes pulau baru `[island-test] gagal=0`), render-c 209 s,
+render-a 189 s, render-b 175 s, package 90 s. Belum diuji di HP — sandbox tidak
+bisa menjalankan Godot, jadi bentuk pulau dinilai dari gambar render CI
+(`world-pulau/pantai/pemandangan/jalan/laut`) dan dari HP pengguna.

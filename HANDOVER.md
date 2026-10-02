@@ -70,7 +70,13 @@
     2. `arm.collide_with_bodies` TIDAK ADA di `SpringArm3D` — cara mematikan
        tabrakan SpringArm adalah `arm.collision_mask = 0`. Keduanya membuat
        gerbang `gate` gagal dan render ikut gagal.
-  - BELUM diuji di HP (sandbox tidak bisa render Godot).
+  - Run `37011157491`: 7/7 pekerjaan HIJAU (4 menit 30 s push → selesai).
+    `[island-test] gagal=0`, `[scenery-test] gagal=0`, `[world-render-test]
+    HASIL: OK`, gate 104 s, render-c 209 s, render-a 189 s, render-b 175 s.
+    Gambar render CI tersedia: world-pulau, world-pemandangan, world-pantai,
+    world-jalan, world-laut.
+  - BELUM diuji di HP (sandbox tidak bisa render Godot) — itulah pemeriksaan
+    visual yang perlu dilakukan pengguna.
 
 - 2026-10-02 (sesi ini, cicilan 2) — **KULIT MANNEQUIN: HITAM POLOS** (garis
   energi & percikan dibuang; lanjutan "hitam gelap + outline putih tipis").
