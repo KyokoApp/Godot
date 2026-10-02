@@ -80,8 +80,13 @@ func _run() -> void:
 	# Pose bergerak HARUS lewat joystick: kalau klip dipanggil langsung, pemain
 	# menimpanya lagi tiap frame dan semua gambar jadi pose diam (kejadian di
 	# versi pertama tes ini — HUD-nya masih tertulis Idle_Loop).
-	orbit.focus_offset = Vector3(0.0, 0.55, 0.0)
+	# Pose bergerak dibidik PINGGUL dan jaraknya dekat: kalau kamera jauh di
+	# setinggi kepala, kain cuma jadi beberapa piksel dan tidak bisa dinilai.
+	var hips := {"bone": "Bip001 Pelvis", "lift": 0.05}
+	orbit.focus_offset = Vector3(0.0, _focus_height(hips, player, avatar), 0.0)
 	orbit.yaw = PI * 0.5
+	orbit.pitch = 0.06
+	orbit.distance = 1.80
 	stick.set("direction", Vector2.UP)
 	for frame in range(90):
 		await physics_frame
@@ -97,6 +102,9 @@ func _run() -> void:
 	# Jongkok: lewat tombol pemain juga, supaya animasinya konsisten.
 	player.toggle_crouch()
 	stick.set("direction", Vector2.UP)
+	orbit.yaw = PI * 0.25
+	orbit.pitch = 0.10
+	orbit.distance = 1.60
 	for frame in range(60):
 		await physics_frame
 	await _capture("avatar-jongkok")

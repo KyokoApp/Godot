@@ -781,3 +781,51 @@ Kontrak sekarang di `player.gd` + `mannequin.gd`:
 Bukti per-frame: `tools/test_jump_trace.gd` (step CI "Rekam alur animasi lompat").
 Alurnya sengaja melepas analog tepat saat menekan LOMPAT, lalu memeriksa laju
 minimum di udara, jarak terbang, klip saat mendarat, dan klip saat melambat.
+
+## Leher & kain Aurelia: akurasi kerangka + kain tidak menembus baju (2026-10-02)
+Keluhan pengguna: "leher nya kurus banget kayaknya modelnya kurang akurat dan
+juga kain baju masih banyak yang kliatan kaku dan nembus di baju lain."
+Semua akarnya ada di `animation/cloth_springs.gd`:
+- **Leher ternyata disimulasikan sebagai kain.** Geometri leher digerakkan
+  `Bone_NeckA01_M` (476 titik; anak `Bip001 Neck` yang hanya 9 titik), dan grup
+  `Bone_Neck` ikut verlet — tiap frame kulit leher ditarik gravitasi sehingga
+  leher tampak kurus dan memanjang. Grup itu DIHAPUS; leher sekarang mengikuti
+  animasi badan seperti tulang lain. Bukti lama: laporan tembus menunjuk
+  partikel `Bone_NeckA01_M` vs kapsul `Bip001 Neck`.
+- **Urutan mask tabrakan salah.** `allowed` ditulis per kapsul lalu per
+  partikel, tapi dibaca per partikel (`index * jumlah_kapsul + slot`) — jadi
+  simulasi mendorong partikel yang salah (mask hanya kebetulan benar kalau
+  jumlah partikel = jumlah kapsul). Sekarang penulisan dan pembacaan sama-sama
+  kolom-kapsul; ini juga salah satu sebab kain masih menembus badan.
+- **Kain vs kain (aturan baru).** Tiap rantai dihitung lapisannya (rata-rata
+  jarak titik rest ke kapsul badan). Rantai yang lebih luar tidak boleh masuk ke
+  kapsul rantai yang lebih dalam: `WEAVE_RADIUS` 2 cm, kapsul dibuat dari segmen
+  terdekat di rest pose (maksimum 6 per rantai). Ini yang menghentikan panel
+  menembus baju lain, dan sekarang ada angkanya (`weave_report()`, digerbang di
+  `tools/test_aurelia.gd`).
+- **Kain yang dipasang di lengan tidak digoyang.** `Bone_ShawlJ01_L`/`K01_L`
+  menggantung di `Bone_ShawlArmTwistA01_L` (anak `Bip001 L UpperArm`); goyangan
+  gravitasi membuatnya menyayat jubah badan setiap lengan diangkat. Ketiganya
+  masuk `SKIP_BONES` dan kaku mengikuti lengan seperti aslinya.
+- **Kain tidak kaku lagi**: kekakuan grup Shawl 15 → 9,5 /detik, redaman
+  1,7 → 1,45.
+- Angka CI terakhir (commit `de3ed0a`, run 36975703931; kerangka/kain tidak
+  berubah setelahnya): rantai 40, kain 67 tulang, **tembus kain** diam 0,0044 m
+  dan lari 0,0038 m (gerbang 0,02/0,03), **tembus kain vs kain** diam 0,0000 m
+  dan lari 0,0031 m (gerbang 0,012/0,02), biaya kain+retarget 2,99 ms/frame dari
+  anggaran 6,0 ms, zoom kamera OK.
+- **Pratinjau baru** supaya mata bisa memeriksa bagian ini: `leher` (bidik
+  `Bip001 Neck` dari sedikit bawah), `kain` (samping, bidik `Bip001 Pelvis`),
+  `kain_belakang` (tiga-perempat belakang, bidik `Bip001 Spine1`), dan pose
+  jalan/lari/jongkok kini dibidik pinggul pada 1,6-1,8 m. Titik bidik diambil
+  dari POSISI TULANG, bukan angka meter: percobaan pertama memakai tinggi
+  tebakan dan bidikan leher mengarah ke langit. `orbit_camera.gd` sekarang
+  menyimpan `focus_offset` (dulu angka 0,55 ditulis di `main.gd`).
+- **Alat baru**: `tools/fbx_inspect.py` (baca FBX tanpa Godot: `bones`,
+  `extras`, `mats`, `bonesize` — tulang mana menggerakkan berapa titik dan
+  sebesar apa geometrinya) dan `tools/fetch_previews.sh` (menyusun ulang JPEG
+  pratinjau dari komentar commit CI; unduhan artefak sering gagal EOF).
+- Catatan model: leher asli memang 9 cm (`Bone_NeckA01_M` x ±0,045) sementara
+  kepalanya 23 cm — setelah simulasi dilepas, leher tampil seperti aslinya. Bila
+  pengguna tetap ingin lebih tebal, itu koreksi bentuk (skala tulang leher),
+  bukan bug simulasi.
