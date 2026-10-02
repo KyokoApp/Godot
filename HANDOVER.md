@@ -1,5 +1,31 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-03 (cicilan 13) — **LANGIT MALAM DIPERBAIKI + HUD GAYA GAME AKSI**
+  (permintaan: "masih kurang realistis langit nya kalo bulan dah cakep banget
+  tapi bintang dan langit kayak png ada garis garis gitu dan juga rapih kan ui
+  kamu bisa tiru ui attack,lompat dan lain lain kayak genshin atau wuwa").
+  - `src/game/environment/dusk_sky.gdshader`:
+    - **akar masalah "garis garis"**: sel grid azimut selebar 2x sel polar dalam
+      sudut (azimut = 2π, polar = π) tapi jarak ke pusat bintang tidak
+      dikoreksi → setiap bintang oval horizontal. Fix:
+      `away = length((local - offset) * vec2(2.0, 1.0))`.
+    - **pola grid**: versi 1-hash (hemat FPS di cicilan 12b) membuat posisi
+      bintang terkurung di kurva `fract(roll*K)`. Kembali ke 3 hash terpisah.
+    - bintang: magnitudo `pow(bright, 2.6)`, bintang terang lebih besar, inti
+      tajam + halo lembut, variasi warna biru→kuning.
+    - dither ± setengah level 8-bit supaya gradasi biru tua tidak belang.
+  - HUD gaya Genshin/WuWa: ikon besar + label kecil di tombol aksi
+    (`ui/sword.svg`, `ui/jump.svg`, `ui/crouch.svg` baru), gambar tombol dirapikan
+    (cakram + kilau + cincin tepi + cincin dalam + cooldown), tata letak
+    melengkung di kanan bawah, petunjuk debug di banner dihapus.
+  - **bug HUD ditemukan & diperbaiki**: `SpeedButton` (LARI) tidak pernah diberi
+    `custom_minimum_size`, jadi `_place()` di `main.gd` menghitung diameter 0 dan
+    tombolnya berukuran NOL piksel — tidak bisa ditekan. Kalau nanti ada laporan
+    "tombol lari tidak berfungsi", itu penyebabnya.
+  - batasan tes yang mengunci HUD (`tools/test_hud.gd`): ukuran tombol serang
+    HARUS 136×136, caption "SERANG"/"TEMBAK", dan caption jongkok berganti
+    "JONGKOK"↔"BERDIRI".
+
 - 2026-10-03 (cicilan 12b) — **REVISI MALAM: AWAN DIBUANG, BINTANG DIKURANGI,
   BULAN DITURUNKAN, JALAN BERSIH DARI RUMPUT** (permintaan: "terlalu rame banget
   itu awannya ilangin trus bintang nya buat lebih sedikit jangan terlalu rame dan

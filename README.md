@@ -1105,3 +1105,43 @@ ketutupun rumput pas di deketin".
   `can_grow()`.
 
 Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-03 — langit malam diperbaiki (bintang oval + pola garis) dan HUD gaya game aksi
+
+Permintaan: "masih kurang realistis langit nya kalo bulan dah cakep banget tapi
+bintang dan langit kayak png ada garis garis gitu dan juga rapih kan ui kamu bisa
+tiru ui attack,lompat dan lain lain kayak genshin atau wuwa".
+
+- `environment/dusk_sky.gdshader`:
+  - **Penyebab bintang kayak garis/oval ditemukan**: sel grid azimut selebar 2x
+    sel polar DALAM SUDUT (azimut keliling = 2π, polar = π), tapi jarak ke pusat
+    bintang tidak dikoreksi. Akibatnya setiap bintang jadi oval horizontal —
+    persis "garis garis" yang terlihat. Diperbaiki dengan
+    `length((local - offset) * vec2(2.0, 1.0))`.
+  - **Pola grid hilang**: versi hemat (1 hash untuk offset + kecerahan) membuat
+    posisi bintang terkurung di satu kurva `fract(roll*K)`. Kembali ke 3 hash
+    terpisah. Tiga `sin()` per piksel masih jauh lebih murah daripada awan yang
+    sudah dihapus (24-36 `sin()`).
+  - **Bintang tidak lagi seperti sprite PNG**: distribusi magnitudo
+    (`pow(bright, 2.6)` — kebanyakan redup, sedikit terang), bintang terang lebih
+    besar, inti tajam + halo lembut, dan sedikit variasi warna (biru dingin →
+    kuning hangat).
+  - **Banding gradasi hilang**: dither ± setengah level 8-bit ditambahkan, jadi
+    gradasi biru tua tidak lagi pecah jadi garis-garis horizontal.
+- HUD (`main.gd`, `ui/rune_button.gd`, `ui/speed_button.gd`) jadi gaya game aksi:
+  - tombol aksi pakai **ikon besar di tengah + label kecil di bawah** (bukan
+    huruf besar menempati tombol). Ikon baru: `ui/sword.svg` (serang),
+    `ui/jump.svg` (lompat), `ui/crouch.svg` (jongkok); ikon lama flame/speed/
+    settings tetap dipakai.
+  - gambar tombol dirapikan: cakram gelap lembut + kilau atas + cincin tepi
+    tipis + cincin dalam detail + sapuan cooldown.
+  - tata letak tombol kanan bawah disusun melengkung mengelilingi tombol serang
+    (serang besar di ujung, tembak/jongkok/lari di sekitarnya) dan tidak saling
+    tumpang tindih.
+  - **bug sekalian diperbaiki**: tombol LARI (`SpeedButton`) tidak pernah
+    diberi `custom_minimum_size`, jadi `_place()` menghitung diameter 0 dan
+    tombolnya berukuran nol piksel — tidak bisa ditekan sama sekali.
+  - petunjuk debug di banner kiri atas ("geser kiri = jalan/lari · ...")
+    dihapus; banner cukup menampilkan nama klip + progres.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.

@@ -10,9 +10,10 @@ shader_type sky;
 //   - kawah bulan = lingkaran analitik di basis lokal piringan bulan;
 //   - halo bulan = exp() sudut pandang.
 //
-// Hemat: bintang hanya dihitung di atas ufuk (cabang dinamis), SATU hash per
-// piksel (offset & kecerahan bintang diturunkan dari hash yang sama), dan kawah
-// bulan hanya dihitung di dekat piringan.
+// Hemat FPS (tetap dipertahankan): bintang hanya dihitung di atas ufuk (cabang
+// dinamis), dan kawah bulan hanya dihitung di dekat piringan. Yang TIDAK
+// dihemat lagi: hash bintang kembali jadi 3 pemanggilan terpisah — versi 1 hash
+// bikin posisi bintang berpola garis dan bentuknya oval (ditolak pengguna).
 //
 // Arah "sun_direction" menunjuk ke BULAN. Namanya dibiarkan karena dipakai
 // bersama oleh air, pemandangan, dan tes render.
@@ -33,7 +34,11 @@ uniform float star_density = 34.0;
 // Pecahan sel yang berisi bintang. Dikurangi dari 0,045: permintaan pengguna
 // "bintang nya buat lebih sedikit jangan terlalu rame".
 uniform float star_amount = 0.016;
-// Ukuran bintang sebagai pecahan sel (sekitar 1-3 piksel di HP).
+// Ukuran INTI bintang dalam sel polar (1 sel polar = 1/(2*star_density) radian).
+// Sengaja kecil: bintang asli intinya nyaris sebesar piksel, dan ukuran seragam
+// yang besar bikin terlihat seperti sprite PNG tempel (keluhan pengguna).
+// Cahayanya tetap penuh di tengah, jadi bintang tetap terlihat walau intinya
+// hanya satu-dua piksel — sisanya ditangani halo lembut di star_field().
 uniform float star_size = 0.30;
 uniform float star_brightness = 1.7;
 uniform float star_twinkle = 0.30;
@@ -59,27 +64,43 @@ float wrapped_hash(vec2 p) {
 }
 
 // Bintang: grid di koordinat bola langit. Sumbu azimut keliling (2x lebih
-// panjang), jadi skala sumbu polar digandakan supaya sel tetap mendekati persegi
-// dan bintang tidak jadi oval.
+// panjang), jadi skala sumbu polar digandakan supaya jumlah sel di kedua arah
+// seimbang.
 //
-// HEMAT: hanya SATU pemanggilan hash. Posisi dan kecerahan bintang diturunkan
-// dari hash yang sama dengan perkalian fract — bukan 3 hash terpisah.
+// DUA hal yang bikin langit terlihat "kayak PNG" dan sudah diperbaiki di sini:
+//   1. Sel azimut selebar 2x sel polar DALAM SUDUT. Jarak ke pusat bintang harus
+//      dikoreksi (x dikali 2) sebelum dibandingkan dengan star_size — tanpa itu
+//      setiap bintang jadi oval horizontal dan langit penuh garis-garis.
+//   2. Offset posisi dan kecerahan pakai hash TERPISAH. Versi hemat yang
+//      menurunkan keduanya dari SATU hash membuat posisi bintang terkurung di
+//      satu kurva, jadi pola grid-nya tetap kelihatan.
 vec3 star_field(vec3 direction, float fade) {
 	vec2 sphere = vec2(atan(direction.z, direction.x),
 		acos(clamp(direction.y, -1.0, 1.0)));
 	vec2 grid = vec2(sphere.x * star_density, sphere.y * star_density * 2.0);
 	vec2 cell = floor(grid);
 	vec2 local = fract(grid);
-	float roll = wrapped_hash(cell);
-	vec2 offset = vec2(fract(roll * 73.17), fract(roll * 191.31));
-	float away = length(local - offset);
-	float point = 1.0 - smoothstep(0.0, star_size, away);
-	float bright = fract(roll * 331.79);
+	vec2 wrapped = mod(cell, vec2(128.0));
+	float roll = hash(wrapped);
+	vec2 offset = vec2(hash(wrapped + 17.3), hash(wrapped + 41.9));
+	// Koreksi aspek sel: satu sel azimut = 2 sel polar dalam sudut.
+	float away = length((local - offset) * vec2(2.0, 1.0));
+	float bright = hash(wrapped + 5.7);
+	// Distribusi magnitudo seperti langit sungguhan: kebanyakan redup, sedikit
+	// yang terang (pow mendorong ke angka kecil). Bintang terang juga lebih besar.
+	float magnitude = pow(bright, 2.6);
+	float reach = away / (0.45 + magnitude * 1.55);
+	// Titik tajam + halo lembut. Bintang asli bukan cakram datar: intinya nyaris
+	// sebesar piksel, dan yang bikin terasa "langit" adalah glow di sekitarnya.
+	float core = 1.0 - smoothstep(0.0, star_size, reach);
+	float halo = exp(-reach * reach * 30.0) * 0.28;
 	float twinkle = 1.0 - star_twinkle * 0.5 * (1.0 + sin(TIME * 1.7 + bright * 39.0));
 	float on = stars_enabled ? 1.0 : 0.0;
 	float lit = step(1.0 - star_amount, roll) * on;
-	return star_color.rgb * star_brightness * point * twinkle * fade * lit
-		* (0.55 + bright * 0.9);
+	// Sedikit variasi warna: biru dingin sampai kuning hangat.
+	vec3 tint = mix(vec3(0.70, 0.81, 1.0), vec3(1.0, 0.87, 0.70), fract(bright * 7.31));
+	return star_color.rgb * tint * star_brightness * (core + halo) * (0.30 + magnitude * 2.6)
+		* twinkle * fade * lit;
 }
 
 // Bulan + halo. Kawah ditaruh di basis lokal piringan bulan supaya posisinya
@@ -144,5 +165,9 @@ void sky() {
 		color += star_field(direction, smoothstep(0.03, 0.22, elevation));
 	}
 	color += moon_disc(direction);
-	COLOR = color;
+	// Dither halus (± setengah level 8-bit). Gradasi biru TUA kalau dibulatkan
+	// langsung jadi garis-garis horizontal (banding) — itu yang bikin langit
+	// terlihat "kayak PNG". Butir ini memecah garisnya tanpa terlihat sebagai
+	// noise. Diambil dari arah pandang supaya tetap stabil per piksel.
+	COLOR = color + (hash(direction.xy * 733.0 + direction.z) - 0.5) * 0.005;
 }

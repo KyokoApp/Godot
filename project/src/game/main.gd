@@ -31,12 +31,16 @@ const BOOT_READY := "game ready"
 const FIRE_ICON = preload("res://src/game/ui/flame.svg")
 const SETTINGS_ICON = preload("res://src/game/ui/settings.svg")
 const SPEED_ICON = preload("res://src/game/ui/speed.svg")
+const SWORD_ICON = preload("res://src/game/ui/sword.svg")
+const JUMP_ICON = preload("res://src/game/ui/jump.svg")
+const CROUCH_ICON = preload("res://src/game/ui/crouch.svg")
 const SPAWN := Vector2(0, 7)
 ## HUD gaya game aksi: satu tombol serang besar, tombol aksi bulat di sekitarnya.
 const ATTACK_DIAMETER := 136.0
-const FIRE_DIAMETER := 96.0
-const ACTION_DIAMETER := 92.0
-const RUNE_DIAMETER := 72.0
+const FIRE_DIAMETER := 100.0
+const ACTION_DIAMETER := 94.0
+const SPEED_DIAMETER := 88.0
+const RUNE_DIAMETER := 68.0
 
 var warmup_requested := false
 var warmup_complete := false
@@ -171,7 +175,6 @@ func _build_hud() -> void:
 	_player.joystick = _joystick
 	_banner = ClipBanner.new()
 	_banner.character = _visual
-	_banner.extra = "geser kiri = jalan/lari · SERANG = combo · TEMBAK = api"
 	layer.add_child(_banner)
 	_banner.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	_banner.offset_left = 20
@@ -182,43 +185,46 @@ func _build_hud() -> void:
 	_settings.compact = true
 	_settings.tooltip_text = "Pengaturan grafik"
 	layer.add_child(_settings)
-	_place(_settings, Control.PRESET_TOP_RIGHT, -92, 104)
+	_place(_settings, Control.PRESET_TOP_RIGHT, -88, 100)
 	_settings.pressed.connect(_toggle_graphics)
 	_catalog_button = _rune("ANIM", RUNE_DIAMETER)
 	_catalog_button.name = "CatalogRune"
 	_catalog_button.tooltip_text = "Pilih animasi (%d klip)" % Catalog.clip_count()
 	layer.add_child(_catalog_button)
-	_place(_catalog_button, Control.PRESET_TOP_RIGHT, -92, 20)
+	_place(_catalog_button, Control.PRESET_TOP_RIGHT, -88, 20)
 	_catalog_button.pressed.connect(_toggle_panel)
 	# --- kanan bawah: serang besar + tombol aksi di sekelilingnya -----------
-	_attack = _rune("SERANG", ATTACK_DIAMETER)
+	_attack = _rune("SERANG", ATTACK_DIAMETER, SWORD_ICON)
 	_attack.name = "AttackRune"
 	_attack.tooltip_text = "Serangan combo: tekan berulang untuk lanjut"
 	layer.add_child(_attack)
-	_place(_attack, Control.PRESET_BOTTOM_RIGHT, -172, -172)
+	_place(_attack, Control.PRESET_BOTTOM_RIGHT, -184, -184)
 	_attack.pressed.connect(_attack_action)
 	_fire_button = _rune("TEMBAK", FIRE_DIAMETER, FIRE_ICON)
 	_fire_button.name = "FireRune"
 	_fire_button.tooltip_text = "Tembakan api pet"
 	layer.add_child(_fire_button)
-	_place(_fire_button, Control.PRESET_BOTTOM_RIGHT, -300, -176)
+	_place(_fire_button, Control.PRESET_BOTTOM_RIGHT, -318, -196)
 	_fire_button.pressed.connect(_fire_action)
-	_jump = _rune("LOMPAT", ACTION_DIAMETER)
+	_jump = _rune("LOMPAT", ACTION_DIAMETER, JUMP_ICON)
 	_jump.name = "JumpRune"
 	layer.add_child(_jump)
-	_place(_jump, Control.PRESET_BOTTOM_RIGHT, -152, -300)
+	_place(_jump, Control.PRESET_BOTTOM_RIGHT, -166, -334)
 	_jump.pressed.connect(_player.request_jump)
-	_crouch = _rune("JONGKOK", ACTION_DIAMETER)
+	_crouch = _rune("JONGKOK", ACTION_DIAMETER, CROUCH_ICON)
 	_crouch.name = "CrouchRune"
 	layer.add_child(_crouch)
-	_place(_crouch, Control.PRESET_BOTTOM_RIGHT, -354, -292)
+	_place(_crouch, Control.PRESET_BOTTOM_RIGHT, -384, -308)
 	_crouch.pressed.connect(_toggle_crouch)
 	_speed_button = SpeedButton.new()
 	_speed_button.name = "SpeedBoost"
 	_speed_button.caption = "LARI"
 	_speed_button.tooltip_text = "Lari kencang ×1,35 / normal"
+	# Ukuran WAJIB diisi: tanpa custom_minimum_size, _place() menghitung diameter
+	# 0 dan tombol ini jadi nol piksel (tidak bisa ditekan sama sekali).
+	_speed_button.custom_minimum_size = Vector2(SPEED_DIAMETER, SPEED_DIAMETER)
 	layer.add_child(_speed_button)
-	_place(_speed_button, Control.PRESET_BOTTOM_RIGHT, -260, -300)
+	_place(_speed_button, Control.PRESET_BOTTOM_RIGHT, -286, -338)
 	_speed_button.pressed.connect(_toggle_speed)
 	_build_graphics_drawer(layer)
 	_panel = AnimationPanel.new()
