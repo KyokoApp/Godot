@@ -31,7 +31,12 @@ jobs:
       # Aset biner besar (FBX avatar + tekstur + pustaka UAL) tidak disimpan di
       # git; diambil dari lampiran rilis `assets-v1` (cadangan: riwayat git).
       - name: Ambil aset biner
-        run: tools/fetch_assets.sh
+        # Log-nya ditee ke berkas: langkah ini pernah gagal karena jaringan dan
+        # tanpa log-nya tidak ada cara tahu berkas mana yang gagal. Ekornya
+        # dikirim di komentar commit "angka penting" (langkah itu if: always()).
+        run: |
+          set -o pipefail
+          tools/fetch_assets.sh 2>&1 | tee fetch-assets.log
 
       - uses: actions/setup-python@v5
         with:
@@ -485,6 +490,14 @@ jobs:
             grep -hE '\[aurelia-test\]|tembus kain|material: Mat|pasangan hilang|iterasi kain|biaya avatar|camera-zoom-test|gerak klip|tinggi avatar|arah (lowerarm|calf|hand)' \
               aurelia-test.log zoom-test.log performance-test.log avatar-render.log 2>/dev/null | tail -40
             echo '```'
+            if [ -s fetch-assets.log ]; then
+              echo
+              echo '### aset biner (ekor log)'
+              echo
+              echo '```'
+              tail -6 fetch-assets.log
+              echo '```'
+            fi
           } > numbers.md
           jq -Rs '{body: .}' numbers.md > numbers.json
           gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/comments" \
