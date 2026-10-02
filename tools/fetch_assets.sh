@@ -115,28 +115,33 @@ git_file() { # git_file <path-di-repo> <tujuan>
 	return 0
 }
 
-missing=0
-
+# Kedua pengumpul mengembalikan 0 HANYA kalau semua berkas siap. Kalau ada satu
+# saja yang gagal, seluruh langkah dianggap gagal — campuran berkas dari dua
+# sumber dengan versi berbeda lebih berbahaya daripada gagal terang-terangan.
 collect_release() {
-	fetch "$FBX" "$AURELIA/$FBX" || missing=1
+	local failed=0
+	fetch "$FBX" "$AURELIA/$FBX" || failed=1
 	for glb in "${GLBS[@]}"; do
 		case "$glb" in
-			UAL1_Standard.glb) fetch "$glb" "$MANNEQUIN/$glb" || missing=1 ;;
-			*) fetch "$glb" "$COMBAT/$glb" || missing=1 ;;
+			UAL1_Standard.glb) fetch "$glb" "$MANNEQUIN/$glb" || failed=1 ;;
+			*) fetch "$glb" "$COMBAT/$glb" || failed=1 ;;
 		esac
 	done
 	for tex in "${TEXTURE_FILES[@]}"; do
-		fetch "$tex" "$TEXTURES/$tex" || missing=1
+		fetch "$tex" "$TEXTURES/$tex" || failed=1
 	done
+	return $failed
 }
 
 collect_git() {
-	git_file "aurelia-debug/$FBX" "$AURELIA/$FBX" || missing=1
-	git_file "project/assets/mannequin/UAL1_Standard.glb" "$MANNEQUIN/UAL1_Standard.glb" || missing=1
-	git_file "project/assets/combat/UAL2_Standard.glb" "$COMBAT/UAL2_Standard.glb" || missing=1
+	local failed=0
+	git_file "aurelia-debug/$FBX" "$AURELIA/$FBX" || failed=1
+	git_file "project/assets/mannequin/UAL1_Standard.glb" "$MANNEQUIN/UAL1_Standard.glb" || failed=1
+	git_file "project/assets/combat/UAL2_Standard.glb" "$COMBAT/UAL2_Standard.glb" || failed=1
 	for tex in "${TEXTURE_FILES[@]}"; do
-		git_file "aurelia-debug/Textures/$tex" "$TEXTURES/$tex" || missing=1
+		git_file "aurelia-debug/Textures/$tex" "$TEXTURES/$tex" || failed=1
 	done
+	return $failed
 }
 
 echo "aset A-Sekai (mode: $MODE)"
@@ -145,14 +150,30 @@ if [ "$MODE" = "release" ]; then
 	if ! collect_release; then
 		# Rilis belum siap (mis. workflow aset belum pernah jalan) -> pakai
 		# riwayat git sebagai cadangan supaya build tidak pernah mentok.
-		echo "  rilis tidak lengkap, beralih ke riwayat git ($COMMIT)"
-		missing=0
-		collect_git
+		echo "  rilis belum lengkap, beralih ke riwayat git ($COMMIT)"
+		collect_git || true
 	fi
 else
 	echo "sumber: git $COMMIT"
-	collect_git
+	collect_git || true
 fi
+
+# Verifikasi akhir: semua berkas harus ada dan tidak kosong (unduhan gagal yang
+# tersimpan sebagai halaman HTML tidak lolos).
+missing=0
+check_file() {
+	local path="$1" min="$2"
+	if [ ! -f "$path" ] || [ "$(stat -c%s "$path")" -lt "$min" ]; then
+		echo "  KURANG: $path" >&2
+		missing=1
+	fi
+}
+check_file "$AURELIA/$FBX" 1000000
+check_file "$MANNEQUIN/UAL1_Standard.glb" 1000000
+check_file "$COMBAT/UAL2_Standard.glb" 1000000
+for tex in "${TEXTURE_FILES[@]}"; do
+	check_file "$TEXTURES/$tex" 100
+done
 
 if [ "$missing" != 0 ]; then
 	echo "GAGAL: ada aset yang tidak bisa diambil" >&2
