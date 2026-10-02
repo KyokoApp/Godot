@@ -19,8 +19,14 @@ extends SkeletonModifier3D
 ##   2. puntiran: selisih rotasi global sumber dari rest-nya diurai jadi
 ##               swing + twist terhadap sumbu rest sumber; sudutnya dipakai
 ##               sebagai puntiran avatar terhadap sumbu rest avatar.
-##   3. letak  : sama seperti rumus bawaan Godot (selisih dari rest, dikali
-##               skala gerak) supaya naik-turun pinggul tetap sepadan ukuran.
+##   3. letak  : sama seperti rumus bawaan Godot
+##               (RetargetModifier3D::_retarget_pose), yaitu
+##               pre * ((pose_lokal_sumber - rest_lokal_sumber) * skala)
+##               + rest_lokal_avatar, supaya naik-turun pinggul tetap sepadan
+##               ukuran. PENTING: semua nilai di sini LOKAL (relatif induk).
+##               Versi pertama memakai pose/rest GLOBAL, jadi posisi lokal yang
+##               ditulis ke tulang sebesar tinggi tulang di dunia — seluruh
+##               kerangka melar dan arah tulangnya kacau.
 ##
 ## (2) penting: tanpa puntiran, putaran pinggul saat berjalan dan telapak kaki
 ## yang menekuk hilang karena sumbu tulang-tulang itu hampir vertikal.
@@ -180,8 +186,9 @@ func _measure() -> void:
 		_target_axis.append(axis_target.normalized())
 		_source_rest_basis.append(source_rest.basis)
 		_target_rest_basis.append(target_rest.basis)
-		_source_rest_origin.append(source_rest.origin)
-		_target_rest_origin.append(target_rest.origin)
+		# Rest LOKAL (relatif induk) — dipakai untuk menghitung letak pose.
+		_source_rest_origin.append(_source.get_bone_rest(source_bone).origin)
+		_target_rest_origin.append(_target.get_bone_rest(target_bone).origin)
 		_pre.append(_parent_global_rest(_target, target_bone).basis.inverse()
 			* _parent_global_rest(_source, source_bone).basis)
 
@@ -241,8 +248,9 @@ func apply() -> void:
 		var source_bone := _source_bones[index]
 		var target_bone := _target_bones[index]
 		var source_pose := _source.get_bone_global_pose(source_bone)
-		# --- letak: selisih dari rest, dikali skala gerak.
-		var position := _pre[index] * ((source_pose.origin - _source_rest_origin[index])
+		var source_local := _source.get_bone_pose(source_bone)
+		# --- letak: selisih LOKAL dari rest, dikali skala gerak (rumus bawaan).
+		var position := _pre[index] * ((source_local.origin - _source_rest_origin[index])
 			* _motion_scale) + _target_rest_origin[index]
 		_target.set_bone_pose_position(target_bone, position)
 		if _leaf[index] == 1 or _target_axis[index].length_squared() < 0.5:

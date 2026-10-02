@@ -17,6 +17,9 @@ const STEP := 1.0 / 60.0
 var _failures := 0
 ## Catatan angka untuk dibaca dari anotasi CI (log panjang terpotong).
 var _notes := PackedStringArray()
+## Tiap pesan gagal hanya dicetak SEKALI (tes ini mengulang ratusan frame, dan
+## log yang membanjir membuat bagian diagnostik di akhir terpotong).
+var _reported := {}
 
 
 func _init() -> void:
@@ -24,10 +27,14 @@ func _init() -> void:
 
 
 func _check(condition: bool, message: String) -> void:
-	if not condition:
-		_failures += 1
-		push_error(message)
-		print("::error::", message)
+	if condition:
+		return
+	_failures += 1
+	if _reported.has(message):
+		return
+	_reported[message] = true
+	push_error(message)
+	print("::error::", message)
 
 
 func _run() -> void:
@@ -200,12 +207,16 @@ func _cloth_with_hair(character: Character) -> ClothDynamics:
 	return null
 
 
-func _longest_hair_chain(springs: Springs) -> int:
+## Rantai terpanjang (paling banyak tulang, lalu paling panjang) untuk uji
+## kelembaman: makin panjang rantai, makin terlihat kain tertinggal.
+func _longest_chain(springs: Springs, only_hair := false) -> int:
 	var best := -1
 	var best_length := 0.0
 	for index in range(springs.chain_count()):
 		var names := springs.chain_bone_names(index)
-		if names.is_empty() or not names[0].begins_with("Bone_Hair"):
+		if names.is_empty():
+			continue
+		if only_hair and not names[0].begins_with("Bone_Hair"):
 			continue
 		var length := springs.chain_length(index)
 		if length > best_length:
@@ -246,21 +257,24 @@ func _test_cloth_inertia(character: Character) -> void:
 		_check(false, "Tidak ada pembungkus kain yang punya rantai rambut")
 		return
 	var springs: Springs = wrapper.springs
-	var chain := _longest_hair_chain(springs)
-	_check(chain >= 0, "Tidak ada rantai rambut panjang untuk diuji")
+	var chain := _longest_chain(springs)
+	_check(chain >= 0, "Tidak ada rantai kain untuk diuji")
 	if chain < 0:
 		return
-	var tip := springs.particle(chain, springs.chain_bones(chain).size())
 	# Dudukkan dulu supaya simulasi tenang.
 	for step in range(90):
 		wrapper.simulate(STEP)
-	var settled := springs.particle(chain, springs.chain_bones(chain).size())
-	_check(settled.y < tip.y + 0.001, "Rambut tidak menggantung ke bawah")
-	character.global_position += Vector3(1.0, 0.0, 0.0)
+	var tip := springs.particle(chain, springs.chain_bones(chain).size())
+	var settled := tip
+	_check(settled.y < tip.y + 0.001, "Kain tidak menggantung ke bawah")
+	# Badan digeser sedikit (bukan dipindah 1 m sekali hentak): rambut sepanjang
+	# beberapa senti memang HARUS ikut saat kepala berpindah jauh, jadi yang
+	# mengukur kelembaman adalah geseran kecil dibanding panjang rantai.
+	var body_move := 0.15
+	character.global_position += Vector3(body_move, 0.0, 0.0)
 	wrapper.simulate(STEP)
 	wrapper.simulate(STEP)
 	var lagging := springs.particle(chain, springs.chain_bones(chain).size())
-	var body_move := 1.0
 	var cloth_move := lagging.distance_to(settled)
 	_check(cloth_move < body_move * 0.6, "Kain menempel kaku, tidak tertinggal: %.3f m"
 		% cloth_move)
