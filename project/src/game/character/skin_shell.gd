@@ -68,6 +68,10 @@ func configure(source: Skeleton3D) -> void:
 		cover.mesh = origin.mesh
 		cover.skin = origin.skin
 		cover.material_override = skin
+		# Jalur skeleton dihitung SESUDAH masuk pohon: `get_path_to` butuh induk
+		# bersama yang sudah ada, kalau tidak Godot mengeluh
+		# "Parameter common_parent is null" dan mesh-nya tidak terskin.
+		add_child(cover)
 		cover.skeleton = cover.get_path_to(_mirror)
 		# Kulit yang menggambar bayangan: mesh mannequin di dalamnya tidak perlu
 		# ikut menggambar bayangan yang sama dua kali.
@@ -75,7 +79,6 @@ func configure(source: Skeleton3D) -> void:
 		origin.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		# Garis tepi tipis supaya siluetnya tetap terbaca di malam hari.
 		skin.next_pass = _make_outline()
-		add_child(cover)
 		_meshes.append(cover)
 		_sources.append(origin)
 		_covers += 1

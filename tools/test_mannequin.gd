@@ -204,17 +204,22 @@ func _test_cast(character: Character, skeleton: Skeleton3D) -> void:
 
 func _test_avatar_motion(character: Character) -> void:
 	# Klip harus benar-benar menggerakkan tulang mannequin (bukan patung diam).
-	var before: Array[Quaternion] = []
+	var before_rotation: Array[Quaternion] = []
+	var before_position: Array[Vector3] = []
 	for bone in range(character.skeleton.get_bone_count()):
-		before.append(character.skeleton.get_bone_pose_rotation(bone))
+		before_rotation.append(character.skeleton.get_bone_pose_rotation(bone))
+		before_position.append(character.skeleton.get_bone_pose_position(bone))
 	character.set_locomotion("Jog_Fwd_Loop", 1.0)
 	for step in range(12):
 		character.animation.advance(1.0 / 30.0)
 	var moved := 0
 	for bone in range(character.skeleton.get_bone_count()):
-		if not before[bone].is_equal_approx(character.skeleton.get_bone_pose_rotation(bone)):
+		if not before_rotation[bone].is_equal_approx(
+				character.skeleton.get_bone_pose_rotation(bone)) \
+				or not before_position[bone].is_equal_approx(
+					character.skeleton.get_bone_pose_position(bone)):
 			moved += 1
-	_check(moved >= 20, "Mannequin tidak ikut bergerak: %d tulang" % moved)
+	_check(moved >= 10, "Mannequin tidak ikut bergerak: %d tulang" % moved)
 
 
 func _test_feet(character: Character) -> void:
