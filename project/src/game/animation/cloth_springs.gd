@@ -107,6 +107,10 @@ class Strand:
 	## (supaya rantai benar-benar menggantung ke bawah walau badan miring) dan
 	## basis tulang penggantung yang beranimasi (supaya rambut ikut menoleh).
 	var gravity_basis := Basis()
+	## Transformasi dunia tulang penggantung saat ini. Dipakai untuk menyusun
+	## bentuk rest (rotasi + LETAK: tanpa letak, kain tertarik ke titik nol dunia
+	## sehingga tidak ikut saat badan berpindah).
+	var anchor := Transform3D()
 	## Kapsul yang relevan untuk rantai ini + mask "partikel ini di luar kapsul
 	## saat rest" (1 = boleh ditolak keluar, 0 = memang tertanam).
 	var colliders := PackedInt32Array()
@@ -265,10 +269,20 @@ func _tip_point(skeleton: Skeleton3D, bones: PackedInt32Array,
 		if skeleton.get_bone_parent(child) == last:
 			return skeleton.get_bone_global_rest(child).origin
 	var tail := rest_points[rest_points.size() - 1]
-	var previous := rest_points[rest_points.size() - 2]
+	var previous := Vector3.ZERO
+	if rest_points.size() >= 2:
+		previous = rest_points[rest_points.size() - 2]
+	else:
+		# Rantai satu tulang (mis. satu helai rambut, anting, liontin): pakai
+		# arah tulang induknya supaya ujungnya tidak jatuh tepat di pangkal
+		# (dulu panjangnya jadi nol dan rantainya dibuang).
+		var parent := skeleton.get_bone_parent(last)
+		if parent < 0:
+			return tail + Vector3(0.0, -0.03, 0.0)
+		previous = skeleton.get_bone_global_rest(parent).origin
 	var length := tail.distance_to(previous)
 	if length < 0.0005:
-		length = 0.02
+		return tail + Vector3(0.0, -0.03, 0.0)
 	return tail + (tail - previous).normalized() * length
 
 
@@ -313,6 +327,7 @@ func _init_particles(skeleton: Skeleton3D) -> void:
 	for chain in _chains:
 		var rigid := skeleton.global_transform * skeleton.get_bone_global_pose(chain.parent_bone)
 		chain.gravity_basis = rigid.basis.orthonormalized()
+		chain.anchor = rigid
 		chain.points.resize(chain.rest_local.size())
 		chain.prev.resize(chain.rest_local.size())
 		for index in range(chain.rest_local.size()):
@@ -353,6 +368,7 @@ func _blend_basis(chain: Strand, world: Transform3D, skeleton: Skeleton3D, dt: f
 func _simulate_chain(chain: Strand, dt: float, world: Transform3D, skeleton: Skeleton3D,
 		wind: Vector3) -> void:
 	var rigid := world * skeleton.get_bone_global_pose(chain.parent_bone)
+	chain.anchor = rigid
 	chain.points[0] = rigid * chain.rest_local[0]
 	var damping := clampf(1.0 - chain.drag * dt, 0.0, 1.0)
 	var accel := Vector3(0.0, -_gravity * chain.gravity, 0.0) + wind
@@ -396,7 +412,7 @@ func _keep_length(chain: Strand, index: int) -> void:
 func _keep_shape(chain: Strand, index: int, k: float) -> void:
 	if k <= 0.0:
 		return
-	var rest := chain.gravity_basis * chain.rest_local[index]
+	var rest := chain.anchor.origin + chain.gravity_basis * chain.rest_local[index]
 	var rest_offset := rest - chain.points[index - 1]
 	var current := chain.points[index] - chain.points[index - 1]
 	chain.points[index] = chain.points[index - 1] + current.lerp(rest_offset, k)

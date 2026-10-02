@@ -108,6 +108,21 @@ static func missing_pairs(source: Skeleton3D, target: Skeleton3D) -> PackedStrin
 	return missing
 
 
+## "Sumbu" tulang: anak langsungnya yang punya pasangan, dan pasangannya juga
+## anak langsung tulang target. Inilah arah yang dipakai retarget dan yang harus
+## sama persis antara animasi dan avatar; tes memakainya supaya mengukur hal yang
+## sama (anak pertama biasa bisa tulang puntir atau tulang hias).
+static func axis_child(source: Skeleton3D, target: Skeleton3D, source_bone: int,
+		target_bone: int) -> Vector2i:
+	for pair: Vector2i in resolve(source, target):
+		if source.get_bone_parent(pair.x) != source_bone:
+			continue
+		if target.get_bone_parent(pair.y) != target_bone:
+			continue
+		return pair
+	return Vector2i(-1, -1)
+
+
 ## Peta nama rig sumber -> indeks tulang avatar, hanya pasangan yang ADA di
 ## kedua sisi. Dipakai retarget (gerak badan) dan goyangan kain (tulang gantung).
 static func resolve(source: Skeleton3D, target: Skeleton3D) -> Array[Vector2i]:

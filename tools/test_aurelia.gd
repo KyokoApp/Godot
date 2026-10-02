@@ -15,6 +15,8 @@ const ClothDynamics = preload("res://src/game/animation/cloth_dynamics.gd")
 const Springs = preload("res://src/game/animation/cloth_springs.gd")
 const STEP := 1.0 / 60.0
 var _failures := 0
+## Catatan angka untuk dibaca dari anotasi CI (log panjang terpotong).
+var _notes := PackedStringArray()
 
 
 func _init() -> void:
@@ -42,6 +44,9 @@ func _run() -> void:
 	_test_feet_above_ground(character)
 	_test_cloth_inertia(character)
 	_test_cloth_no_penetration(character)
+	var missing := Humanoid.missing_pairs(character.skeleton, character.avatar)
+	if not missing.is_empty():
+		_notes.append("pasangan hilang: " + ", ".join(missing))
 	var chains := 0
 	var bones := 0
 	for springs in character.cloths:
@@ -55,6 +60,8 @@ func _run() -> void:
 	# terakhir, jadi bagian ini yang harus terbaca saat ada masalah.
 	print("--- diagnostik ---")
 	print(character.status)
+	for note in _notes:
+		print(note)
 	print("nama tulang avatar:", _bone_names(character.avatar, 12))
 	print("tulang mirip kain:", _cloth_names(character.avatar))
 	quit(0 if _failures == 0 else 1)
@@ -138,12 +145,9 @@ func _test_retarget_shape(character: Character) -> void:
 			character.retarget.apply()
 			if step % 4 != 0:
 				continue
-			_check(_directions_match(character, "lowerarm_l", "Bip001 L Forearm"),
-				"Lengan bawah avatar menyimpang dari animasi: " + motion)
-			_check(_directions_match(character, "calf_l", "Bip001 L Calf"),
-				"Betis avatar menyimpang dari animasi: " + motion)
-			_check(_directions_match(character, "hand_r", "Bip001 R Hand"),
-				"Tangan avatar menyimpang dari animasi: " + motion)
+			_check_direction(character, "lowerarm_l", "Bip001 L Forearm", motion)
+			_check_direction(character, "calf_l", "Bip001 L Calf", motion)
+			_check_direction(character, "hand_r", "Bip001 R Hand", motion)
 		# Bukti tambahan: pose avatar BUKAN T-pose.
 		var upper := character.avatar.find_bone("Bip001 L UpperArm")
 		var rest := character.avatar.get_bone_global_rest(upper)
@@ -155,20 +159,32 @@ func _test_retarget_shape(character: Character) -> void:
 				% rad_to_deg(angle))
 
 
-func _directions_match(character: Character, source_name: String, target_name: String) -> bool:
+## Arah sumbu tulang (tulang -> anak yang ikut dipetakan) harus sama dengan
+## arah sumbu tulang animasi. Angkanya dicatat supaya bisa dibaca di CI.
+func _check_direction(character: Character, source_name: String, target_name: String,
+		motion: String) -> void:
 	var source_bone := character.skeleton.find_bone(source_name)
 	var target_bone := character.avatar.find_bone(target_name)
 	if source_bone < 0 or target_bone < 0:
-		return false
-	var source_child := _mapped_child(character.skeleton, source_bone)
-	var target_child := _mapped_child(character.avatar, target_bone)
-	if source_child < 0 or target_child < 0:
-		return false
-	var source_direction := (character.skeleton.get_bone_global_pose(source_child).origin
+		_check(false, "Tulang tidak ditemukan: %s / %s" % [source_name, target_name])
+		return
+	var pair := Humanoid.axis_child(character.skeleton, character.avatar, source_bone,
+		target_bone)
+	if pair.x < 0:
+		_check(false, "Tidak ada anak yang dipetakan di %s" % source_name)
+		return
+	var source_direction := (character.skeleton.get_bone_global_pose(pair.x).origin
 		- character.skeleton.get_bone_global_pose(source_bone).origin).normalized()
-	var target_direction := (character.avatar.get_bone_global_pose(target_child).origin
+	var target_direction := (character.avatar.get_bone_global_pose(pair.y).origin
 		- character.avatar.get_bone_global_pose(target_bone).origin).normalized()
-	return source_direction.dot(target_direction) > 0.97
+	var dot := source_direction.dot(target_direction)
+	if motion == "Crouch_Fwd_Loop":
+		_notes.append("arah %s: dot=%.4f (%s->%s)" % [source_name, dot,
+			character.skeleton.get_bone_name(pair.x),
+			character.avatar.get_bone_name(pair.y)])
+	if dot < 0.97:
+		_check(false, "%s avatar menyimpang dari animasi (%s): dot=%.3f" % [
+			source_name, motion, dot])
 
 
 ## Pembungkus kain yang memuat tulang rambut (badan dan rambut bisa berada di
@@ -254,6 +270,9 @@ func _test_cloth_inertia(character: Character) -> void:
 		wrapper.simulate(STEP)
 	var caught_up := springs.particle(chain, springs.chain_bones(chain).size())
 	var rest_point := character.avatar.global_transform * Vector3.ZERO
+	_notes.append("kain: diam=%.3f tertinggal=%.3f menyusul=%.3f (badan %.2f)" % [
+		lagging.distance_to(settled), cloth_move, caught_up.distance_to(lagging),
+		body_move])
 	_check(caught_up.distance_to(lagging) > 0.2 * body_move,
 		"Kain tidak menyusul badan setelah badan diam")
 	_check(not is_equal_approx(caught_up.x, rest_point.x),
