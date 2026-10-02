@@ -48,6 +48,8 @@ const LAND_RECOVERY := 0.28
 const OFFSET_SPEED := 6.0
 ## Dua iterasi cukup untuk kain panjang; empat terlalu mahal untuk HP.
 const CLOTH_ITERATIONS := 2
+## Kecepatan avatar "ditanam" ke tanah (1/detik).
+const PLANT_SPEED := 5.0
 
 var animation: AnimationPlayer
 var skeleton: Skeleton3D
@@ -68,6 +70,8 @@ var mode := Mode.LOCOMOTION
 var clip := IDLE
 var gait := IDLE
 var ground_offset := 0.0
+## Geser turun tambahan supaya telapak menyentuh tanah (lihat _physics_process).
+var plant_offset := 0.0
 var playback_scale := 1.0
 ## Node rig UAL (alat umpan balik animasi, disembunyikan) dan node avatar FBX.
 var rig_model: Node3D
@@ -364,10 +368,25 @@ func _physics_process(delta: float) -> void:
 	var measured: Dictionary = metrics.get(clip, {})
 	var target := float(measured.get("ground_offset", 0.0))
 	ground_offset = lerpf(ground_offset, target, 1.0 - exp(-OFFSET_SPEED * delta))
+	_update_plant(delta)
 	if _model != null:
-		_model.position.y = ground_offset
+		_model.position.y = ground_offset + plant_offset
 	if _avatar_root != null:
-		_avatar_root.position.y = ground_offset
+		_avatar_root.position.y = ground_offset + plant_offset
+
+
+## Tanam kaki. Kaki avatar 4 % lebih pendek daripada mannequin UAL, dan retarget
+## memindahkan BENTUK pose, jadi di klip lokomosi telapak berhenti beberapa senti
+## di atas tanah (dan efek tapak api tidak pernah melihat kontak). Selama badan
+## menapak tanah, avatar diturunkan sampai telapak terendah kembali setinggi rest
+## pose-nya. Di udara tidak diapa-apakan (badan memang harus terangkat).
+func _update_plant(delta: float) -> void:
+	var target := 0.0
+	var body := get_parent()
+	if body is CharacterBody3D and (body as CharacterBody3D).is_on_floor():
+		var lowest := minf(foot_stride_lift(true), foot_stride_lift(false))
+		target = clampf(-lowest, -0.06, 0.12)
+	plant_offset = lerpf(plant_offset, target, 1.0 - exp(-PLANT_SPEED * delta))
 
 
 # --------------------------------------------- kontak kaki untuk efek api ----
@@ -381,19 +400,27 @@ func foot_pose(left: bool) -> Transform3D:
 	return avatar.global_transform * avatar.get_bone_global_pose(foot)
 
 
+## Tinggi tulang telapak (pergelangan) di atas titik asal model, di RUANG DUNIA.
+## Dipakai sebagai tebal telapak oleh efek tapak api, yang mengukur jarak dunia —
+## jadi angkanya harus ikut skala model kalau importer FBX menskalakannya.
 func foot_clearance(left: bool) -> float:
 	var foot := Humanoid.find_bone(avatar, "Bip001 L Foot" if left else "Bip001 R Foot")
-	if foot < 0:
+	if foot < 0 or avatar == null:
 		return 0.1
-	return clampf(avatar.get_bone_global_rest(foot).origin.y, 0.06, 0.18)
+	var rest := avatar.global_transform * avatar.get_bone_global_rest(foot)
+	var base := avatar.global_transform.origin.y
+	return clampf(rest.origin.y - base, 0.03, 0.2)
 
 
+## Seberapa tinggi telapak terangkat dari tinggi rest-nya (untuk gerbang fase
+## tumpuan di efek tapak api), juga di RUANG DUNIA supaya skalanya sepadan.
 func foot_stride_lift(left: bool) -> float:
 	var foot := Humanoid.find_bone(avatar, "Bip001 L Foot" if left else "Bip001 R Foot")
-	if foot < 0:
+	if foot < 0 or avatar == null:
 		return 0.0
-	return avatar.get_bone_global_pose(foot).origin.y \
-		- avatar.get_bone_global_rest(foot).origin.y
+	var rest := avatar.global_transform * avatar.get_bone_global_rest(foot)
+	var now := avatar.global_transform * avatar.get_bone_global_pose(foot)
+	return now.origin.y - rest.origin.y
 
 
 # ---------------------------------------------------------------- tambahan ----
