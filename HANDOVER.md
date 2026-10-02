@@ -124,6 +124,18 @@
     supaya panel rok/rambut juga bertabrakan dengan kapsul kaki yang baru
     mengayun. Ditambah `penetration_report()` (rantai tanpa kapsul + kedalaman
     tembus terburuk) yang diperiksa gerbang saat diam dan saat lari.
+  - **Angka akhir sesudah perbaikan** (komentar commit "angka penting" di CI,
+    selalu dikirim): peta material terbaca tepat — Mat_Hair→Hair_Diffuse (2
+    surface), Mat_Body→Body_Diffuse, Mat_Dress→Body_Diffuse, Mat_Brow/Mat_Face→
+    Face_Diffuse (3 surface), Mat_Pupil→Hair_Diffuse; arah tulang avatar
+    dot=1,0000 untuk lengan bawah, betis, dan tangan di keempat klip uji;
+    tembus kain diam 0,0011 m dan lari 0,0035 m (sebelumnya 0,034 m gagal);
+    biaya kain+retarget 2,50 ms/frame; gerbang lain semua lulus sampai rilis APK.
+  - **Pelajaran**: `material_override` hanya satu untuk seluruh mesh — untuk
+    mesh dengan beberapa material (di sini Body: rambut + badan + dress) WAJIB
+    `set_surface_override_material(index, ...)`, dan nama materialnya bisa dibaca
+    dari `mesh.surface_get_name(index)` karena importer FBX Godot menamai surface
+    dengan nama material FBX.
   - **Pratinjau render di CI**: artefak/log GitHub tidak bisa diunduh dari
     lingkungan agen, jadi langkah baru merender avatar dari kamera pemain
     (`tools/render_avatar.gd`: 0,4 m / 0,85 m / 2,2 m + pose jalan & lari),
