@@ -386,7 +386,11 @@ func _update_plant(delta: float) -> void:
 	if body is CharacterBody3D and (body as CharacterBody3D).is_on_floor():
 		var lowest := minf(foot_stride_lift(true), foot_stride_lift(false))
 		target = clampf(-lowest, -0.06, 0.12)
-	plant_offset = lerpf(plant_offset, target, 1.0 - exp(-PLANT_SPEED * delta))
+	# Turun lebih cepat daripada naik: saat telapak menyentuh tanah (lift anjlok
+	# sekejap) badan harus sudah turun, sedangkan saat naik cukup halus supaya
+	# tidak terlihat menyentak.
+	var speed := PLANT_SPEED if target > plant_offset else PLANT_SPEED * 4.0
+	plant_offset = lerpf(plant_offset, target, 1.0 - exp(-speed * delta))
 
 
 # --------------------------------------------- kontak kaki untuk efek api ----

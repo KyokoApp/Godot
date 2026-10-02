@@ -87,7 +87,10 @@ func _sample(side: int) -> void:
 	var distance := pose.origin.y - point.y
 	var clearance := character.foot_clearance(side == 0)
 	# Tidak ada foot IK: pose stance mocap diproyeksikan ke permukaan padang.
-	var margin := 0.035
+	# Ambangnya diukur dari tebal telapak KARAKTER, bukan angka tetap: avatar FBX
+	# dan mannequin UAL punya tinggi pergelangan yang berbeda, dan retarget
+	# membuat telapak berhenti beberapa senti di atas tanah pada klip lokomosi.
+	var margin := maxf(clearance * 0.9, 0.055)
 	if distance > clearance + margin + 0.055 or normal.y < 0.6:
 		_contact[side] = false
 		return
