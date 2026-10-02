@@ -45,9 +45,9 @@ func _test_avatar_cost(character: Character, panel: PerfPanel) -> void:
 	var retarget_ms := float(Time.get_ticks_usec() - retarget_start) / float(frames) / 1000.0
 	var total := cloth_ms + retarget_ms
 	var chains := 0
-	for wrapper in character.cloths:
-		if wrapper != null and wrapper.springs != null:
-			chains += wrapper.springs.chain_count()
+	for cloth in character.cloths:
+		if cloth != null and cloth.springs != null:
+			chains += cloth.springs.chain_count()
 	print("::notice::biaya avatar %.2f ms/frame (kain %.2f, retarget %.2f, %d kerangka, %d rantai)"
 		% [total, cloth_ms, retarget_ms, character.avatars.size(), chains])
 	_check(total < AVATAR_BUDGET_MS,
