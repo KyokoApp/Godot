@@ -664,3 +664,20 @@ mengikuti dependensi *scene*, bukan dependensi *skrip*.
   menangkap kelas bug ini.
 - Konsekuensi penting: **perbaikan ini butuh install APK baru**; update konten
   lewat PCK tidak bisa memperbaiki launcher yang rusak.
+
+### 2026-10-02 — kontrol & HUD: lompat langsung, combo, panel kecil, tombol bulat
+
+- **Lompat langsung**: menekan LOMPAT memakai `velocity.y = JUMP_VELOCITY` saat
+  itu juga (dulu ada jeda tolakan 0,22 s). Pose `Jump_Start` hanya menempel
+  0,3 s, lalu klip melayang `Jump_Loop`, dan mendarat hanya sah saat badan
+  benar-benar turun.
+- **Combo serangan**: tiap tekan SERANG lanjut ke klip berikutnya
+  (`Punch_Jab` → `Punch_Cross` → `Melee_Hook`) lalu berulang; combo kembali ke
+  awal setelah 1,1 detik tanpa serangan.
+- **Tombol bulat tanpa kotak** (`rune_button.gd`): label di dalam lingkaran +
+  cincin aksen. Susunan HUD: SERANG (136) di kanan bawah, TEMBAK api pet (96),
+  LOMPAT/LARI/JONGKOK (92) di atasnya, ANIM + GRAFIK (72) di kanan atas.
+- **Panel animasi = jendela kecil** yang bisa discroll; scroll ditangani panel
+  sendiri sehingga drag bisa dimulai di baris mana pun (dulu hanya dari pojok),
+  ketukan pendek memilih klip, dan ketukan di luar jendela menutup panel.
+- Tombol HUD tidak lagi ikut memulai analog (`input_exclusions`).

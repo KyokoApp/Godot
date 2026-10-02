@@ -52,6 +52,30 @@
   latar polos; fungsional, tinggal kosmetik.
 - PERINGATAN: memperbaiki paket APK **butuh install APK baru**; update konten
   (PCK) tidak bisa memperbaiki launcher yang rusak.
+- 2026-10-02 (malam) — kontrol & HUD dirombak sesuai permintaan pengguna:
+  - **Lompat langsung**: `player.gd` tidak lagi menahan badan 0,22 s; dorongan
+    dipasang saat tombol ditekan, pose `Jump_Start` menempel 0,3 s lalu klip
+    melayang. Dua jebakan yang ikut diperbaiki: logika lantai yang menolkan
+    kecepatan vertikal di frame pertama, dan `_update_air_state` yang salah
+    membaca "mendarat" selagi badan masih naik (kini wajib `velocity.y <= 0`).
+  - **Combo serangan**: `player.attack()` memutar Punch_Jab → Punch_Cross →
+    Melee_Hook lalu berulang, reset otomatis setelah 1,1 s tanpa serangan.
+  - **Tombol tembak api terpisah** dari tombol serang: `_fire_button` (pet) vs
+    `_attack` (combo).
+  - **HUD bulat gaya game aksi**: `rune_button.gd` kini punya `caption` +
+    `accent` dan menggambar cakram berisi; tidak ada tombol kotak. Susunan:
+    SERANG 136 px di kanan bawah, TEMBAK 96, lalu LOMPAT/LARI/JONGKOK 92 di
+    baris atasnya; ANIM + GRAFIK 72 di kanan atas (laci grafik turun ke y=196).
+  - **Panel animasi jadi jendela kecil** (maks 620×520, ±90%/78% layar) di
+    tengah, dengan backdrop yang menutup saat diketuk di luar jendela.
+  - **Scroll panel ditangani sendiri**: `ScrollContainer` bawaan tidak menerima
+    drag kalau jari mendarat di atas tombol baris, sehingga scroll hanya jalan
+    dari celah/pojok (keluhan langsung di HP). Panel sekarang menangani
+    `InputEventScreenDrag` sendiri: drag di titik mana pun menggeser daftar,
+    ketukan pendek (<14 px) memilih klip.
+  - **Analog tidak lagi ikut aktif saat tombol HUD ditekan**
+    (`virtual_joystick.input_exclusions`), karena tombol bulat dan analog
+    sama-sama mendengar `_input` langsung.
 - Tes yang diperketat: `_check()` mencetak `::error::` supaya CI memberi alasan;
   step tes memakai `tee` + langkah "Ringkasan kegagalan" menampilkan 24 baris
   terakhir tiap log sebagai anotasi.
