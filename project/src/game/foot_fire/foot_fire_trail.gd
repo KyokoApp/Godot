@@ -7,7 +7,7 @@ const MeshFactory = preload("res://src/game/foot_fire/foot_fire_mesh.gd")
 const SHADER = preload("res://src/game/foot_fire/foot_fire.gdshader")
 const MAX_STAMPS := 16
 const LIFETIME := 1.15
-## Tapak api mannequin: inti ungu, tengah lavender, ujung sian.
+## Tapak api: inti ungu, tengah lavender, ujung sian.
 const PALETTE := [Color("6228cc"), Color("ad74ff"), Color("b4efff")]
 
 var character: Character

@@ -1,11 +1,11 @@
 extends PanelContainer
 ## HUD kecil di kiri atas: nama animasi yang sedang tampil + progres + petunjuk.
 
-const Mannequin = preload("res://src/game/character/aurelia_visual.gd")
+const Character = preload("res://src/game/character/aurelia_visual.gd")
 const TEXT := Color("f2ecff")
 const DIM := Color("b7a9d6")
 
-var character: Mannequin
+var character: Character
 var extra := ""
 var _title: Label
 var _detail: Label

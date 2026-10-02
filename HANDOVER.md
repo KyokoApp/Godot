@@ -23,8 +23,9 @@
     spasi/tanda `+` dari importer tidak merusak peta.
   - Goyangan kain/rambut: `animation/cloth_springs.gd` (inti verlet, bisa diuji
     headless) + `animation/cloth_dynamics.gd` (pembungkus SkeletonModifier3D
-    pada kerangka avatar). 55 rantai: 26 rambut, 18 rok/syal, sisanya kerah,
-    kalung, anting, tudung. Rantai dibentuk dari tulang asli avatar
+    pada kerangka avatar). Angka terukur dari gerbang CI: **44 rantai, 71 tulang,
+    16 kapsul** (rambut 20 rantai, syal/rok 15, kerah 3, leher/kalung/anting/
+    pinggul/ikat 7). Rantai dibentuk dari tulang asli avatar
     (Bone_Hair*, Bone_Shawl*, Bone_Collar*, Bone_Hip*, Bone_Pendant*,
     Bone_Earrings*, Bone_Neck*, +Flycloak).
     - Kain disimulasikan **di ruang dunia**, jadi punya kelembaman: saat badan
@@ -43,18 +44,59 @@
     EyeStar), plus tekstur lightmap dipakai sebagai pancaran lembut supaya
     jubah navy tidak jadi hitam legap di malam hari. Mesh `EffectMesh`
     disembunyikan.
+  - **Importer FBX memecah avatar menjadi BEBERAPA Skeleton3D** (badan, rambut,
+    mata) karena himpunan tulangnya tidak bersambung. `aurelia_visual.gd`
+    mendata SEMUA Skeleton3D di bawah akar avatar, mengurutkannya berdasarkan
+    jumlah tulang (terbanyak = kerangka utama, dipakai pemain/HUD/tapak api),
+    lalu memberi satu retarget + satu pembungkus kain per kerangka
+    (`retargets[]`, `cloths[]`). Kalau nanti jumlah kerangkanya berubah, dua
+    array itu sudah menanganinya — jangan kembali ke satu `avatar` saja.
+  - **Path tekstur peka huruf besar-kecil di Linux**: folder dari unggahan
+    bernama `Textures` (huruf T besar). `aurelia_materials.gd` sempat memakai
+    `textures/` sehingga seluruh material tampil tanpa tekstur di CI walau
+    jalan di Windows.
   - Aset biner (±24 MB) TIDAK lagi di git: `tools/fetch_assets.sh` mengunduhnya
     dari lampiran rilis `assets-v1` (workflow `publish-assets`, sumbernya riwayat
     commit `0d56df0`), dengan cadangan `--from-git` kalau rilis belum ada. CI
     menjalankan langkah ini sebelum `--import`; **tanpa langkah itu import pasti
     gagal** karena FBX & GLB tidak ada.
-  - Gerbang baru: `tools/test_aurelia.gd` (peta tulang lengkap 54 pasangan,
-    arah tulang avatar = arah animasi, tidak T-pose, telapak tidak menembus
+  - Gerbang baru: `tools/test_aurelia.gd` (peta tulang lengkap 52 pasangan yang
+    ada, arah tulang avatar = arah animasi, tidak T-pose, telapak tidak menembus
     tanah, kain tertinggal-saat-badan-bergerak lalu menyusul, rambut tidak
     menembus kepala/badan). Waktu tunggu langkah tes yang memuat seluruh game
     dinaikkan 90/120 → 180 detik karena avatar menambah beban boot.
+  - **Pelajaran rumus retarget** (semuanya pernah salah dan ketangkap gerbang):
+    (1) `_measure()` TIDAK BOLEH memakai `resize()` lalu `append()` — array jadi
+    dua kali panjang dan tiap tulang membaca nilai tulang lain; (2) rumus letak
+    harus memakai rest/pose **LOKAL** (relatif induk), persis seperti
+    `RetargetModifier3D::_retarget_pose` bawaan engine — versi global membuat
+    seluruh kerangka melar; (3) sumbu tulang = anak yang DIPETAKAN (bukan anak
+    pertama, yang bisa tulang puntir seperti `Bone_ForearmTwistA01_L`); (4) tes
+    dan retarget harus memilih anak dengan urutan yang sama, kalau tidak tes
+    mengukur jari manis sementara retarget mengarahkan jari telunjuk.
+  - **Pelajaran kain**: `_keep_shape` harus memakai transformasi LENGKAP tulang
+    penggantung (rotasi + letak), bukan hanya rotasinya — kalau tidak, kain
+    selalu tertarik ke titik nol dunia dan tidak pernah menyusul badan yang
+    berpindah. Rantai satu tulang (rambut tipis, anting, liontin) dulu berujung
+    tepat di pangkal sehingga panjangnya nol dan dibuang: ujungnya sekarang
+    mengikuti arah tulang induk.
+  - **Kaki 4 % lebih pendek daripada mannequin**: retarget memindahkan bentuk
+    pose, jadi telapak berhenti ~3 cm di atas tanah dan efek tapak api tidak
+    pernah melihat kontak. `aurelia_visual._update_plant()` menurunkan avatar
+    (maks 6 cm) selama badan menapak; `foot_clearance()`/`foot_stride_lift()`
+    dihitung di ruang dunia dan `foot_fire_trail.gd` memakai tebal telapak
+    karakter sebagai ambang (bukan angka 0.035/0.04 yang disetel untuk UAL).
+  - **Log CI**: langkah "Ringkasan kegagalan" sekarang mengirim SELURUH log
+    sebagai komentar commit (anotasi hanya memuat 25-60 baris terakhir, dan log
+    GitHub tidak bisa diunduh dari luar CI). Diagnostik yang perlu dibaca saat
+    gagal dicetak di AKHIR log tes.
 
 
+- 2026-10-02 (lanjutan) — **CI HIJAU PENUH dengan avatar Aurelia** (run
+  36962861782, commit `21a54e1`): 25 langkah lulus, termasuk Tes avatar Aurelia
+  (retarget + kain), tapak api, semua render Vulkan, ekspor PCK + APK, audit isi
+  APK, boot launcher, dan rilis `A-Sekai build-21a54e1`. Sisa langkah yang belum
+  diverifikasi di HP pengguna: tes main di perangkat.
 - Terbaru (2026-10-01): dunia dirombak jadi **padang rumput 100 m × 100 m**
   (`world/field.gd` + `grass_field.gd` + `world/boundary_fence.gd`). Pulau 1 km,
   laut, sungai, arena, jalan batu dan aset nature model DIHAPUS dari repo.
