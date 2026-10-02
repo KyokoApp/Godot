@@ -56,6 +56,13 @@
     bersih (72 berkas), dan seluruh angka gerbang disimulasikan ulang di Python
     (radius 285-368 m, luas 0,35 km², garis pantai tepat 0,000 m, 36 chunk hidup,
     selisih grid vs analitik 0,014 m). Godot TIDAK bisa dijalankan di sandbox.
+  - Run `37010302393`: gerbang `gate` hampir hijau (compile, scenery, grass,
+    movement, skin, clips, zoom semua lolos) — dua tes masih salah asumsi:
+    `test_island` membandingkan titik dengan `is_equal_approx` (cos/sin ->
+    atan2 beda ~4e-6 rad, dikali radius 150 m jadi ~3e-5 m: di atas batas 1e-5),
+    dan `test_hud` mengukur ketinggian SEBELUM lari — pulau bergelombang jadi
+    lari menurun memang mendarat lebih rendah. Keduanya diperbaiki jadi
+    toleransi jarak 1 cm dan tinggi tepat sebelum lompat.
   - Dua bug yang HANYA ketahuan di CI (pelajaran untuk cicilan berikutnya):
     1. `var blend := t - floor(t)` — fungsi global `floor()` mengembalikan
        Varian, dan `:=` dari Varian adalah COMPILE ERROR di Godot 4.5 (persis

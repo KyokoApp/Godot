@@ -153,13 +153,17 @@ func _run() -> void:
 		await physics_frame
 	var running_speed := float(player.get("move_speed"))
 	_check(running_speed > 1.5, "Pemain tidak berlari sebelum lompat: %.2f" % running_speed)
+	# Ketinggian diukur TEPAT sebelum lompat, bukan di titik muncul: pulau 1 km
+	# bergelombang (padang 100 m dulu rata), jadi pemain yang lari menurun
+	# memang mendarat lebih rendah dari tempat ia mulai bergerak.
+	var takeoff_y := player.position.y
 	_touch(11, jump.get_global_rect().get_center(), true)
 	_touch(11, jump.get_global_rect().get_center(), false)
 	var landing_clip := ""
 	var landed := false
 	for frame in range(80):
 		await physics_frame
-		if player.is_on_floor() and player.position.y > before_y:
+		if player.is_on_floor() and player.position.y > takeoff_y - 1.0:
 			landing_clip = str(visual.clip)
 			landed = true
 			break

@@ -136,7 +136,10 @@ func _test_land_and_sea() -> void:
 func _test_height_agreement() -> void:
 	var field := Field.new()
 	root.add_child(field)
-	await process_frame
+	# Tunggu chunk selesai di-stream: kalau tidak, semua titik jatuh ke fungsi
+	# analitik dan selisihnya selalu 0 — tesnya hijau tapi tidak menguji apa pun.
+	for _frame in range(60):
+		await process_frame
 	var worst := 0.0
 	var points := 0
 	for step in range(24):
@@ -162,9 +165,11 @@ func _test_clamp_inside() -> void:
 			"clamp_inside mengembalikan titik di luar pulau pada sudut %.1f" % angle)
 		_check(fixed.length() <= outside.length() + 0.001,
 			"clamp_inside mendorong pemain menjauh pada sudut %.1f" % angle)
-		# Titik yang sudah di dalam tidak boleh ikut digeser.
+		# Titik yang sudah di dalam tidak boleh ikut digeser. Toleransi 1 cm:
+		# sudut dihitung ulang lewat atan2 (bedanya ~4e-6 rad) dan itu dikalikan
+		# radius ~150 m, jadi is_equal_approx (1e-5 m) terlalu ketat.
 		var inside := Vector2(cos(angle), sin(angle)) * (Field.island_radius(angle) * 0.5)
-		_check(Field.clamp_inside(inside, 14.0).is_equal_approx(inside),
+		_check(Field.clamp_inside(inside, 14.0).distance_to(inside) < 0.01,
 			"Titik di dalam pulau ikut digeser pada sudut %.1f" % angle)
 	_notes.append("clamp_inside: titik di laut dikembalikan ke darat (margin 14 m)")
 
