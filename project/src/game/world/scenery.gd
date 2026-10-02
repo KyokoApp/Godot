@@ -164,15 +164,19 @@ func _build_cliffs() -> void:
 	var colors := PackedColorArray()
 	var indices := PackedInt32Array()
 	var blocks := 9
-	# Muka terdekat blok = base_x - depth/2; depth maksimum 12 m, jadi base_x
-	# harus >= Field.HALF + 6 + 6 supaya tebing tidak menyentuh padang.
+	# Blok dibuat saling menimpa (lebar 15 m, jarak titik 12,5 m) supaya terbaca
+	# sebagai satu dinding batu, bukan deretan menara. Muka terdekat blok =
+	# base_x - depth/2; depth maksimum 17 m, jadi base_x = Field.HALF + 13 masih
+	# menyisakan 4,5 m dari pagar.
 	var base_x := Field.HALF + 13.0
 	for block in range(blocks):
 		var center_z := -Field.HALF + 12.0 + float(block) * 12.5
-		var height := 16.0 + 7.0 * sin(float(block) * 1.7)
-		var depth := 9.0 + 3.0 * cos(float(block) * 2.3)
-		_add_rock_block(vertices, colors, indices, Vector3(base_x, -3.0, center_z),
-			Vector3(depth, height, 11.0), block)
+		var height := 17.0 + 4.0 * sin(float(block) * 1.7)
+		var depth := 14.0 + 3.0 * cos(float(block) * 2.3)
+		var offset := 1.6 * sin(float(block) * 2.1)
+		_add_rock_block(vertices, colors, indices,
+			Vector3(base_x + offset, -3.0, center_z),
+			Vector3(depth, height, 15.0), block)
 	cliff_count = blocks
 	_commit(vertices, colors, indices, "Cliffs", self)
 
