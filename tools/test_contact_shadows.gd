@@ -75,18 +75,6 @@ func _run() -> void:
 	var flat_mean := _mean_luma(flat)
 	_check(flat_mean < 0.9 * _mean_luma(off),
 		"Quad contact shadow tidak tampil sama sekali (diagnosa): %f" % flat_mean)
-	# 2b) Diagnosa kedua: nilai kedalaman mentah di titik uji (0 berarti buffer
-	#     kedalaman tidak terbaca — bukan hitungannya yang salah).
-	material.set_shader_parameter("debug_flat", false)
-	material.set_shader_parameter("debug_depth", true)
-	for frame in range(4):
-		await process_frame
-	await RenderingServer.frame_post_draw
-	var depths: Image = root.get_texture().get_image()
-	print("[contact-test] kedalaman di titik uji=%.4f (0 berarti buffer kosong)"
-		% depths.get_pixelv(
-			_screen_point(camera, depths, Vector3(2.0, 0.05, 0.0))).r)
-	material.set_shader_parameter("debug_depth", false)
 	# 3) Efek nyala: hitungan sinar sungguhan.
 	for frame in range(4):
 		await process_frame

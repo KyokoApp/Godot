@@ -905,7 +905,9 @@ tracing". Cicilan ini hanya suasana/pencahayaan.
 
 - `environment/dusk_environment.gd` — glow (bloom) dinyalakan: satu-satunya efek
   "sinema" yang didukung renderer Mobile. Yang mekar hanya bagian terang (pendar
-  matahari, kunang-kunang ungu, tepi bercahaya). Matahari jadi lebih jingga dan
+  matahari, kunang-kunang ungu, tepi bercahaya). Ambang sengaja 1,15 dan intensitas
+  0,12: dengan 1,0/0,32 pendar ufuk menyaturasi jadi putih (1,1,1) dan gerbang
+  `test_dusk` "ufuk harus hangat (merah > biru)" gagal. Matahari jadi lebih jingga dan
   sedikit lebih kuat (1,0 / 0,83 / 0,64, energi 1,05), cahaya sekitar lebih
   dingin dan redup supaya terbaca senja — tapi tidak turun jauh, karena janji
   `test_dusk` adalah "bukan malam pekat". Kabut ikut menghangat.

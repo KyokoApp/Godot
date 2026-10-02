@@ -4,8 +4,10 @@
   CONTACT SHADOW ALA RAY TRACING** (lanjutan "suasana senja dengan sinar cahaya
   dan kesan seperti ray tracing").
   - `src/game/environment/dusk_environment.gd`: **glow/bloom dinyalakan**
-    (glow_intensity 0,32, hdr_threshold 1,0) — satu-satunya efek sinema yang
-    renderer Mobile dukung. Matahari lebih jingga/kuat (1,0/0,83/0,64, energi
+    (glow_intensity 0,12, hdr_threshold **1,15**) — satu-satunya efek sinema yang
+    renderer Mobile dukung. Ambang 1,15 supaya pita persik di ufuk TIDAK
+    menyaturasi jadi putih (1,0/0,32 membuat gerbang `test_dusk` "ufuk hangat"
+    gagal: merah > biru). Matahari lebih jingga/kuat (1,0/0,83/0,64, energi
     1,05), ambient lebih dingin+redup (0,55/0,61/0,82, energi 0,52), kabut
     menghangat (0,76/0,70/0,80). TIDAK dibuat gelap sekali: janji `test_dusk`
     "bukan malam pekat" (zenith biru > 0,30, tanah hijau > 0,22).

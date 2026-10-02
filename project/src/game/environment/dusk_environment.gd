@@ -56,10 +56,15 @@ static func make_environment() -> Environment:
 	# Glow (bloom) — satu-satunya efek "sinema" yang renderer Mobile dukung.
 	# Yang mekar hanya bagian terang: pendar matahari, kunang-kunang ungu, dan
 	# tepi bercahaya. Tanpa ini suasana senja terlihat datar seperti siang hari.
+	#
+	# AMBANG 1,15 (bukan 1,0) dan INTENSITAS 0,12: dengan 1,0/0,32 pendar di ufuk
+	# menyaturasi jadi putih (1,1,1) dan gerbang test_dusk "ufuk harus hangat
+	# (merah > biru)" gagal. Sekarang yang mekar hanya inti matahari (1,28 HDR),
+	# sementara pita persik di ufuk tetap berwarna.
 	environment.glow_enabled = true
-	environment.glow_intensity = 0.32
+	environment.glow_intensity = 0.12
 	environment.glow_bloom = 0.08
-	environment.glow_hdr_threshold = 1.0
+	environment.glow_hdr_threshold = 1.15
 	environment.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
 	environment.glow_normalized = false
 	return environment

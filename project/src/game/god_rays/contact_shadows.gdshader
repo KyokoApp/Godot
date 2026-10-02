@@ -35,10 +35,9 @@ uniform float max_distance = 55.0;
 uniform float strength = 0.55;
 // Warna bayangan senja: ungu kebiruan yang dalam, bukan hitam datar.
 uniform vec3 shadow_color : source_color = vec3(0.06, 0.05, 0.11);
-// Mode diagnosa (hanya dipakai test_contact_shadows): "flat" menggelapkan
-// seluruh layar tanpa hitungan, "depth" menampilkan nilai kedalaman mentah.
+// Mode diagnosa (hanya dipakai test_contact_shadows): menggelapkan seluruh layar
+// tanpa hitungan, untuk membuktikan quad + blend memang tampil.
 uniform bool debug_flat = false;
-uniform bool debug_depth = false;
 uniform float bias = 0.0004;
 const int SAMPLE_COUNT = 14;
 
@@ -81,9 +80,6 @@ void fragment() {
 	if (debug_flat) {
 		ALBEDO = vec3(0.0, 0.0, 0.0);
 		ALPHA = 0.5;
-	} else if (debug_depth) {
-		ALBEDO = vec3(raw);
-		ALPHA = 1.0;
 	} else {
 		// Memudar di 10% tepi layar: ray yang keluar layar jangan membuat tepian.
 		vec2 fade = max(vec2(0.0), 10.0 * abs(SCREEN_UV - 0.5) - 4.0);
