@@ -38,8 +38,12 @@ func _run() -> void:
 	var arrays := blade_mesh.surface_get_arrays(0)
 	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 	_check(indices.size() == 18, "Budget 6 segitiga per rumpun berubah")
-	_check(Grass.MAX_TRIANGLES <= 112000, "Kepadatan baru melampaui budget LOD")
+	_check(Grass.MAX_TRIANGLES <= 336864, "Kepadatan baru melampaui budget LOD")
 	_check(Grass.BLADE_WIDTH < 0.1, "Helai rumput masih terlalu lebar")
+	# Helai rapat harus sampai 24 m (5x5 tile), bukan berhenti di 12 m.
+	_check(Grass.NEAR_SPAN * 2 + 1 == 5, "Cakupan helai rapat menyusut")
+	# Helai harus KECIL: tinggi di bawah setengah tinggi lama (0,55 m).
+	_check(Grass.BLADE_HEIGHT < 0.4, "Helai rumput masih setinggi semak")
 	var camera := Camera3D.new()
 	world.add_child(camera)
 	camera.position = player.position + Vector3(0, 3, 6)
@@ -71,7 +75,8 @@ func _run() -> void:
 		var z := randf_range(-60, 60)
 		if ground.can_grow(x, z):
 			_check(Field.is_inside(x, z, 0.0), "Penempatan rumput di luar pulau")
-	for frame in range(35):
+	# 49 tile dibangun satu per frame, jadi butuh 49 frame (bukan 35).
+	for frame in range(60):
 		await process_frame
 	_check(field.tiles.size() == Grass.MAX_TILES, "Jumlah tile tidak sesuai batas")
 	var total := 0

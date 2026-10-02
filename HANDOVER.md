@@ -1,5 +1,26 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-02 (sesi ini, cicilan 6) — **RUMPUT RAPAT: HELAI KECIL, MENUTUPI 32 M,
+  KARTU LOD SAMPAI 128 M** (lanjutan "rumput jadi kecil, rapat, benar-benar
+  terlihat helainya, menutupi semua yang terlihat di jangkauan kamera").
+  - `src/game/grass_field.gd`: helai tinggi 0,55 → **0,34 m**, lebar 0,085 →
+    **0,055 m**, lapisan bawah 0,25 → 0,22 m. `GRID` 40 → **44** (13,4
+    rumpun/m², 54 helai/m²), `FAR_GRID` 20 → 22. `RADIUS` 2 → **3**, `NEAR_SPAN`
+    baru = 2 → helai rapat + lapisan bawah sampai **24 m** (5×5 tile), lalu
+    renggang sampai 36 m. `MAX_TILES` 49, `MAX_CLUMPS` 60.016,
+    `MAX_TRIANGLES` 336.864.
+  - `src/game/grass.gdshader`: fade helai 23 → **32 m**; fade detail/lapisan
+    bawah 8–11 → **18–25 m** (dulu tanah tampak tak tertutup sudah di 11 m).
+  - `src/game/world/distant_grass.gd`: kartu LOD 27–128 m (`RADIUS` 4, `GRID`
+    14, 81 tile, dua tile/frame). `grass_distance.gdshader`: fade masuk 19–27 m,
+    fade keluar 100–130 m.
+  - `tools/test_grass.gd`: batas budget 112.000 → **336.864**, cek `NEAR_SPAN`
+    dan `BLADE_HEIGHT < 0,4`, tunggu **60 frame** (49 tile, satu per frame).
+  - Total segitiga rumput: **400.368** (sebelumnya 140.224, ×2,4). Kalau HP
+    terasa berat, turunkan `GRID` dulu (paling besar pengaruhnya).
+  - Sisa antrian cicilan (JANGAN digabung): partikel ungu, suasana senja +
+    sinar cahaya, shader air.
+
 - 2026-10-02 (sesi ini, cicilan 5) — **PALET SENJA: TANAH & RUMPUT GELAP TAPI
   TETAP TERBACA** (lanjutan "tanah dan rumput jadi gelap tapi tetap kelihatan,
   dan rumput satu warna dengan tanah"). HANYA warna.

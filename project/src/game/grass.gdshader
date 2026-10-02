@@ -15,7 +15,7 @@ uniform vec3 player_position = vec3(0.0);
 uniform vec2 wind_direction = vec2(0.8, 0.4);
 uniform float wind_strength = 0.20;
 uniform float fade_start = 16.0;
-uniform float fade_end = 23.0;
+uniform float fade_end = 32.0;
 
 varying vec3 grass_world_position;
 
@@ -24,9 +24,11 @@ void vertex() {
 	float tip = UV.x > 1.5 ? 0.0 : 1.0 - UV.y;
 	float distance_xz = length(root.xz - player_position.xz);
 	float visibility = 1.0 - smoothstep(fade_start, fade_end, distance_xz);
-	// Detail dan lapisan bawah lenyap sebelum batas tile LOD terdekat (12 m).
+	// Detail dan lapisan bawah menipis lebih dulu (18-25 m) supaya permukaan
+	// tanah tetap tertutup sampai jauh — dulu keduanya hilang sudah di 8-11 m,
+	// jadi rumput tampak berhenti tak jauh dari pemain.
 	if (INSTANCE_CUSTOM.r > 0.5 || UV.x > 1.5) {
-		visibility *= 1.0 - smoothstep(8.0, 11.0, distance_xz);
+		visibility *= 1.0 - smoothstep(18.0, 25.0, distance_xz);
 	}
 	// Menyusut ke akar secara halus; tetap opaque, tanpa overdraw alpha.
 	VERTEX = mix(root, VERTEX, visibility);

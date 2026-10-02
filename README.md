@@ -855,3 +855,28 @@ ungu, sinar cahaya, dan shader air menyusul).
   supaya tidak menyesatkan.
 
 Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-02 — rumput rapat: helai kecil, menutupi sampai 32 m, kartu LOD sampai 128 m
+
+Lanjutan permintaan "rumput jadi kecil, rapat, benar-benar terlihat helainya,
+menutupi semua yang terlihat di jangkauan kamera". Cicilan ini hanya rumput.
+
+- `grass_field.gd` — helai mengecil supaya terbaca sebagai helai, bukan semak:
+  tinggi 0,55 → 0,34 m, lebar 0,085 → 0,055 m, lapisan bawah 0,25 → 0,22 m.
+  Kerapatan naik: `GRID` 40 → 44 (13,4 rumpun/m², 54 helai/m²) dan `FAR_GRID`
+  20 → 22.
+- Cakupan helai rapat + lapisan bawah naik dari 12 m ke 24 m (`NEAR_SPAN`
+  1 → 2, jadi 5×5 tile), lalu makin renggang sampai 36 m (`RADIUS` 2 → 3).
+  Sebelumnya lapisan bawah tanah hilang sudah di 8–11 m dari pemain, jadi
+  rumput tampak berhenti tak jauh dari pemain.
+- `grass.gdshader` — fade helai 23 → 32 m; fade detail/lapisan bawah 8–11 →
+  18–25 m.
+- `world/distant_grass.gd` — kartu LOD mengambil alih dari 27 m sampai 128 m
+  (`RADIUS` 3 → 4, `GRID` 12 → 14, dua tile per frame supaya 81 tile tetap
+  cepat terisi saat spawn); `world/grass_distance.gdshader` fade masuk 19–27 m,
+  fade keluar 100–130 m.
+- Anggaran gambar: helai asli 336.864 tris + kartu 63.504 tris = 400.368 tris
+  (sebelumnya 140.224). Batas ini dijaga `tools/test_grass.gd`, dan tile penuh
+  sekarang 49 (tes menunggu 60 frame, bukan 35).
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.

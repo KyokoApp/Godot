@@ -1,6 +1,7 @@
 extends Node3D
-## Rumput berlapis di pulau 1 km: 9 tile dekat rapat, sisanya lebih ringan.
-## Jarak tile tetap mengikuti pemain (radius 2 tile = 24 m), jadi kepadatan dan
+## Rumput berlapis di pulau 1 km: helai rapat + lapisan bawah sampai 24 m,
+## lalu makin renggang sampai 36 m, lalu kartu LOD (distant_grass.gd) sampai 128 m.
+## Jarak tile tetap mengikuti pemain (radius 3 tile = 36 m), jadi kepadatan dan
 ## biaya gambar TIDAK berubah walau dunianya kini 1 km — yang menentukan adalah
 ## `Field.can_grow()`, bukan ukuran dunia.
 
@@ -8,15 +9,22 @@ const DistantGrass = preload("res://src/game/world/distant_grass.gd")
 const Field = preload("res://src/game/world/field.gd")
 const SHADER = preload("res://src/game/grass.gdshader")
 const TILE_SIZE := 12.0
-const GRID := 40
-const FAR_GRID := 20
-const RADIUS := 2
-const MAX_TILES := 25
-const MAX_CLUMPS := 9 * GRID * GRID + 16 * FAR_GRID * FAR_GRID
-const MAX_TRIANGLES := 9 * GRID * GRID * 6 + 16 * FAR_GRID * FAR_GRID * 4
-const COVER_HALF_SIZE := 0.25
-const BLADE_WIDTH := 0.085
-const BLADE_HEIGHT := 0.55
+const GRID := 44
+const FAR_GRID := 22
+const RADIUS := 3
+## Tile dengan helai rapat + lapisan bawah: cakupan 24 m dari pemain (5x5 tile).
+## Di luar itu rumpunnya menipis (FAR_GRID) supaya transisi ke kartu LOD halus.
+const NEAR_SPAN := 2
+const MAX_TILES := (RADIUS * 2 + 1) ** 2
+const NEAR_TILES := (NEAR_SPAN * 2 + 1) ** 2
+const MAX_CLUMPS := NEAR_TILES * GRID * GRID + (MAX_TILES - NEAR_TILES) * FAR_GRID * FAR_GRID
+const MAX_TRIANGLES := (NEAR_TILES * GRID * GRID * 6
+	+ (MAX_TILES - NEAR_TILES) * FAR_GRID * FAR_GRID * 4)
+## Helai KECIL supaya terbaca sebagai helai, bukan semak: tinggi 0,55 -> 0,34 m
+## dan lebar 0,085 -> 0,055 m. Lapisan bawah ikut mengecil mengikuti helai.
+const COVER_HALF_SIZE := 0.22
+const BLADE_WIDTH := 0.055
+const BLADE_HEIGHT := 0.34
 
 var distant: DistantGrass
 var ground: Field
@@ -50,7 +58,7 @@ func _process(_delta: float) -> void:
 	var center := Vector2i(floori(position_3d.x / TILE_SIZE), floori(position_3d.z / TILE_SIZE))
 	if center != _center:
 		_recenter(center)
-	# Batasi lonjakan CPU: paling banyak satu tile (maksimal 1.600 kandidat) tiap frame.
+	# Batasi lonjakan CPU: paling banyak satu tile (maksimal 1.936 kandidat) tiap frame.
 	if not _pending.is_empty():
 		_build_tile(_pending.pop_front())
 
@@ -83,7 +91,8 @@ func can_grow(x: float, z: float) -> bool:
 
 
 func grid_for(key: Vector2i) -> int:
-	return GRID if maxi(absi(key.x - _center.x), absi(key.y - _center.y)) <= 1 else FAR_GRID
+	var span := maxi(absi(key.x - _center.x), absi(key.y - _center.y))
+	return GRID if span <= NEAR_SPAN else FAR_GRID
 
 
 func placements_for(key: Vector2i) -> Array[Transform3D]:

@@ -1,11 +1,14 @@
 extends Node3D
-## Sparse crossed 2D cards (4 tris/clump), blended with existing near grass.
+## Kartu 2D bersilang (4 tris/kartu) yang menerima estafet dari helai rapat:
+## helai asli berhenti di 24 m, kartu mengambil alih sampai 128 m supaya rumput
+## tetap terlihat di sepanjang jangkauan kamera, bukan berhenti mendadak.
 
 const TILE := 32.0
-const GRID := 12
-const RADIUS := 3
-const MAX_TILES := 49
+const GRID := 14
+const RADIUS := 4
+const MAX_TILES := (RADIUS * 2 + 1) ** 2
 const MAX_TRIANGLES := MAX_TILES * GRID * GRID * 4
+## Kartu dibangun dua per frame: 81 tile = 41 frame, cukup cepat saat spawn.
 const SHADER = preload("res://src/game/world/grass_distance.gdshader")
 
 var field: Node3D
@@ -40,7 +43,9 @@ func update_center(point: Vector3) -> void:
 					_pending.append(key)
 		_pending.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
 			return a.distance_squared_to(center) < b.distance_squared_to(center))
-	if not _pending.is_empty():
+	for index in range(2):
+		if _pending.is_empty():
+			break
 		_build_tile(_pending.pop_front())
 
 
