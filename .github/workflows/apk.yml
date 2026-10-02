@@ -543,12 +543,33 @@ jobs:
 
       - name: Ringkasan kegagalan
         if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           for log in *.log build/*.log; do
             [ -f "$log" ] || continue
             echo "::error::--- $log"
             tail -25 "$log" | while IFS= read -r line; do echo "::error::$line"; done
           done
+          # Log GitHub (API) tidak bisa diunduh dari luar, dan anotasi hanya
+          # memuat 25-60 baris terakhir. Jadi saat gagal, seluruh log dikirim
+          # sebagai komentar commit supaya bisa dibaca utuh.
+          {
+            echo "### Log lengkap (run $GITHUB_RUN_ID, commit \`${GITHUB_SHA:0:7}\`)"
+            echo
+            for log in *.log build/*.log; do
+              [ -f "$log" ] || continue
+              echo '```'
+              echo "=== $log ==="
+              tail -c 24000 "$log"
+              echo '```'
+            done
+          } > comment.md
+          head -c 60000 comment.md > comment-cut.md
+          mv comment-cut.md comment.md
+          jq -Rs '{body: .}' comment.md > comment.json
+          gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/comments" \
+            --input comment.json --jq '.html_url' || echo "komentar gagal dikirim"
 
       - name: Terbitkan build ke GitHub Release
         env:

@@ -136,8 +136,20 @@ func _reorder(order: Array[int]) -> void:
 
 ## Hitung sumbu, bidang rest, dan aturan perpindahan posisi untuk tiap pasangan.
 func _measure() -> void:
-	_leaf.resize(_count)
-	_parent_pair.resize(_count)
+	# Array dikosongkan lalu DIISI (append), bukan resize+append: resize sudah
+	# menambah elemen kosong, sehingga append menggeser semua indeks dan tiap
+	# tulang membaca nilai milik tulang lain (daun dianggap punya arah -> sumbu
+	# (0,0,0) -> error "axis must be normalized").
+	_leaf = PackedByteArray()
+	_parent_pair = PackedInt32Array()
+	_source_axis_local = PackedVector3Array()
+	_target_axis = PackedVector3Array()
+	_source_axis = PackedVector3Array()
+	_source_rest_basis = []
+	_target_rest_basis = []
+	_source_rest_origin = PackedVector3Array()
+	_target_rest_origin = PackedVector3Array()
+	_pre = []
 	for index in range(_count):
 		var source_bone := _source_bones[index]
 		var target_bone := _target_bones[index]
@@ -233,7 +245,9 @@ func apply() -> void:
 		var position := _pre[index] * ((source_pose.origin - _source_rest_origin[index])
 			* _motion_scale) + _target_rest_origin[index]
 		_target.set_bone_pose_position(target_bone, position)
-		if _leaf[index] == 1:
+		if _leaf[index] == 1 or _target_axis[index].length_squared() < 0.5:
+			# Tulang daun (tanpa anak yang ikut dipetakan) tidak menggerakkan
+			# geometri: cukup diletakkan, tidak perlu diputar.
 			continue
 		# --- arah: persis arah tulang sumber, diambil dari sumbu rest avatar.
 		var direction := (source_pose.basis * _source_axis_local[index]).normalized()
