@@ -1,5 +1,5 @@
 extends Node3D
-## Frozen native skin snapshots. Shared geometry, no animation, textures, lights or shadows.
+## Bekas pose beku mannequin: geometri sama, tanpa animasi/tekstur/bayangan.
 
 const Character = preload("res://src/game/mannequin.gd")
 const SHADER = preload("res://src/game/speed/afterimage.gdshader")
@@ -13,7 +13,6 @@ var _materials: Array[ShaderMaterial] = []
 var _ages: Array[float] = []
 var _meshes: Array[MeshInstance3D] = []
 var _source: Skeleton3D
-var _skin := ""
 var _clock := 0.0
 var _next := 0
 var _pending := false
@@ -27,14 +26,14 @@ func update_motion(delta: float, speed: float, boosted: bool) -> void:
 		_materials[index].set_shader_parameter("opacity", 0.26 * life * life)
 		ghosts[index].visible = life > 0
 	var position := character.global_position
-	if position.distance_to(_previous) > 3.0 or character.skin_id != _skin:
+	if position.distance_to(_previous) > 3.0:
 		clear()
 	_previous = position
 	if not boosted or speed < 0.3:
 		_pending = false
 		_clock = 0
 		return
-	if character.skin_id != _skin:
+	if _source == null:
 		_rebuild()
 	_clock += delta
 	if _clock >= INTERVAL:
@@ -58,9 +57,8 @@ func _rebuild() -> void:
 	_materials.clear()
 	_ages.clear()
 	_meshes.clear()
-	_skin = character.skin_id
 	_next = 0
-	_source = character.source_skeleton if _skin == Character.MANNEQUIN else character.retarget.target
+	_source = character.skeleton
 	# Godot emits this after all modifiers, before skin upload and pose restoration.
 	# Unlike CastLayer's signal, it also fires during ordinary non-casting locomotion.
 	var capture := _capture.bind(_source)
@@ -70,8 +68,7 @@ func _rebuild() -> void:
 		var mesh := node as MeshInstance3D
 		if mesh.is_visible_in_tree():
 			_meshes.append(mesh)
-	# Kanna's source mesh is substantially heavier; cap its snapshots at two.
-	for index in range(2 if _skin == Character.KANNA else 3):
+	for index in range(3):
 		_build_ghost()
 
 
@@ -87,8 +84,7 @@ func _build_ghost() -> void:
 		skeleton.set_bone_rest(bone, _source.get_bone_rest(bone))
 	var material := ShaderMaterial.new()
 	material.shader = SHADER
-	material.set_shader_parameter("tint", {"miku": Color("8bbfff"),
-		"kanna": Color("efb58a"), "mannequin": Color("c5a0ee")}.get(_skin, Color.WHITE))
+	material.set_shader_parameter("tint", Color("c5a0ee"))
 	for source in _meshes:
 		var mesh := MeshInstance3D.new()
 		mesh.mesh = source.mesh
@@ -107,7 +103,7 @@ func _build_ghost() -> void:
 
 
 func _capture(source: Skeleton3D) -> void:
-	if not _pending or source != _source or character.skin_id != _skin:
+	if not _pending or source != _source:
 		return
 	_pending = false
 	var ghost := ghosts[_next]

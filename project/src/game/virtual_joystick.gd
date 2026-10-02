@@ -6,6 +6,8 @@ const RADIUS := 86.0
 const DEAD_ZONE := 0.15
 
 var input_exclusion: Control
+## Semua kontrol HUD yang tidak boleh memulai analog (tombol bulat, panel, laci).
+var input_exclusions: Array[Control] = []
 var input_enabled := true
 var direction := Vector2.ZERO
 var _finger := -1
@@ -31,9 +33,8 @@ func _input(event: InputEvent) -> void:
 		if touch.index == _finger and (not touch.pressed or touch.canceled):
 			reset()
 		elif touch.pressed and _finger == -1:
-			if is_instance_valid(input_exclusion) and input_exclusion.is_visible_in_tree():
-				if input_exclusion.contains_point(touch.position):
-					return
+			if _blocked(touch.position):
+				return
 			var local := get_global_transform_with_canvas().affine_inverse() * touch.position
 			if Rect2(Vector2.ZERO, Vector2(size.x * 0.5, size.y)).has_point(local):
 				_origin = local
@@ -44,6 +45,24 @@ func _input(event: InputEvent) -> void:
 		if drag.index == _finger:
 			var local := get_global_transform_with_canvas().affine_inverse() * drag.position
 			_update_stick(local)
+
+
+func _blocked(point: Vector2) -> bool:
+	# Tombol HUD juga mendengar sentuhan langsung, jadi analog harus mengalah:
+	# menekan tombol tidak boleh sekaligus mulai berjalan.
+	for control in input_exclusions:
+		if not is_instance_valid(control) or not control.is_visible_in_tree():
+			continue
+		if control.has_method("contains_point"):
+			if bool(control.call("contains_point", point)):
+				return true
+		elif control.get_global_rect().has_point(point):
+			return true
+	if not is_instance_valid(input_exclusion) or not input_exclusion.is_visible_in_tree():
+		return false
+	if input_exclusion.has_method("contains_point"):
+		return bool(input_exclusion.call("contains_point", point))
+	return input_exclusion.get_global_rect().has_point(point)
 
 
 func reset() -> void:

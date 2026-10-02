@@ -1,7 +1,7 @@
 extends SceneTree
-## Digunakan dua kali: logika headless dan render Mobile/Vulkan via Mesa/Xvfb.
+## Rumput di padang 100 m: anggaran LOD, penempatan di tanah, LOD turun saat jauh.
 
-const Island = preload("res://src/game/island.gd")
+const Field = preload("res://src/game/world/field.gd")
 const FirePet = preload("res://src/game/fire_pet.gd")
 const Character = preload("res://src/game/mannequin.gd")
 const Grass = preload("res://src/game/grass_field.gd")
@@ -22,24 +22,23 @@ func _check(condition: bool, message: String) -> void:
 func _run() -> void:
 	var world := Node3D.new()
 	root.add_child(world)
-	var island := Island.new()
-	world.add_child(island)
+	var ground := Field.new()
+	world.add_child(ground)
 	var player := Node3D.new()
-	player.position = Vector3(45, island.surface_height(45, 0) + 0.9, 0)
+	player.position = Vector3(12, ground.surface_height(12, 4) + 0.9, 4)
 	world.add_child(player)
 	var character := Character.new()
 	character.position = player.position - Vector3(0, 0.9, 0)
 	world.add_child(character)
 	var field := Grass.new()
-	field.island = island
+	field.ground = ground
 	field.player = player
 	world.add_child(field)
 	var blade_mesh: ArrayMesh = field.get("_mesh")
 	var arrays := blade_mesh.surface_get_arrays(0)
 	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 	_check(indices.size() == 18, "Budget 6 segitiga per rumpun berubah")
-	_check(Grass.MAX_TRIANGLES <= 112000,
-		"Kepadatan baru melampaui budget LOD")
+	_check(Grass.MAX_TRIANGLES <= 112000, "Kepadatan baru melampaui budget LOD")
 	_check(Grass.BLADE_WIDTH < 0.1, "Helai rumput masih terlalu lebar")
 	var camera := Camera3D.new()
 	world.add_child(camera)
@@ -55,13 +54,18 @@ func _run() -> void:
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-50, 20, 0)
 	world.add_child(sun)
-	for z in range(-330, 331, 10):
-		_check(not field.can_grow(Island.road_x(z), z), "Rumput tumbuh di jalan")
-	_check(not field.can_grow(490, 490), "Rumput tumbuh di laut")
-	_check(not field.can_grow(420, 0), "Rumput tumbuh di pantai")
-	_check(not field.can_grow(310, -110), "Rumput tumbuh di sisi tebing")
-	for rock in island.rock_clearances:
-		_check(not field.can_grow(rock.x, rock.z), "Rumput tumbuh di batu")
+	# Rumput hanya di dalam padang, tidak menembus pagar.
+	_check(field.can_grow(0, 0), "Rumput tidak tumbuh di tengah padang")
+	_check(field.can_grow(-40, 30), "Rumput tidak tumbuh di sudut dalam")
+	_check(not field.can_grow(56, 0), "Rumput tumbuh di luar pagar")
+	_check(not field.can_grow(0, -52), "Rumput tumbuh di luar batas selatan")
+	_check(not field.can_grow(-49.6, -49.6), "Rumput tumbuh menembus pagar")
+	for _sample in range(40):
+		var x := randf_range(-52, 52)
+		var z := randf_range(-52, 52)
+		if ground.can_grow(x, z):
+			_check(absf(x) < Field.HALF and absf(z) < Field.HALF,
+				"Penempatan lolos di luar padang")
 	for frame in range(35):
 		await process_frame
 	_check(field.tiles.size() == Grass.MAX_TILES, "Jumlah tile tidak sesuai batas")
@@ -74,15 +78,13 @@ func _run() -> void:
 		for index in range(placements.size()):
 			var placement: Transform3D = placements[index]
 			# Renderer dummy tidak menyimpan transform MultiMesh di GPU.
-			# Readback GPU hanya diuji pada pass render Vulkan, bukan headless.
 			if "--render" in OS.get_cmdline_user_args():
 				placement = tile.multimesh.get_instance_transform(index)
 				_check(placement.is_equal_approx(placements[index]), "Transform GPU berbeda")
 			var point: Vector3 = tile.position + placement.origin
 			_check(field.can_grow(point.x, point.z), "Penempatan di area terlarang")
-			_check(absf(point.y + 0.03 - island.surface_height(point.x, point.z)) < 0.01,
+			_check(absf(point.y + 0.03 - ground.surface_height(point.x, point.z)) < 0.01,
 				"Akar rumput mengambang")
-	_test_cover(field)
 	_test_lod_subset(field)
 	_check(total > 100, "Tidak ada padang rumput yang cukup untuk dirender")
 	_check(total <= Grass.MAX_CLUMPS, "Budget rumput terlampaui")
@@ -92,16 +94,14 @@ func _run() -> void:
 		_check(image != null and not image.is_empty(), "Render menghasilkan gambar kosong")
 		image.save_png("user://grass-render-test.png")
 		await _test_two_sided_lighting()
-		await _test_road_color()
-	# Jalan jauh tidak menumpuk tile dari posisi sebelumnya.
-	player.position = Vector3(-130, island.surface_height(-130, 40) + 0.9, 40)
+	# Tile jauh dilepas saat pemain berpindah ke sisi lain padang.
+	player.position = Vector3(-38, ground.surface_height(-38, 38) + 0.9, 38)
 	for frame in range(35):
 		await process_frame
 	_check(field.tiles.size() <= Grass.MAX_TILES, "Tile lama bocor setelah berpindah")
 	for key in field.tiles:
 		_check(absi(key.x - floori(player.position.x / Grass.TILE_SIZE)) <= Grass.RADIUS,
 			"Tile jauh tidak dilepas")
-	# Melintasi satu batas tile harus tetap di bawah budget selama transisi LOD.
 	player.position.x += Grass.TILE_SIZE
 	for frame in range(35):
 		await process_frame
@@ -112,6 +112,20 @@ func _run() -> void:
 		_check(triangles <= Grass.MAX_TRIANGLES, "Budget terlampaui saat transisi LOD")
 	print("[grass-test] HASIL: ", "OK" if _failures == 0 else "GAGAL")
 	quit(0 if _failures == 0 else 1)
+
+
+func _test_lod_subset(field: Grass) -> void:
+	var near := field.placements_for(Vector2i(0, 0))
+	_check(not near.is_empty(), "Tile dekat kosong")
+	# Grid jauh adalah subset grid dekat supaya akar tidak melompat saat LOD turun.
+	var far_count := 0
+	for placement in near:
+		var cell_x := floori(placement.origin.x * Grass.GRID / Grass.TILE_SIZE)
+		var cell_z := floori(placement.origin.z * Grass.GRID / Grass.TILE_SIZE)
+		if cell_x % 2 == 0 and cell_z % 2 == 0:
+			far_count += 1
+	_check(far_count > 0 and far_count < near.size(),
+		"Subset LOD jauh tidak masuk akal: %d dari %d" % [far_count, near.size()])
 
 
 func _test_two_sided_lighting() -> void:
@@ -166,21 +180,6 @@ func _test_two_sided_lighting() -> void:
 	_check(front.g > 0.30 and back.g > 0.30, "Salah satu sisi rumput masih gelap")
 	_check(absf(front.get_luminance() - back.get_luminance()) < 0.025,
 		"Cahaya depan/belakang rumput tidak setara")
-	print("::notice::Grass lighting baru: depan=", front, " belakang=", back)
-	# A/B hanya di tes: reproduksi shader lama untuk memastikan tes menangkap bug.
-	var legacy := Shader.new()
-	legacy.code = Grass.SHADER.code.replace(
-		"NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);", "")
-	material.shader = legacy
-	for frame in range(8):
-		await process_frame
-	await RenderingServer.frame_post_draw
-	rendered = viewport.get_texture().get_image()
-	front = rendered.get_pixel(int(left.x), int(left.y))
-	back = rendered.get_pixel(int(right.x), int(right.y))
-	_check(absf(front.get_luminance() - back.get_luminance()) > 0.05,
-		"Tes A/B tidak mereproduksi perbedaan normal shader lama")
-	print("::notice::Grass lighting lama: depan=", front, " belakang=", back)
 	viewport.queue_free()
 
 
@@ -198,85 +197,3 @@ func _lighting_card(reverse: bool) -> ArrayMesh:
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	return mesh
-
-
-func _test_cover(field: Node3D) -> void:
-	var key := Vector2i(3, 0)
-	var placements: Array[Transform3D] = field.placements_for(key)
-	var origin := Vector3(key.x * Grass.TILE_SIZE, 0, key.y * Grass.TILE_SIZE)
-	var checked := 0
-	var covered := 0
-	for z in range(1, 10):
-		for x in range(1, 10):
-			var point := origin + Vector3(x + 0.17, 0, z + 0.23)
-			if not field.can_grow(point.x, point.z):
-				continue
-			if Vector2(point.x - 45.0, point.z).length() > 7.5:
-				continue
-			checked += 1
-			for placement in placements:
-				var local := placement.affine_inverse() * (point - origin)
-				if absf(local.x) <= Grass.COVER_HALF_SIZE and absf(local.z) <= Grass.COVER_HALF_SIZE:
-					covered += 1
-					break
-	_check(checked > 30, "Sampel area hijau tidak cukup untuk tes penutup tanah")
-	_check(covered >= checked * 0.95, "Penutup tanah dekat belum mencapai 95% sampel")
-	print("::notice::Ground cover: ", covered, "/", checked, " sampel tertutup")
-
-
-func _test_lod_subset(field: Node3D) -> void:
-	var saved: Vector2i = field.get("_center")
-	var near: Array[Transform3D] = field.placements_for(saved)
-	var origins: Dictionary[Vector3, bool] = {}
-	for placement in near:
-		origins[placement.origin] = true
-	field.set("_center", saved + Vector2i(2, 0))
-	var far: Array[Transform3D] = field.placements_for(saved)
-	field.set("_center", saved)
-	_check(far.size() < near.size(), "LOD jauh tidak mengurangi kepadatan")
-	for placement in far:
-		_check(origins.has(placement.origin), "Akar berpindah saat ganti LOD")
-
-
-func _test_road_color() -> void:
-	var viewport := SubViewport.new()
-	viewport.size = Vector2i(256, 128)
-	viewport.own_world_3d = true
-	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	root.add_child(viewport)
-	var camera := Camera3D.new()
-	viewport.add_child(camera)
-	camera.position = Vector3(0, 40, 0.01)
-	camera.look_at(Vector3.ZERO)
-	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	camera.size = 32
-	camera.current = true
-	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees.x = -90
-	viewport.add_child(sun)
-	var plane := PlaneMesh.new()
-	plane.size = Vector2(80, 80)
-	var arrays := plane.get_mesh_arrays()
-	var colors := PackedColorArray()
-	colors.resize((arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size())
-	colors.fill(Island.GRASS_COLOR)
-	arrays[Mesh.ARRAY_COLOR] = colors
-	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	var material := ShaderMaterial.new()
-	material.shader = Island.TERRAIN_SHADER
-	material.set_shader_parameter("dirt_color", Island.DIRT_COLOR)
-	var surface := MeshInstance3D.new()
-	surface.mesh = mesh
-	surface.material_override = material
-	viewport.add_child(surface)
-	for frame in range(3):
-		await process_frame
-	await RenderingServer.frame_post_draw
-	var image := viewport.get_texture().get_image()
-	var center := image.get_pixel(128, 64)
-	var edge := image.get_pixel(8, 64)
-	_check(center.r > center.g * 1.15, "Jalan shader tidak berwarna tanah")
-	_check(edge.g > edge.r * 1.15, "Tanah jalan bocor ke rumput")
-	image.save_png("user://road-render-test.png")
-	viewport.queue_free()

@@ -599,3 +599,85 @@ dan lingkaran arena saat seluruhnya dalam jangkauan. Radius pandang 125m.
 Tekstur 256px dibuat sekali dari terrain aktual; update posisi 10Hz, tanpa kamera
 3D tambahan. Sentuhan peta tidak mengaktifkan joystick. Belum ada peta fullscreen,
 quest marker atau teleport. HUD mengikuti skala viewport seperti kontrol lain.
+
+## Padang 100 m + mannequin only + katalog 85 animasi (2026-10-01)
+
+Permintaan pengguna: bangun ulang dunia jadi padang 100 m × 100 m berumput,
+hapus karakter lain (Miku/Kanna), dan pakai SEMUA animasi yang tersedia dengan
+animasi yang benar-benar diperbaiki.
+
+- **Dunia**: `world/field.gd` (100 m × 100 m, gelombang ≤ 0,9 m, shader tanah +
+  penutup rumput), `world/boundary_fence.gd`, `grass_field.gd` (tile 12 m,
+  LOD grid 40/20, batas 25 tile hidup). Rumput hanya di dalam pagar.
+- **Karakter**: hanya `mannequin.gd`. Miku, Kanna, skin switcher, kartu karakter,
+  portrait, retarget, hair spring, minimap, arena, air, jalan batu dan model
+  nature dihapus dari repo.
+- **Animasi**: satu AnimationPlayer memuat UAL1 (43 klip) + pustaka `ual2` dari
+  UAL2 (43 klip) = 85 nama di `animation/catalog.gd`, lengkap dengan label dan
+  keterangan Indonesia serta flag loop/once/hold/gait.
+- **Perbaikan animasi**: mode loop per klip disetel dari katalog; kecepatan main
+  klip dicocokkan dengan langkah hasil ukur `animation/anim_metrics.gd` sehingga
+  kaki tidak meluncur; offset tanah per klip menjaga pose rendah; cross-fade antar
+  klip; aksi sekali jalan pakai timer `_action_left` (deterministik di headless).
+- **Gerbang baru tanpa engine**: `python3 tools/check_animation_catalog.py`
+  memverifikasi 85 klip ada di GLB, sumber & flag benar, lalu mengukur ulang
+  langkah tiap klip gait (m/s) dan membandingkannya dengan rentang yang dijaga.
+- **Tes engine** yang relevan: `test_mannequin` (katalog + state machine + casting),
+  `test_movement`, `test_grass` (LOD + dua sisi terang), `test_hud`, `test_speed`
+  (boost 1,35× + anti meluncur), `test_motion_flair` (tapak api), `test_night`,
+  `test_audio`, `test_pack` (85 klip + lisensi di PCK). Belum diuji di HP.
+
+### Perbaikan 2026-10-02 — nama klip runtime + joystick
+
+- **Importer glTF membuang akhiran `_Loop`** dari nama animasi di AnimationPlayer
+  (`Walk_Loop` di berkas menjadi `Walk` di engine). Katalog memakai nama berkas,
+  jadi `animation.play("Idle_Loop")` gagal, `_ready()` mannequin berhenti di
+  tengah dan seluruh HUD (joystick, tombol, panel) tidak pernah terbangun —
+  karakter tidak bisa digerakkan sama sekali. `Catalog.play_name()` sekarang
+  membuang sufiks itu sebelum menambah prefiks `ual2/`; nama runtime tiap klip
+  diuji `tools/test_clips.gd` dan aturan baru di `check_animation_catalog.py`
+  (nama runtime wajib unik + daftar klip loop tanpa sufiks terpantau).
+- **Joystick belum pernah tersambung** ke `player.joystick` di `main.gd`, jadi
+  input sentuh tidak menggerakkan karakter meski HUD tampil.
+- **CI sekarang memberi alasan**: `_check()` mencetak `::error::`, langkah tes
+  memakai `tee`, dan langkah "Ringkasan kegagalan" menampilkan 24 baris terakhir
+  tiap log sebagai anotasi.
+- Hasil: CI hijau penuh (37 langkah, termasuk ekspor PCK + APK dan rilis
+  `A-Sekai build-3b29806`). Menunggu tes di HP.
+
+### 2026-10-02 — akar layar abu-abu di HP: paket APK kehilangan skrip launcher
+
+Layar HP yang abu rata **tanpa teks apa pun** ternyata bukan masalah shader atau
+HP: warna itu warna latar bawaan Godot, artinya tidak ada satu pun UI yang
+digambar. Penyebabnya paket utama APK hanya berisi `launcher.gdc` dan ikon —
+`backdrop.gd`, `chunk_policy.gd`, `chunk_store.gd` tidak ikut, sementara
+`launcher.gd` mem-preload ketiganya, sehingga skrip launcher gagal dimuat dan
+seluruh launcher mati sebelum menggambar apa pun. Filter ekspor `scenes` hanya
+mengikuti dependensi *scene*, bukan dependensi *skrip*.
+
+- `export_presets.cfg` (preset Android): berkas launcher masuk `export_files` +
+  `include_filter`; `main.tscn` membawa ilustrasi sebagai ext_resource.
+- `backdrop.gd` tidak lagi mem-preload tekstur; kalau teksturnya tidak ada,
+  launcher memakai latar polos (bukan mati total).
+- Gerbang baru di CI: `Audit isi APK` dan `tools/test_apk_launcher.gd` yang
+  mem-boot launcher dari isi APK, bukan dari folder proyek — satu-satunya cara
+  menangkap kelas bug ini.
+- Konsekuensi penting: **perbaikan ini butuh install APK baru**; update konten
+  lewat PCK tidak bisa memperbaiki launcher yang rusak.
+
+### 2026-10-02 — kontrol & HUD: lompat langsung, combo, panel kecil, tombol bulat
+
+- **Lompat langsung**: menekan LOMPAT memakai `velocity.y = JUMP_VELOCITY` saat
+  itu juga (dulu ada jeda tolakan 0,22 s). Pose `Jump_Start` hanya menempel
+  0,3 s, lalu klip melayang `Jump_Loop`, dan mendarat hanya sah saat badan
+  benar-benar turun.
+- **Combo serangan**: tiap tekan SERANG lanjut ke klip berikutnya
+  (`Punch_Jab` → `Punch_Cross` → `Melee_Hook`) lalu berulang; combo kembali ke
+  awal setelah 1,1 detik tanpa serangan.
+- **Tombol bulat tanpa kotak** (`rune_button.gd`): label di dalam lingkaran +
+  cincin aksen. Susunan HUD: SERANG (136) di kanan bawah, TEMBAK api pet (96),
+  LOMPAT/LARI/JONGKOK (92) di atasnya, ANIM + GRAFIK (72) di kanan atas.
+- **Panel animasi = jendela kecil** yang bisa discroll; scroll ditangani panel
+  sendiri sehingga drag bisa dimulai di baris mana pun (dulu hanya dari pojok),
+  ketukan pendek memilih klip, dan ketukan di luar jendela menutup panel.
+- Tombol HUD tidak lagi ikut memulai analog (`input_exclusions`).

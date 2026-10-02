@@ -19,6 +19,11 @@ Kenapa alat otomatis tidak menangkapnya waktu itu:
   - probe lama hanya memuat skrip di dalam satu folder; skrip di luar
     folder itu tidak pernah dikompilasi sama sekali
 
+Selain itu alat ini juga menangkap dua hal yang pernah menjatuhkan build:
+  - deklarasi ganda di satu berkas (mis. `static func clip_count()` dua kali)
+    -> engine menolak seluruh berkas dan semua skrip yang bergantung padanya
+  - `var x := fungsi_tanpa_tipe()` di skrip sendiri -> "Cannot infer the type"
+
 Jadi alat ini menutup celah yang tersisa: jalan lokal tanpa Godot,
 sebelum commit. Exit code 0 = bersih, 1 = ada temuan.
 
@@ -51,6 +56,58 @@ SAFE_WRAP_RE = re.compile(
     r"\b(?:float|int|String|str|Color|Vector[23]|bool)"
     r"[ \t]*\([ \t]*[A-Za-z_]\w*[ \t]*\["
 )
+# Deklarasi tingkat atas; `static func` dihitung sama seperti `func`.
+# Hanya deklarasi tingkat atas (kolom 0); variabel lokal di dalam fungsi
+# boleh memakai nama yang sama dengan variabel fungsi lain.
+DECL_RE = re.compile(
+    r"^(?:static[ \t]+)?(?:func|var|const|signal|enum)[ \t]+([A-Za-z_]\w*)",
+    re.M,
+)
+FUNC_RE = re.compile(
+    r"^[ \t]*(?:static[ \t]+)?func[ \t]+([A-Za-z_]\w*)[ \t]*\(([^)]*)\)"
+    r"[ \t]*(?:->[ \t]*([A-Za-z_][\w\[\]\.]*))?",
+    re.M,
+)
+PRELOAD_RE = re.compile(
+    r'^[ \t]*const[ \t]+([A-Za-z_]\w*)[ \t]*=[ \t]*preload\("res://([^"]+)"\)',
+    re.M,
+)
+CALL_EXPR_RE = re.compile(r"^(?:([A-Za-z_]\w*)\.)?([A-Za-z_]\w*)[ \t]*\(")
+
+
+def untyped_returns(src: str, preloads: dict[str, str], cache: dict[str, dict[str, str]]) -> list[str]:
+    """Nama fungsi milik skrip sendiri yang tidak punya tipe balikan eksplisit."""
+    problems: list[str] = []
+    for lineno, line in enumerate(src.split("\n"), 1):
+        m = INFER_RE.match(line)
+        if not m:
+            continue
+        name, expr = m.group(2), m.group(3)
+        call = CALL_EXPR_RE.match(expr.strip())
+        if not call:
+            continue
+        owner, func_name = call.group(1), call.group(2)
+        target: dict[str, str] | None = None
+        if owner is None:
+            target = {m.group(1): m.group(3) for m in FUNC_RE.finditer(src)}
+        elif owner in preloads:
+            path = ROOT / "project" / preloads[owner].removeprefix("res://")
+            if path.name in cache:
+                target = cache[path.name]
+            elif path.is_file():
+                target = {m.group(1): m.group(3)
+                          for m in FUNC_RE.finditer(path.read_text(encoding="utf-8"))}
+                cache[path.name] = target
+        if not target or func_name not in target:
+            continue
+        if not target[func_name]:
+            where = f"{owner}.{func_name}" if owner else func_name
+            problems.append(
+                f"{name}: `var {name} := {where}(...)` PASTI gagal compile — "
+                f"fungsi {where} tidak punya tipe balikan eksplisit, jadi `:=` "
+                f"tidak bisa menyimpulkan tipe. Tulis tipe eksplisit."
+            )
+    return problems
 
 
 def gd_files() -> list[Path]:
@@ -68,10 +125,27 @@ def main() -> int:
     problems: list[str] = []
     warnings: list[str] = []
 
+    cache: dict[str, dict[str, str]] = {}
     for path in files:
         rel = path.relative_to(ROOT)
         src = path.read_text(encoding="utf-8")
         plain_arrays = {m.group(1) for m in TYPED_ARRAY_RE.finditer(src)}
+
+        # (3) Deklarasi ganda: engine menolak seluruh berkas, bukan cuma baris itu.
+        seen: dict[str, int] = {}
+        for lineno, line in enumerate(src.split("\n"), 1):
+            m = DECL_RE.match(line)
+            if not m:
+                continue
+            name = m.group(1)
+            if name in seen:
+                problems.append(
+                    f"{rel}:{lineno}: deklarasi `{name}` dobel (sudah ada di baris "
+                    f"{seen[name]}) — Godot menolak seluruh berkas dan semua skrip "
+                    f"yang meng-preload-nya. Hapus salah satu."
+                )
+            else:
+                seen[name] = lineno
 
         for lineno, line in enumerate(src.split("\n"), 1):
             m = INFER_RE.match(line)
@@ -99,6 +173,11 @@ def main() -> int:
                     f"Variant). Kalau CI bilang 'Cannot infer the type of "
                     f"{name}', tulis tipe eksplisit."
                 )
+
+        # (4) `var x := fungsi_tanpa_tipe()` di skrip sendiri.
+        preloads = {m.group(1): m.group(2) for m in PRELOAD_RE.finditer(src)}
+        for problem in untyped_returns(src, preloads, cache):
+            problems.append(f"{rel}:{problem}")
 
     print(f"Diperiksa: {len(files)} file .gd")
     for w in warnings:

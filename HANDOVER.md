@@ -1,35 +1,85 @@
 # STATUS TERBARU — prioritas dari pengguna
 
-- Terbaru: swipe/pinch kamera kanan, default dekat 4 m, gerak relatif kamera.
-- Pulau prosedural 1.000 × 1.000 m (bentang terrain termasuk pesisir), perbukitan,
-  dataran tebing timur, batu collision, jalan tanah berliku dan laut. Warna terang.
-- Cakupan gabungan kamera + dunia diminta langsung pengguna. Belum ada berenang,
-  bangunan atau vegetasi detail. Pemain dibatasi di garis air dangkal.
-- Tes otomatis mencakup ray tanah, elevasi jalan, swipe/pinch, isolasi kiri-kanan,
-  dan SpringArm menghadapi tembok. Performa/tampilan tetap harus diuji di HP.
+- Terbaru (2026-10-01): dunia dirombak jadi **padang rumput 100 m × 100 m**
+  (`world/field.gd` + `grass_field.gd` + `world/boundary_fence.gd`). Pulau 1 km,
+  laut, sungai, arena, jalan batu dan aset nature model DIHAPUS dari repo.
+- Karakter hanya **mannequin UAL**. Miku, Kanna, skin switcher, kartu karakter,
+  portrait, retarget, hair spring, minimap dan combat library dihapus.
+- Animasi: SATU AnimationPlayer memuat UAL1 (43 klip) + pustaka `ual2`
+  (43 klip) = 85 nama di `animation/catalog.gd` (label + keterangan Indonesia,
+  flag loop/once/hold/gait). Semua klip bisa diputar dari panel "ANIMASI (85)".
+- Perbaikan animasi: mode loop per klip dari katalog, kecepatan klip dicocokkan
+  dengan langkah hasil ukur `animation/anim_metrics.gd` (anti kaki meluncur),
+  offset tanah per klip untuk pose rendah, transisi cross-fade, dan aksi sekali
+  jalan memakai timer `_action_left` (bukan sinyal) supaya deterministik.
+- Gerbang tanpa engine baru: `python3 tools/check_animation_catalog.py` — 85 klip
+  wajib ada, sumber/flag benar, dan langkah tiap klip gait diukur ulang.
+- Perubahan sesi ini tetap di branch sesi (sekarang `arena/01a0f97d-godot`);
+  integrasi ke main tidak dilakukan dari sesi ini.
+- Perubahan gameplay dikirim lewat PCK yang kompatibel launcher 1; jangan minta
+  install APK lagi kalau launcher 3A sudah terpasang.
+- Keystore debug permanen: jangan regenerate.
+- 2026-10-02 — **CI HIJAU PENUH** (run 36940453606, commit `3b29806`): 37 langkah
+  lulus, termasuk ekspor PCK + APK dan rilis `A-Sekai build-3b29806`
+  (`asekai.apk`, `content.pck`, potongan `.bin`, `content-v2.json`).
+  Yang menunggu sekarang hanya tes di HP, bukan fitur baru.
+- Dua bug besar yang membuat semuanya tampak mati sudah dibereskan:
+  1. **Importer glTF membuang akhiran `_Loop`** dari nama animasi di
+     AnimationPlayer (`Walk_Loop` -> `Walk`), sedangkan katalog memanggil nama
+     berkas. Akibatnya `animation.play("Idle_Loop")` gagal, `_ready()` mannequin
+     berhenti dan SELURUH HUD (joystick, tombol) tidak pernah terbangun.
+     `Catalog.play_name()` sekarang membuang sufiks itu; nama runtime diuji
+     `tools/test_clips.gd` + aturan baru di `check_animation_catalog.py`
+     (nama runtime wajib unik, klip loop tanpa sufiks terpantau).
+  2. **Joystick tidak pernah tersambung ke pemain** (`_player.joystick` tidak
+     pernah di-set di `main.gd`), jadi sentuhan tidak menggerakkan karakter.
+- 2026-10-02 (sore) — **AKAR "layar abu polos" DI HP DITEMUKAN**: paket utama
+  APK hanya memuat `launcher.gdc` + ikon. `backdrop.gd`, `chunk_policy.gd`, dan
+  `chunk_store.gd` TIDAK ikut, padahal `launcher.gd` mem-preload ketiganya →
+  skrip launcher gagal dimuat → UI tidak pernah digambar → yang tampak di HP
+  hanya warna latar bawaan Godot (abu rata, tanpa teks, app tetap hidup).
+  Penyebab: filter ekspor `scenes` hanya mengikuti dependensi *scene*, bukan
+  dependensi *skrip*. Diperbaiki dengan `export_files` + `include_filter` untuk
+  seluruh berkas launcher, `main.tscn` membawa tekstur ilustrasi sebagai
+  ext_resource, dan `backdrop.gd` tidak lagi mem-preload tekstur (preload yang
+  gagal mematikan seluruh launcher).
+  Karena CI selama ini menjalankan tes dari **folder proyek** (semua berkas
+  sumber masih ada), bug ini tidak pernah terdeteksi. Sekarang ada dua gerbang
+  baru: `Audit isi APK` (memastikan berkas launcher/bootstrap benar-benar ada,
+  menerima bentuk `.gd` maupun `.gdc`+`.remap`) dan `tools/test_apk_launcher.gd`
+  yang mem-boot launcher dari **isi APK** (`--path build/apk-audit/assets`).
+  Catatan: ilustrasi `loading.jpg` masih belum ikut ke APK, jadi launcher memakai
+  latar polos; fungsional, tinggal kosmetik.
+- PERINGATAN: memperbaiki paket APK **butuh install APK baru**; update konten
+  (PCK) tidak bisa memperbaiki launcher yang rusak.
+- 2026-10-02 (malam) — kontrol & HUD dirombak sesuai permintaan pengguna:
+  - **Lompat langsung**: `player.gd` tidak lagi menahan badan 0,22 s; dorongan
+    dipasang saat tombol ditekan, pose `Jump_Start` menempel 0,3 s lalu klip
+    melayang. Dua jebakan yang ikut diperbaiki: logika lantai yang menolkan
+    kecepatan vertikal di frame pertama, dan `_update_air_state` yang salah
+    membaca "mendarat" selagi badan masih naik (kini wajib `velocity.y <= 0`).
+  - **Combo serangan**: `player.attack()` memutar Punch_Jab → Punch_Cross →
+    Melee_Hook lalu berulang, reset otomatis setelah 1,1 s tanpa serangan.
+  - **Tombol tembak api terpisah** dari tombol serang: `_fire_button` (pet) vs
+    `_attack` (combo).
+  - **HUD bulat gaya game aksi**: `rune_button.gd` kini punya `caption` +
+    `accent` dan menggambar cakram berisi; tidak ada tombol kotak. Susunan:
+    SERANG 136 px di kanan bawah, TEMBAK 96, lalu LOMPAT/LARI/JONGKOK 92 di
+    baris atasnya; ANIM + GRAFIK 72 di kanan atas (laci grafik turun ke y=196).
+  - **Panel animasi jadi jendela kecil** (maks 620×520, ±90%/78% layar) di
+    tengah, dengan backdrop yang menutup saat diketuk di luar jendela.
+  - **Scroll panel ditangani sendiri**: `ScrollContainer` bawaan tidak menerima
+    drag kalau jari mendarat di atas tombol baris, sehingga scroll hanya jalan
+    dari celah/pojok (keluhan langsung di HP). Panel sekarang menangani
+    `InputEventScreenDrag` sendiri: drag di titik mana pun menggeser daftar,
+    ketukan pendek (<14 px) memilih klip.
+  - **Analog tidak lagi ikut aktif saat tombol HUD ditekan**
+    (`virtual_joystick.input_exclusions`), karena tombol bulat dan analog
+    sama-sama mendengar `_input` langsung.
+- Tes yang diperketat: `_check()` mencetak `::error::` supaya CI memberi alasan;
+  step tes memakai `tee` + langkah "Ringkasan kegagalan" menampilkan 24 baris
+  terakhir tiap log sebagai anotasi.
 
-
-- Permintaan terbaru: mannequin asli + idle/jalan/lari didahulukan (5A), analog
-  transparan mengambang hanya saat disentuh di kiri layar. Kamera tetap dulu.
-- Aset UAL1 Standard diambil utuh dari archive (asal + hash di
-  `project/licenses/LICENSES.txt`).
-- Perubahan gameplay ini dikirim melalui PCK kompatibel launcher 1; jangan
-  meminta install APK lagi jika launcher 3A sudah terpasang.
-- Menunggu tes HP: update otomatis benar masuk, arah hadap, kaki tidak meluncur,
-  idle/walk/run, analog muncul/hilang. Jangan lanjut fitur lain sebelum tes.
-
-
-- Perubahan sesi ini tetap di `arena/01a0f421-godot`; integrasi ke main tidak
-  dilakukan dari sesi ini.
-- Milestone 2A joystick sudah dibuat; tes otomatis lolos, hasil tes HP belum dicatat.
-- Pengguna mendahulukan launcher/update dalam game sebelum swipe kamera 2B.
-- Implementasi 3A: launcher bawaan APK, manifest release, PCK gameplay tervalidasi,
-  loading bar tipis bawah, retry/offline, marker pemulihan boot. Lihat README.
-- Satu update APK diperlukan untuk memasang launcher. Update berikutnya yang
-  kompatibel bisa lewat PCK; bukan janji semua perubahan bebas update APK.
-- Konfirmasi tes HP dan uji dua versi konten sebelum lanjut milestone lain.
-
----
 
 # SERAH TERIMA — untuk sesi AI berikutnya
 
@@ -547,3 +597,23 @@ Run `python3 tools/check_license_bundle.py` for the repository-side bundle gate;
 Godot pack tests verify the bundle is present in the exported PCK. This consolidates
 notices; it does not relicense third-party assets or grant broad redistribution
 rights.
+
+## Alur lompat: lari -> lompat -> lari tanpa jeda (2026-10-02, lanjutan)
+Keluhan pengguna: "selesai loncat dia berhenti, gak ada animasi dalam sekejap,
+trus lanjut lagi jalan… jangan jongkok dulu dan jeda patung."
+Kontrak sekarang di `player.gd` + `mannequin.gd`:
+- `JUMP_POSE_TIME` 0,16 s lalu `Jump_Loop` (loop) selama di udara; klip
+  `Jump_Start` 1,33 s tidak pernah diputar penuh.
+- Mendarat sambil bergerak (`move_speed > LANDING_SKIP_SPEED` 1,2 m/s) memutar
+  klip mendarat **nol frame**; gait langsung menyambung di frame sentuh tanah.
+  Klip mendarat hanya untuk pendaratan pelan/diam (`LAND_RECOVERY` 0,28 s).
+- Di udara laju horizontal tidak dibuang (`AIR_STEER` 6 rad/s untuk belok,
+  `AIR_ACCEL` 4 untuk lompatan dari diam). Ini akar keluhan sebenarnya: jempol
+  yang lepas dari analog saat menekan LOMPAT dulu membuat badan mengerem di
+  udara, mendarat pelan, lalu memutar pose jongkok.
+- Gait dipilih dari `max(input, laju badan)`, jadi saat analog dilepas badan
+  melambat lewat Sprint -> Jog -> Walk -> Idle, bukan langsung berpose Idle
+  sambil meluncur.
+Bukti per-frame: `tools/test_jump_trace.gd` (step CI "Rekam alur animasi lompat").
+Alurnya sengaja melepas analog tepat saat menekan LOMPAT, lalu memeriksa laju
+minimum di udara, jarak terbang, klip saat mendarat, dan klip saat melambat.

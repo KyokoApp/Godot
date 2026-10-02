@@ -1,12 +1,13 @@
 extends Node
-## Two contacts per animation cycle; actual movement/floor gate prevents wall footsteps.
+## Dua kontak per siklus animasi; gerak nyata + lantai mencegah langkah palsu.
 
-const Island = preload("res://src/game/island.gd")
+const Field = preload("res://src/game/world/field.gd")
 const WorldAudio = preload("res://src/game/audio/world_audio.gd")
 const Mannequin = preload("res://src/game/mannequin.gd")
+const EDGE_DIRT := 45.0
 
 var audio: WorldAudio
-var island: Island
+var field: Field
 var body: CharacterBody3D
 var visual: Mannequin
 var emitted := 0
@@ -18,13 +19,11 @@ var _left := false
 
 
 func surface_at(point: Vector3, normal: Vector3) -> String:
-	if normal.y < 0.78 or point.y > island.surface_height(point.x, point.z) + 0.5:
+	# Padang ini seluruhnya rumput; hanya cincin tanah di tepi pagar yang beda,
+	# sama seperti warna tepi di ground.gdshader.
+	if normal.y < 0.55:
 		return "stone"
-	if absf(point.z) < 310 and Island.road_distance(point.x, point.z) < 1.25:
-		return "stone"
-	if point.y < 4.0:
-		return "dirt"
-	if absf(point.z) < 330 and Island.road_distance(point.x, point.z) < 11:
+	if field != null and maxf(absf(point.x), absf(point.z)) > EDGE_DIRT:
 		return "dirt"
 	return "grass"
 

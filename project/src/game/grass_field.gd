@@ -1,8 +1,10 @@
 extends Node3D
-## Rumput berlapis: 9 tile dekat rapat, 16 tile luar lebih ringan.
+## Rumput berlapis di padang 100 m: 9 tile dekat rapat, sisanya lebih ringan.
+## Jarak tile mengikuti pemain seperti sebelumnya, tetapi batas padang sekarang
+## 100 m (bukan pulau 1 km), jadi kepadatan tetap dan biaya gambar sama.
 
 const DistantGrass = preload("res://src/game/world/distant_grass.gd")
-const Island = preload("res://src/game/island.gd")
+const Field = preload("res://src/game/world/field.gd")
 const SHADER = preload("res://src/game/grass.gdshader")
 const TILE_SIZE := 12.0
 const GRID := 40
@@ -16,7 +18,7 @@ const BLADE_WIDTH := 0.085
 const BLADE_HEIGHT := 0.55
 
 var distant: DistantGrass
-var island: Island
+var ground: Field
 var player: Node3D
 var tiles: Dictionary[Vector2i, MultiMeshInstance3D] = {}
 var _pending: Array[Vector2i] = []
@@ -39,7 +41,7 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	if island == null or player == null:
+	if ground == null or player == null:
 		return
 	var position_3d := player.global_position
 	distant.update_center(position_3d)
@@ -76,23 +78,7 @@ func _tile_priority(key: Vector2i) -> float:
 
 
 func can_grow(x: float, z: float) -> bool:
-	if Island.ArenaShape.distance_to(x, z) < 2 or absf(x) > 495 or absf(z) > 495:
-		return false
-	var height := island.surface_height(x, z)
-	if height < 5.4 or Island.WaterShape.covers(x, z, 1.5):
-		return false
-	# Margin tambahan menahan daun yang tertiup angin agar tidak masuk jalan.
-	if absf(z) < 340 and Island.road_distance(x, z) < 15.0:
-		return false
-	var gradient := Vector2(
-		island.surface_height(x + 1, z) - island.surface_height(x - 1, z),
-		island.surface_height(x, z + 1) - island.surface_height(x, z - 1)) * 0.5
-	if gradient.length() > 0.45:
-		return false
-	for rock in island.rock_clearances:
-		if Vector2(x - rock.x, z - rock.z).length() < rock.y + 0.7:
-			return false
-	return true
+	return ground != null and ground.can_grow(x, z)
 
 
 func grid_for(key: Vector2i) -> int:
@@ -118,14 +104,14 @@ func placements_for(key: Vector2i) -> Array[Transform3D]:
 			var world_z := origin.z + local_z
 			if not can_grow(world_x, world_z):
 				continue
-			var height := island.surface_height(world_x, world_z) - 0.03
+			var height := ground.surface_height(world_x, world_z) - 0.03
 			var basis := Basis(Vector3.UP, angle)
 			basis = basis.scaled(Vector3.ONE * scale_factor)
 			# Lapisan bawah mengikuti kemiringan, bukan melayang di atas lereng.
-			var dx := (island.surface_height(world_x + 0.5, world_z)
-				- island.surface_height(world_x - 0.5, world_z))
-			var dz := (island.surface_height(world_x, world_z + 0.5)
-				- island.surface_height(world_x, world_z - 0.5))
+			var dx := (ground.surface_height(world_x + 0.5, world_z)
+				- ground.surface_height(world_x - 0.5, world_z))
+			var dz := (ground.surface_height(world_x, world_z + 0.5)
+				- ground.surface_height(world_x, world_z - 0.5))
 			basis.x.y = dx * basis.x.x + dz * basis.x.z
 			basis.z.y = dx * basis.z.x + dz * basis.z.z
 			placements.append(Transform3D(basis, Vector3(local_x, height, local_z)))
@@ -225,5 +211,5 @@ func _make_mesh(with_cover: bool) -> ArrayMesh:
 
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_VISIBILITY_CHANGED and is_instance_valid(island):
-		island.set_grass_cover(is_visible_in_tree())
+	if what == NOTIFICATION_VISIBILITY_CHANGED and is_instance_valid(ground):
+		ground.set_grass_cover(is_visible_in_tree())

@@ -3,8 +3,13 @@ extends Button
 
 var rectangular := false
 var glyph: Texture2D
+## Label di dalam lingkaran (tanpa kotak): digambar di bawah glyph, atau di tengah
+## kalau tombol tidak punya glyph.
+var caption := ""
 var compact := false
 var cooldown_fraction := 0.0
+## Warna cincin; alpha 0 = putih standar.
+var accent := Color(1, 1, 1, 0)
 var _finger := -1
 
 
@@ -65,12 +70,28 @@ func _draw() -> void:
 	var center := size * 0.5
 	var radius := minf(size.x, size.y) * 0.5 - 3.0
 	var held := _finger != -1
-	draw_circle(center, radius, Color(0, 0, 0, 0.10 if held else 0.025))
-	draw_arc(center, radius, 0, TAU, 80, Color(1, 1, 1, 0.7 if held else 0.3), 1, true)
-	if glyph != null:
-		var extent := size * (0.67 if compact else 0.65) * (0.94 if held else 1.0)
+	# Cakram berisi + cincin aksen: bulat, bukan kotak, dan tetap terbaca di atas
+	# rumput gelap tanpa border tebal.
+	draw_circle(center, radius, Color(0.06, 0.05, 0.11, 0.42 if held else 0.30))
+	draw_circle(center, radius * 0.86, Color(0.13, 0.10, 0.22, 0.5 if held else 0.34))
+	var ring := accent if accent.a > 0.0 else Color(1, 1, 1, 0.34)
+	draw_arc(center, radius, 0, TAU, 80, Color(ring.r, ring.g, ring.b, 0.95 if held else ring.a),
+		2, true)
+	var caption_size := maxi(12, int(minf(size.x, size.y) * 0.16))
+	var has_glyph := glyph != null
+	if has_glyph:
+		var factor := 0.60 if compact else 0.56
+		if caption != "":
+			factor = 0.46
+		var extent := size * factor * (0.94 if held else 1.0)
 		var tint := Color(1, 1, 1, 0.5 if cooldown_fraction > 0 else 1.0)
-		draw_texture_rect(glyph, Rect2(center - extent * 0.5, extent), false, tint)
+		var offset := Vector2(0, -size.y * 0.05) if caption != "" else Vector2.ZERO
+		draw_texture_rect(glyph, Rect2(center - extent * 0.5 + offset, extent), false, tint)
+	if caption != "":
+		var font := ThemeDB.fallback_font
+		var baseline := Vector2(0, size.y * (0.86 if has_glyph else 0.62))
+		draw_string(font, baseline, caption, HORIZONTAL_ALIGNMENT_CENTER,
+			size.x, caption_size, Color(1, 1, 1, 0.94 if held else 0.86))
 	if cooldown_fraction > 0.001:
 		draw_arc(center, radius - 2, -PI * 0.5,
 			-PI * 0.5 + TAU * cooldown_fraction, 80, Color.WHITE, 3, true)

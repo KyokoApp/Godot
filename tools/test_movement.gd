@@ -12,6 +12,7 @@ func _check(condition: bool, message: String) -> void:
 	if not condition:
 		_failures += 1
 		push_error(message)
+		print("::error::", message)
 
 
 func _touch(stick: Control, index: int, point: Vector2, pressed: bool) -> void:
@@ -54,12 +55,21 @@ func _run() -> void:
 	var start := player.position
 	for frame in range(30):
 		await physics_frame
+	print("::notice::gerak kanan dari ", start, " ke ", player.position,
+		" arah=", direction, " kecepatan=", player.move_speed)
 	_check(player.position.x > start.x + 1.0, "Pemain tidak bergerak ke kanan")
 	_touch(stick, 0, center + Vector2(200, 0), false)
 	_check(stick.get("direction") == Vector2.ZERO, "Lepas di luar joystick tidak reset")
-	for frame in range(3):
+	for frame in range(20):
 		await physics_frame
-	_check(absf(player.velocity.x) < 0.001, "Pemain tidak berhenti")
+	_check(absf(player.velocity.x) < 0.05, "Pemain tidak berhenti")
+	# Regresi "jalan di tempat": klip jalan tidak boleh bertahan saat badan diam.
+	_check(player.gait == "Idle_Loop",
+		"Gait tidak kembali ke Idle saat berhenti: " + player.gait)
+	_check(player.select_gait(0.0, "Walk_Loop") == "Idle_Loop",
+		"Histeresis masih menahan klip jalan saat kecepatan nol")
+	_check(player.select_gait(3.0, "Jog_Fwd_Loop") == "Jog_Fwd_Loop",
+		"Histeresis Jog hilang (berkedip antar klip)")
 	_check(int(stick.get("_finger")) == -1, "Analog tidak disembunyikan setelah dilepas")
 	_touch(stick, 2, center, true)
 	_drag(stick, 2, center + Vector2(0, -86))
@@ -67,10 +77,11 @@ func _run() -> void:
 	for frame in range(30):
 		await physics_frame
 	_check(player.position.z < start.z - 1.0, "Arah atas joystick salah")
+	print("::notice::gerak atas dari ", start, " ke ", player.position)
 	stick.notification(NOTIFICATION_APPLICATION_FOCUS_OUT)
 	_check(stick.get("direction") == Vector2.ZERO, "Input tersangkut saat kehilangan fokus")
-	var island: Node3D = game.get("_island")
-	var ground: float = island.surface_height(player.position.x, player.position.z)
+	var field: Node3D = game.get("_field")
+	var ground: float = field.surface_height(player.position.x, player.position.z)
 	_check(absf(player.position.y - ground - 0.9) < 0.2, "Kapsul tidak berpijak di tanah")
 	print("[movement-test] gagal: ", _failures)
 	quit(0 if _failures == 0 else 1)

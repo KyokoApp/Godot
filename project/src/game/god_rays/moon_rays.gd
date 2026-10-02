@@ -2,9 +2,7 @@ extends MeshInstance3D
 ## Screen-space radial light scattering, adapted for Mobile without a second scene render.
 const SHADER = preload("res://src/game/god_rays/moon_rays.gdshader")
 const Night = preload("res://src/game/environment/night_environment.gd")
-const Shape = preload("res://src/game/arena/arena_shape.gd")
 var camera: Camera3D
-var player: Node3D
 var enabled := true
 var strength := 0.0
 var _material: ShaderMaterial
@@ -28,10 +26,6 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	strength = 0.0
 	if not enabled or not is_instance_valid(camera) or not camera.current:
-		visible = false
-		return
-	if is_instance_valid(player) and Shape.distance_to(
-			player.global_position.x, player.global_position.z) <= 0:
 		visible = false
 		return
 	var source := camera.global_position + Night.MOON_DIRECTION * 1000.0
