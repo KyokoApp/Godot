@@ -58,21 +58,29 @@ func _run() -> void:
 	quit(0 if _failures == 0 else 1)
 
 
-## Cubit dua jari pada separuh kanan layar, menjauhkan jari = mendekatkan kamera.
-func _pinch(orbit: Orbit, spread_from: float, spread_to: float, steps: int) -> void:
+## Cubit dua jari di separuh KANAN layar (di sana kamera menerima sentuhan;
+## separuh kiri untuk analog). Kedua jari harus mulai di paruh kanan, jadi
+## setengah-jaraknya dibatasi 20 % lebar layar. Menjauhkan jari = mendekat.
+## Mengembalikan true kalau kedua sentuhan benar-benar terdaftar.
+func _pinch(orbit: Orbit, from_frac: float, to_frac: float, steps: int) -> bool:
 	var size := root.get_visible_rect().size
-	var center := Vector2(size.x * 0.75, size.y * 0.5)
+	var width := maxf(size.x, 320.0)
+	var center := Vector2(width * 0.75, size.y * 0.5)
 	var axis := Vector2(1.0, 0.0)
+	var half_from := width * minf(from_frac, 0.20)
+	var half_to := width * minf(to_frac, 0.20)
 	# Dua jari di sisi BERLAWANAN dari titik tengah: kalau keduanya diletakkan di
 	# titik yang sama, panjang cubit selalu nol dan zoom tidak pernah terjadi.
-	orbit._input(_touch(3, center - axis * spread_from, true))
-	orbit._input(_touch(7, center + axis * spread_from, true))
+	orbit._input(_touch(3, center - axis * half_from, true))
+	orbit._input(_touch(7, center + axis * half_from, true))
+	var registered := orbit._touches.size() == 2
 	for step in range(1, steps + 1):
-		var spread := lerpf(spread_from, spread_to, float(step) / float(steps))
-		orbit._input(_drag(3, center - axis * spread))
-		orbit._input(_drag(7, center + axis * spread))
-	orbit._input(_touch(3, center - axis * spread_to, false))
-	orbit._input(_touch(7, center + axis * spread_to, false))
+		var half := lerpf(half_from, half_to, float(step) / float(steps))
+		orbit._input(_drag(3, center - axis * half))
+		orbit._input(_drag(7, center + axis * half))
+	orbit._input(_touch(3, center - axis * half_to, false))
+	orbit._input(_touch(7, center + axis * half_to, false))
+	return registered
 
 
 func _touch(index: int, position: Vector2, pressed: bool) -> InputEventScreenTouch:
@@ -92,15 +100,16 @@ func _drag(index: int, position: Vector2) -> InputEventScreenDrag:
 
 func _test_pinch_in(orbit: Orbit) -> void:
 	var before := orbit.distance
-	# Jarak jari 40 px -> 320 px = kamera mendekat 8x.
-	_pinch(orbit, 40.0, 320.0, 8)
+	# Jari dari 2 % -> 20 % lebar layar = kamera mendekat 10x.
+	var registered := _pinch(orbit, 0.02, 0.20, 8)
+	_check(registered, "Dua sentuhan tidak terdaftar: cubit tidak mungkin terjadi")
 	_check(orbit.distance < before,
 		"Cubit menjauhkan jari tidak mendekatkan kamera: %.3f -> %.3f"
 		% [before, orbit.distance])
 	_check(orbit._touches.is_empty(), "Sentuhan tidak dilepas setelah cubit")
 	# Cubit terus sampai batas; langkah berlebih memastikan mentok di ujung.
-	for round_index in range(20):
-		_pinch(orbit, 60.0, 380.0, 6)
+	for round_index in range(8):
+		_pinch(orbit, 0.02, 0.20, 6)
 	_check(is_equal_approx(orbit.distance, Orbit.MIN_DISTANCE),
 		"Zoom terdekat bukan %.2f m: %.2f" % [Orbit.MIN_DISTANCE, orbit.distance])
 	# Kamera mengejar titik pandang dengan halus; beri waktu sebelum diukur.
@@ -144,8 +153,8 @@ func _test_wheel(orbit: Orbit) -> void:
 
 
 func _test_pinch_out(orbit: Orbit, character: Character) -> void:
-	for round_index in range(20):
-		_pinch(orbit, 380.0, 60.0, 6)
+	for round_index in range(8):
+		_pinch(orbit, 0.20, 0.02, 6)
 	_check(is_equal_approx(orbit.distance, Orbit.MAX_DISTANCE),
 		"Zoom terjauh bukan %.2f m: %.2f" % [Orbit.MAX_DISTANCE, orbit.distance])
 	for frame in range(25):
