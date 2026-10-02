@@ -38,6 +38,14 @@ func _run() -> void:
 		quit(1)
 		return
 	orbit.exclusions = []
+	# Sembunyikan efek yang menghalangi pandangan (pet api, aura kecepatan, tapak
+	# api, sinar bulan): yang diperiksa di sini avatar-nya, bukan efeknya.
+	for node_name in ["_pet", "_speed_aura", "_foot_fire", "_moon_rays", "_banner"]:
+		var effect: Node = game.get(node_name)
+		if effect is Node3D:
+			(effect as Node3D).visible = false
+		if effect != null:
+			effect.set_process(false)
 	# Sudut & jarak: depan untuk wajah, samping untuk kain, belakang untuk
 	# rambut belakang dan rok (di situlah tembus badan paling terlihat).
 	var views := [
