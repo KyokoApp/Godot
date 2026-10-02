@@ -452,6 +452,27 @@ jobs:
           grep -F '[incremental-export] HASIL: OK' build/incremental-test.log
           grep -F '[incremental-export] script-only delta:' build/incremental-test.log | while IFS= read -r line; do echo "::notice::$line"; done
 
+      - name: Audit isi APK (berkas launcher wajib ada)
+        run: |
+          rm -rf build/apk-audit
+          mkdir -p build/apk-audit
+          (cd build/apk-audit && unzip -q ../asekai.apk)
+          echo "::notice::berkas di assets: $(find build/apk-audit/assets -type f | wc -l)"
+          missing=0
+          for name in launcher/main.tscn launcher/launcher.gd launcher/backdrop.gd \
+              launcher/chunk_policy.gd launcher/chunk_store.gd launcher/art/icon.png \
+              bootstrap/base.pck bootstrap/base.json; do
+            if [ -f "build/apk-audit/assets/$name" ]; then
+              echo "::notice::ADA assets/$name ($(stat -c%s "build/apk-audit/assets/$name") byte)"
+            else
+              echo "::error::HILANG dari APK: assets/$name"
+              missing=1
+            fi
+          done
+          find build/apk-audit/assets/launcher -type f | sort \
+            | while IFS= read -r line; do echo "::notice::$line"; done
+          test "$missing" = 0
+
       - name: Ringkasan kegagalan
         if: failure()
         run: |

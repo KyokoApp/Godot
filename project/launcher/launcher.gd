@@ -44,10 +44,32 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
+	# Paling awal: penanda boot polos tanpa tekstur/skrip lain, supaya layar tidak
+	# pernah benar-benar kosong saat ada bagian paket yang gagal dimuat.
+	var boot := ColorRect.new()
+	boot.name = "BootMark"
+	boot.color = Color(0.05, 0.07, 0.14)
+	boot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(boot)
+	boot.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var boot_label := Label.new()
+	boot_label.name = "BootLabel"
+	boot_label.text = "A - S E K A I  memuat…"
+	boot_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	boot_label.add_theme_font_size_override("font_size", 28)
+	boot_label.add_theme_color_override("font_color", Color("dfd1fa"))
+	boot_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	boot_label.position = Vector2(-320, -20)
+	boot_label.size = Vector2(640, 40)
+	add_child(boot_label)
 	var background := Control.new()
-	background.set_script(preload("res://launcher/backdrop.gd"))
+	var backdrop_script: Script = load("res://launcher/backdrop.gd") as Script
+	if backdrop_script != null:
+		background.set_script(backdrop_script)
 	add_child(background)
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	move_child(background, 0)
+	move_child(boot, 0)
 	var title := Label.new()
 	title.text = "A - S E K A I"
 	title.add_theme_font_size_override("font_size", 64)
