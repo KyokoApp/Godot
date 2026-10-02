@@ -470,6 +470,26 @@ jobs:
           path: ~/.local/share/godot/app_userdata/**/avatar-*-test.png
           if-no-files-found: ignore
 
+      # Angka-angka penting selalu dikirim sebagai komentar (ringkasan kegagalan
+      # hanya jalan saat gagal, jadi tanpa ini nilai diagnostik hilang di run
+      # yang hijau — dan justru itu yang perlu dilihat saat mencari sisa bug).
+      - name: Ringkasan angka (komentar commit)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "### angka penting (run $GITHUB_RUN_ID, commit \`${GITHUB_SHA:0:7}\`)"
+            echo
+            echo '```'
+            grep -hE '\[aurelia-test\]|tembus kain|material: Mat|pasangan hilang|iterasi kain|biaya avatar|camera-zoom-test|arah (lowerarm|calf|hand)' \
+              aurelia-test.log zoom-test.log performance-test.log avatar-render.log 2>/dev/null | tail -40
+            echo '```'
+          } > numbers.md
+          jq -Rs '{body: .}' numbers.md > numbers.json
+          gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/comments" \
+            --input numbers.json --jq '.html_url' || echo "komentar angka gagal"
+
       # Pratinjau untuk pemeriksa: screenshot dikecilkan jadi JPEG lalu ditempel
       # base64 di komentar commit (artefak & log GitHub tidak bisa diunduh dari
       # luar CI). Satu gambar = satu komentar supaya tidak kena batas 64 KB.

@@ -38,17 +38,26 @@ func _run() -> void:
 		quit(1)
 		return
 	orbit.exclusions = []
-	# Sorot wajah: sudut sedikit dari depan supaya mata dan rambut depan terlihat.
-	orbit.yaw = PI
-	orbit.pitch = 0.18
+	# Sudut & jarak: depan untuk wajah, samping untuk kain, belakang untuk
+	# rambut belakang dan rok (di situlah tembus badan paling terlihat).
 	var views := [
-		{"distance": 0.40, "name": "dekat"},
-		{"distance": 0.85, "name": "kepala"},
-		{"distance": 2.20, "name": "badan"},
+		{"distance": 0.40, "name": "dekat", "yaw": PI, "pitch": 0.18},
+		{"distance": 0.85, "name": "kepala", "yaw": PI, "pitch": 0.18},
+		{"distance": 2.20, "name": "badan", "yaw": PI, "pitch": 0.26},
+		{"distance": 2.20, "name": "samping", "yaw": PI * 0.5, "pitch": 0.20},
+		{"distance": 2.20, "name": "belakang", "yaw": 0.0, "pitch": 0.20},
 	]
 	for view: Dictionary in views:
 		orbit.distance = float(view["distance"])
+		orbit.yaw = float(view["yaw"])
+		orbit.pitch = float(view["pitch"])
 		await _capture("avatar-%s" % view["name"])
+	# Pose rendah (jongkok): rok paling mungkin menembus paha di pose ini.
+	(game.get("_visual") as Node).set_locomotion("Crouch_Fwd_Loop", 1.0)
+	orbit.yaw = PI * 0.5
+	for frame in range(30):
+		await physics_frame
+	await _capture("avatar-jongkok")
 	# Pose jalan: kaki mengayun, jadi kain/rok ikut bergerak dan bisa diperiksa
 	# apakah ada panel yang menembus badan.
 	(game.get("_visual") as Node).set_locomotion("Walk_Loop", 1.0)
