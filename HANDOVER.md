@@ -33,6 +33,19 @@
     menjadi sinar matahari (`god_rays/sun_rays.gd`) dari `Dusk.SUN_DIRECTION`
     yang sama dengan kilau air, dan tombol panel performa kini berbunyi
     "Sinar matahari".
+  - **Perbaikan dari pratinjau** (dari gambar, bukan dari error): pita kulit
+    lebar terlihat seperti perban/mumi -> dasar dinaikkan (lavender terang),
+    bercak hash halus, dan garis energi memakai ambang dekat 1,0 sehingga hanya
+    puncak gelombang yang menyala; mode grafis Ringan (12,0/0,130) hanya sedikit
+    lebih kasar dari Normal (16,5/0,105).
+  - **Gerbang casting diperbaiki**: pemulihan pose dinilai dari POSISI TULANG
+    (selisih < 1 mm), bukan piksel — bahan kulit berdenyut mengikuti TIME dan
+    awan bergerak, jadi hitungan piksel berubah walau posenya sama.
+  - **`Dusk.SUN_DIRECTION` dinormalkan** (dulu 0,997): uji `test_dusk` baru
+    benar-benar berjalan setelah casting hijau, dan cek dot > 0,999 mustahil
+    lulus dengan vektor yang tidak panjang 1.
+  - **Bersih-bersih**: folder pratinjau `worldpass/` (18 gambar) dikeluarkan dari
+    git + masuk `.gitignore` (pernah ikut ter-commit oleh `git add -A`).
   - **Gerbang baru**: `tools/test_skin_shell.gd` (selisih pose < 0,0005 m,
     denyut, klip bergerak), `tools/test_scenery.gd` (bagian lengkap, tata letak,
     nol collision, parameter jalan tanah, tebing benar-benar di luar padang),
