@@ -18,6 +18,14 @@ const GRAVITY := 20.0
 const JUMP_VELOCITY := 7.0
 ## Pose tolakan hanya sekejap; setelah itu klip melayang (loop) mengambil alih.
 const JUMP_POSE_TIME := 0.16
+## Di udara laju lari TIDAK dibuang: hanya arahnya yang boleh dikoreksi dan itu
+## pun lembut. Kalau tidak, jempol yang lepas dari analog saat menekan LOMPAT
+## membuat badan mengerem di udara, mendarat pelan, lalu memutar pose mendarat —
+## persis "berhenti sekejap, jongkok dulu, baru jalan lagi".
+const AIR_STEER := 6.0
+## Tambahan laju di udara hanya untuk lompatan dari diam (badan boleh mengejar
+## input), dan lebih pelan daripada di darat supaya lompatan lari tetap terasa.
+const AIR_ACCEL := 4.0
 ## Di atas kecepatan ini barulah klip jalan dipakai; di bawahnya Idle. Tanpa batas
 ## ini, pemain yang sudah berhenti tetap memutar klip jalan (jalan di tempat).
 const IDLE_EXIT := 0.20
@@ -138,10 +146,29 @@ func _physics_process(delta: float) -> void:
 		if _combo_timer <= 0.0:
 			combo_index = 0
 	var desired := _desired_speed(stick)
-	gait = select_gait(desired, gait)
+	# Gait ikut laju badan yang sebenarnya, bukan cuma input: begitu analog
+	# dilepas, badan yang masih meluncur tidak boleh langsung berpose Idle —
+	# itulah "berhenti sekejap" yang terlihat. Badan melambat lewat klip
+	# Sprint -> Jog -> Walk -> Idle, sama seperti kakinya.
+	gait = select_gait(maxf(desired, move_speed), gait)
 	var target := _target_velocity(stick, desired)
-	var blended := Vector2(velocity.x, velocity.z).lerp(
-		Vector2(target.x, target.z), 1.0 - exp(-ACCEL * delta))
+	var flat := Vector2(velocity.x, velocity.z)
+	var blended := flat
+	if _airborne:
+		# Di udara badan tidak mengerem sendiri: laju saat menolak dibawa sampai
+		# mendarat. Arah masih bisa dikoreksi, dan lompatan dari diam tetap boleh
+		# mengejar input (lebih pelan daripada di darat).
+		var speed := flat.length()
+		var wish := Vector2(target.x, target.z)
+		if wish.length() > speed:
+			blended = flat.lerp(wish, 1.0 - exp(-AIR_ACCEL * delta))
+		elif speed > 0.05 and wish.length() > 0.01:
+			# Putar arah saja, panjangnya tetap — tidak ada frame yang menoleh
+			# lewat titik nol lalu berhenti sekejap di udara.
+			blended = flat.rotated(clampf(flat.angle_to(wish),
+				-AIR_STEER * delta, AIR_STEER * delta))
+	else:
+		blended = flat.lerp(Vector2(target.x, target.z), 1.0 - exp(-ACCEL * delta))
 	# Saat baru menolak, badan masih menempel lantai satu frame — kalau kecepatan
 	# vertikalnya dinolkan di sini, lompatannya langsung hilang.
 	var rising := _airborne and velocity.y > 0.0
@@ -193,9 +220,12 @@ func _apply_animation(desired: float) -> void:
 	# Aksi sekali jalan dan klip pilihan panel tidak boleh ditimpa.
 	if visual.is_busy():
 		return
+	# Klip gait mengikuti laju badan (bukan cuma input tekanan analog): saat
+	# meluncur berhenti setelah berlari, kaki tetap mengayun secepat badan.
+	var reference := maxf(desired, move_speed)
 	var scale := 1.0
-	if desired > 0.02:
-		scale = clampf(desired / visual.natural_speed(gait), SCALE_MIN,
+	if reference > 0.05:
+		scale = clampf(reference / visual.natural_speed(gait), SCALE_MIN,
 			SCALE_MAX_BOOST if boosted else SCALE_MAX)
 	visual.set_locomotion(gait, scale)
 

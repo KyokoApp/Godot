@@ -597,3 +597,23 @@ Run `python3 tools/check_license_bundle.py` for the repository-side bundle gate;
 Godot pack tests verify the bundle is present in the exported PCK. This consolidates
 notices; it does not relicense third-party assets or grant broad redistribution
 rights.
+
+## Alur lompat: lari -> lompat -> lari tanpa jeda (2026-10-02, lanjutan)
+Keluhan pengguna: "selesai loncat dia berhenti, gak ada animasi dalam sekejap,
+trus lanjut lagi jalan… jangan jongkok dulu dan jeda patung."
+Kontrak sekarang di `player.gd` + `mannequin.gd`:
+- `JUMP_POSE_TIME` 0,16 s lalu `Jump_Loop` (loop) selama di udara; klip
+  `Jump_Start` 1,33 s tidak pernah diputar penuh.
+- Mendarat sambil bergerak (`move_speed > LANDING_SKIP_SPEED` 1,2 m/s) memutar
+  klip mendarat **nol frame**; gait langsung menyambung di frame sentuh tanah.
+  Klip mendarat hanya untuk pendaratan pelan/diam (`LAND_RECOVERY` 0,28 s).
+- Di udara laju horizontal tidak dibuang (`AIR_STEER` 6 rad/s untuk belok,
+  `AIR_ACCEL` 4 untuk lompatan dari diam). Ini akar keluhan sebenarnya: jempol
+  yang lepas dari analog saat menekan LOMPAT dulu membuat badan mengerem di
+  udara, mendarat pelan, lalu memutar pose jongkok.
+- Gait dipilih dari `max(input, laju badan)`, jadi saat analog dilepas badan
+  melambat lewat Sprint -> Jog -> Walk -> Idle, bukan langsung berpose Idle
+  sambil meluncur.
+Bukti per-frame: `tools/test_jump_trace.gd` (step CI "Rekam alur animasi lompat").
+Alurnya sengaja melepas analog tepat saat menekan LOMPAT, lalu memeriksa laju
+minimum di udara, jarak terbang, klip saat mendarat, dan klip saat melambat.
