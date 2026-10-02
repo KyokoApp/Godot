@@ -2,7 +2,7 @@ extends VBoxContainer
 ## Pembanding A/B perangkat nyata, bukan janji 60 FPS atau pengukuran GPU.
 
 const SETTINGS := "user://graphics.cfg"
-const Character = preload("res://src/game/character/aurelia_visual.gd")
+const Character = preload("res://src/game/mannequin.gd")
 
 var rays: MeshInstance3D
 var rays_enabled := true

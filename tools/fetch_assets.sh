@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# Ambil aset biner besar (FBX avatar + 15 tekstur + 2 pustaka animasi UAL).
+# Ambil aset biner besar (2 pustaka animasi UAL + sampul padang).
 #
-# Kenapa tidak di git: FBX 4,9 MB + tekstur 3,7 MB + UAL 15,7 MB = ± 24 MB
-# berkas biner. Semuanya tersimpan sebagai lampiran rilis GitHub (tag `assets-v1`)
+# Kenapa tidak di git: UAL1 + UAL2 = ± 15,7 MB berkas biner. Semuanya tersimpan sebagai lampiran rilis GitHub (tag `assets-v1`)
 # dan diunduh saat dibutuhkan, jadi klon repo tetap ringan dan tidak ada berkas
 # besar yang ikut berubah di riwayat.
 #
@@ -23,30 +22,10 @@ ASSET_REPO="${ASEKAI_ASSET_REPO:-KyokoApp/Godot}"
 ASSET_BASE="${ASEKAI_ASSET_BASE:-https://github.com/${ASSET_REPO}/releases/download/${ASSET_TAG}}"
 DEFAULT_COMMIT="0d56df0d77cde7de8df8f31194815e90fee294aa"
 
-AURELIA="$ROOT/project/assets/aurelia"
-TEXTURES="$AURELIA/Textures"
 MANNEQUIN="$ROOT/project/assets/mannequin"
 COMBAT="$ROOT/project/assets/combat"
 
-FBX="Avatar_Boy_Pole_Lohen.fbx"
 GLBS=("UAL1_Standard.glb" "UAL2_Standard.glb")
-TEXTURE_FILES=(
-	Avatar_Boy01_Tex_FaceLightmap.png
-	Avatar_Boy_Pole_Lohen_Tex_Body_Diffuse.png
-	Avatar_Boy_Pole_Lohen_Tex_Body_Lightmap.png
-	Avatar_Boy_Pole_Lohen_Tex_Body_Normalmap.png
-	Avatar_Boy_Pole_Lohen_Tex_Body_Shadow_Ramp.png
-	Avatar_Boy_Pole_Lohen_Tex_Face_Diffuse.png
-	Avatar_Boy_Pole_Lohen_Tex_Hair_Diffuse.png
-	Avatar_Boy_Pole_Lohen_Tex_Hair_Lightmap.png
-	Avatar_Boy_Pole_Lohen_Tex_Hair_Normalmap.png
-	Avatar_Boy_Pole_Lohen_Tex_Hair_Shadow_Ramp.png
-	Avatar_Tex_Appear_Face_Mask.png
-	Avatar_Tex_Appear_Pupil_Mask.png
-	Avatar_Tex_Face01_Shadow.png
-	Avatar_Tex_MetalMap.png
-	Avatar_Tex_Specular_Ramp.png
-)
 
 MODE="release"
 COMMIT="$DEFAULT_COMMIT"
@@ -120,27 +99,19 @@ git_file() { # git_file <path-di-repo> <tujuan>
 # sumber dengan versi berbeda lebih berbahaya daripada gagal terang-terangan.
 collect_release() {
 	local failed=0
-	fetch "$FBX" "$AURELIA/$FBX" || failed=1
 	for glb in "${GLBS[@]}"; do
 		case "$glb" in
 			UAL1_Standard.glb) fetch "$glb" "$MANNEQUIN/$glb" || failed=1 ;;
 			*) fetch "$glb" "$COMBAT/$glb" || failed=1 ;;
 		esac
 	done
-	for tex in "${TEXTURE_FILES[@]}"; do
-		fetch "$tex" "$TEXTURES/$tex" || failed=1
-	done
 	return $failed
 }
 
 collect_git() {
 	local failed=0
-	git_file "aurelia-debug/$FBX" "$AURELIA/$FBX" || failed=1
 	git_file "project/assets/mannequin/UAL1_Standard.glb" "$MANNEQUIN/UAL1_Standard.glb" || failed=1
 	git_file "project/assets/combat/UAL2_Standard.glb" "$COMBAT/UAL2_Standard.glb" || failed=1
-	for tex in "${TEXTURE_FILES[@]}"; do
-		git_file "aurelia-debug/Textures/$tex" "$TEXTURES/$tex" || failed=1
-	done
 	return $failed
 }
 
@@ -168,12 +139,8 @@ check_file() {
 		missing=1
 	fi
 }
-check_file "$AURELIA/$FBX" 1000000
 check_file "$MANNEQUIN/UAL1_Standard.glb" 1000000
 check_file "$COMBAT/UAL2_Standard.glb" 1000000
-for tex in "${TEXTURE_FILES[@]}"; do
-	check_file "$TEXTURES/$tex" 100
-done
 
 if [ "$missing" != 0 ]; then
 	echo "GAGAL: ada aset yang tidak bisa diambil" >&2
@@ -181,7 +148,5 @@ if [ "$missing" != 0 ]; then
 fi
 
 echo "aset siap:"
-printf '  %-46s %8s\n' "project/assets/aurelia/$FBX" "$(stat -c%s "$AURELIA/$FBX")"
-printf '  %-46s %8s\n' "project/assets/aurelia/Textures ($(ls -1 "$TEXTURES" | wc -l) berkas)" "$(du -sh "$TEXTURES" | cut -f1)"
 printf '  %-46s %8s\n' "project/assets/mannequin/UAL1_Standard.glb" "$(stat -c%s "$MANNEQUIN/UAL1_Standard.glb")"
 printf '  %-46s %8s\n' "project/assets/combat/UAL2_Standard.glb" "$(stat -c%s "$COMBAT/UAL2_Standard.glb")"

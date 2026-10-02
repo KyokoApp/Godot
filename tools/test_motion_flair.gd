@@ -2,7 +2,7 @@ extends SceneTree
 ## Tapak api 3D dari pose kaki mannequin: kontak berulang, tidak muncul saat
 ## diam/melayang, palet benar, dan kolam stamp tidak bocor.
 
-const Character = preload("res://src/game/character/aurelia_visual.gd")
+const Character = preload("res://src/game/mannequin.gd")
 const Trail = preload("res://src/game/foot_fire/foot_fire_trail.gd")
 var _failures := 0
 

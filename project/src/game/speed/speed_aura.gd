@@ -1,7 +1,7 @@
 extends Node3D
 ## Short pose echoes wrapped in soft smoke. No bright ribbons or sphere shell.
 
-const Character = preload("res://src/game/character/aurelia_visual.gd")
+const Character = preload("res://src/game/mannequin.gd")
 const Ghosts = preload("res://src/game/speed/afterimage_trail.gd")
 const SMOKE = preload("res://src/game/speed/smoke.gdshader")
 const WASH = preload("res://src/game/speed/speed_wash.gdshader")

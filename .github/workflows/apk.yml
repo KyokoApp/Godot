@@ -63,22 +63,24 @@ jobs:
           # Gerbang tanpa engine: 85 klip UAL + ukur ulang langkah kaki.
           python3 tools/check_animation_catalog.py
           # Berkas wajib ada. Satu commit pernah membawa indeks klon yang rusak
-          # (pekerjaan Aurelia hilang, mannequin.gd lama kembali); kegagalannya
-          # baru muncul di langkah ambil aset dengan pesan yang menyesatkan.
-          # Daftar ini membuat "pohon berkas ter-revert" ketahuan dalam hitungan
-          # detik, sebelum apa pun diunduh.
-          for wajib in tools/fetch_assets.sh tools/fbx_inspect.py tools/render_avatar.gd \
-                tools/test_aurelia.gd tools/test_camera_zoom.gd \
-                project/src/game/character/aurelia_visual.gd \
-                project/src/game/character/aurelia_materials.gd \
-                project/src/game/animation/cloth_springs.gd \
-                project/src/game/animation/humanoid_map.gd \
-                project/src/game/animation/retarget_modifier.gd \
+          # (berkas hilang, versi lama kembali); kegagalannya baru muncul di
+          # langkah ambil aset dengan pesan yang menyesatkan. Daftar ini membuat
+          # "pohon berkas ter-revert" ketahuan dalam hitungan detik.
+          for wajib in tools/fetch_assets.sh tools/render_mannequin.gd \
+                tools/test_skin_shell.gd tools/test_camera_zoom.gd \
+                project/src/game/mannequin.gd \
+                project/src/game/character/skin_shell.gd \
+                project/src/game/character/skin_shell.gdshader \
                 .github/workflows/assets.yml; do
             [ -f "$wajib" ] || { echo "::error::berkas wajib hilang: $wajib"; exit 1; }
           done
-          [ ! -f project/src/game/mannequin.gd ] \
-            || { echo "::error::mannequin.gd lama muncul lagi"; exit 1; }
+          # Karakter FBX sudah dibuang; kalau berkas ini muncul lagi berarti
+          # pohon berkas ter-revert ke commit lama.
+          for sisa in project/src/game/character/aurelia_visual.gd \
+                project/src/game/animation/cloth_springs.gd aurelia-debug; do
+            [ ! -e "$sisa" ] \
+              || { echo "::error::sisa karakter FBX muncul lagi: $sisa"; exit 1; }
+          done
 
       # --- 2. dependensi + Godot ----------------------------------------
       - name: Dependensi sistem
@@ -184,19 +186,19 @@ jobs:
             exit 1
           fi
 
-      # Avatar Aurelia: retarget tulang (T-pose -> A-pose) + goyangan kain/rambut.
-      - name: Tes avatar Aurelia (retarget + kain)
+      # Kulit beranimasi: salinan mesh yang selalu menimpa mannequin.
+      - name: Tes kulit beranimasi mannequin (headless)
         run: |
           set +e
           timeout 300 ./godot --headless --path project \
-            --script "$GITHUB_WORKSPACE/tools/test_aurelia.gd" 2>&1 | tee aurelia-test.log
+            --script "$GITHUB_WORKSPACE/tools/test_skin_shell.gd" 2>&1 | tee skin-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
-          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' aurelia-test.log; then
-            tail -60 aurelia-test.log | while IFS= read -r line; do echo "::error::$line"; done
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' skin-test.log; then
+            tail -60 skin-test.log | while IFS= read -r line; do echo "::error::$line"; done
             exit 1
           fi
-          grep -F '[aurelia-test]' aurelia-test.log
+          grep -F '[skin-test]' skin-test.log
 
       # Zoom kamera: cubit dua jari harus benar-benar menempel ke karakter.
       - name: Tes zoom kamera (headless)
@@ -475,7 +477,7 @@ jobs:
           timeout 240 xvfb-run -a env \
             VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
             ./godot --path project --rendering-method mobile --rendering-driver vulkan \
-            --script "$GITHUB_WORKSPACE/tools/render_avatar.gd" 2>&1 | tee avatar-render.log
+            --script "$GITHUB_WORKSPACE/tools/render_mannequin.gd" 2>&1 | tee avatar-render.log
           STATUS=${PIPESTATUS[0]}
           set -e
           if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' avatar-render.log; then
@@ -504,8 +506,8 @@ jobs:
             echo "### angka penting (run $GITHUB_RUN_ID, commit \`${GITHUB_SHA:0:7}\`)"
             echo
             echo '```'
-            grep -hE '\[aurelia-test\]|tembus kain|material: Mat|pasangan hilang|iterasi kain|biaya avatar|camera-zoom-test|gerak klip|tinggi avatar|arah (lowerarm|calf|hand)' \
-              aurelia-test.log zoom-test.log performance-test.log avatar-render.log 2>/dev/null | tail -40
+            grep -hE '\[skin-test\]|kulit:|biaya avatar|camera-zoom-test|gerak klip|tinggi avatar|katalog klip' \
+              skin-test.log zoom-test.log performance-test.log avatar-render.log 2>/dev/null | tail -40
             echo '```'
             if [ -s fetch-assets.log ]; then
               echo

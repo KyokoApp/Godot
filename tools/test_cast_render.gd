@@ -2,7 +2,7 @@ extends SceneTree
 ## Exercise native post-animation modifier + skinning, not just manually sampled bones.
 
 const Catalog = preload("res://src/game/animation/catalog.gd")
-const Character = preload("res://src/game/character/aurelia_visual.gd")
+const Character = preload("res://src/game/mannequin.gd")
 const Night = preload("res://src/game/environment/night_environment.gd")
 var _failures := 0
 var _processed := 0
@@ -54,12 +54,6 @@ func _run() -> void:
 	camera.current = true
 	var character := Character.new()
 	world.add_child(character)
-	# Goyangan kain/rambut punya KELEMBAMAN: setelah cast selesai, helai rambut
-	# masih berayun beberapa ratus milidetik, dan itu bukan "pose tidak pulih".
-	# Uji ini mengukur pose tulang, jadi simpulnya dimatikan dulu.
-	for wrapper in character.cloths:
-		if wrapper != null:
-			wrapper.set_enabled(false)
 	character.animation.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
 	character.cast_layer.set_physics_process(false)
 	# Nama sinyal engine bisa berbeda antar rilis 4.x: pakai connect berbasis nama,

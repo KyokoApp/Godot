@@ -1,9 +1,9 @@
 extends SceneTree
-## Karakter Aurelia satu-satunya karakter: SEMUA klip katalog harus ada, mode loop
+## Mannequin satu-satunya karakter: SEMUA klip katalog harus ada, mode loop
 ## benar, metrik langkah terukur, aksi sekali jalan kembali sendiri, lapisan
 ## casting aman, dan avatar benar-benar digerakkan (bukan patung berdiri).
 
-const Character = preload("res://src/game/character/aurelia_visual.gd")
+const Character = preload("res://src/game/mannequin.gd")
 const Catalog = preload("res://src/game/animation/catalog.gd")
 const Metrics = preload("res://src/game/animation/anim_metrics.gd")
 var _failures := 0
@@ -36,23 +36,20 @@ func _run() -> void:
 	if avatar == null:
 		quit(1)
 		return
-	_check(character.rig_model != null and not character.rig_model.visible,
-		"Rig animasi UAL seharusnya tidak digambar")
-	_check(character.retargets.size() >= 1 and character.retarget.mapped_count() >= 40,
-		"Peta tulang avatar kurang lengkap: %d" %
-		(character.retarget.mapped_count() if character.retarget != null else 0))
-	# Material dipasang PER SURFACE (mesh Body punya surface rambut + badan +
-	# dress), jadi yang diperiksa tiap surface, bukan material_override.
+	# Kulit beranimasi: setiap mesh mannequin memakai bahan kulit, dan salinan
+	# kulitnya ada di atasnya (detailnya diuji tools/test_skin_shell.gd).
+	_check(character.skin != null and character.skin.is_ready(),
+		"Kulit beranimasi tidak terbentuk")
+	var surfaced := 0
 	for node in avatar.find_children("*", "MeshInstance3D", true, false):
 		var mesh := node as MeshInstance3D
 		if not mesh.visible or mesh.mesh == null:
 			continue
-		for surface in range(mesh.mesh.get_surface_count()):
-			var material := mesh.get_surface_override_material(surface) as StandardMaterial3D
-			_check(material != null and material.albedo_texture != null
-				and material.next_pass is ShaderMaterial,
-				"Material avatar hilang di %s[%s]" % [mesh.name,
-				mesh.mesh.surface_get_name(surface)])
+		var material := mesh.material_override as ShaderMaterial
+		_check(material != null and material.next_pass is ShaderMaterial,
+			"Bahan kulit hilang di %s" % mesh.name)
+		surfaced += 1
+	_check(surfaced > 0, "Mannequin tidak punya mesh yang digambar")
 	_test_catalog(character, animation, skeleton)
 	_test_metrics(character)
 	_test_state_machine(character)
@@ -206,24 +203,18 @@ func _test_cast(character: Character, skeleton: Skeleton3D) -> void:
 
 
 func _test_avatar_motion(character: Character) -> void:
-	# Kalau retarget mati, avatar hanya berdiri di rest pose walau klip berjalan.
+	# Klip harus benar-benar menggerakkan tulang mannequin (bukan patung diam).
 	var before: Array[Quaternion] = []
-	for bone in range(character.avatar.get_bone_count()):
-		before.append(character.avatar.get_bone_pose_rotation(bone))
+	for bone in range(character.skeleton.get_bone_count()):
+		before.append(character.skeleton.get_bone_pose_rotation(bone))
 	character.set_locomotion("Jog_Fwd_Loop", 1.0)
 	for step in range(12):
 		character.animation.advance(1.0 / 30.0)
-		for follower in character.retargets:
-			follower.apply()
 	var moved := 0
-	for bone in range(character.avatar.get_bone_count()):
-		if not before[bone].is_equal_approx(character.avatar.get_bone_pose_rotation(bone)):
+	for bone in range(character.skeleton.get_bone_count()):
+		if not before[bone].is_equal_approx(character.skeleton.get_bone_pose_rotation(bone)):
 			moved += 1
-	_check(moved >= 20, "Avatar tidak ikut bergerak (retarget mati): %d tulang" % moved)
-	# Tulang jari termasuk yang dipetakan: tangan tidak boleh mengepal kaku.
-	var hand := character.avatar.find_bone("Bip001 L Finger11")
-	var arm := character.avatar.find_bone("Bip001 L Forearm")
-	_check(hand >= 0 and arm >= 0, "Tulang tangan avatar tidak ditemukan")
+	_check(moved >= 20, "Mannequin tidak ikut bergerak: %d tulang" % moved)
 
 
 func _test_feet(character: Character) -> void:

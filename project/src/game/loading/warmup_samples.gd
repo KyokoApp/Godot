@@ -3,7 +3,7 @@ extends RefCounted
 ## lapisan tubuh atas, tapak api, aura cepat, dan sinar bulan.
 
 const Field = preload("res://src/game/world/field.gd")
-const Character = preload("res://src/game/character/aurelia_visual.gd")
+const Character = preload("res://src/game/mannequin.gd")
 const Spirit = preload("res://src/game/legacy_spirit/spirit_visual.gd")
 const Projectile = preload("res://src/game/fire_projectile.gd")
 const Burst = preload("res://src/game/fire_burst.gd")

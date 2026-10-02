@@ -1,5 +1,5 @@
 extends Node3D
-## Padang latihan 100 m × 100 m berumput + karakter Aurelia (avatar FBX) yang
+## Padang rumput 100 m × 100 m + mannequin UAL berkulit beranimasi yang
 ## digerakkan katalog animasi lengkap (85 klip UAL1 + UAL2) lewat retarget, plus
 ## goyangan kain/rambut simulasi verlet.
 
@@ -7,7 +7,7 @@ const Field = preload("res://src/game/world/field.gd")
 const Fence = preload("res://src/game/world/boundary_fence.gd")
 const Grass = preload("res://src/game/grass_field.gd")
 const Player = preload("res://src/game/player.gd")
-const Character = preload("res://src/game/character/aurelia_visual.gd")
+const Character = preload("res://src/game/mannequin.gd")
 const Orbit = preload("res://src/game/orbit_camera.gd")
 const Joystick = preload("res://src/game/virtual_joystick.gd")
 const Night = preload("res://src/game/environment/night_environment.gd")
@@ -79,7 +79,7 @@ func _ready() -> void:
 	_build_grass()
 	_build_effects()
 	_build_hud()
-	print("[main] padang %.0f m + Aurelia (%d klip) siap" % [
+	print("[main] padang %.0f m + mannequin (%d klip) siap" % [
 		Field.SIZE, Catalog.clip_count()])
 	_confirm_boot.call_deferred()
 

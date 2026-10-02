@@ -35,11 +35,6 @@ jobs:
           set -euo pipefail
           COMMIT=0d56df0d77cde7de8df8f31194815e90fee294aa
           mkdir -p dist
-          git show "$COMMIT:aurelia-debug/Avatar_Boy_Pole_Lohen.fbx" \
-            > dist/Avatar_Boy_Pole_Lohen.fbx
-          for f in $(git ls-tree --name-only "$COMMIT:aurelia-debug/Textures"); do
-            git show "$COMMIT:aurelia-debug/Textures/$f" > "dist/$f"
-          done
           git show "$COMMIT:project/assets/mannequin/UAL1_Standard.glb" \
             > dist/UAL1_Standard.glb
           git show "$COMMIT:project/assets/combat/UAL2_Standard.glb" \
@@ -72,14 +67,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          NOTES="Aset biner A-Sekai: FBX avatar Aurelia + 15 tekstur + pustaka animasi UAL1/UAL2.
+          NOTES="Aset biner A-Sekai: pustaka animasi UAL1/UAL2.
           
           Diunduh otomatis oleh \`tools/fetch_assets.sh\` (dipakai CI sebelum import proyek).
           Berkas ini tidak disimpan di git supaya repo tetap ringan; sumbernya ada di
           riwayat commit 0d56df0."
           if ! gh release view "$ASSET_TAG" >/dev/null 2>&1; then
             gh release create "$ASSET_TAG" \
-              --title "Aset biner (avatar Aurelia + pustaka UAL)" \
+              --title "Aset biner (pustaka animasi UAL)" \
               --notes "$NOTES"
           fi
           gh release upload "$ASSET_TAG" dist/* --clobber

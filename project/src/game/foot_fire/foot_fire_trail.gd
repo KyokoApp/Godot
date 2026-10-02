@@ -1,7 +1,7 @@
 extends Node3D
 ## Actual ankle/toe poses + floor ray contacts, not a generic ribbon behind the player.
 
-const Character = preload("res://src/game/character/aurelia_visual.gd")
+const Character = preload("res://src/game/mannequin.gd")
 const Field = preload("res://src/game/world/field.gd")
 const MeshFactory = preload("res://src/game/foot_fire/foot_fire_mesh.gd")
 const SHADER = preload("res://src/game/foot_fire/foot_fire.gdshader")

@@ -1,15 +1,16 @@
 extends SceneTree
-## Render avatar Aurelia dari kamera pemain pada beberapa jarak, lalu simpan
+## Render mannequin (dengan kulit beranimasinya) dari kamera pemain pada
+## beberapa jarak, lalu simpan
 ## sebagai PNG untuk diperiksa mata (dan dikirim sebagai pratinjau di CI).
 ##
-## Kenapa ada tes ini: bug material (rambut memakai atlas jubah, mata memakai
-## atlas rambut, sisi dalam mesh ikut tergambar) TIDAK bisa ditangkap oleh
-## pemeriksaan angka — hanya terlihat dari gambar. Jarak 0,4 m = zoom terdekat
-## yang sekarang mungkin dipakai pemain, jadi itu yang dirender lebih dulu.
+## Kenapa ada tes ini: hasil akhir "kulit" tidak bisa dinilai dari angka —
+## apakah tulang/sambungan mannequin benar-benar tertutup hanya terlihat dari
+## gambar. Jarak 0,4 m = zoom terdekat yang dipakai pemain, jadi itu yang
+## dirender lebih dulu. Sudut belakang/samping penting untuk melihat apakah ada
+## bagian mesh dalam yang menonjol keluar kulit.
 
 const Catalog = preload("res://src/game/animation/catalog.gd")
 const Orbit = preload("res://src/game/orbit_camera.gd")
-const Humanoid = preload("res://src/game/animation/humanoid_map.gd")
 var _failures := 0
 
 

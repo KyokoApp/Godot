@@ -3,7 +3,7 @@ extends Node3D
 ## Pose diambil dari kerangka AVATAR (yang terlihat), bukan rig animasi UAL yang
 ## tidak digambar; kalau salah ambil, bayangan akan berpose beda dari badannya.
 
-const Character = preload("res://src/game/character/aurelia_visual.gd")
+const Character = preload("res://src/game/mannequin.gd")
 const SHADER = preload("res://src/game/speed/afterimage.gdshader")
 const INTERVAL := 0.10
 const LIFETIME := 0.28
@@ -66,10 +66,14 @@ func _rebuild() -> void:
 	var capture := _capture.bind(_source)
 	if not _source.skeleton_updated.is_connected(capture):
 		_source.skeleton_updated.connect(capture)
-	for node in character.avatar.find_children("*", "MeshInstance3D", true, false):
-		var mesh := node as MeshInstance3D
-		if mesh.is_visible_in_tree():
-			_meshes.append(mesh)
+	# Lapisan yang benar-benar terlihat adalah kulit beranimasi; menyalin mesh
+	# dalam berarti bayangannya memakai geometri tanpa bahan kulit.
+	_meshes = character.visible_meshes()
+	if _meshes.is_empty():
+		for node in character.avatar.find_children("*", "MeshInstance3D", true, false):
+			var mesh := node as MeshInstance3D
+			if mesh.is_visible_in_tree():
+				_meshes.append(mesh)
 	for index in range(3):
 		_build_ghost()
 

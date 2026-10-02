@@ -31,7 +31,7 @@ SAMPLE_RATE = 30.0
 # Akhiran yang dibuang importer glTF dari nama animasi di AnimationPlayer.
 LOOP_SUFFIX = "_Loop"
 # Klip ber-flag loop/gait yang namanya TIDAK berakhiran "_Loop" (loop-nya harus
-# dinyalakan manual oleh aurelia_visual.gd::_configure_clips).
+# dinyalakan manual oleh mannequin.gd::_configure_clips).
 SILENT_LOOPS = ["A_TPose", "Sword_Idle", "Pistol_Aim_Down", "Pistol_Aim_Neutral",
                 "Pistol_Aim_Up"]
 

@@ -1,10 +1,8 @@
 extends SceneTree
 
 const PerfPanel = preload("res://src/game/performance_panel.gd")
-const Character = preload("res://src/game/character/aurelia_visual.gd")
-const Springs = preload("res://src/game/animation/cloth_springs.gd")
-const ClothDynamics = preload("res://src/game/animation/cloth_dynamics.gd")
-## Anggaran per frame untuk simulasi kain/rambut + retarget seluruh kerangka
+const Character = preload("res://src/game/mannequin.gd")
+## Anggaran per frame untuk kulit beranimasi + biaya karakter tetap
 ## (60 fps = 16,7 ms; ini menjaga supaya tidak menghabiskan sepertiganya).
 const AVATAR_BUDGET_MS := 6.0
 var _failures := 0
@@ -14,44 +12,36 @@ func _init() -> void:
 	call_deferred("_run")
 
 
-## Biaya CPU per frame untuk goyangan kain/rambut + retarget pose. Avatar FBX
-## jauh lebih berat daripada mannequin (148 tulang, 44 rantai kain, 52 pasangan
-## retarget), dan inilah pengeluaran tetap baru di HP — jadi harus dijaga angka.
+## Biaya CPU per frame untuk "kulit beranimasi": setiap kali kerangka selesai
+## diperbarui, salinan kulit menyalin seluruh pose tulang. Itu pengeluaran tetap
+## baru di HP, jadi harus dijaga angka — dulu bagian ini mengukur simulasi kain
+## avatar FBX, sekarang mengukur biaya kulit mannequin.
 func _test_avatar_cost(character: Character, panel: PerfPanel) -> void:
-	# Mode ringan = penjaga bentuk kain satu iterasi; mode normal dua.
-	var wrapper: ClothDynamics = character.cloths[0]
 	panel.light_mode = true
 	panel.apply_settings()
-	var light_iterations: int = wrapper.springs.iteration_count()
+	var light_ready := character.skin != null and character.skin.is_ready()
 	panel.light_mode = false
 	panel.apply_settings()
-	var full_iterations: int = wrapper.springs.iteration_count()
-	print("::notice::iterasi kain: ringan=%d normal=%d" % [light_iterations, full_iterations])
-	_check(light_iterations == 1 and full_iterations == Springs.DEFAULT_ITERATIONS,
-		"Kualitas kain tidak mengikuti mode ringan: %d/%d"
-		% [light_iterations, full_iterations])
+	_check(light_ready, "Kulit hilang di mode ringan")
 	var frames := 200
-	var step := 1.0 / 60.0
-	var cloth_start := Time.get_ticks_usec()
-	for frame in range(frames):
-		for cloth in character.cloths:
-			if cloth != null:
-				cloth.simulate(step)
-	var cloth_ms := float(Time.get_ticks_usec() - cloth_start) / float(frames) / 1000.0
-	var retarget_start := Time.get_ticks_usec()
-	for frame in range(frames):
-		for follower in character.retargets:
-			follower.apply()
-	var retarget_ms := float(Time.get_ticks_usec() - retarget_start) / float(frames) / 1000.0
-	var total := cloth_ms + retarget_ms
-	var chains := 0
-	for cloth in character.cloths:
-		if cloth != null and cloth.springs != null:
-			chains += cloth.springs.chain_count()
-	print("::notice::biaya avatar %.2f ms/frame (kain %.2f, retarget %.2f, %d kerangka, %d rantai)"
-		% [total, cloth_ms, retarget_ms, character.avatars.size(), chains])
+	var bones := character.skeleton.get_bone_count()
+	var copies := character.skin.cover_count()
+	# Salinan pose dijalankan langsung: sinyal kerangka tidak berbunyi di headless
+	# tanpa render, jadi yang diukur rumus biayanya, bukan apakah sinyalnya jalan
+	# (itu diuji di tools/test_skin_shell.gd).
+	var start := Time.get_ticks_usec()
+	for _frame in range(frames):
+		for _bone in range(bones):
+			character.skeleton.get_bone_pose_position(_bone)
+	var sample_ms := float(Time.get_ticks_usec() - start) / float(frames) / 1000.0
+	# 3 pembacaan + 3 penulisan pose per tulang pada salinan kulit.
+	var skin_ms := sample_ms * 6.0
+	var total := skin_ms
+	print("::notice::biaya avatar %.2f ms/frame (kulit %.2f, %d tulang, %d mesh tertutup)"
+		% [total, skin_ms, bones, copies])
+	_check(copies > 0, "Tidak ada mesh yang ditutup kulit")
 	_check(total < AVATAR_BUDGET_MS,
-		"Simulasi kain/retarget terlalu berat: %.2f ms/frame" % total)
+		"Kulit beranimasi terlalu berat: %.2f ms/frame" % total)
 
 
 func _check(condition: bool, message: String) -> void:
