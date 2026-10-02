@@ -215,7 +215,12 @@ func natural_speed(name: String) -> float:
 
 
 func set_locomotion(name: String, playback_speed := 1.0) -> void:
-	if mode != Mode.LOCOMOTION:
+	if mode == Mode.HELD:
+		# Pose tahan (klip aksi yang berhenti di frame terakhir) DILEPAS begitu
+		# pemain meminta gait. Dulu mode HELD juga menolak mengganti klip, jadi
+		# badannya berjalan sambil membeku seperti foto — "kayak difoto".
+		mode = Mode.LOCOMOTION
+	elif mode != Mode.LOCOMOTION:
 		# Klip pilihan panel atau aksi sekali jalan tidak boleh ditimpa pemain.
 		gait = name
 		return

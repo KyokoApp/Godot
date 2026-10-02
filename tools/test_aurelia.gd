@@ -54,6 +54,7 @@ func _run() -> void:
 	_test_cloth_inertia(character)
 	_test_cloth_no_penetration(character)
 	_test_clip_motion(character)
+	_test_hold_release(character)
 	var missing := Humanoid.missing_pairs(character.skeleton, character.avatar)
 	if not missing.is_empty():
 		_notes.append("pasangan hilang: " + ", ".join(missing))
@@ -349,6 +350,26 @@ func _clip_travel(character: Character, motion: String) -> Vector2:
 			total += moved
 			previous[index] = now
 	return Vector2(peak, total)
+
+
+## Pose tahan (klip aksi yang berhenti di frame terakhir, mis. sesudah menyerang)
+## HARUS lepas begitu pemain meminta gait. Dulu mode HELD juga menolak mengganti
+## klip, jadi badannya berjalan sambil membeku seperti foto.
+func _test_hold_release(character: Character) -> void:
+	character.play_showcase("Idle_Loop")
+	character.animation.advance(0.4)
+	character.freeze_at_last_frame()
+	var frozen := character.animation.current_animation
+	_check(not character.animation.is_playing(), "Pose tahan seharusnya berhenti")
+	character.set_locomotion("Jog_Fwd_Loop", 1.0)
+	if character.mode == Character.Mode.HELD:
+		_check(false, "Mode HELD tidak dilepas saat pemain meminta gait")
+		return
+	var playing := character.animation.current_animation
+	_check(playing != frozen, "Klip tidak berganti sesudah pose tahan: %s" % playing)
+	_check(character.animation.is_playing(), "Animasi tetap berhenti sesudah pose tahan")
+	_notes.append("pose tahan: %s -> %s (main=%s)" % [frozen, playing,
+		"ya" if character.animation.is_playing() else "tidak"])
 
 
 ## Kaki tidak boleh menembus tanah di klip berdiri/jalan (skala gerak retarget).

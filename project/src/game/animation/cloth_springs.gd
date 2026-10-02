@@ -64,7 +64,7 @@ const GROUPS := [
 	{"prefix": "Bone_Hair", "stiffness": 30.0, "drag": 2.6, "gravity": 1.0,
 		"wind": 0.55, "weave": false, "hang": 0.30},
 	{"prefix": "Bone_Shawl", "stiffness": 9.5, "drag": 1.45, "gravity": 1.0,
-		"wind": 0.85, "weave": true, "hang": 0.90},
+		"wind": 0.85, "weave": true, "hang": 0.80},
 	{"prefix": "Bone_Collar", "stiffness": 28.0, "drag": 2.4, "gravity": 1.0,
 		"wind": 0.7, "weave": true, "hang": 0.40},
 	{"prefix": "Bone_Hip", "stiffness": 34.0, "drag": 3.0, "gravity": 1.0,
@@ -80,6 +80,11 @@ const GROUPS := [
 ## Bagian rantai teratas masih memakai sudut rest (supaya sambungan ke badan
 ## tidak patah); mulai dari pecahan ini ke ujung, jatuh ke arah bawah.
 const HANG_RAMP_FROM := 0.20
+## Arah jatuh tidak persis tegak lurus: arah datar (bidang) panel dipertahankan
+## sebesar ini. Tanpa itu semua panel dari dada jatuh ke satu titik dan jubahnya
+## berubah jadi tenda/kerucut; dengan ini panel tetap menyebar seperti potongan
+## aslinya, hanya miring ke bawah.
+const HANG_SPREAD := 0.45
 
 ## Tulang kain yang TIDAK boleh disimulasikan. `Bone_ShawlJ01_L` dan
 ## `Bone_ShawlK01_L` menggantung di `Bone_ShawlArmTwistA01_L` (anak
@@ -620,7 +625,11 @@ func _keep_shape(chain: Strand, index: int, k: float) -> void:
 	if chain.hang > 0.0 and rest_offset.length_squared() > 0.000001:
 		var hang := chain.hang * _hang_ramp(chain, index)
 		if hang > 0.0:
-			rest_offset = rest_offset.normalized().slerp(Vector3.DOWN, hang) \
+			var down := Vector3.DOWN
+			var flat := Vector3(rest_offset.x, 0.0, rest_offset.z)
+			if flat.length_squared() > 0.000001:
+				down = (flat.normalized() * HANG_SPREAD + Vector3.DOWN).normalized()
+			rest_offset = rest_offset.normalized().slerp(down, hang) \
 				* rest_offset.length()
 	chain.points[index] = chain.points[index - 1] + current.lerp(rest_offset, k)
 
