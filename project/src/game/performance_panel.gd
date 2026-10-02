@@ -2,11 +2,13 @@ extends VBoxContainer
 ## Pembanding A/B perangkat nyata, bukan janji 60 FPS atau pengukuran GPU.
 
 const SETTINGS := "user://graphics.cfg"
+const Character = preload("res://src/game/mannequin.gd")
 
 var rays: MeshInstance3D
 var rays_enabled := true
 var sun: DirectionalLight3D
 var grass: Node3D
+var character: Character
 var light_mode := true
 var grass_enabled := true
 var shadows_enabled := false
@@ -65,7 +67,7 @@ func _load_settings() -> void:
 	grass_enabled = bool(config.get_value("graphics", "grass", true))
 	shadows_enabled = bool(config.get_value("graphics", "shadows", false))
 	uncapped = bool(config.get_value("graphics", "uncapped", false))
-	rays_enabled = bool(config.get_value("graphics", "moon_rays", true))
+	rays_enabled = bool(config.get_value("graphics", "sun_rays", true))
 
 
 func _save_settings() -> void:
@@ -74,7 +76,7 @@ func _save_settings() -> void:
 	config.set_value("graphics", "grass", grass_enabled)
 	config.set_value("graphics", "shadows", shadows_enabled)
 	config.set_value("graphics", "uncapped", uncapped)
-	config.set_value("graphics", "moon_rays", rays_enabled)
+	config.set_value("graphics", "sun_rays", rays_enabled)
 	config.save(SETTINGS)
 
 
@@ -87,13 +89,17 @@ func apply_settings() -> void:
 	if grass != null:
 		grass.visible = grass_enabled
 		grass.set_process(grass_enabled)
+	if character != null:
+		# Goyangan kain/rambut ada di dalam mode ringan, tapi dengan satu iterasi
+		# penjaga bentuk (biaya CPU turun hampir separuh).
+		character.set_light_cloth(light_mode)
 	_quality.text = "Resolusi 3D: " + ("75% (Ringan)" if light_mode else "100% (Normal)")
 	_grass_button.text = "Rumput: " + ("Nyala" if grass_enabled else "Mati (tes FPS)")
 	_shadows.text = "Bayangan: " + ("Nyala" if shadows_enabled else "Mati")
 	_limit.text = "Batas FPS: " + ("Bebas*" if uncapped else "60")
 	if rays != null:
 		rays.set("enabled", rays_enabled)
-	_rays_button.text = "Sinar bulan: " + ("Nyala" if rays_enabled else "Mati (tes FPS)")
+	_rays_button.text = "Sinar matahari: " + ("Nyala" if rays_enabled else "Mati (tes FPS)")
 	_frames.clear()
 	_elapsed = 0.0
 	_stats.text = "Mengukur frame…\n* Tetap mengikuti VSync / layar HP"

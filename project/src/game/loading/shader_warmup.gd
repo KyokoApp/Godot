@@ -2,7 +2,7 @@ extends CanvasLayer
 ## Best-effort warmup, NOT a guarantee that every future GPU pipeline is cached.
 
 const Samples = preload("res://src/game/loading/warmup_samples.gd")
-const Night = preload("res://src/game/environment/night_environment.gd")
+const Dusk = preload("res://src/game/environment/dusk_environment.gd")
 const SOFT_LIMIT_MS := 20000
 
 var cancel_requested := false
@@ -156,9 +156,9 @@ func _build_viewport(game: Node3D) -> void:
 	_world = Node3D.new()
 	_viewport.add_child(_world)
 	var environment := WorldEnvironment.new()
-	environment.environment = Night.make_environment()
+	environment.environment = Dusk.make_environment()
 	_world.add_child(environment)
-	var light := Night.make_moonlight()
+	var light := Dusk.make_sunlight()
 	var source: DirectionalLight3D = game.get("_sun")
 	light.shadow_enabled = source.shadow_enabled
 	_world.add_child(light)

@@ -16,3 +16,14 @@ __pycache__/
 
 # Generated APK seed, rebuilt from the tested content export
 project/bootstrap/
+
+# Aset biner besar — diambil `tools/fetch_assets.sh` (lampiran rilis `assets-v1`).
+# FBX avatar + 15 tekstur + pustaka animasi UAL = ± 24 MB; tidak disimpan di git
+# supaya klon repo tetap ringan dan riwayat tidak membengkak.
+project/assets/mannequin/
+project/assets/combat/
+
+# pratinjau lokal dari CI (tools/fetch_previews.sh)
+preview/
+preview-*/
+worldpass/

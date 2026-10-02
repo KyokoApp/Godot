@@ -9,12 +9,18 @@ extends Node3D
 ##  2. Mode loop tiap klip disetel benar dari katalog (loop vs sekali vs tahan).
 ##  3. Kecepatan main dicocokkan dengan langkah hasil ukur (tidak meluncur).
 ##  4. Offset tanah per klip menjaga kaki tidak tenggelam di klip rendah.
+##  5. Tubuh mannequin dilapisi "kulit beranimasi" (character/skin_shell.gd):
+##     salinan mesh yang digelembungkan sedikit dan memakai bahan kulit yang sama
+##     dengan mesh di dalamnya, jadi tulang/sambungan mannequin tidak pernah
+##     terlihat polos. Denyutnya mengikuti kecepatan badan.
 
 signal clip_changed(clip: String)
 
 enum Mode { LOCOMOTION, ACTION, SHOWCASE, HELD }
 
 const MODEL = preload("res://assets/mannequin/UAL1_Standard.glb")
+const SkinShell = preload("res://src/game/character/skin_shell.gd")
+const SKIN_SHADER = preload("res://src/game/character/skin_shell.gdshader")
 const COMBAT_MODEL = preload("res://assets/combat/UAL2_Standard.glb")
 const OUTLINE = preload("res://src/game/character_outline.gdshader")
 const CastLayer = preload("res://src/game/animation/cast_layer.gd")
@@ -31,6 +37,10 @@ const OFFSET_SPEED := 6.0
 
 var animation: AnimationPlayer
 var skeleton: Skeleton3D
+## Kerangka yang terlihat. Efek (bekas pose, tapak api, aura) dan tes membidik
+## `avatar`; pada mannequin kerangka itu sama dengan `skeleton`.
+var avatar: Skeleton3D
+var skin: SkinShell
 var cast_layer: CastLayer
 var metrics: Dictionary = {}
 var mode := Mode.LOCOMOTION
@@ -41,6 +51,7 @@ var playback_scale := 1.0
 var _hold_after := false
 var _action_left := 0.0
 var _model: Node3D
+var _skin_material: ShaderMaterial
 var _library: AnimationLibrary
 
 
@@ -55,12 +66,14 @@ func _ready() -> void:
 	if animation == null or skeleton == null:
 		push_error("Mannequin: AnimationPlayer/Skeleton3D hilang")
 		return
+	avatar = skeleton
 	# Klip sekali jalan yang sudah habis langsung menyerahkan badan ke gait;
 	# tanpa ini ada jendela diam di frame terakhir (terlihat seperti jalan di tempat
 	# atau pose kaku) sebelum timer aksi selesai.
 	animation.animation_finished.connect(_on_animation_finished)
 	_merge_combat_library()
 	_apply_material()
+	_setup_skin()
 	_configure_clips()
 	metrics = Metrics.measure_catalog(animation, skeleton, Catalog)
 	animation.play(Catalog.play_name(IDLE), 0.0)
@@ -88,17 +101,58 @@ func _merge_combat_library() -> void:
 	source.free()
 
 
+## Mesh mannequin memakai bahan kulit yang sama dengan lapisan luarnya. Jadi
+## sudut mana pun yang menonjol di lipatan tajam (siku, lutut, pinggul) tetap
+## berwarna kulit — tidak pernah ada bagian mannequin polos yang terlihat.
 func _apply_material() -> void:
-	const MATERIAL := Color(0.68, 0.58, 0.84)
+	_skin_material = ShaderMaterial.new()
+	_skin_material.shader = SKIN_SHADER
+	_skin_material.set_shader_parameter("grow", 0.0)
+	var outline := ShaderMaterial.new()
+	outline.shader = OUTLINE
+	outline.set_shader_parameter("outline_width", 0.005)
+	_skin_material.next_pass = outline
 	for node in _model.find_children("*", "MeshInstance3D", true, false):
-		var mesh := node as MeshInstance3D
-		var material := StandardMaterial3D.new()
-		material.albedo_color = MATERIAL
-		material.roughness = 0.85
-		var outline := ShaderMaterial.new()
-		outline.shader = OUTLINE
-		material.next_pass = outline
-		mesh.material_override = material
+		(node as MeshInstance3D).material_override = _skin_material
+
+
+## Kulit beranimasi: salinan mesh yang selalu menimpa mannequin
+## (lihat character/skin_shell.gd).
+func _setup_skin() -> void:
+	skin = SkinShell.new()
+	skin.name = "SkinShell"
+	add_child(skin)
+	skin.configure(skeleton)
+
+
+## Denyut kulit dari kecepatan badan (dipakai _physics_process di bawah).
+func _update_motion(speed: float, boosting := false) -> void:
+	if skin == null:
+		return
+	skin.set_pulse(speed if not boosting else speed * 1.35)
+
+
+## Mesh yang benar-benar digambar (lapisan kulit). Efek seperti bekas pose
+## menyalin dari sini supaya yang disalin bukan mesh dalam yang tak terlihat.
+func visible_meshes() -> Array[MeshInstance3D]:
+	if skin == null:
+		return []
+	return skin.covers()
+
+
+## Mode ringan: kurangi kerumitan bahan kulit (pola energi & percikan) tanpa
+## mengubah siluetnya, jadi HP kelas bawah tetap dapat karakter yang sama.
+func set_light_cloth(light: bool) -> void:
+	if _skin_material == null:
+		return
+	# Mode ringan tetap memakai pola yang sama, hanya sedikit lebih kasar —
+	# kalau angkanya jauh berbeda, kulit terlihat berganti model saat setelan
+	# grafis diubah (band bawaan 15,5/0,115).
+	_skin_material.set_shader_parameter("vein_scale", 12.0 if light else 16.5)
+	_skin_material.set_shader_parameter("vein_width", 0.130 if light else 0.105)
+	if skin != null and skin.skin != null:
+		skin.skin.set_shader_parameter("vein_scale", 12.0 if light else 16.5)
+		skin.skin.set_shader_parameter("vein_width", 0.130 if light else 0.105)
 
 
 func _configure_clips() -> void:
@@ -134,7 +188,12 @@ func natural_speed(name: String) -> float:
 
 
 func set_locomotion(name: String, playback_speed := 1.0) -> void:
-	if mode != Mode.LOCOMOTION:
+	if mode == Mode.HELD:
+		# Pose tahan (klip aksi yang berhenti di frame terakhir) DILEPAS begitu
+		# pemain meminta gait. Dulu mode HELD juga menolak mengganti klip, jadi
+		# badannya berjalan sambil membeku seperti foto — "kayak difoto".
+		mode = Mode.LOCOMOTION
+	elif mode != Mode.LOCOMOTION:
 		# Klip pilihan panel atau aksi sekali jalan tidak boleh ditimpa pemain.
 		gait = name
 		return
@@ -237,14 +296,10 @@ func set_playback_scale(value: float) -> void:
 		animation.speed_scale = playback_scale
 
 
-func clip_length() -> float:
+func progress() -> float:
 	if animation == null:
 		return 0.0
-	return animation.current_animation_length
-
-
-func progress() -> float:
-	var length := clip_length()
+	var length := animation.current_animation_length
 	if length <= 0.0:
 		return 0.0
 	return clampf(animation.current_animation_position / length, 0.0, 1.0)
@@ -283,6 +338,15 @@ func _physics_process(delta: float) -> void:
 				animation.pause()
 			else:
 				return_to_locomotion()
+	# Denyut kulit mengikuti kecepatan badan: dibaca langsung dari badan pemain
+	# (induk node ini) supaya tidak perlu ada pemanggil tambahan tiap frame.
+	var body := get_parent()
+	if body is CharacterBody3D:
+		_update_motion((body as CharacterBody3D).velocity.length(), false)
+	# Kulit ikut menyala saat tubuh atas memainkan mantra/serangan.
+	if skin != null:
+		var casting := cast_layer != null and cast_layer.active
+		skin.set_charge(1.0 if casting else 0.0)
 	# Offset tanah halus: klip rendah (guling, meluncur) tidak menenggelamkan kaki.
 	var measured: Dictionary = metrics.get(clip, {})
 	var target := float(measured.get("ground_offset", 0.0))

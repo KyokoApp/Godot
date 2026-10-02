@@ -1,6 +1,7 @@
 extends SceneTree
-## Mannequin satu-satunya karakter: SEMUA klip katalog harus ada, mode loop benar,
-## metrik langkah terukur, aksi sekali jalan kembali sendiri, lapisan casting aman.
+## Mannequin satu-satunya karakter: SEMUA klip katalog harus ada, mode loop
+## benar, metrik langkah terukur, aksi sekali jalan kembali sendiri, lapisan
+## casting aman, dan avatar benar-benar digerakkan (bukan patung berdiri).
 
 const Character = preload("res://src/game/mannequin.gd")
 const Catalog = preload("res://src/game/animation/catalog.gd")
@@ -30,16 +31,31 @@ func _run() -> void:
 		quit(1)
 		return
 	_check(character.get("skin_id") == null, "API skin lama masih ada")
-	for node in character.find_children("*", "MeshInstance3D", true, false):
+	var avatar := character.avatar
+	_check(avatar != null, "Kerangka avatar tidak ada")
+	if avatar == null:
+		quit(1)
+		return
+	# Kulit beranimasi: setiap mesh mannequin memakai bahan kulit, dan salinan
+	# kulitnya ada di atasnya (detailnya diuji tools/test_skin_shell.gd).
+	_check(character.skin != null and character.skin.is_ready(),
+		"Kulit beranimasi tidak terbentuk")
+	var surfaced := 0
+	for node in avatar.find_children("*", "MeshInstance3D", true, false):
 		var mesh := node as MeshInstance3D
-		var material := mesh.material_override as StandardMaterial3D
+		if not mesh.visible or mesh.mesh == null:
+			continue
+		var material := mesh.material_override as ShaderMaterial
 		_check(material != null and material.next_pass is ShaderMaterial,
-			"Outline mannequin hilang")
+			"Bahan kulit hilang di %s" % mesh.name)
+		surfaced += 1
+	_check(surfaced > 0, "Mannequin tidak punya mesh yang digambar")
 	_test_catalog(character, animation, skeleton)
 	_test_metrics(character)
 	_test_state_machine(character)
 	_test_cast(character, skeleton)
 	_test_feet(character)
+	_test_avatar_motion(character)
 	print("[mannequin-test] klip=%d metrik=%d gagal=%d" % [
 		animation.get_animation_list().size(), character.metrics.size(), _failures])
 	quit(0 if _failures == 0 else 1)
@@ -184,6 +200,26 @@ func _test_cast(character: Character, skeleton: Skeleton3D) -> void:
 	_check(layer.playing, "Casting tidak jalan saat aksi sihir")
 	character._physics_process(1.0)
 	_check(not character.is_busy(), "Aksi sihir tidak selesai")
+
+
+func _test_avatar_motion(character: Character) -> void:
+	# Klip harus benar-benar menggerakkan tulang mannequin (bukan patung diam).
+	var before_rotation: Array[Quaternion] = []
+	var before_position: Array[Vector3] = []
+	for bone in range(character.skeleton.get_bone_count()):
+		before_rotation.append(character.skeleton.get_bone_pose_rotation(bone))
+		before_position.append(character.skeleton.get_bone_pose_position(bone))
+	character.set_locomotion("Jog_Fwd_Loop", 1.0)
+	for step in range(12):
+		character.animation.advance(1.0 / 30.0)
+	var moved := 0
+	for bone in range(character.skeleton.get_bone_count()):
+		if not before_rotation[bone].is_equal_approx(
+				character.skeleton.get_bone_pose_rotation(bone)) \
+				or not before_position[bone].is_equal_approx(
+					character.skeleton.get_bone_pose_position(bone)):
+			moved += 1
+	_check(moved >= 10, "Mannequin tidak ikut bergerak: %d tulang" % moved)
 
 
 func _test_feet(character: Character) -> void:

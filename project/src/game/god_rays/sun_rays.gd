@@ -1,7 +1,8 @@
 extends MeshInstance3D
-## Screen-space radial light scattering, adapted for Mobile without a second scene render.
-const SHADER = preload("res://src/game/god_rays/moon_rays.gdshader")
-const Night = preload("res://src/game/environment/night_environment.gd")
+## Sinar matahari (radial scattering) dari arah matahari rendah di ilustrasi layar
+## muat; versi Mobile, tanpa render scene kedua.
+const SHADER = preload("res://src/game/god_rays/sun_rays.gdshader")
+const Dusk = preload("res://src/game/environment/dusk_environment.gd")
 var camera: Camera3D
 var enabled := true
 var strength := 0.0
@@ -9,7 +10,7 @@ var _material: ShaderMaterial
 
 
 func _ready() -> void:
-	name = "MoonRays"
+	name = "SunRays"
 	var quad := QuadMesh.new()
 	quad.size = Vector2(2, 2)
 	mesh = quad
@@ -28,7 +29,7 @@ func _process(_delta: float) -> void:
 	if not enabled or not is_instance_valid(camera) or not camera.current:
 		visible = false
 		return
-	var source := camera.global_position + Night.MOON_DIRECTION * 1000.0
+	var source := camera.global_position + Dusk.SUN_DIRECTION * 1000.0
 	if camera.is_position_behind(source):
 		visible = false
 		return

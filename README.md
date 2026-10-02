@@ -394,13 +394,26 @@ Lebar jalur mengikuti arah tikungan, dengan gelombang elevasi panjang/lembut;
 mesh dan collider tetap satu permukaan. Rumput, batu, dan foley memakai ukuran
 jalur yang sama. Budget terrain tetap 80k triangles, tanpa mesh jalan tumpang tindih.
 
-### Malam biru, bintang jarang, bulan kecil
-Environment malam statis: gradasi indigo/biru tua, horizon lembut, sedikit
-bintang tanpa kedip agresif, bulan kecil (~0.63 derajat) dengan halo tipis.
-Moonlight mengikuti posisi bulan; ambient biru dipisahkan dari sky agar jalan,
-rumput dan karakter tetap terbaca. Satu directional light yang sama, pengaturan
-shadow tetap berlaku. Tidak memasang color-reducer/post-process, kabut volumetrik,
-atau siklus siang-malam. UI, pet, outline, audio dan combat tidak diubah.
+### Dunia senja seperti ilustrasi layar muat
+Permintaan pengguna (2026-10-02): dunia dibuat semirip mungkin dengan
+`project/launcher/art/loading.jpg`. Ilustrasi itu bukan malam pekat, jadi
+environment malam diganti **senja terang**: langit biru lavender dengan awan
+pita panjang, pendar krem-persik di ufuk barat tempat matahari baru terbenam,
+dan tanah hijau yang tetap terbaca. Warna shader diambil dari piksel ilustrasi
+(zenith `#5776C2`, tengah `#8099D4`, pita hangat `#B4B3D2`, pendar ufuk
+`#FDCBB2`). Bulan dan bintang dihapus — di ilustrasi langitnya bersih; titik
+cahaya yang tampak adalah kunang-kunang di dekat tanah.
+- `environment/dusk_environment.gd` + `dusk_sky.gdshader` = preset bersama untuk
+  permainan, warmup shader, dan tes render (jadi layar dan gambar tes tidak
+  pernah berbeda). Kabut jarak tipis 60–420 m; langit tidak ikut berkabut.
+- Pemandangan di luar pagar (`world/scenery.gd`, tanpa collision): dua sabuk
+  bukit hijau, laut tosca + pulau kecil di barat, tebing batu di timur, dua
+  gapura + tiga tiang batu, dan tiga kumpulan kunang-kunang.
+- Jalan tanah berliku digambar `ground.gdshader` (bukan mesh terpisah), jadi
+  tidak ada draw call atau collision tambahan.
+- Satu directional light matahari rendah (`Dusk.SUN_DIRECTION`); pengaturan
+  shadow tetap berlaku. Tidak ada siklus siang-malam atau post-process berat.
+  UI, pet, outline, audio dan combat tidak diubah.
 
 ### World dressing, kabut tipis, dan rumput LOD tiga lapis
 - Aset asli archive: 3 jenis pohon, semak/semak bunga, pakis, bunga, 2 batu,
@@ -417,7 +430,7 @@ atau siklus siang-malam. UI, pet, outline, audio dan combat tidak diubah.
 - Frustum culling bawaan tetap. Occlusion culling kini aktif dengan patch
   konservatif di DALAM bukit/terrain, <=5k tris; tidak menganggap daun transparan
   sebagai dinding. Ini bukan janji semua objek yang tertutup apa saja pasti dicull.
-- Kabut depth ringan32–230m, langit/bulan tidak ditutupi, tanpa volumetric fog.
+- Kabut depth tipis, langit tidak ditutupi, tanpa volumetric fog.
   Tes aset/mask/budget/determinisme/cleanup/occluder/PCK + Mobile Vulkan wajib;
   FPS/overdraw/CPU occlusion tetap perlu pengukuran HP nyata.
 
@@ -438,7 +451,7 @@ Tidak mengubah launcher/updater bawaan APK: tahap ini berada di konten PCK;
 boot marker dikonfirmasi setelah warmup/skip selesai.
 
 
-### Danau & sungai malam
+### Danau & sungai (histori desain; dunia sekarang padang 100 m + pemandangan luar pagar)
 Danau di timur spawn memiliki garis pantai berlekuk/teluk kecil, tersambung sungai
 berkelok ke laut tenggara. Terrain dan collider memakai cekungan yang sama;
 jalan tetap utuh, rumput/pohon/batu besar menjauhi tepian. Belum ada berenang:
@@ -583,13 +596,14 @@ menyatakan migrasi HP tervalidasi. Tidak mengklaim delta per-baris atau selalu u
   terang atau bola). Shader warmup kini 23 tahap. Tes batas, speed/HUD dan render wajib.
 
 
-## Sinar bulan screen-space
+## Sinar matahari screen-space
 Adaptasi metode radial scattering dari referensi pengguna, bukan volumetric fog. Memakai
 kedalaman layar reverse-Z, 16 sampel, tanpa render ulang seluruh dunia lewat
-SubViewport. Warna biru pucat halus mengikuti arah bulan di sky. Otomatis mati
-saat bulan di belakang/luar kamera atau pemain di dalam arena. Efek berada di
+SubViewport. Warna krem hangat halus mengikuti arah matahari senja di sky
+(`Dusk.SUN_DIRECTION`, sama dengan arah kilau di air). Otomatis mati saat
+matahari di belakang/luar kamera atau pemain di dalam arena. Efek berada di
 bawah HUD dan transparansi, tidak menerangi terrain/karakter. Objek transparan
-atau di luar layar tidak ikut menghalangi sinar. Toggle tersimpan “Sinar bulan”
+atau di luar layar tidak ikut menghalangi sinar. Toggle tersimpan “Sinar matahari”
 ada di Grafik untuk tes A/B HP; tidak menjamin FPS. Renderer target Mobile 4.5.2.
 
 ## Minimap bulat
@@ -624,7 +638,8 @@ animasi yang benar-benar diperbaiki.
   langkah tiap klip gait (m/s) dan membandingkannya dengan rentang yang dijaga.
 - **Tes engine** yang relevan: `test_mannequin` (katalog + state machine + casting),
   `test_movement`, `test_grass` (LOD + dua sisi terang), `test_hud`, `test_speed`
-  (boost 1,35× + anti meluncur), `test_motion_flair` (tapak api), `test_night`,
+  (boost 1,35× + anti meluncur), `test_motion_flair` (tapak api), `test_dusk`, `test_skin_shell`,
+  `test_scenery` (gerbang pemandangan) dan `render_world` (4 sudut dunia),
   `test_audio`, `test_pack` (85 klip + lisensi di PCK). Belum diuji di HP.
 
 ### Perbaikan 2026-10-02 — nama klip runtime + joystick

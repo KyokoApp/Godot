@@ -28,6 +28,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Aset biner besar (FBX avatar + tekstur + pustaka UAL) tidak disimpan di
+      # git; diambil dari lampiran rilis `assets-v1` (cadangan: riwayat git).
+      - name: Ambil aset biner
+        # Log-nya ditee ke berkas: langkah ini pernah gagal karena jaringan dan
+        # tanpa log-nya tidak ada cara tahu berkas mana yang gagal. Ekornya
+        # dikirim di komentar commit "angka penting" (langkah itu if: always()).
+        run: |
+          set -o pipefail
+          tools/fetch_assets.sh 2>&1 | tee fetch-assets.log
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -52,6 +62,28 @@ jobs:
           python3 tools/test_chunk_content.py
           # Gerbang tanpa engine: 85 klip UAL + ukur ulang langkah kaki.
           python3 tools/check_animation_catalog.py
+          # Berkas wajib ada. Satu commit pernah membawa indeks klon yang rusak
+          # (berkas hilang, versi lama kembali); kegagalannya baru muncul di
+          # langkah ambil aset dengan pesan yang menyesatkan. Daftar ini membuat
+          # "pohon berkas ter-revert" ketahuan dalam hitungan detik.
+          for wajib in tools/fetch_assets.sh tools/render_mannequin.gd \
+                tools/test_skin_shell.gd tools/test_camera_zoom.gd \
+                tools/test_scenery.gd tools/render_world.gd \
+                project/src/game/world/scenery.gd \
+                project/src/game/world/water.gdshader \
+                project/src/game/mannequin.gd \
+                project/src/game/character/skin_shell.gd \
+                project/src/game/character/skin_shell.gdshader \
+                .github/workflows/assets.yml; do
+            [ -f "$wajib" ] || { echo "::error::berkas wajib hilang: $wajib"; exit 1; }
+          done
+          # Karakter FBX sudah dibuang; kalau berkas ini muncul lagi berarti
+          # pohon berkas ter-revert ke commit lama.
+          for sisa in project/src/game/character/aurelia_visual.gd \
+                project/src/game/animation/cloth_springs.gd aurelia-debug; do
+            [ ! -e "$sisa" ] \
+              || { echo "::error::sisa karakter FBX muncul lagi: $sisa"; exit 1; }
+          done
 
       # --- 2. dependensi + Godot ----------------------------------------
       - name: Dependensi sistem
@@ -134,7 +166,7 @@ jobs:
       - name: Tes joystick dan gerak (headless)
         run: |
           set +e
-          timeout 90 ./godot --headless --path project \
+          timeout 180 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_movement.gd" 2>&1 | tee movement-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
@@ -144,10 +176,10 @@ jobs:
             exit 1
           fi
 
-      - name: Tes mannequin dan animasi tulang
+      - name: Tes karakter dan animasi tulang
         run: |
           set +e
-          timeout 120 ./godot --headless --path project \
+          timeout 180 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_mannequin.gd" 2>&1 | tee mannequin-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
@@ -157,10 +189,53 @@ jobs:
             exit 1
           fi
 
+      # Kulit beranimasi: salinan mesh yang selalu menimpa mannequin.
+      - name: Tes kulit beranimasi mannequin (headless)
+        run: |
+          set +e
+          timeout 300 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_skin_shell.gd" 2>&1 | tee skin-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' skin-test.log; then
+            tail -60 skin-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+
+      # Pemandangan di luar pagar: bukit, laut, tebing, reruntuhan, kunang.
+      # Gerbang ini murni angka (tanpa render) supaya cepat dijalankan.
+      - name: Tes pemandangan dunia (headless)
+        run: |
+          set +e
+          timeout 180 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_scenery.gd" 2>&1 | tee scenery-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' scenery-test.log; then
+            tail -60 scenery-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[scenery-test]' scenery-test.log
+          grep -F '[skin-test]' skin-test.log
+
+      # Zoom kamera: cubit dua jari harus benar-benar menempel ke karakter.
+      - name: Tes zoom kamera (headless)
+        run: |
+          set +e
+          timeout 180 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_camera_zoom.gd" 2>&1 | tee zoom-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' zoom-test.log; then
+            tail -60 zoom-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[camera-zoom-test]' zoom-test.log
+
       - name: Tes kontak tapak api 3D (headless)
         run: |
           set +e
-          timeout 120 ./godot --headless --path project \
+          timeout 180 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_motion_flair.gd" 2>&1 | tee motion-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
@@ -173,7 +248,7 @@ jobs:
       - name: Tes mannequin dan kontrol performa
         run: |
           set +e
-          timeout 90 ./godot --headless --path project \
+          timeout 180 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_performance.gd" 2>&1 | tee performance-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
@@ -186,7 +261,7 @@ jobs:
       - name: Tes pet api, attack, collision dan cleanup
         run: |
           set +e
-          timeout 90 ./godot --headless --path project \
+          timeout 180 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_fire_pet.gd" 2>&1 | tee fire-pet-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
@@ -199,7 +274,7 @@ jobs:
       - name: Tes mask dan streaming rumput
         run: |
           set +e
-          timeout 90 ./godot --headless --path project \
+          timeout 180 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_grass.gd" 2>&1 | tee grass-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
@@ -228,7 +303,7 @@ jobs:
       - name: Render projectile dan impact (Mobile Vulkan software)
         run: |
           set +e
-          timeout 120 xvfb-run -a env \
+          timeout 180 xvfb-run -a env \
             VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
             ./godot --path project --rendering-method mobile --rendering-driver vulkan \
             --audio-driver Dummy --resolution 480x270 \
@@ -252,7 +327,7 @@ jobs:
       - name: Rekam alur animasi lompat (headless)
         run: |
           set +e
-          timeout 120 ./godot --headless --path project \
+          timeout 180 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_jump_trace.gd" 2>&1 | tee jump-trace.log
           STATUS=${PIPESTATUS[0]}
           set -e
@@ -317,7 +392,7 @@ jobs:
       - name: Tes speed, boost dan anti-meluncur
         run: |
           set +e
-          timeout 120 ./godot --headless --path project \
+          timeout 180 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_speed.gd" 2>&1 | tee speed-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
@@ -327,28 +402,28 @@ jobs:
           fi
           grep -F '[speed-test] HASIL: OK' speed-test.log
 
-      - name: Render sinar bulan dan occlusion (Mobile Vulkan)
+      - name: Render sinar matahari dan occlusion (Mobile Vulkan)
         run: |
           set +e
           timeout 180 xvfb-run -a env \
             VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
             ./godot --path project --rendering-method mobile --rendering-driver vulkan \
             --audio-driver Dummy --resolution 480x270 \
-            --script "$GITHUB_WORKSPACE/tools/test_god_rays.gd" 2>&1 | tee god-rays.log
+            --script "$GITHUB_WORKSPACE/tools/test_sun_rays.gd" 2>&1 | tee sun-rays.log
           STATUS=${PIPESTATUS[0]}
           set -e
-          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' god-rays.log; then
-            tail -60 god-rays.log | while IFS= read -r line; do echo "::error::$line"; done
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' sun-rays.log; then
+            tail -60 sun-rays.log | while IFS= read -r line; do echo "::error::$line"; done
             exit 1
           fi
-          grep -F '[god-rays-test] HASIL: OK' god-rays.log
+          grep -F '[sun-rays-test] HASIL: OK' sun-rays.log
 
-      - name: Simpan screenshot sinar bulan
+      - name: Simpan screenshot sinar matahari
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: moon-rays-screenshots
-          path: ~/.local/share/godot/app_userdata/**/moon-rays-test.png
+          name: sun-rays-screenshots
+          path: ~/.local/share/godot/app_userdata/**/sun-rays-test.png
 
       - name: Simpan screenshot motion flair
         if: always()
@@ -377,7 +452,7 @@ jobs:
       - name: Tes audio mixer, jarak, panning, occlusion dan langkah
         run: |
           set +e
-          timeout 120 ./godot --headless --audio-driver Dummy --path project \
+          timeout 180 ./godot --headless --audio-driver Dummy --path project \
             --script "$GITHUB_WORKSPACE/tools/test_audio.gd" 2>&1 | tee audio-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
@@ -387,29 +462,153 @@ jobs:
           fi
           grep -F '[audio-test] HASIL: OK' audio-test.log
 
-      - name: Render malam, bintang, bulan dan keterbacaan tanah (Mobile Vulkan)
+      - name: Render langit senja, awan, matahari dan keterbacaan tanah (Mobile Vulkan)
         run: |
           set +e
-          timeout 120 xvfb-run -a env \
+          timeout 180 xvfb-run -a env \
             VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
             ./godot --path project --rendering-method mobile --rendering-driver vulkan \
             --audio-driver Dummy --resolution 480x270 \
-            --script "$GITHUB_WORKSPACE/tools/test_night.gd" 2>&1 | tee night-test.log
+            --script "$GITHUB_WORKSPACE/tools/test_dusk.gd" 2>&1 | tee dusk-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
-          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' night-test.log; then
-            tail -50 night-test.log | while IFS= read -r line; do echo "::error::$line"; done
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' dusk-test.log; then
+            tail -50 dusk-test.log | while IFS= read -r line; do echo "::error::$line"; done
             exit 1
           fi
-          grep -F '[night-test] HASIL: OK' night-test.log
+          grep -F '[dusk-test] HASIL: OK' dusk-test.log
 
-      - name: Simpan screenshot malam
+      - name: Simpan screenshot senja
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: night-screenshots
-          path: ~/.local/share/godot/app_userdata/**/night-*-test.png
+          name: dusk-screenshots
+          path: ~/.local/share/godot/app_userdata/**/dusk-*-test.png
           if-no-files-found: ignore
+
+      # Render avatar dari kamera pemain (0,4 m / 0,85 m / 2,2 m + pose jalan):
+      # bug material & kain hanya terlihat dari gambar, bukan dari angka.
+      - name: Render avatar dekat (Mobile Vulkan software)
+        if: always()
+        run: |
+          set +e
+          timeout 240 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --script "$GITHUB_WORKSPACE/tools/render_mannequin.gd" 2>&1 | tee avatar-render.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' avatar-render.log; then
+            tail -60 avatar-render.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[avatar-render-test] HASIL: OK' avatar-render.log
+
+      # Empat sudut pandang dunia (pemandangan/jalan/tebing/laut) supaya bentuk
+      # bukit, jalur tanah, tebing, dan laut benar-benar terlihat di gambar.
+      - name: Render pemandangan dunia (Mobile Vulkan software)
+        if: always()
+        run: |
+          set +e
+          timeout 300 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --script "$GITHUB_WORKSPACE/tools/render_world.gd" 2>&1 | tee world-render.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' world-render.log; then
+            tail -60 world-render.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[world-render-test] HASIL: OK' world-render.log
+
+      - name: Simpan screenshot dunia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: world-screenshots
+          path: ~/.local/share/godot/app_userdata/**/world-*-test.png
+          if-no-files-found: ignore
+
+      - name: Simpan screenshot avatar
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: avatar-screenshots
+          path: ~/.local/share/godot/app_userdata/**/avatar-*-test.png
+          if-no-files-found: ignore
+
+      # Angka-angka penting selalu dikirim sebagai komentar (ringkasan kegagalan
+      # hanya jalan saat gagal, jadi tanpa ini nilai diagnostik hilang di run
+      # yang hijau — dan justru itu yang perlu dilihat saat mencari sisa bug).
+      - name: Ringkasan angka (komentar commit)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "### angka penting (run $GITHUB_RUN_ID, commit \`${GITHUB_SHA:0:7}\`)"
+            echo
+            echo '```'
+            grep -hE '\[skin-test\]|kulit:|biaya avatar|camera-zoom-test|gerak klip|tinggi avatar|katalog klip' \
+              skin-test.log zoom-test.log performance-test.log avatar-render.log 2>/dev/null | tail -40
+            grep -hE '\[scenery-test\]|\[world-render-test\]' \
+              scenery-test.log world-render.log 2>/dev/null | tail -30
+            grep -hE '\[dusk-test\]|\[sun-rays-test\]' \
+              dusk-test.log sun-rays.log 2>/dev/null | tail -10
+            echo '```'
+            if [ -s fetch-assets.log ]; then
+              echo
+              echo '### aset biner (ekor log)'
+              echo
+              echo '```'
+              tail -6 fetch-assets.log
+              echo '```'
+            fi
+          } > numbers.md
+          jq -Rs '{body: .}' numbers.md > numbers.json
+          gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/comments" \
+            --input numbers.json --jq '.html_url' || echo "komentar angka gagal"
+
+      # Pratinjau untuk pemeriksa: screenshot dikecilkan jadi JPEG lalu ditempel
+      # base64 di komentar commit (artefak & log GitHub tidak bisa diunduh dari
+      # luar CI). Satu gambar = satu komentar supaya tidak kena batas 64 KB.
+      - name: Pratinjau render (komentar commit)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s globstar nullglob
+          SHOTS=(~/.local/share/godot/app_userdata/**/avatar-*-test.png \
+            ~/.local/share/godot/app_userdata/**/world-*-test.png \
+            ~/.local/share/godot/app_userdata/**/casting-*-test.png)
+          if [ ${#SHOTS[@]} -eq 0 ]; then
+            echo "tidak ada screenshot untuk pratinjau"
+            exit 0
+          fi
+          mkdir -p preview
+          cp "${SHOTS[@]}" preview/
+          ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/make_preview.gd" -- "$PWD/preview" 560 \
+            > /dev/null 2>&1 || true
+          for jpg in preview/*.jpg; do
+            [ -f "$jpg" ] || continue
+            SIZE=$(stat -c%s "$jpg")
+            # Lewati yang terlalu besar: satu komentar maksimal 64 KB.
+            [ "$SIZE" -le 42000 ] || { echo "lewat: $jpg ($SIZE B)"; continue; }
+            NAME=$(basename "$jpg")
+            {
+              echo "### pratinjau: $NAME"
+              echo
+              echo '```'
+              base64 -w 0 "$jpg"
+              echo
+              echo '```'
+            } > body.md
+            jq -Rs '{body: .}' body.md > body.json
+            gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/comments" \
+              --input body.json --jq '.html_url' || echo "komentar $NAME gagal"
+          done
 
       - name: Tes warmup GPU, skip, boot marker dan cleanup (Mobile Vulkan)
         run: |
@@ -524,12 +723,33 @@ jobs:
 
       - name: Ringkasan kegagalan
         if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           for log in *.log build/*.log; do
             [ -f "$log" ] || continue
             echo "::error::--- $log"
             tail -25 "$log" | while IFS= read -r line; do echo "::error::$line"; done
           done
+          # Log GitHub (API) tidak bisa diunduh dari luar, dan anotasi hanya
+          # memuat 25-60 baris terakhir. Jadi saat gagal, seluruh log dikirim
+          # sebagai komentar commit supaya bisa dibaca utuh.
+          {
+            echo "### Log lengkap (run $GITHUB_RUN_ID, commit \`${GITHUB_SHA:0:7}\`)"
+            echo
+            for log in *.log build/*.log; do
+              [ -f "$log" ] || continue
+              echo '```'
+              echo "=== $log ==="
+              tail -c 24000 "$log"
+              echo '```'
+            done
+          } > comment.md
+          head -c 60000 comment.md > comment-cut.md
+          mv comment-cut.md comment.md
+          jq -Rs '{body: .}' comment.md > comment.json
+          gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/comments" \
+            --input comment.json --jq '.html_url' || echo "komentar gagal dikirim"
 
       - name: Terbitkan build ke GitHub Release
         env:

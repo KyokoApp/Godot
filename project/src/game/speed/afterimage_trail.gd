@@ -1,5 +1,7 @@
 extends Node3D
-## Bekas pose beku mannequin: geometri sama, tanpa animasi/tekstur/bayangan.
+## Bekas pose beku karakter: geometri sama, tanpa animasi/tekstur/bayangan.
+## Pose diambil dari kerangka AVATAR (yang terlihat), bukan rig animasi UAL yang
+## tidak digambar; kalau salah ambil, bayangan akan berpose beda dari badannya.
 
 const Character = preload("res://src/game/mannequin.gd")
 const SHADER = preload("res://src/game/speed/afterimage.gdshader")
@@ -58,16 +60,20 @@ func _rebuild() -> void:
 	_ages.clear()
 	_meshes.clear()
 	_next = 0
-	_source = character.skeleton
+	_source = character.avatar
 	# Godot emits this after all modifiers, before skin upload and pose restoration.
 	# Unlike CastLayer's signal, it also fires during ordinary non-casting locomotion.
 	var capture := _capture.bind(_source)
 	if not _source.skeleton_updated.is_connected(capture):
 		_source.skeleton_updated.connect(capture)
-	for node in character.find_children("*", "MeshInstance3D", true, false):
-		var mesh := node as MeshInstance3D
-		if mesh.is_visible_in_tree():
-			_meshes.append(mesh)
+	# Lapisan yang benar-benar terlihat adalah kulit beranimasi; menyalin mesh
+	# dalam berarti bayangannya memakai geometri tanpa bahan kulit.
+	_meshes = character.visible_meshes()
+	if _meshes.is_empty():
+		for node in character.avatar.find_children("*", "MeshInstance3D", true, false):
+			var mesh := node as MeshInstance3D
+			if mesh.is_visible_in_tree():
+				_meshes.append(mesh)
 	for index in range(3):
 		_build_ghost()
 

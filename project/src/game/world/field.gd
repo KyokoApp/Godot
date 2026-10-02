@@ -15,6 +15,10 @@ const HEIGHT_AMPLITUDE := 0.55
 const GRASS_COLOR := Color("8fce63")
 const GRASS_DARK := Color("6aa845")
 const DIRT_COLOR := Color("c9a873")
+# Jalan tanah berliku (digambar shader, tanpa mesh/collision tambahan).
+const PATH_WIDTH := 2.1
+const PATH_CURVE := 14.0
+const PATH_FREQUENCY := 0.085
 
 var _heights := PackedFloat32Array()
 var _material: ShaderMaterial
@@ -31,6 +35,11 @@ func _ready() -> void:
 	_material.set_shader_parameter("edge_color", DIRT_COLOR)
 	_material.set_shader_parameter("half_size", HALF)
 	_material.set_shader_parameter("edge_begin", HALF - 4.5)
+	_material.set_shader_parameter("path_color", DIRT_COLOR)
+	_material.set_shader_parameter("path_width", PATH_WIDTH)
+	_material.set_shader_parameter("path_curve", PATH_CURVE)
+	_material.set_shader_parameter("path_frequency", PATH_FREQUENCY)
+	_material.set_shader_parameter("path_enabled", true)
 	_heights.resize((CELLS + 1) * (CELLS + 1))
 	for z in range(CELLS + 1):
 		for x in range(CELLS + 1):

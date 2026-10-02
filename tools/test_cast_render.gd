@@ -3,7 +3,7 @@ extends SceneTree
 
 const Catalog = preload("res://src/game/animation/catalog.gd")
 const Character = preload("res://src/game/mannequin.gd")
-const Night = preload("res://src/game/environment/night_environment.gd")
+const Dusk = preload("res://src/game/environment/dusk_environment.gd")
 var _failures := 0
 var _processed := 0
 
@@ -27,6 +27,31 @@ func _capture(character: Character) -> Image:
 	return root.get_texture().get_image()
 
 
+## Posisi tulang seluruh badan (3 angka per tulang), dipakai untuk menilai
+## pemulihan pose dari ANGKANYA, bukan dari piksel: bahan kulit berdenyut
+## mengikuti TIME, jadi gambarnya berubah sendiri walau badannya diam.
+func _pose_snapshot(character: Character) -> PackedFloat32Array:
+	var skeleton := character.skeleton
+	var data := PackedFloat32Array()
+	data.resize(skeleton.get_bone_count() * 3)
+	for bone in range(skeleton.get_bone_count()):
+		var position := skeleton.get_bone_pose_position(bone)
+		data[bone * 3] = position.x
+		data[bone * 3 + 1] = position.y
+		data[bone * 3 + 2] = position.z
+	return data
+
+
+## Selisih tulang terburuk terhadap pose acuan (meter).
+func _pose_gap(rest: PackedFloat32Array, character: Character) -> float:
+	var skeleton := character.skeleton
+	var worst := 0.0
+	for bone in range(skeleton.get_bone_count()):
+		var wanted := Vector3(rest[bone * 3], rest[bone * 3 + 1], rest[bone * 3 + 2])
+		worst = maxf(worst, wanted.distance_to(skeleton.get_bone_pose_position(bone)))
+	return worst
+
+
 func _difference(first: Image, second: Image) -> int:
 	var changed := 0
 	for y in range(first.get_height()):
@@ -41,12 +66,20 @@ func _difference(first: Image, second: Image) -> int:
 func _run() -> void:
 	var world := Node3D.new()
 	root.add_child(world)
+	# Latar polos, bukan langit senja: awan bergerak mengikuti TIME, dan gerakan
+	# latar itu ikut terhitung sebagai "piksel berubah" sehingga uji pemulihan
+	# pose jadi rapuh (pernah gagal padahal posenya benar).
 	var environment := WorldEnvironment.new()
-	environment.environment = Night.make_environment()
+	environment.environment = Environment.new()
+	environment.environment.background_mode = Environment.BG_COLOR
+	environment.environment.background_color = Color(0.10, 0.12, 0.18)
+	environment.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	environment.environment.ambient_light_color = Color(0.62, 0.68, 0.86)
+	environment.environment.ambient_light_energy = 0.58
 	world.add_child(environment)
-	var light := Night.make_moonlight()
+	var light := Dusk.make_sunlight()
 	world.add_child(light)
-	light.look_at_from_position(Vector3.ZERO, -Night.MOON_DIRECTION)
+	light.look_at_from_position(Vector3.ZERO, -Dusk.SUN_DIRECTION)
 	var camera := Camera3D.new()
 	world.add_child(camera)
 	camera.position = Vector3(2.3, 1.7, 3.2)
@@ -75,6 +108,7 @@ func _test_clip(character: Character) -> void:
 		character.animation.play(Catalog.play_name(motion), 0)
 		character.animation.advance(0.2)
 		var before: Image = await _capture(character)
+		var rest := _pose_snapshot(character)
 		character.start_cast()
 		character.cast_layer._physics_process(0.20)
 		var cast: Image = await _capture(character)
@@ -83,5 +117,8 @@ func _test_clip(character: Character) -> void:
 		cast.save_png("user://casting-" + motion + "-test.png")
 		character.cast_layer._physics_process(0.4)
 		var after: Image = await _capture(character)
-		_check(_difference(before, after) < 15, "Pose tidak pulih setelah casting: " + motion)
-		print("[cast-render-test] ", motion, " changed pixels=", changed)
+		var gap := _pose_gap(rest, character)
+		_check(gap < 0.001, "Pose tidak pulih setelah casting: %s (selisih %.4f m)"
+			% [motion, gap])
+		print("[cast-render-test] ", motion, " changed pixels=", changed,
+			" selisih pose pulih=%.5f m" % gap)

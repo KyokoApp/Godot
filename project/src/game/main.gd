@@ -1,16 +1,18 @@
 extends Node3D
-## Padang latihan 100 m × 100 m berumput + mannequin UAL dengan katalog animasi
-## lengkap (85 klip dari UAL1 + UAL2). Karakter lain (Miku, Kanna) sudah dihapus.
+## Padang rumput 100 m × 100 m + mannequin UAL berkulit beranimasi yang
+## digerakkan katalog animasi lengkap (85 klip UAL1 + UAL2) lewat retarget, plus
+## goyangan kain/rambut simulasi verlet.
 
 const Field = preload("res://src/game/world/field.gd")
+const Scenery = preload("res://src/game/world/scenery.gd")
 const Fence = preload("res://src/game/world/boundary_fence.gd")
 const Grass = preload("res://src/game/grass_field.gd")
 const Player = preload("res://src/game/player.gd")
-const Mannequin = preload("res://src/game/mannequin.gd")
+const Character = preload("res://src/game/mannequin.gd")
 const Orbit = preload("res://src/game/orbit_camera.gd")
 const Joystick = preload("res://src/game/virtual_joystick.gd")
-const Night = preload("res://src/game/environment/night_environment.gd")
-const MoonRays = preload("res://src/game/god_rays/moon_rays.gd")
+const Dusk = preload("res://src/game/environment/dusk_environment.gd")
+const SunRays = preload("res://src/game/god_rays/sun_rays.gd")
 const WorldAudio = preload("res://src/game/audio/world_audio.gd")
 const Footsteps = preload("res://src/game/audio/footsteps.gd")
 const FootFire = preload("res://src/game/foot_fire/foot_fire_trail.gd")
@@ -43,12 +45,13 @@ var warmup_complete := false
 var warmup_report: Dictionary = {}
 var _previous_occlusion := false
 var _field: Field
+var _scenery: Scenery
 var _grass: Grass
 var _player: Player
-var _visual: Mannequin
+var _visual: Character
 var _orbit: Orbit
 var _sun: DirectionalLight3D
-var _moon_rays: MoonRays
+var _sun_rays: SunRays
 var _audio: WorldAudio
 var _footsteps: Footsteps
 var _foot_fire: FootFire
@@ -85,17 +88,22 @@ func _ready() -> void:
 
 func _build_environment() -> void:
 	var world_environment := WorldEnvironment.new()
-	world_environment.name = "NightEnvironment"
-	world_environment.environment = Night.make_environment()
+	world_environment.name = "DuskEnvironment"
+	world_environment.environment = Dusk.make_environment()
 	add_child(world_environment)
-	_sun = Night.make_moonlight()
+	_sun = Dusk.make_sunlight()
 	add_child(_sun)
-	_sun.look_at_from_position(Vector3.ZERO, -Night.MOON_DIRECTION)
+	_sun.look_at_from_position(Vector3.ZERO, -Dusk.SUN_DIRECTION)
 
 
 func _build_world() -> void:
 	_field = Field.new()
 	add_child(_field)
+	# Pemandangan di luar pagar: bukit, tebing, laut, reruntuhan batu, titik
+	# cahaya — disusun seperti ilustrasi layar muat. Tanpa collision, jadi
+	# gameplay di dalam padang tidak berubah.
+	_scenery = Scenery.new()
+	add_child(_scenery)
 	add_child(Fence.new())
 
 
@@ -103,7 +111,7 @@ func _build_player() -> void:
 	_player = Player.new()
 	_player.field = _field
 	add_child(_player)
-	_visual = Mannequin.new()
+	_visual = Character.new()
 	_visual.name = "Visual"
 	_visual.position.y = -Player.HEIGHT * 0.5
 	_player.add_child(_visual)
@@ -126,9 +134,9 @@ func _build_grass() -> void:
 
 
 func _build_effects() -> void:
-	_moon_rays = MoonRays.new()
-	_moon_rays.camera = _orbit.camera
-	_orbit.camera.add_child(_moon_rays)
+	_sun_rays = SunRays.new()
+	_sun_rays.camera = _orbit.camera
+	_orbit.camera.add_child(_sun_rays)
 	_audio = WorldAudio.new()
 	_audio.listener = _orbit.camera
 	add_child(_audio)
@@ -145,7 +153,7 @@ func _build_effects() -> void:
 	add_child(_foot_fire)
 	_speed_aura = SpeedAura.new()
 	_speed_aura.character = _visual
-	_speed_aura.environment = get_node("NightEnvironment").environment
+	_speed_aura.environment = get_node("DuskEnvironment").environment
 	add_child(_speed_aura)
 	_pet = FirePet.new()
 	_pet.player = _player
@@ -274,9 +282,10 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 	title.add_theme_color_override("font_color", Color.WHITE)
 	content.add_child(title)
 	_performance = PerformancePanel.new()
-	_performance.rays = _moon_rays
+	_performance.rays = _sun_rays
 	_performance.sun = _sun
 	_performance.grass = _grass
+	_performance.character = _visual
 	content.add_child(_performance)
 	_graphics_drawer.hide()
 
@@ -357,7 +366,7 @@ func _input(event: InputEvent) -> void:
 func _physics_process(delta: float) -> void:
 	if _orbit == null or _player == null:
 		return
-	_orbit.follow(_player.global_position + Vector3(0, 0.55, 0), delta)
+	_orbit.follow(_player.global_position + _orbit.focus_offset, delta)
 	_footsteps.update_motion(delta, _player.move_speed)
 	_speed_aura.update_motion(delta, _player.move_speed,
 		_player.boosted and _player.grounded)

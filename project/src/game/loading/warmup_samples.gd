@@ -1,6 +1,6 @@
 extends RefCounted
-## Render resource asli: material tanah, rumput MultiMesh, mannequin ber-skinning,
-## lapisan tubuh atas, tapak api, aura cepat, dan sinar bulan.
+## Render resource asli: material tanah, rumput MultiMesh, avatar ber-skinning,
+## lapisan tubuh atas, tapak api, aura cepat, dan sinar matahari.
 
 const Field = preload("res://src/game/world/field.gd")
 const Character = preload("res://src/game/mannequin.gd")
@@ -9,7 +9,7 @@ const Projectile = preload("res://src/game/fire_projectile.gd")
 const Burst = preload("res://src/game/fire_burst.gd")
 const FootFire = preload("res://src/game/foot_fire/foot_fire_trail.gd")
 const SpeedAura = preload("res://src/game/speed/speed_aura.gd")
-const MoonRays = preload("res://src/game/god_rays/moon_rays.gd")
+const SunRays = preload("res://src/game/god_rays/sun_rays.gd")
 const STAGES := 14
 
 
@@ -20,7 +20,7 @@ static func populate(stage: int, world: Node3D, game: Node3D) -> void:
 	elif stage == 1 or stage == 2:
 		_grass(world, game, stage == 2)
 	elif stage <= 6:
-		_mannequin(world, stage)
+		_avatar(world, stage)
 	elif stage == 7:
 		_spirit(world)
 	elif stage == 8:
@@ -62,7 +62,7 @@ static func _grass(world: Node3D, game: Node3D, far: bool) -> void:
 		_add_grass(world, distant.get("_mesh"), distant.get("_material"), Vector3(-25, 0, 0))
 
 
-static func _mannequin(world: Node3D, stage: int) -> void:
+static func _avatar(world: Node3D, stage: int) -> void:
 	var character := Character.new()
 	world.add_child(character)
 	if stage == 3:
@@ -113,7 +113,7 @@ static func _speed(world: Node3D, game: Node3D, with_ghosts: bool) -> void:
 	character.set_locomotion("Sprint_Loop", 1.0)
 	var trail := SpeedAura.new()
 	trail.character = character
-	var environment := game.get_node("NightEnvironment") as WorldEnvironment
+	var environment := game.get_node("DuskEnvironment") as WorldEnvironment
 	trail.environment = environment.environment
 	world.add_child(trail)
 	trail.update_motion(0.11, 15, with_ghosts)
@@ -125,7 +125,7 @@ static func _speed(world: Node3D, game: Node3D, with_ghosts: bool) -> void:
 
 
 static func _rays(world: Node3D) -> void:
-	var rays := MoonRays.new()
+	var rays := SunRays.new()
 	world.add_child(rays)
 	rays.set_process(false)
 	rays.visible = true

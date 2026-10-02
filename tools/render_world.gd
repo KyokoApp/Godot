@@ -1,0 +1,79 @@
+extends SceneTree
+## Render pemandangan dunia dari beberapa sudut lebar, supaya bisa dinilai mata
+## apakah sudah mirip ilustrasi layar muat (bukit, tebing, laut, jalan,
+## reruntuhan, titik cahaya). Angka tidak bisa menilai "mirip", jadi gambar ini
+## yang dikirim ke komentar commit CI.
+##
+## Tiga sudut sengaja dipilih seperti komposisi ilustrasi:
+##   * "pemandangan" : dari bukit di dalam padang, menghadap barat ke laut
+##   * "jalan"       : sejajar jalan tanah, seperti pemain berjalan pulang
+##   * "tebing"      : menghadap tebing batu di timur
+
+const Orbit = preload("res://src/game/orbit_camera.gd")
+var _failures := 0
+
+
+func _init() -> void:
+	call_deferred("_run")
+
+
+func _run() -> void:
+	var game: Node3D = load("res://src/game/main.tscn").instantiate()
+	root.add_child(game)
+	for _frame in range(90):
+		await physics_frame
+		if (game.get("_player") as CharacterBody3D).is_on_floor():
+			break
+	var orbit: Orbit = game.get("_orbit")
+	if orbit == null:
+		print("::error::kamera orbit tidak ditemukan")
+		quit(1)
+		return
+	orbit.exclusions = []
+	# Efek yang menutupi pandangan disembunyikan; yang dinilai di sini dunianya.
+	for node_name in ["_pet", "_speed_aura", "_foot_fire", "_sun_rays", "_banner"]:
+		var effect: Node = game.get(node_name)
+		if effect is Node3D:
+			(effect as Node3D).visible = false
+		if effect != null:
+			effect.set_process(false)
+	var player: CharacterBody3D = game.get("_player")
+	# Sudut pandang mengikuti komposisi ilustrasi: dari tempat tinggi menghadap
+	# laut di barat, lalu jalan, tebing di timur, dan laut dari tepi padang.
+	var views := [
+		{"name": "pemandangan", "distance": 58.0, "yaw": PI * 0.5, "pitch": 0.34,
+			"offset": Vector3(0.0, 5.0, 0.0)},
+		{"name": "jalan", "distance": 16.0, "yaw": PI * 1.25, "pitch": 0.08,
+			"offset": Vector3(0.0, 3.0, 0.0)},
+		{"name": "tebing", "distance": 34.0, "yaw": -PI * 0.5, "pitch": 0.22,
+			"offset": Vector3(6.0, 6.0, 0.0)},
+		{"name": "laut", "distance": 70.0, "yaw": PI * 0.5, "pitch": 0.30,
+			"offset": Vector3(-24.0, 8.0, 0.0)},
+	]
+	for view: Dictionary in views:
+		orbit.focus_offset = view["offset"]
+		orbit.distance = float(view["distance"])
+		orbit.yaw = float(view["yaw"])
+		orbit.pitch = float(view["pitch"])
+		for _frame in range(30):
+			await physics_frame
+		await _capture("world-%s" % view["name"])
+	var scenery: Node = game.get("_scenery")
+	print("[world-render-test] pemandangan: ",
+		"ada" if scenery != null else "TIDAK ADA",
+		", bagian=", scenery.get_child_count() if scenery != null else 0)
+	print("[world-render-test] HASIL: ", "OK" if _failures == 0 else "GAGAL")
+	game.queue_free()
+	for _frame in range(4):
+		await process_frame
+	quit(0 if _failures == 0 else 1)
+
+
+func _capture(name: String) -> void:
+	for _frame in range(3):
+		await process_frame
+	await RenderingServer.frame_post_draw
+	var image := root.get_texture().get_image()
+	var path := "user://%s-test.png" % name
+	image.save_png(path)
+	print("[world-render-test] ", path, " ", image.get_width(), "x", image.get_height())
