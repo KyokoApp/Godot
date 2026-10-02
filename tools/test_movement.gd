@@ -68,8 +68,22 @@ func _run() -> void:
 		"Gait tidak kembali ke Idle saat berhenti: " + player.gait)
 	_check(player.select_gait(0.0, "Walk_Loop") == "Idle_Loop",
 		"Histeresis masih menahan klip jalan saat kecepatan nol")
-	_check(player.select_gait(3.0, "Jog_Fwd_Loop") == "Jog_Fwd_Loop",
-		"Histeresis Jog hilang (berkedip antar klip)")
+	# Histeresis: klip tetap dipilih selama kecepatan masih di dalam bandnya.
+	# Batas band sekarang DIHITUNG dari kecepatan alami tiap klip (hasil ukur
+	# tulang kaki), jadi yang diuji adalah sifat histeresisnya, bukan angka
+	# kecepatan yang bisa bergeser kalau aset animasi diganti.
+	var bands: Array = player.call("_gait_bands")
+	var jog_band := {}
+	for entry in bands:
+		if str(entry["clip"]) == "Jog_Fwd_Loop":
+			jog_band = entry
+	_check(not jog_band.is_empty(), "Band Jog tidak terbentuk dari ukuran klip")
+	if not jog_band.is_empty():
+		var middle: float = (float(jog_band["min"]) + float(jog_band["max"])) * 0.5
+		_check(player.select_gait(middle, "Jog_Fwd_Loop") == "Jog_Fwd_Loop",
+			"Histeresis Jog hilang (berkedip antar klip)")
+		_check(player.select_gait(float(jog_band["max"]) + 2.0, "Jog_Fwd_Loop")
+			!= "Jog_Fwd_Loop", "Klip lari tidak pernah dipakai")
 	_check(int(stick.get("_finger")) == -1, "Analog tidak disembunyikan setelah dilepas")
 	_touch(stick, 2, center, true)
 	_drag(stick, 2, center + Vector2(0, -86))

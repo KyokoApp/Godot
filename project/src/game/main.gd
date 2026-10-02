@@ -202,26 +202,30 @@ func _build_hud() -> void:
 	_attack.tooltip_text = "Serangan combo: tekan berulang untuk lanjut"
 	layer.add_child(_attack)
 	# Serang sengaja TIDAK di pojok: dulu pas di sudut layar dan susah ditekan
-	# dengan ibu jari. Sekarang tombolnya berhenti ±130 px dari tepi kanan/bawah
-	# (zona nyaman ibu jari), dan tombol lain disebar melengkung di sekitarnya
-	# dengan jarak lega supaya tidak salah pencet.
+	# dengan ibu jari. Sekarang tombolnya berhenti ±130-200 px dari tepi
+	# kanan/bawah (zona nyaman ibu jari), dan tombol lain disebar melengkung di
+	# sekitarnya dengan jarak lega supaya tidak salah pencet.
+	# BATASAN: posisi ditulis sebagai offset piksel dari pojok kanan-bawah, dan
+	# CI menguji HUD di 640x360 sementara HP memakai 1280x720. Jadi offset
+	# vertikal dibatasi ±300 px supaya TENGAH setiap tombol tetap masuk layar di
+	# kedua ukuran (tes menyentuh tombol pada titik tengahnya).
 	_place(_attack, Control.PRESET_BOTTOM_RIGHT, -200, -200)
 	_attack.pressed.connect(_attack_action)
 	_fire_button = _rune("TEMBAK", FIRE_DIAMETER, FIRE_ICON)
 	_fire_button.name = "FireRune"
 	_fire_button.tooltip_text = "Tembakan api pet"
 	layer.add_child(_fire_button)
-	_place(_fire_button, Control.PRESET_BOTTOM_RIGHT, -360, -215)
+	_place(_fire_button, Control.PRESET_BOTTOM_RIGHT, -360, -180)
 	_fire_button.pressed.connect(_fire_action)
 	_jump = _rune("LOMPAT", ACTION_DIAMETER, JUMP_ICON)
 	_jump.name = "JumpRune"
 	layer.add_child(_jump)
-	_place(_jump, Control.PRESET_BOTTOM_RIGHT, -196, -370)
+	_place(_jump, Control.PRESET_BOTTOM_RIGHT, -196, -300)
 	_jump.pressed.connect(_player.request_jump)
 	_crouch = _rune("JONGKOK", ACTION_DIAMETER, CROUCH_ICON)
 	_crouch.name = "CrouchRune"
 	layer.add_child(_crouch)
-	_place(_crouch, Control.PRESET_BOTTOM_RIGHT, -470, -215)
+	_place(_crouch, Control.PRESET_BOTTOM_RIGHT, -470, -180)
 	_crouch.pressed.connect(_toggle_crouch)
 	_speed_button = SpeedButton.new()
 	_speed_button.name = "SpeedBoost"
@@ -231,7 +235,7 @@ func _build_hud() -> void:
 	# 0 dan tombol ini jadi nol piksel (tidak bisa ditekan sama sekali).
 	_speed_button.custom_minimum_size = Vector2(SPEED_DIAMETER, SPEED_DIAMETER)
 	layer.add_child(_speed_button)
-	_place(_speed_button, Control.PRESET_BOTTOM_RIGHT, -460, -330)
+	_place(_speed_button, Control.PRESET_BOTTOM_RIGHT, -460, -300)
 	_speed_button.pressed.connect(_toggle_speed)
 	# Dash: dorongan lurus sebentar, animasi Melee_Hook (gerakannya memang seperti
 	# dash di game aksi). Ditaruh di atas tombol serang, mudah dijangkau.
@@ -239,7 +243,7 @@ func _build_hud() -> void:
 	_dash.name = "DashRune"
 	_dash.tooltip_text = "Dash: menerjang lurus sebentar"
 	layer.add_child(_dash)
-	_place(_dash, Control.PRESET_BOTTOM_RIGHT, -330, -390)
+	_place(_dash, Control.PRESET_BOTTOM_RIGHT, -330, -300)
 	_dash.pressed.connect(_dash_action)
 	_build_graphics_drawer(layer)
 	_panel = AnimationPanel.new()

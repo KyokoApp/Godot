@@ -316,9 +316,15 @@ func _gait_bands() -> Array:
 
 func _band_for(speed: float) -> String:
 	var bands := _gait_bands()
+	if bands.is_empty():
+		return IDLE
 	for entry in bands:
 		if speed >= float(entry["min"]) and speed <= float(entry["max"]):
 			return str(entry["clip"])
+	# Di bawah band pertama = Idle. Tanpa cabang ini kecepatan nol jatuh ke
+	# fallback klip TERCEPAT, jadi pemain yang berhenti berpose lari.
+	if speed < float(bands[0]["min"]):
+		return IDLE
 	return GAIT_CLIPS[GAIT_CLIPS.size() - 1]
 
 
