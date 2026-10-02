@@ -13,8 +13,13 @@ const ROW_ACTIVE := Color(0.36, 0.28, 0.56)
 const TEXT_COLOR := Color("e9e4f7")
 const DIM_COLOR := Color("9d98b5")
 const REEL_HOLD := 1.6
+## Jendela kecil di tengah layar, bukan fullscreen: daftar 85 klip cukup discroll.
+const WINDOW_MAX := Vector2(620, 520)
+const WINDOW_RATIO := Vector2(0.90, 0.78)
 
 var character: Mannequin
+var _backdrop: ColorRect
+var _window: PanelContainer
 var _rows: Dictionary[String, Button] = {}
 var _order: PackedStringArray = PackedStringArray()
 var _status: Label
@@ -37,23 +42,37 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	visible = false
 	_build()
+	get_viewport().size_changed.connect(_resize_window)
 
 
 func _build() -> void:
-	var backdrop := ColorRect.new()
-	backdrop.color = PANEL_COLOR
-	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(backdrop)
-	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# Latar gelap transparan; sentuh di luarnya = tutup (tidak memakai layar penuh
+	# sebagai panel, jadi game tetap kelihatan di belakang).
+	_backdrop = ColorRect.new()
+	_backdrop.name = "PanelBackdrop"
+	_backdrop.color = Color(0.02, 0.02, 0.04, 0.55)
+	_backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_backdrop)
+	_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_backdrop.gui_input.connect(_backdrop_input)
+	_window = PanelContainer.new()
+	_window.name = "AnimationWindow"
+	var frame := StyleBoxFlat.new()
+	frame.bg_color = PANEL_COLOR
+	frame.border_color = Color(1, 1, 1, 0.14)
+	frame.set_border_width_all(1)
+	frame.set_corner_radius_all(24)
+	_window.add_theme_stylebox_override("panel", frame)
+	add_child(_window)
+	_resize_window()
 	var margin := MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 24)
-	add_child(margin)
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		margin.add_theme_constant_override("margin_" + side, 16)
+	_window.add_child(margin)
 	var column := VBoxContainer.new()
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_theme_constant_override("separation", 10)
+	column.add_theme_constant_override("separation", 8)
 	margin.add_child(column)
 	column.add_child(_title())
 	column.add_child(_toolbar())
@@ -63,10 +82,15 @@ func _build() -> void:
 	_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(_detail)
 	_scroll = ScrollContainer.new()
+	_scroll.name = "ClipScroll"
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+	# Sedikit toleransi supaya ketukan ringan saat menekan baris tidak dianggap drag.
+	_scroll.scroll_deadzone = 8
 	column.add_child(_scroll)
 	_list = VBoxContainer.new()
+	_list.mouse_filter = Control.MOUSE_FILTER_PASS
 	_list.add_theme_constant_override("separation", 6)
 	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.add_child(_list)
@@ -83,13 +107,13 @@ func _toolbar() -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	_reel_button = _button("PUTAR SEMUA", _toggle_reel)
-	_repeat_button = _button("ULANGI: NYALA", _toggle_repeat)
-	_slow_button = _button("KECEPATAN: 1×", _toggle_slow)
+	_repeat_button = _button("ULANGI", _toggle_repeat)
+	_slow_button = _button("1×", _toggle_slow)
 	row.add_child(_reel_button)
 	row.add_child(_repeat_button)
 	row.add_child(_slow_button)
 	var close := _button("TUTUP", close_panel)
-	close.custom_minimum_size = Vector2(140, 52)
+	close.custom_minimum_size = Vector2(120, 48)
 	row.add_child(close)
 	return row
 
@@ -107,11 +131,14 @@ func _button(text: String, action: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.focus_mode = Control.FOCUS_NONE
-	button.custom_minimum_size = Vector2(210, 52)
+	button.custom_minimum_size = Vector2(140, 48)
 	button.add_theme_font_size_override("font_size", 18)
 	var style := StyleBoxFlat.new()
 	style.bg_color = ROW_COLOR
-	style.set_corner_radius_all(12)
+	# Pil penuh (radius = setengah tinggi) supaya tidak ada sudut kotak.
+	style.set_corner_radius_all(26)
+	style.content_margin_left = 14
+	style.content_margin_right = 14
 	button.add_theme_stylebox_override("normal", style)
 	var active := style.duplicate() as StyleBoxFlat
 	active.bg_color = ROW_ACTIVE
@@ -138,8 +165,12 @@ func _row(clip: String, label: String) -> Button:
 	var button := _button("%s  ·  %s  ·  %.2f s" % [label, clip, length],
 		func() -> void: _select(clip, false))
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.clip_text = true
 	button.custom_minimum_size = Vector2(0, 54)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# PASS: baris tetap bisa ditekan, tapi drag diteruskan ke daftar sehingga
+	# scroll bisa dimulai di mana saja — bukan hanya di pojok/tepi.
+	button.mouse_filter = Control.MOUSE_FILTER_PASS
 	_rows[clip] = button
 	return button
 
@@ -149,8 +180,32 @@ func contains_point(point: Vector2) -> bool:
 	return Rect2(Vector2.ZERO, size).has_point(local)
 
 
+func _resize_window() -> void:
+	if _window == null:
+		return
+	var view := get_viewport_rect().size
+	var target := Vector2(minf(WINDOW_MAX.x, view.x * WINDOW_RATIO.x),
+		minf(WINDOW_MAX.y, view.y * WINDOW_RATIO.y))
+	_window.custom_minimum_size = target
+	_window.size = target
+	_window.position = (view - target) * 0.5
+
+
+func _backdrop_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed \
+			and not (event as InputEventScreenTouch).canceled:
+		close_panel()
+
+
+func window_rect() -> Rect2:
+	if _window == null:
+		return Rect2()
+	return Rect2(_window.global_position, _window.size)
+
+
 func open() -> void:
 	visible = true
+	_resize_window()
 	_refresh_active()
 	_report()
 
@@ -174,12 +229,12 @@ func _toggle_reel() -> void:
 
 func _toggle_repeat() -> void:
 	_repeat = not _repeat
-	_repeat_button.text = "ULANGI: NYALA" if _repeat else "ULANGI: MATI"
+	_repeat_button.text = "ULANGI" if _repeat else "SEKALI"
 
 
 func _toggle_slow() -> void:
 	_slow = not _slow
-	_slow_button.text = "KECEPATAN: 0,5×" if _slow else "KECEPATAN: 1×"
+	_slow_button.text = "0,5×" if _slow else "1×"
 	character.set_playback_scale(0.5 if _slow else 1.0)
 
 
@@ -218,10 +273,12 @@ func _refresh_active() -> void:
 		var selected := clip == character.clip
 		var style := StyleBoxFlat.new()
 		style.bg_color = ROW_ACTIVE if selected else ROW_COLOR
-		style.set_corner_radius_all(12)
+		style.set_corner_radius_all(26)
+		style.content_margin_left = 14
+		style.content_margin_right = 14
 		_rows[clip].add_theme_stylebox_override("normal", style)
-	_detail.text = "%s — %s" % [character.current_label(),
-		character.description_of(character.clip)]
+	_detail.text = "%s — %s\nGeser di daftar untuk scroll; ketuk luar jendela untuk tutup." % [
+		character.current_label(), character.description_of(character.clip)]
 
 
 func _process(delta: float) -> void:

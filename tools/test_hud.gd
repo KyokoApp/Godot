@@ -4,6 +4,7 @@ extends SceneTree
 
 var _failures := 0
 var _fingers: Dictionary = {}
+var _last_drag: Dictionary = {}
 
 
 func _init() -> void:
@@ -46,12 +47,16 @@ func _touch(index: int, point: Vector2, pressed: bool, canceled := false) -> voi
 		_fingers[index] = true
 	else:
 		_fingers.erase(index)
+	_last_drag[index] = point
 
 
 func _drag(index: int, point: Vector2) -> void:
 	var event := InputEventScreenDrag.new()
 	event.index = index
 	event.position = point
+	# Perangkat asli mengisi relative; ScrollContainer memakai selisih posisi.
+	event.relative = point - _last_drag.get(index, point)
+	_last_drag[index] = point
 	root.push_input(event, true)
 
 
@@ -65,6 +70,7 @@ func _run() -> void:
 			break
 	_check(player != null and player.is_on_floor(), "Pemain tidak menyentuh tanah")
 	var attack: Button = game.get("_attack")
+	var fire: Button = game.get("_fire_button")
 	var jump: Button = game.get("_jump")
 	var crouch: Button = game.get("_crouch")
 	var catalog: Button = game.get("_catalog_button")
@@ -74,7 +80,9 @@ func _run() -> void:
 	var visual: Node3D = game.get("_visual")
 	var pet: Node3D = game.get("_pet")
 	var pet_id := pet.get_instance_id()
-	_check(attack.size.is_equal_approx(Vector2(88, 88)), "Tombol serangan bukan 88px")
+	_check(attack.size.is_equal_approx(Vector2(136, 136)), "Tombol serang bukan 136px")
+	_check(attack.get("caption") == "SERANG", "Tombol serang tidak berlabel SERANG")
+	_check(fire.get("caption") == "TEMBAK", "Tombol tembak api tidak berlabel")
 	_check(game.find_child("CharacterSwitcher", true, false) == null,
 		"Pemilih karakter lama masih ada")
 	_check(game.get("_minimap") == null, "Minimap lama masih ada")
@@ -90,35 +98,47 @@ func _run() -> void:
 	# Jongkok.
 	_touch(10, crouch.get_global_rect().get_center(), true)
 	_touch(10, crouch.get_global_rect().get_center(), false)
-	_check(player.crouching and crouch.text == "BERDIRI", "Tombol jongkok tidak bekerja")
+	_check(player.crouching and crouch.get("caption") == "BERDIRI",
+		"Tombol jongkok tidak bekerja")
 	_touch(10, crouch.get_global_rect().get_center(), true)
 	_touch(10, crouch.get_global_rect().get_center(), false)
-	_check(not player.crouching and crouch.text == "JONGKOK", "Jongkok tidak dibatalkan")
-	# Lompat: animasi menolak lebih dulu, badan menyusul.
-	var before_velocity := player.velocity.y
+	_check(not player.crouching and crouch.get("caption") == "JONGKOK",
+		"Jongkok tidak dibatalkan")
+	# Serangan combo: tiap tekan ganti klip, lalu berputar dari awal lagi.
+	var attack_point := attack.get_global_rect().get_center()
+	for expected in ["Punch_Jab", "Punch_Cross", "Melee_Hook", "Punch_Jab"]:
+		_touch(2, attack_point, true)
+		_touch(2, attack_point, false)
+		_check(visual.clip == expected,
+			"Combo tidak berurutan: harusnya %s, dapat %s" % [expected, visual.clip])
+	_check(int(player.get("combo_index")) == 1, "Indeks combo tidak berputar")
+	_check(orbit.get("_touches").is_empty(), "Tombol serang ikut memutar kamera")
+	# Lompat: langsung melompat, animasi tolakan menempel di badan yang sudah naik.
+	var before_y := player.position.y
 	_touch(11, jump.get_global_rect().get_center(), true)
 	_touch(11, jump.get_global_rect().get_center(), false)
-	_check(player.get("_jump_delay") > 0.0, "Lompat tidak memulai fase tolakan")
+	_check(player.velocity.y > 1.0, "Lompat tidak langsung mendorong badan")
 	_check(visual.clip == "Jump_Start", "Animasi tolakan bukan Jump_Start")
-	_check(is_equal_approx(player.velocity.y, before_velocity),
-		"Badan melompat sebelum animasi menolak")
-	for frame in range(20):
+	var climbed := false
+	for frame in range(12):
 		await physics_frame
-	_check(player.velocity.y > 1.0 or not player.is_on_floor(), "Badan tidak ikut melompat")
+		if player.position.y > before_y + 0.05:
+			climbed = true
+	_check(climbed, "Badan tidak naik setelah lompat")
 	for frame in range(90):
 		await physics_frame
 		if player.is_on_floor():
 			break
 	_check(player.is_on_floor(), "Pemain tidak mendarat kembali")
-	# Serangan pet + analog jalan bersamaan.
+	# Tembakan api pet + analog jalan bersamaan.
 	var left := root.get_visible_rect().size * Vector2(0.22, 0.66)
-	var hit := attack.get_global_rect().get_center()
+	var hit := fire.get_global_rect().get_center()
 	_touch(0, left, true)
 	_drag(0, left + Vector2(86, 0))
 	_touch(1, hit, true)
 	_check(pet.get("casting"), "Jari kedua gagal casting sambil jalan")
-	_check(stick.get("direction").x > 0.9, "Attack menghentikan joystick")
-	_check(orbit.get("_touches").is_empty(), "Attack ikut memutar kamera")
+	_check(stick.get("direction").x > 0.9, "Tombol tembak menghentikan joystick")
+	_check(orbit.get("_touches").is_empty(), "Tombol tembak ikut memutar kamera")
 	var start := player.position
 	for frame in range(12):
 		await physics_frame
@@ -133,6 +153,35 @@ func _run() -> void:
 	_touch(12, catalog.get_global_rect().get_center(), true)
 	_touch(12, catalog.get_global_rect().get_center(), false)
 	_check(panel.visible, "Tombol katalog tidak membuka panel")
+	var window: Control = panel.find_child("AnimationWindow", true, false)
+	var view_size := root.get_visible_rect().size
+	_check(window != null, "Jendela panel animasi tidak terbentuk")
+	if window != null:
+		_check(window.size.x <= view_size.x * 0.95 and window.size.y <= view_size.y * 0.85,
+			"Panel animasi masih memenuhi layar: %s" % window.size)
+		_check(window.size.y > 200.0, "Jendela panel terlalu kecil: %s" % window.size)
+	var scroll: ScrollContainer = panel.find_child("ClipScroll", true, false)
+	_check(scroll != null, "Daftar klip tidak bisa discroll")
+	if scroll != null and window != null:
+		scroll.scroll_vertical = 0
+		for frame in range(3):
+			await process_frame
+		var window_rect := window.get_global_rect()
+		# Titik awal di bagian bawah jendela: jelas berada di dalam daftar klip.
+		var from := Vector2(window_rect.get_center().x,
+			window_rect.position.y + window_rect.size.y * 0.72)
+		_touch(15, from, true)
+		for step in range(8):
+			_drag(15, from + Vector2(0, -26 * (step + 1)))
+			await process_frame
+		_touch(15, from + Vector2(0, -208), false)
+		for frame in range(3):
+			await process_frame
+		_check(scroll.scroll_vertical > 20,
+			"Drag di tengah daftar tidak men-scroll (harus bisa dari mana saja)")
+		scroll.scroll_vertical = 0
+		for frame in range(2):
+			await process_frame
 	var rows: Dictionary = panel.get("_rows")
 	_check(rows.size() == 85, "Panel tidak memuat 85 klip: %d" % rows.size())
 	var row: Button = rows["Sword_Regular_Combo"]

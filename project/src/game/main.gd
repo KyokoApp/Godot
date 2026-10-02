@@ -27,6 +27,11 @@ const FIRE_ICON = preload("res://src/game/ui/flame.svg")
 const SETTINGS_ICON = preload("res://src/game/ui/settings.svg")
 const SPEED_ICON = preload("res://src/game/ui/speed.svg")
 const SPAWN := Vector2(0, 7)
+## HUD gaya game aksi: satu tombol serang besar, tombol aksi bulat di sekitarnya.
+const ATTACK_DIAMETER := 136.0
+const FIRE_DIAMETER := 96.0
+const ACTION_DIAMETER := 92.0
+const RUNE_DIAMETER := 72.0
 
 var warmup_requested := false
 var warmup_complete := false
@@ -46,6 +51,7 @@ var _speed_aura: SpeedAura
 var _pet: FirePet
 var _joystick: Joystick
 var _attack: RuneButton
+var _fire_button: RuneButton
 var _settings: RuneButton
 var _speed_button: SpeedButton
 var _jump: Button
@@ -156,97 +162,83 @@ func _build_hud() -> void:
 	_player.joystick = _joystick
 	_banner = ClipBanner.new()
 	_banner.character = _visual
-	_banner.extra = "geser kiri = jalan · tombol LOMPAT/JONGKOK"
+	_banner.extra = "geser kiri = jalan/lari · SERANG = combo · TEMBAK = api"
 	layer.add_child(_banner)
 	_banner.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	_banner.offset_left = 20
 	_banner.offset_top = 20
-	_settings = RuneButton.new()
+	# --- sudut kanan atas: dua tombol kecil bulat ---------------------------
+	_settings = _rune("GRAFIK", RUNE_DIAMETER, SETTINGS_ICON)
 	_settings.name = "GraphicsRune"
 	_settings.compact = true
-	_settings.glyph = SETTINGS_ICON
 	_settings.tooltip_text = "Pengaturan grafik"
 	layer.add_child(_settings)
-	_settings.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	_settings.offset_left = -80
-	_settings.offset_right = -20
-	_settings.offset_top = 20
-	_settings.offset_bottom = 80
+	_place(_settings, Control.PRESET_TOP_RIGHT, -92, 104)
 	_settings.pressed.connect(_toggle_graphics)
-	_catalog_button = _text_button("ANIMASI (85)", 150)
+	_catalog_button = _rune("ANIM", RUNE_DIAMETER)
+	_catalog_button.name = "CatalogRune"
+	_catalog_button.tooltip_text = "Pilih animasi (%d klip)" % Catalog.clip_count()
 	layer.add_child(_catalog_button)
-	_catalog_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	_catalog_button.offset_left = -252
-	_catalog_button.offset_right = -96
-	_catalog_button.offset_top = 20
-	_catalog_button.offset_bottom = 78
+	_place(_catalog_button, Control.PRESET_TOP_RIGHT, -92, 20)
 	_catalog_button.pressed.connect(_toggle_panel)
-	_attack = RuneButton.new()
-	_attack.name = "FireAttack"
-	_attack.glyph = FIRE_ICON
-	_attack.tooltip_text = "Serangan api pet"
+	# --- kanan bawah: serang besar + tombol aksi di sekelilingnya -----------
+	_attack = _rune("SERANG", ATTACK_DIAMETER)
+	_attack.name = "AttackRune"
+	_attack.tooltip_text = "Serangan combo: tekan berulang untuk lanjut"
 	layer.add_child(_attack)
-	_attack.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	_attack.offset_left = -196
-	_attack.offset_right = -108
-	_attack.offset_top = -184
-	_attack.offset_bottom = -96
+	_place(_attack, Control.PRESET_BOTTOM_RIGHT, -172, -172)
 	_attack.pressed.connect(_attack_action)
-	_jump = _text_button("LOMPAT", 96)
+	_fire_button = _rune("TEMBAK", FIRE_DIAMETER, FIRE_ICON)
+	_fire_button.name = "FireRune"
+	_fire_button.tooltip_text = "Tembakan api pet"
+	layer.add_child(_fire_button)
+	_place(_fire_button, Control.PRESET_BOTTOM_RIGHT, -300, -176)
+	_fire_button.pressed.connect(_fire_action)
+	_jump = _rune("LOMPAT", ACTION_DIAMETER)
+	_jump.name = "JumpRune"
 	layer.add_child(_jump)
-	_jump.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	_jump.offset_left = -196
-	_jump.offset_right = -108
-	_jump.offset_top = -292
-	_jump.offset_bottom = -204
+	_place(_jump, Control.PRESET_BOTTOM_RIGHT, -152, -300)
 	_jump.pressed.connect(_player.request_jump)
-	_crouch = _text_button("JONGKOK", 96)
+	_crouch = _rune("JONGKOK", ACTION_DIAMETER)
+	_crouch.name = "CrouchRune"
 	layer.add_child(_crouch)
-	_crouch.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	_crouch.offset_left = -308
-	_crouch.offset_right = -212
-	_crouch.offset_top = -184
-	_crouch.offset_bottom = -96
+	_place(_crouch, Control.PRESET_BOTTOM_RIGHT, -354, -292)
 	_crouch.pressed.connect(_toggle_crouch)
 	_speed_button = SpeedButton.new()
 	_speed_button.name = "SpeedBoost"
-	_speed_button.glyph = SPEED_ICON
-	_speed_button.tooltip_text = "Toggle kecepatan ×1,35 / normal"
+	_speed_button.caption = "LARI"
+	_speed_button.tooltip_text = "Lari kencang ×1,35 / normal"
 	layer.add_child(_speed_button)
-	_speed_button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	_speed_button.offset_left = -308
-	_speed_button.offset_right = -212
-	_speed_button.offset_top = -292
-	_speed_button.offset_bottom = -204
+	_place(_speed_button, Control.PRESET_BOTTOM_RIGHT, -260, -300)
 	_speed_button.pressed.connect(_toggle_speed)
 	_build_graphics_drawer(layer)
 	_panel = AnimationPanel.new()
 	_panel.character = _visual
 	layer.add_child(_panel)
 	_panel.closed.connect(_close_panel)
-	_joystick.input_exclusion = _panel
+	# Analog tidak boleh ikut aktif saat tombol HUD ditekan.
+	_joystick.input_exclusions = [_panel, _graphics_drawer, _settings, _catalog_button,
+		_attack, _fire_button, _jump, _crouch, _speed_button]
 	_orbit.exclusions = [_panel, _graphics_drawer, _settings, _catalog_button,
-		_attack, _jump, _crouch, _speed_button]
+		_attack, _fire_button, _jump, _crouch, _speed_button]
 
 
-func _text_button(text: String, width: float) -> Button:
-	var button := Button.new()
-	button.text = text
-	button.focus_mode = Control.FOCUS_NONE
-	button.custom_minimum_size = Vector2(width, 84)
-	button.add_theme_font_size_override("font_size", 17)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.19, 0.14, 0.29, 0.86)
-	style.border_color = Color(1, 1, 1, 0.18)
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(14)
-	button.add_theme_stylebox_override("normal", style)
-	var active := style.duplicate() as StyleBoxFlat
-	active.bg_color = Color(0.33, 0.24, 0.48, 0.95)
-	button.add_theme_stylebox_override("pressed", active)
-	button.add_theme_stylebox_override("hover", active)
-	button.add_theme_color_override("font_color", Color("e7ddfa"))
+func _rune(caption: String, diameter: float, glyph: Texture2D = null) -> RuneButton:
+	# Semua tombol aksi bulat — tidak ada kotak di HUD.
+	var button := RuneButton.new()
+	button.caption = caption
+	button.glyph = glyph
+	button.custom_minimum_size = Vector2(diameter, diameter)
 	return button
+
+
+func _place(control: Control, preset: int, left: float, top: float) -> void:
+	var diameter := maxf(control.custom_minimum_size.x, control.custom_minimum_size.y)
+	control.set_anchors_and_offsets_preset(preset)
+	control.offset_left = left
+	control.offset_top = top
+	control.offset_right = left + diameter
+	control.offset_bottom = top + diameter
 
 
 func _build_graphics_drawer(layer: CanvasLayer) -> void:
@@ -266,8 +258,8 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 	_graphics_drawer.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	_graphics_drawer.offset_left = -334
 	_graphics_drawer.offset_right = -24
-	_graphics_drawer.offset_top = 100
-	_graphics_drawer.offset_bottom = 470
+	_graphics_drawer.offset_top = 196
+	_graphics_drawer.offset_bottom = 566
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 12)
 	_graphics_drawer.add_child(content)
@@ -287,6 +279,10 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 # --------------------------------------------------------------- aksi HUD --
 
 func _attack_action() -> void:
+	_player.attack()
+
+
+func _fire_action() -> void:
 	_pet.attack()
 
 
@@ -298,7 +294,8 @@ func _toggle_speed() -> void:
 
 func _toggle_crouch() -> void:
 	_player.toggle_crouch()
-	_crouch.text = "BERDIRI" if _player.crouching else "JONGKOK"
+	_crouch.caption = "BERDIRI" if _player.crouching else "JONGKOK"
+	_crouch.queue_redraw()
 
 
 func _toggle_panel() -> void:
@@ -325,6 +322,7 @@ func _apply_input_state() -> void:
 	_orbit.reset_touches()
 	_orbit.input_enabled = not overlay
 	_attack.visible = not overlay
+	_fire_button.visible = not overlay
 	_jump.visible = not overlay
 	_crouch.visible = not overlay
 	_speed_button.visible = not overlay
@@ -361,8 +359,8 @@ func _physics_process(delta: float) -> void:
 
 
 func _process(_delta: float) -> void:
-	_attack.cooldown_fraction = clampf(_pet.cooldown / FirePet.COOLDOWN, 0, 1)
-	_attack.queue_redraw()
+	_fire_button.cooldown_fraction = clampf(_pet.cooldown / FirePet.COOLDOWN, 0, 1)
+	_fire_button.queue_redraw()
 	if _speed_button.boosted != _player.boosted:
 		_speed_button.boosted = _player.boosted
 		_speed_button.queue_redraw()

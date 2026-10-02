@@ -16,7 +16,11 @@ const HEIGHT := 1.8
 const RADIUS := 0.3
 const GRAVITY := 20.0
 const JUMP_VELOCITY := 7.0
-const JUMP_ANTICIPATION := 0.22
+## Pose tolakan hanya sekejap; setelah itu klip melayang yang mengambil alih.
+const JUMP_POSE_TIME := 0.30
+## Combo serangan: tiap tekan tombol lanjut ke klip berikutnya lalu berulang.
+const ATTACK_COMBO := ["Punch_Jab", "Punch_Cross", "Melee_Hook"]
+const COMBO_RESET := 1.1
 const ACCEL := 16.0
 const TURN_SPEED := 13.0
 const BOOST_MULTIPLIER := 1.35
@@ -54,8 +58,10 @@ var move_speed := 0.0
 var speed_scale := 1.0
 var gait := IDLE
 var grounded := true
-var _jump_delay := 0.0
+var combo_index := 0
 var _airborne := false
+var _air_time := 0.0
+var _combo_timer := 0.0
 
 
 func _ready() -> void:
@@ -83,12 +89,26 @@ func spawn(point: Vector2) -> void:
 
 
 func request_jump() -> void:
-	# Animasi menolak dulu (Jump_Start), badan menyusul setelah JUMP_ANTICIPATION.
-	if _airborne or _jump_delay > 0.0 or not is_on_floor():
+	# Langsung melompat: dorongan dipasang saat itu juga, pose tolakan hanya
+	# menempel di badan yang sudah naik. Tidak ada jeda menahan pemain.
+	if _airborne or not is_on_floor():
 		return
-	_jump_delay = JUMP_ANTICIPATION
+	velocity.y = JUMP_VELOCITY
+	_airborne = true
+	_air_time = 0.0
 	if visual != null:
 		visual.play_action(JUMP_START)
+
+
+func attack() -> String:
+	# Combo: tiap tekan ganti klip serangan, sama seperti game aksi lain.
+	if visual == null:
+		return ""
+	var clip: String = ATTACK_COMBO[combo_index]
+	combo_index = (combo_index + 1) % ATTACK_COMBO.size()
+	_combo_timer = COMBO_RESET
+	visual.play_action(clip)
+	return clip
 
 
 func toggle_crouch() -> void:
@@ -105,8 +125,10 @@ func _physics_process(delta: float) -> void:
 	var stick := Vector2.ZERO
 	if joystick != null and joystick.input_enabled:
 		stick = joystick.direction
-	if _jump_delay > 0.0:
-		stick = Vector2.ZERO
+	if _combo_timer > 0.0:
+		_combo_timer = maxf(0.0, _combo_timer - delta)
+		if _combo_timer <= 0.0:
+			combo_index = 0
 	var desired := _desired_speed(stick)
 	gait = select_gait(desired, gait)
 	var target := _target_velocity(stick, desired)
@@ -114,13 +136,12 @@ func _physics_process(delta: float) -> void:
 		Vector2(target.x, target.z), 1.0 - exp(-ACCEL * delta))
 	if is_on_floor():
 		velocity = Vector3(blended.x, 0.0, blended.y)
-		_update_jump(delta)
 	else:
 		velocity = Vector3(blended.x, velocity.y - GRAVITY * delta, blended.y)
 	move_speed = Vector2(velocity.x, velocity.z).length()
 	move_and_slide()
 	_keep_inside()
-	_update_air_state()
+	_update_air_state(delta)
 	_apply_animation(desired)
 	if move_speed > 0.05 and grounded:
 		var facing := atan2(-velocity.x, -velocity.z)
@@ -152,11 +173,12 @@ func _target_velocity(stick: Vector2, desired: float) -> Vector3:
 
 
 func _apply_animation(desired: float) -> void:
-	# Aksi sekali jalan, lompat, dan klip pilihan panel tidak boleh ditimpa.
-	if visual.is_busy() or _jump_delay > 0.0:
+	# Aksi sekali jalan dan klip pilihan panel tidak boleh ditimpa.
+	if visual.is_busy():
 		return
 	if _airborne:
-		if visual.gait != AIR_FALL:
+		# Pose tolakan hanya sebentar; setelah itu klip melayang.
+		if visual.gait != AIR_FALL and _air_time > JUMP_POSE_TIME:
 			visual.set_air_clip(AIR_FALL, 1.1)
 		return
 	var scale := 1.0
@@ -181,21 +203,16 @@ func select_gait(speed: float, current: String) -> String:
 	return "Sprint_Loop"
 
 
-func _update_jump(delta: float) -> void:
-	if _jump_delay <= 0.0:
-		return
-	_jump_delay -= delta
-	if _jump_delay <= 0.0:
-		velocity.y = JUMP_VELOCITY
-		_airborne = true
-
-
-func _update_air_state() -> void:
+func _update_air_state(delta: float) -> void:
 	grounded = is_on_floor()
 	if not _airborne:
 		return
-	if grounded:
+	_air_time += delta
+	# Mendarat hanya sah saat badan benar-benar turun; kalau tidak, frame pertama
+	# setelah tolakan (yang masih menempel lantai) akan salah dibaca sebagai mendarat.
+	if grounded and velocity.y <= 0.0:
 		_airborne = false
+		_air_time = 0.0
 		visual.play_action(JUMP_LAND)
 	elif not visual.is_busy() and visual.gait != AIR_FALL:
 		visual.set_air_clip(AIR_FALL, 1.1)
