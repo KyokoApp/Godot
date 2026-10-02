@@ -2,6 +2,8 @@ extends SceneTree
 
 const PerfPanel = preload("res://src/game/performance_panel.gd")
 const Character = preload("res://src/game/character/aurelia_visual.gd")
+const Springs = preload("res://src/game/animation/cloth_springs.gd")
+const ClothDynamics = preload("res://src/game/animation/cloth_dynamics.gd")
 ## Anggaran per frame untuk simulasi kain/rambut + retarget seluruh kerangka
 ## (60 fps = 16,7 ms; ini menjaga supaya tidak menghabiskan sepertiganya).
 const AVATAR_BUDGET_MS := 6.0
@@ -15,7 +17,19 @@ func _init() -> void:
 ## Biaya CPU per frame untuk goyangan kain/rambut + retarget pose. Avatar FBX
 ## jauh lebih berat daripada mannequin (148 tulang, 44 rantai kain, 52 pasangan
 ## retarget), dan inilah pengeluaran tetap baru di HP — jadi harus dijaga angka.
-func _test_avatar_cost(character: Character) -> void:
+func _test_avatar_cost(character: Character, panel: PerfPanel) -> void:
+	# Mode ringan = penjaga bentuk kain satu iterasi; mode normal dua.
+	var wrapper: ClothDynamics = character.cloths[0]
+	panel.light_mode = true
+	panel.apply_settings()
+	var light_iterations: int = wrapper.springs.iteration_count()
+	panel.light_mode = false
+	panel.apply_settings()
+	var full_iterations: int = wrapper.springs.iteration_count()
+	print("::notice::iterasi kain: ringan=%d normal=%d" % [light_iterations, full_iterations])
+	_check(light_iterations == 1 and full_iterations == Springs.DEFAULT_ITERATIONS,
+		"Kualitas kain tidak mengikuti mode ringan: %d/%d"
+		% [light_iterations, full_iterations])
 	var frames := 200
 	var step := 1.0 / 60.0
 	var cloth_start := Time.get_ticks_usec()
@@ -94,7 +108,7 @@ func _run() -> void:
 		if child.visible:
 			visible_meshes += 1
 	_check(visible_meshes > 0, "Avatar tidak tampil")
-	_test_avatar_cost(character)
+	_test_avatar_cost(character, panel)
 	game.queue_free()
 	await process_frame
 	_check(Engine.max_fps == 0 and is_equal_approx(root.scaling_3d_scale, 1.0),

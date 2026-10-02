@@ -25,6 +25,8 @@ const MAX_DELTA := 1.0 / 30.0
 ## tidak digabung (rok punya banyak panel; tiap panel = satu rantai).
 const MAX_COLLIDER_MARGIN := 0.22
 const GROUND_FRICTION := 0.55
+## Iterasi penjaga bentuk untuk mode normal (mode ringan memakai 1).
+const DEFAULT_ITERATIONS := 2
 ## Kecepatan basis acuan mengejar arah badan (1/detik).
 const BASIS_FOLLOW := 6.0
 
@@ -143,6 +145,16 @@ var _warned := false
 # ------------------------------------------------------------------ setup ----
 
 ## Bangun rantai + kapsul dari rest pose skeleton. Aman dipanggil ulang.
+## Jumlah iterasi penjaga panjang/kekakuan/tabrakan per langkah. Mode ringan
+## memakai 1 (cukup untuk kain yang sudah tenang), mode normal 2.
+func set_iterations(value: int) -> void:
+	_iterations = clampi(value, 1, 4)
+
+
+func iteration_count() -> int:
+	return _iterations
+
+
 func configure(skeleton: Skeleton3D, iterations := 2) -> void:
 	_skeleton = skeleton
 	_iterations = clampi(iterations, 1, 4)

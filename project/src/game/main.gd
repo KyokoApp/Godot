@@ -278,6 +278,7 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 	_performance.rays = _moon_rays
 	_performance.sun = _sun
 	_performance.grass = _grass
+	_performance.character = _visual
 	content.add_child(_performance)
 	_graphics_drawer.hide()
 

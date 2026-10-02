@@ -335,6 +335,14 @@ func is_busy() -> bool:
 	return mode == Mode.ACTION or mode == Mode.SHOWCASE
 
 
+## Dipakai panel grafik "Mode ringan": kain/rambut tetap bergoyang, tapi dengan
+## penjaga bentuk satu iterasi sehingga biaya CPU-nya turun.
+func set_light_cloth(light: bool) -> void:
+	for wrapper in cloths:
+		if wrapper != null:
+			wrapper.set_quality(light)
+
+
 func start_cast() -> void:
 	if cast_layer != null:
 		cast_layer.begin()

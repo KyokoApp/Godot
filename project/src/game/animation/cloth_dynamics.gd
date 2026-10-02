@@ -49,6 +49,14 @@ func simulate(delta: float) -> void:
 		springs.step(delta, _skeleton)
 
 
+## Mode ringan: satu iterasi penjaga bentuk saja. Biaya kain turun hampir
+## separuh, dan karena goyangan tetap dari verlet (bukan penjaga bentuk),
+## gerakannya masih terlihat.
+func set_quality(light: bool) -> void:
+	if springs != null:
+		springs.set_iterations(1 if light else Springs.DEFAULT_ITERATIONS)
+
+
 func set_enabled(value: bool) -> void:
 	if springs != null:
 		springs.set_enabled(value)
