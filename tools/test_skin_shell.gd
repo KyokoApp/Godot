@@ -9,8 +9,9 @@ extends SceneTree
 ##      pada salinannya, jadi lipatan tajam pun tidak pernah menampakkan warna
 ##      mannequin polos,
 ##   4. denyutnya menanggapi kecepatan badan (diam vs lari),
-##   5. gambarnya benar-benar berubah antar frame (animasi, bukan bahan mati) —
-##      diuji dengan merender dan membandingkan piksel.
+##   5. denyut kulit menanggapi kecepatan dan mesh-nya benar-benar bergerak
+##      (janji "gambar berubah antar frame" dinilai di langkah render CI, karena
+##      di mode headless tidak ada gambar yang bisa diambil).
 ##
 ## Nama berkas ini sengaja terpisah dari `test_mannequin.gd` (yang menguji
 ## animasi & kontrol): gerbang kulit bisa gagal sendiri tanpa membingungkan.
@@ -57,7 +58,7 @@ func _run() -> void:
 		_mesh_count(character), character.skin.cover_count(),
 		character.skeleton.get_bone_count(), Catalog.clip_count(), _failures])
 	print("--- diagnostik ---")
-	print(character.status)
+	print("klip=", character.animation.current_animation, " mode=", character.mode)
 	for note in _notes:
 		print(note)
 	quit(0 if _failures == 0 else 1)
