@@ -80,7 +80,7 @@ const COLLIDERS := [
 ]
 
 
-class Collider:
+class Capsule:
 	var bone := -1
 	var from_local := Vector3.ZERO
 	var to_local := Vector3.ZERO
@@ -89,7 +89,7 @@ class Collider:
 	var to_world := Vector3.ZERO
 
 
-class Chain:
+class Strand:
 	var bones := PackedInt32Array()
 	var parent_bone := -1
 	## Partikel 0..n: 0 = pangkal tulang pertama, n = ujung tulang terakhir.
@@ -122,8 +122,8 @@ class Chain:
 		return bones.size()
 
 
-var _chains: Array[Chain] = []
-var _colliders: Array[Collider] = []
+var _chains: Array[Strand] = []
+var _colliders: Array[Capsule] = []
 var _skeleton: Skeleton3D
 var _time := 0.0
 var _iterations := 2
@@ -158,7 +158,7 @@ func configure(skeleton: Skeleton3D, iterations := 2) -> void:
 		push_error("ClothSprings: tidak ada tulang kain/rambut yang cocok")
 	_init_particles(skeleton)
 	_diagnostics = "[cloth] %d rantai, %d tulang, %d kapsul" % [
-		_chain_count(), bone_count(), _colliders.size()]
+		chain_count(), bone_count(), _colliders.size()]
 
 
 ## Kumpulkan tulang per grup. Tulang yang cocok dengan lebih dari satu prefix
@@ -221,7 +221,7 @@ func _build_chain(skeleton: Skeleton3D, group: int, bones: PackedInt32Array) -> 
 	var parent_bone := skeleton.get_bone_parent(bones[0])
 	if parent_bone < 0:
 		return
-	var chain := Chain()
+	var chain := Strand.new()
 	chain.bones = bones
 	chain.parent_bone = parent_bone
 	chain.group = group
@@ -278,7 +278,7 @@ func _build_colliders() -> void:
 		var bone_b := Humanoid.find_bone(_skeleton, entry[1])
 		if bone_a < 0 or bone_b < 0:
 			continue
-		var collider := Collider.new()
+		var collider := Capsule.new()
 		collider.bone = bone_a
 		collider.radius = float(entry[3])
 		var rest_a := _skeleton.get_bone_global_rest(bone_a)
@@ -292,7 +292,7 @@ func _build_colliders() -> void:
 
 ## Pilih kapsul yang mungkin bersinggungan dengan rantai (dihitung sekali dari
 ## rest pose). Tanpa saringan ini tiap partikel harus diuji ke semua kapsul.
-func _attach_colliders(chain: Chain, rest_points: PackedVector3Array) -> void:
+func _attach_colliders(chain: Strand, rest_points: PackedVector3Array) -> void:
 	for index in range(_colliders.size()):
 		var collider := _colliders[index]
 		var rest_a := _skeleton.get_bone_global_rest(collider.bone)
@@ -341,7 +341,7 @@ func step(delta: float, skeleton: Skeleton3D) -> void:
 ## Bentuk acuan rantai: posisi rest yang diambil dari tulang penggantung yang
 ## SEDANG beranimasi. Saat kepala menoleh, rambut ikut arah barunya; tetapi
 ## karena yang ditarik hanya sebagian tiap frame, ayunannya tetap terlihat.
-func _blend_basis(chain: Chain, world: Transform3D, skeleton: Skeleton3D, dt: float) -> void:
+func _blend_basis(chain: Strand, world: Transform3D, skeleton: Skeleton3D, dt: float) -> void:
 	var rigid := world * skeleton.get_bone_global_pose(chain.parent_bone)
 	var target := rigid.basis.orthonormalized()
 	chain.gravity_basis = chain.gravity_basis.slerp(target,
@@ -350,7 +350,7 @@ func _blend_basis(chain: Chain, world: Transform3D, skeleton: Skeleton3D, dt: fl
 		chain.gravity_basis = target
 
 
-func _simulate_chain(chain: Chain, dt: float, world: Transform3D, skeleton: Skeleton3D,
+func _simulate_chain(chain: Strand, dt: float, world: Transform3D, skeleton: Skeleton3D,
 		wind: Vector3) -> void:
 	var rigid := world * skeleton.get_bone_global_pose(chain.parent_bone)
 	chain.points[0] = rigid * chain.rest_local[0]
@@ -378,7 +378,7 @@ func _simulate_chain(chain: Chain, dt: float, world: Transform3D, skeleton: Skel
 
 ## Panjang segmen: hanya partikel anak yang digeser (rantai "ikuti pemimpin"),
 ## cara paling stabil untuk kain yang menggantung.
-func _keep_length(chain: Chain, index: int) -> void:
+func _keep_length(chain: Strand, index: int) -> void:
 	var parent := chain.points[index - 1]
 	var delta := chain.points[index] - parent
 	var distance := delta.length()
@@ -393,7 +393,7 @@ func _keep_length(chain: Chain, index: int) -> void:
 ## penggantung yang SEDANG beranimasi. Karena yang ditarik adalah POSISI (bukan
 ## cuma arah), rantai ikut menyesuaikan saat badan miring: bagian bawah rantai
 ## paling kuat tertarik pulang, jadi bentuk lengkungnya bertahan.
-func _keep_shape(chain: Chain, index: int, k: float) -> void:
+func _keep_shape(chain: Strand, index: int, k: float) -> void:
 	if k <= 0.0:
 		return
 	var rest := chain.gravity_basis * chain.rest_local[index]
@@ -402,7 +402,7 @@ func _keep_shape(chain: Chain, index: int, k: float) -> void:
 	chain.points[index] = chain.points[index - 1] + current.lerp(rest_offset, k)
 
 
-func _collide(chain: Chain, index: int) -> void:
+func _collide(chain: Strand, index: int) -> void:
 	var count := chain.colliders.size()
 	for slot in range(count):
 		if chain.allowed[index * count + slot] == 0:
@@ -417,7 +417,7 @@ func _collide(chain: Chain, index: int) -> void:
 		chain.points[index] = closest + delta * (collider.radius / distance)
 
 
-func _keep_above_ground(chain: Chain, index: int, dt: float) -> void:
+func _keep_above_ground(chain: Strand, index: int, dt: float) -> void:
 	if chain.points[index].y < _ground_y:
 		chain.points[index].y = _ground_y
 	# Gesekan tanah: laju mendatar diserap supaya kain tidak meluncur bebas.
@@ -434,7 +434,7 @@ func _keep_above_ground(chain: Chain, index: int, dt: float) -> void:
 ## basis tulang = (rotasi dari arah rest ke arah partikel) x basis animasinya.
 ## Kedua tulang memakai rumus yang sama supaya tidak ada patahan di sambungan;
 ## karena arahnya diteruskan dari tulang sebelumnya, tidak ada gaya ganda.
-func _write_chain(chain: Chain, skeleton: Skeleton3D, world: Transform3D) -> void:
+func _write_chain(chain: Strand, skeleton: Skeleton3D, world: Transform3D) -> void:
 	var inverse_world := world.affine_inverse()
 	for index in range(chain.bones.size()):
 		var above := chain.parent_bone if index == 0 else chain.bones[index - 1]
