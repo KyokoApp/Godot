@@ -2,13 +2,11 @@ extends VBoxContainer
 ## Pembanding A/B perangkat nyata, bukan janji 60 FPS atau pengukuran GPU.
 
 const SETTINGS := "user://graphics.cfg"
-const Character = preload("res://src/game/character/aurelia_visual.gd")
 
 var rays: MeshInstance3D
 var rays_enabled := true
 var sun: DirectionalLight3D
 var grass: Node3D
-var character: Character
 var light_mode := true
 var grass_enabled := true
 var shadows_enabled := false
@@ -89,10 +87,6 @@ func apply_settings() -> void:
 	if grass != null:
 		grass.visible = grass_enabled
 		grass.set_process(grass_enabled)
-	if character != null:
-		# Goyangan kain/rambut ada di dalam mode ringan, tapi dengan satu iterasi
-		# penjaga bentuk (biaya CPU turun hampir separuh).
-		character.set_light_cloth(light_mode)
 	_quality.text = "Resolusi 3D: " + ("75% (Ringan)" if light_mode else "100% (Normal)")
 	_grass_button.text = "Rumput: " + ("Nyala" if grass_enabled else "Mati (tes FPS)")
 	_shadows.text = "Bayangan: " + ("Nyala" if shadows_enabled else "Mati")

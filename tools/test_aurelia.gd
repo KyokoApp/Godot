@@ -53,6 +53,7 @@ func _run() -> void:
 	_test_cloth_penetration(character)
 	_test_cloth_inertia(character)
 	_test_cloth_no_penetration(character)
+	_test_clip_motion(character)
 	var missing := Humanoid.missing_pairs(character.skeleton, character.avatar)
 	if not missing.is_empty():
 		_notes.append("pasangan hilang: " + ", ".join(missing))
@@ -292,6 +293,52 @@ func _mapped_child(skeleton: Skeleton3D, bone: int) -> int:
 		if skeleton.get_bone_parent(child) == bone:
 			return child
 	return -1
+
+
+## Seberapa besar gerakan ASLI tiap klip (tulang kepala/tangan/pinggul di avatar
+## hasil retarget). Keluhan "pas jongkok kayak difoto" hanya bisa dijawab angka:
+## kalau klip sumbernya sendiri hampir diam, tidak ada simulasi kain yang bisa
+## membuatnya hidup. Nilai di bawah ~0,002 m per frame berarti memang statis.
+func _test_clip_motion(character: Character) -> void:
+	for motion in ["Idle_Loop", "Crouch_Idle_Loop", "Crouch_Fwd_Loop", "Jog_Fwd_Loop"]:
+		var travel := _clip_travel(character, motion)
+		_notes.append("gerak klip %s: %.4f m/frame ujung, %.3f m total" % [motion,
+			travel.x, travel.y])
+
+
+## Gerak per frame terbesar (salah satu tulang) + total jarak semua tulang yang
+## dipantau selama satu putaran klip. Diukur di AVATAR (hasil retarget), jadi
+## sekaligus membuktikan klipnya benar-benar sampai ke tulang avatar.
+func _clip_travel(character: Character, motion: String) -> Vector2:
+	var animation := character.animation.get_animation(motion)
+	if animation == null:
+		return Vector2.ZERO
+	var bones := PackedInt32Array()
+	for name in ["Bip001 Head", "Bip001 L Hand", "Bip001 R Hand", "Bip001 Pelvis"]:
+		var bone := character.avatar.find_bone(name)
+		if bone >= 0:
+			bones.append(bone)
+	if bones.is_empty() or animation.length <= 0.0:
+		return Vector2.ZERO
+	character.set_locomotion(motion, 1.0)
+	character.animation.advance(0.0)
+	var previous := PackedVector3Array()
+	for bone in bones:
+		previous.append(character.avatar.get_bone_global_pose(bone).origin)
+	var rate := 30.0
+	var steps := maxi(int(ceil(animation.length * rate)), 2)
+	var peak := 0.0
+	var total := 0.0
+	for _step in range(steps):
+		character.animation.advance(1.0 / rate)
+		character.retarget.apply()
+		for index in range(bones.size()):
+			var now := character.avatar.get_bone_global_pose(bones[index]).origin
+			var moved := now.distance_to(previous[index])
+			peak = maxf(peak, moved)
+			total += moved
+			previous[index] = now
+	return Vector2(peak, total)
 
 
 ## Kaki tidak boleh menembus tanah di klip berdiri/jalan (skala gerak retarget).

@@ -2,7 +2,7 @@ extends SceneTree
 ## Tapak api 3D dari pose kaki mannequin: kontak berulang, tidak muncul saat
 ## diam/melayang, palet benar, dan kolam stamp tidak bocor.
 
-const Character = preload("res://src/game/character/aurelia_visual.gd")
+const Character = preload("res://src/game/mannequin.gd")
 const Trail = preload("res://src/game/foot_fire/foot_fire_trail.gd")
 var _failures := 0
 
@@ -52,11 +52,6 @@ func _test_contacts() -> void:
 	var minimum := Vector2(INF, INF)
 	var maximum := Vector2(-INF, -INF)
 	var lift_range := Vector2(INF, -INF)
-	# Hitung berapa frame tiap kaki benar-benar memenuhi syarat kontak, supaya
-	# kalau stamp kurang kita tahu apakah gerbang fase tumpuan atau jarak tanah
-	# yang menahan (bukan menebak-nebak lewat 60 baris log terakhir).
-	var in_band := Vector2i.ZERO
-	var in_reach := Vector2i.ZERO
 	stick.set("direction", Vector2.UP)
 	for frame in range(240):
 		await physics_frame
@@ -65,17 +60,9 @@ func _test_contacts() -> void:
 			var gap: float = point.y - ground.surface_height(point.x, point.z)
 			minimum[side] = minf(minimum[side], gap)
 			maximum[side] = maxf(maximum[side], gap)
-			var clearance := character.foot_clearance(side == 0)
-			var reach := maxf(clearance * 0.9, 0.055)
-			if character.foot_stride_lift(side == 0) <= maxf(clearance, 0.04):
-				in_band[side] += 1
-			if gap <= clearance + reach:
-				in_reach[side] += 1
 		var lift := character.foot_stride_lift(true)
 		lift_range.x = minf(lift_range.x, lift)
 		lift_range.y = maxf(lift_range.y, lift)
-	print("::notice::syarat kontak: band=", in_band, " jarak=", in_reach,
-		" clearance=", character.foot_clearance(true))
 	print("::notice::Foot contact min=", minimum, " max=", maximum,
 		" rest=", character.foot_clearance(true), " swing=", lift_range,
 		" stamps=", trail.emitted - before)

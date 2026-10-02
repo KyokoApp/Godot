@@ -3,13 +3,13 @@ extends Node
 
 const Field = preload("res://src/game/world/field.gd")
 const WorldAudio = preload("res://src/game/audio/world_audio.gd")
-const Character = preload("res://src/game/character/aurelia_visual.gd")
+const Mannequin = preload("res://src/game/mannequin.gd")
 const EDGE_DIRT := 45.0
 
 var audio: WorldAudio
 var field: Field
 var body: CharacterBody3D
-var visual: Character
+var visual: Mannequin
 var emitted := 0
 var _last_half := -1
 var _last_clip := ""

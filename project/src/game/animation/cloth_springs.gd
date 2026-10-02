@@ -44,6 +44,13 @@ const BASIS_FOLLOW := 6.0
 ##   gravity   : pengali gravitasi (rambut sedikit lebih ringan dari rok)
 ##   wind      : pengali angin
 ##   weave     : ikut aturan lapisan kain-vs-kain (lihat WEAVE_RADIUS)
+##   hang      : seberapa kuat ujung rantai jatuh ke arah bawah (0..1). Pose
+##               rest model ini adalah pose patung: cape-nya terbentang ke
+##               belakang. Tanpa `hang`, penjaga bentuk menarik kain KEMBALI ke
+##               sudut itu terus-menerus dan hasilnya kaku seperti papan.
+##               `hang` memutar arah acuan tiap segmen ke arah gravitasi, makin
+##               besar di ujung rantai; jadi lekukan/krinyit kain tetap ada tapi
+##               panel benar-benar menggantung.
 ##
 ## Kekakuan kain dipilih rendah (9,5/detik) karena inilah yang membedakan
 ## "kain" dari "karton": dengan rest-shape yang ditarik perlahan, panel baru
@@ -54,21 +61,25 @@ const BASIS_FOLLOW := 6.0
 ## tertarik ke arah gravitasi sehingga leher terlihat kurus dan memanjang.
 ## Leher cukup mengikuti animasi badan seperti tulang tubuh lainnya.
 const GROUPS := [
-	{"prefix": "Bone_Hair", "stiffness": 34.0, "drag": 2.6, "gravity": 1.0,
-		"wind": 0.55, "weave": false},
+	{"prefix": "Bone_Hair", "stiffness": 30.0, "drag": 2.6, "gravity": 1.0,
+		"wind": 0.55, "weave": false, "hang": 0.30},
 	{"prefix": "Bone_Shawl", "stiffness": 9.5, "drag": 1.45, "gravity": 1.0,
-		"wind": 0.85, "weave": true},
-	{"prefix": "Bone_Collar", "stiffness": 30.0, "drag": 2.4, "gravity": 1.0,
-		"wind": 0.7, "weave": true},
-	{"prefix": "Bone_Hip", "stiffness": 40.0, "drag": 3.0, "gravity": 1.0,
-		"wind": 0.5, "weave": true},
+		"wind": 0.85, "weave": true, "hang": 0.90},
+	{"prefix": "Bone_Collar", "stiffness": 28.0, "drag": 2.4, "gravity": 1.0,
+		"wind": 0.7, "weave": true, "hang": 0.40},
+	{"prefix": "Bone_Hip", "stiffness": 34.0, "drag": 3.0, "gravity": 1.0,
+		"wind": 0.5, "weave": true, "hang": 0.75},
 	{"prefix": "Bone_Pendant", "stiffness": 42.0, "drag": 3.2, "gravity": 1.0,
-		"wind": 0.4, "weave": false},
+		"wind": 0.4, "weave": false, "hang": 1.0},
 	{"prefix": "Bone_Earrings", "stiffness": 48.0, "drag": 3.4, "gravity": 1.0,
-		"wind": 0.3, "weave": false},
+		"wind": 0.3, "weave": false, "hang": 1.0},
 	{"prefix": "Flycloak", "stiffness": 12.0, "drag": 1.6, "gravity": 1.0,
-		"wind": 0.9, "weave": true},
+		"wind": 0.9, "weave": true, "hang": 0.90},
 ]
+
+## Bagian rantai teratas masih memakai sudut rest (supaya sambungan ke badan
+## tidak patah); mulai dari pecahan ini ke ujung, jatuh ke arah bawah.
+const HANG_RAMP_FROM := 0.20
 
 ## Tulang kain yang TIDAK boleh disimulasikan. `Bone_ShawlJ01_L` dan
 ## `Bone_ShawlK01_L` menggantung di `Bone_ShawlArmTwistA01_L` (anak
@@ -153,6 +164,8 @@ class Strand:
 	var colliders := PackedInt32Array()
 	var allowed := PackedByteArray()
 	var group := -1
+	## Kekuatan jatuh ke arah gravitasi (lihat GROUPS).
+	var hang := 0.0
 	var stiffness := 20.0
 	var drag := 2.0
 	var gravity := 1.0
@@ -294,6 +307,7 @@ func _build_chain(skeleton: Skeleton3D, group: int, bones: PackedInt32Array) -> 
 	chain.group = group
 	var settings: Dictionary = GROUPS[group]
 	chain.stiffness = float(settings["stiffness"])
+	chain.hang = float(settings["hang"])
 	chain.drag = float(settings["drag"])
 	chain.gravity = float(settings["gravity"])
 	chain.wind = float(settings["wind"])
@@ -590,15 +604,33 @@ func _keep_length(chain: Strand, index: int) -> void:
 
 ## Kekakuan: tarik partikel kembali ke tempat rest-nya, diukur dari tulang
 ## penggantung yang SEDANG beranimasi. Karena yang ditarik adalah POSISI (bukan
-## cuma arah), rantai ikut menyesuaikan saat badan miring: bagian bawah rantai
-## paling kuat tertarik pulang, jadi bentuk lengkungnya bertahan.
+## cuma arah), rantai ikut menyesuaikan saat badan miring.
+##
+## Arah acuan tiap segmen diputar ke arah gravitasi sebesar `hang` (makin besar
+## di ujung rantai). Inilah bedanya kain dengan papan: pose rest model ini
+## membentangkan cape ke belakang, jadi tanpa `hang` penjaga bentuk selalu
+## menariknya kembali ke sudut itu. Dengan `hang`, pangkal tetap mengikuti sudut
+## rest (sambungan ke badan tidak patah) dan ujungnya jatuh ke bawah.
 func _keep_shape(chain: Strand, index: int, k: float) -> void:
 	if k <= 0.0:
 		return
 	var rest := chain.anchor.origin + chain.gravity_basis * chain.rest_local[index]
 	var rest_offset := rest - chain.points[index - 1]
 	var current := chain.points[index] - chain.points[index - 1]
+	if chain.hang > 0.0 and rest_offset.length_squared() > 0.000001:
+		var hang := chain.hang * _hang_ramp(chain, index)
+		if hang > 0.0:
+			rest_offset = rest_offset.normalized().slerp(Vector3.DOWN, hang) \
+				* rest_offset.length()
 	chain.points[index] = chain.points[index - 1] + current.lerp(rest_offset, k)
+
+
+## Berapa besar bagian rantai ini ikut jatuh: 0 di pangkal, 1 di ujung.
+func _hang_ramp(chain: Strand, index: int) -> float:
+	var count := chain.points.size() - 1
+	if count <= 1:
+		return 1.0
+	return smoothstep(HANG_RAMP_FROM, 1.0, float(index) / float(count))
 
 
 ## Dorong partikel keluar dari kapsul. `weaves_only` memilih kapsul kain

@@ -2,13 +2,8 @@ extends Node3D
 ## Kamera dekat, satu jari kanan untuk orbit, dua jari kanan untuk zoom.
 
 const DEFAULT_DISTANCE := 4.0
-## Bisa dizoom sampai benar-benar menempel (0,35 m dari titik pandang di kepala).
-## Titik pandang ada di setinggi kepala, jadi pada jarak ini yang tampak hanya
-## sebagian wajah/rambut — bukan lagi seluruh badan seperti batas 2,4 m dulu.
-const MIN_DISTANCE := 0.35
+const MIN_DISTANCE := 2.4
 const MAX_DISTANCE := 8.0
-## Zoom roda tetikus untuk main di desktop/editor (di HP tetap cubit dua jari).
-const WHEEL_STEP := 1.15
 const MIN_PITCH := 0.10
 const MAX_PITCH := 1.15
 
@@ -19,10 +14,6 @@ var exclusions: Array[Control] = []
 var yaw := 0.0
 var pitch := 0.30
 var distance := DEFAULT_DISTANCE
-## Titik bidik kamera relatif ke pemain. Dulu angka 0,55 ini ditulis di main.gd;
-## sekarang jadi properti supaya tes render bisa membidik leher atau kain tanpa
-## mengubah perilaku permainan (nilainya tidak pernah diubah selain tes).
-var focus_offset := Vector3(0.0, 0.55, 0.0)
 var arm: SpringArm3D
 var camera: Camera3D
 var _touches: Dictionary[int, Vector2] = {}
@@ -73,14 +64,6 @@ func _input(event: InputEvent) -> void:
 					return
 			if _touches.size() < 2:
 				_touches[touch.index] = touch.position
-	elif event is InputEventMouseButton:
-		var button := event as InputEventMouseButton
-		if not button.pressed:
-			return
-		if button.button_index == MOUSE_BUTTON_WHEEL_UP:
-			zoom_by(1.0 / WHEEL_STEP)
-		elif button.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			zoom_by(WHEEL_STEP)
 	elif event is InputEventScreenDrag:
 		var drag := event as InputEventScreenDrag
 		if not _touches.has(drag.index):
@@ -91,19 +74,13 @@ func _input(event: InputEvent) -> void:
 		if _touches.size() == 2:
 			var after := _pinch_length()
 			if before > 8.0 and after > 8.0:
-				zoom_by(before / after)
+				distance = clampf(distance * before / after, MIN_DISTANCE, MAX_DISTANCE)
 		else:
 			var motion := drag.position - previous
 			# Sensitivitas mengikuti lebar viewport, bukan kepadatan pixel perangkat.
 			var sensitivity := TAU / get_viewport().get_visible_rect().size.x
 			yaw = wrapf(yaw - motion.x * sensitivity, -PI, PI)
 			pitch = clampf(pitch + motion.y * sensitivity, MIN_PITCH, MAX_PITCH)
-
-
-## Ubah jarak kamera dengan faktor: < 1 mendekat, > 1 menjauh. Satu tempat
-## untuk semua masukan (cubit, roda tetikus, dan tes) supaya batasnya konsisten.
-func zoom_by(factor: float) -> void:
-	distance = clampf(distance * factor, MIN_DISTANCE, MAX_DISTANCE)
 
 
 func _pinch_length() -> float:
@@ -144,11 +121,6 @@ func _apply_orbit() -> void:
 	rotation.y = yaw
 	arm.rotation.x = -pitch
 	arm.spring_length = distance
-	if camera != null:
-		# Bidang dekat mengikuti jarak: pada 0,1 m jarak tetap, kamera yang sudah
-		# menempel masih memotong wajah/rambut. Saat menjauh, angka kecil justru
-		# membuat z-fighting di kejauhan, jadi nilainya dibatasi 0,03-0,1.
-		camera.near = clampf(distance * 0.15, 0.03, 0.1)
 
 
 func movement_direction(stick: Vector2) -> Vector3:

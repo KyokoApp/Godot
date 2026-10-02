@@ -1,9 +1,9 @@
 extends RefCounted
-## Render resource asli: material tanah, rumput MultiMesh, avatar ber-skinning,
+## Render resource asli: material tanah, rumput MultiMesh, mannequin ber-skinning,
 ## lapisan tubuh atas, tapak api, aura cepat, dan sinar bulan.
 
 const Field = preload("res://src/game/world/field.gd")
-const Character = preload("res://src/game/character/aurelia_visual.gd")
+const Character = preload("res://src/game/mannequin.gd")
 const Spirit = preload("res://src/game/legacy_spirit/spirit_visual.gd")
 const Projectile = preload("res://src/game/fire_projectile.gd")
 const Burst = preload("res://src/game/fire_burst.gd")
@@ -20,7 +20,7 @@ static func populate(stage: int, world: Node3D, game: Node3D) -> void:
 	elif stage == 1 or stage == 2:
 		_grass(world, game, stage == 2)
 	elif stage <= 6:
-		_avatar(world, stage)
+		_mannequin(world, stage)
 	elif stage == 7:
 		_spirit(world)
 	elif stage == 8:
@@ -62,7 +62,7 @@ static func _grass(world: Node3D, game: Node3D, far: bool) -> void:
 		_add_grass(world, distant.get("_mesh"), distant.get("_material"), Vector3(-25, 0, 0))
 
 
-static func _avatar(world: Node3D, stage: int) -> void:
+static func _mannequin(world: Node3D, stage: int) -> void:
 	var character := Character.new()
 	world.add_child(character)
 	if stage == 3:

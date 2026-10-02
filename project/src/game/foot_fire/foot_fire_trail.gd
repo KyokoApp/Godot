@@ -1,13 +1,13 @@
 extends Node3D
 ## Actual ankle/toe poses + floor ray contacts, not a generic ribbon behind the player.
 
-const Character = preload("res://src/game/character/aurelia_visual.gd")
+const Character = preload("res://src/game/mannequin.gd")
 const Field = preload("res://src/game/world/field.gd")
 const MeshFactory = preload("res://src/game/foot_fire/foot_fire_mesh.gd")
 const SHADER = preload("res://src/game/foot_fire/foot_fire.gdshader")
 const MAX_STAMPS := 16
 const LIFETIME := 1.15
-## Tapak api: inti ungu, tengah lavender, ujung sian.
+## Tapak api mannequin: inti ungu, tengah lavender, ujung sian.
 const PALETTE := [Color("6228cc"), Color("ad74ff"), Color("b4efff")]
 
 var character: Character
@@ -68,16 +68,11 @@ func _physics_process(delta: float) -> void:
 
 
 func _sample(side: int) -> void:
-	# Fase tumpuan dinilai terhadap ukuran telapak KARAKTER, bukan angka tetap:
-	# avatar FBX (kaki 4 % lebih pendek, tulang pergelangan 3 cm lebih dekat ke
-	# telapak) berhenti 4 cm lebih tinggi daripada mannequin UAL saat menapak,
-	# sehingga ambang 0.04 yang disetel untuk mannequin tidak pernah tercapai.
-	# Penempatan tapak tetap dari kaki yang menyentuh, bukan pengatur waktu.
-	var clearance := character.foot_clearance(side == 0)
-	var band := maxf(clearance, 0.04) + 0.03
+	# Mocap stance/swing gates the wider contact band needed by retarget proportions.
+	# Placement still comes from the destination foot, never a body-centered timer.
 	var lift := character.foot_stride_lift(side == 0)
-	if lift > band:
-		if lift > band * 1.6:
+	if lift > 0.04:
+		if lift > 0.075:
 			_contact[side] = false
 		return
 	var pose := character.foot_pose(side == 0)
@@ -90,9 +85,9 @@ func _sample(side: int) -> void:
 	var point: Vector3 = hit["position"]
 	var normal: Vector3 = hit["normal"]
 	var distance := pose.origin.y - point.y
+	var clearance := character.foot_clearance(side == 0)
 	# Tidak ada foot IK: pose stance mocap diproyeksikan ke permukaan padang.
-	# Ambang jarak juga diukur dari tebal telapak karakter.
-	var margin := maxf(clearance * 0.9, 0.055)
+	var margin := 0.035
 	if distance > clearance + margin + 0.055 or normal.y < 0.6:
 		_contact[side] = false
 		return

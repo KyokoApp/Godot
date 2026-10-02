@@ -67,6 +67,8 @@ func _run() -> void:
 			"bone": "Bip001 Pelvis", "lift": 0.05},
 		{"distance": 1.30, "name": "kain_belakang", "yaw": PI * 0.25, "pitch": 0.06,
 			"bone": "Bip001 Spine1", "lift": 0.05},
+		{"distance": 1.05, "name": "bokong", "yaw": 0.0, "pitch": 0.02,
+			"bone": "Bip001 Pelvis", "lift": 0.0},
 		{"distance": 2.20, "name": "samping", "yaw": PI * 0.5, "pitch": 0.20},
 		{"distance": 2.20, "name": "belakang", "yaw": 0.0, "pitch": 0.20},
 	]
@@ -99,15 +101,20 @@ func _run() -> void:
 	stick.set("direction", Vector2.ZERO)
 	for frame in range(60):
 		await physics_frame
-	# Jongkok: lewat tombol pemain juga, supaya animasinya konsisten.
+	# Jongkok: lewat tombol pemain juga, supaya animasinya konsisten. Dua pose
+	# direkam: DIAM jongkok (yang dikeluhkan "kayak difoto") dan merangkak maju —
+	# tanpa keduanya, tidak bisa dibedakan klipnya diam atau kainnya kaku.
 	player.toggle_crouch()
-	stick.set("direction", Vector2.UP)
 	orbit.yaw = PI * 0.25
-	orbit.pitch = 0.10
-	orbit.distance = 1.60
-	for frame in range(60):
+	orbit.pitch = 0.06
+	orbit.distance = 1.55
+	for frame in range(70):
 		await physics_frame
 	await _capture("avatar-jongkok")
+	stick.set("direction", Vector2.UP)
+	for frame in range(70):
+		await physics_frame
+	await _capture("avatar-jongkok_jalan")
 	stick.set("direction", Vector2.ZERO)
 	player.toggle_crouch()
 	for frame in range(30):

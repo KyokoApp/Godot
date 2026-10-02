@@ -482,7 +482,7 @@ jobs:
             echo "### angka penting (run $GITHUB_RUN_ID, commit \`${GITHUB_SHA:0:7}\`)"
             echo
             echo '```'
-            grep -hE '\[aurelia-test\]|tembus kain|material: Mat|pasangan hilang|iterasi kain|biaya avatar|camera-zoom-test|arah (lowerarm|calf|hand)' \
+            grep -hE '\[aurelia-test\]|tembus kain|material: Mat|pasangan hilang|iterasi kain|biaya avatar|camera-zoom-test|gerak klip|tinggi avatar|arah (lowerarm|calf|hand)' \
               aurelia-test.log zoom-test.log performance-test.log avatar-render.log 2>/dev/null | tail -40
             echo '```'
           } > numbers.md

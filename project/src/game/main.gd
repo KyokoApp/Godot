@@ -1,13 +1,12 @@
 extends Node3D
-## Padang latihan 100 m × 100 m berumput + karakter Aurelia (avatar FBX) yang
-## digerakkan katalog animasi lengkap (85 klip UAL1 + UAL2) lewat retarget, plus
-## goyangan kain/rambut simulasi verlet.
+## Padang latihan 100 m × 100 m berumput + mannequin UAL dengan katalog animasi
+## lengkap (85 klip dari UAL1 + UAL2). Karakter lain (Miku, Kanna) sudah dihapus.
 
 const Field = preload("res://src/game/world/field.gd")
 const Fence = preload("res://src/game/world/boundary_fence.gd")
 const Grass = preload("res://src/game/grass_field.gd")
 const Player = preload("res://src/game/player.gd")
-const Character = preload("res://src/game/character/aurelia_visual.gd")
+const Mannequin = preload("res://src/game/mannequin.gd")
 const Orbit = preload("res://src/game/orbit_camera.gd")
 const Joystick = preload("res://src/game/virtual_joystick.gd")
 const Night = preload("res://src/game/environment/night_environment.gd")
@@ -46,7 +45,7 @@ var _previous_occlusion := false
 var _field: Field
 var _grass: Grass
 var _player: Player
-var _visual: Character
+var _visual: Mannequin
 var _orbit: Orbit
 var _sun: DirectionalLight3D
 var _moon_rays: MoonRays
@@ -79,7 +78,7 @@ func _ready() -> void:
 	_build_grass()
 	_build_effects()
 	_build_hud()
-	print("[main] padang %.0f m + Aurelia (%d klip) siap" % [
+	print("[main] padang %.0f m + mannequin (%d klip) siap" % [
 		Field.SIZE, Catalog.clip_count()])
 	_confirm_boot.call_deferred()
 
@@ -104,7 +103,7 @@ func _build_player() -> void:
 	_player = Player.new()
 	_player.field = _field
 	add_child(_player)
-	_visual = Character.new()
+	_visual = Mannequin.new()
 	_visual.name = "Visual"
 	_visual.position.y = -Player.HEIGHT * 0.5
 	_player.add_child(_visual)
@@ -278,7 +277,6 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 	_performance.rays = _moon_rays
 	_performance.sun = _sun
 	_performance.grass = _grass
-	_performance.character = _visual
 	content.add_child(_performance)
 	_graphics_drawer.hide()
 
@@ -359,7 +357,7 @@ func _input(event: InputEvent) -> void:
 func _physics_process(delta: float) -> void:
 	if _orbit == null or _player == null:
 		return
-	_orbit.follow(_player.global_position + _orbit.focus_offset, delta)
+	_orbit.follow(_player.global_position + Vector3(0, 0.55, 0), delta)
 	_footsteps.update_motion(delta, _player.move_speed)
 	_speed_aura.update_motion(delta, _player.move_speed,
 		_player.boosted and _player.grounded)
