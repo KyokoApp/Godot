@@ -880,3 +880,20 @@ menutupi semua yang terlihat di jangkauan kamera". Cicilan ini hanya rumput.
   sekarang 49 (tes menunggu 60 frame, bukan 35).
 
 Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-02 — partikel ungu
+
+Lanjutan permintaan "partikel ungu". Cicilan ini hanya partikel.
+
+- `world/scenery.gd` — `MOTE_COLOR` `ffe9b0` (krem) → `c9a6ff` (ungu). Ini
+  satu-satunya partikel yang masih hangat: jejak api kaki, aura kecepatan, roh,
+  dan efek serangan sudah ungu semua.
+- Titik cahaya melayang sekarang menyebar di sepanjang jalan (10 titik, 220
+  partikel) — dulu hanya 3 titik dekat spawn, jadi partikelnya hampir tidak
+  pernah terlihat saat pemain berjalan. Posisi mengikuti lik jalan yang sama
+  dengan `ground.gdshader`, digeser 6 m ke samping supaya melayang di atas
+  rumput, dan tingginya dihitung dari terrain pulau.
+- `tools/test_scenery.gd` — gerbang baru: partikel harus ungu (kanal biru >
+  merah dan > hijau), dan jumlah titik ikut tercetak di diagnostik.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.

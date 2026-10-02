@@ -73,14 +73,20 @@ func _test_parts(scenery: Scenery) -> void:
 	var pillars := scenery.ruins.get_child_count()
 	_check(pillars >= 5, "Reruntuhan kurang lengkap: %d bagian" % pillars)
 	var emitters := 0
+	var mote_color := Color.WHITE
 	for node in scenery.motes.find_children("*", "GPUParticles3D", true, false):
 		var emitter := node as GPUParticles3D
 		if emitter.amount > 0:
 			emitters += 1
+			var glow: StandardMaterial3D = emitter.material_override
+			mote_color = glow.albedo_color
 	_check(emitters >= 1, "Tidak ada titik cahaya melayang")
+	# Partikel harus UNGU (permintaan pengguna), bukan krem/kuning seperti dulu.
+	_check(mote_color.b > mote_color.r and mote_color.b > mote_color.g,
+		"Partikel melayang bukan ungu: %s" % mote_color)
 	_notes.append(("pemandangan: %d sabuk bukit (puncak %.0f m), %d blok tebing, "
-		+ "%d bagian reruntuhan, %d titik cahaya") % [hill_meshes, hill_top,
-		scenery.cliff_count, pillars, emitters])
+		+ "%d bagian reruntuhan, %d titik cahaya %s") % [hill_meshes, hill_top,
+		scenery.cliff_count, pillars, emitters, mote_color])
 
 
 ## Susunan pulau 1 km: laut mengelilingi SEMUA arah pada permukaan y = 0, bukit

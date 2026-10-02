@@ -45,7 +45,10 @@ const ROCK_SHADE := Color("65808f")
 const STONE_COLOR := Color("c8c3b4")
 const MOSS_COLOR := Color("7fae63")
 const DIRT_COLOR := Color("9a8260")
-const MOTE_COLOR := Color("ffe9b0")
+## Titik cahaya melayang: UNGU (permintaan "partikel ungu"), bukan krem lagi.
+## Sebelumnya ini satu-satunya partikel berwarna hangat — efek lain (jejak api
+## kaki, aura kecepatan, roh, serangan) sudah ungu semua.
+const MOTE_COLOR := Color("c9a6ff")
 
 var hills: Node3D
 var sea: MeshInstance3D
@@ -280,14 +283,26 @@ func _build_motes() -> void:
 	motes = Node3D.new()
 	motes.name = "LightMotes"
 	add_child(motes)
-	# Tiga titik: dua di sepanjang jalan, satu di dekat reruntuhan. Tingginya
-	# DIHITUNG dari tanah pulau — dulu tanah rata ± 1 m sehingga y tetap masih
-	# aman, sekarang dataran ± 6 m sehingga y tetap akan menenggelamkan motes.
+	# Titik cahaya menyebar DI SEPANJANG JALAN, bukan hanya tiga titik dekat
+	# spawn: dulu partikelnya hampir tidak pernah terlihat saat pemain berjalan.
+	# Tingginya DIHITUNG dari tanah pulau — dulu tanah rata ± 1 m sehingga y
+	# tetap masih aman, sekarang dataran ± 6 m sehingga y harus dari terrain.
 	var spots: Array[Vector3] = [Vector3(-6.0, 1.4, -14.0), Vector3(-13.0, 1.6, -27.0),
 		Vector3(4.0, 1.3, -8.0)]
+	for step in range(-3, 4):
+		var along := step * 15.0
+		# Geser 6 m ke samping jalan supaya partikel melayang di atas rumput,
+		# bukan tepat di atas jalan tanah.
+		spots.append(Vector3(along, 1.4, _path_centre(along) + 6.0))
 	for spot in spots:
 		var ground: float = Field.terrain_height(spot.x, spot.z)
 		motes.add_child(_mote_emitter(spot + Vector3(0.0, ground, 0.0)))
+
+
+## Lik jalan seperti di ground.gdshader: z = curve*sin(x*freq) + curve*0.3*sin(x*0.019+0.59).
+func _path_centre(x: float) -> float:
+	return (Field.PATH_CURVE * sin(x * Field.PATH_FREQUENCY)
+		+ Field.PATH_CURVE * 0.3 * sin(x * 0.019 + 0.59))
 
 
 func _mote_emitter(position: Vector3) -> GPUParticles3D:

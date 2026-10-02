@@ -1,5 +1,19 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-02 (sesi ini, cicilan 7) — **PARTIKEL UNGU** (lanjutan "partikel
+  ungu"). Cicilan ini hanya partikel.
+  - `src/game/world/scenery.gd`: `MOTE_COLOR` ffe9b0 → **c9a6ff** (krem → ungu).
+    Ini satu-satunya partikel hangat yang tersisa; jejak api kaki, aura
+    kecepatan, roh, dan efek serangan sudah ungu semua.
+  - Titik cahaya melayang: 3 titik dekat spawn → **10 titik di sepanjang jalan**
+    (220 partikel). Posisi mengikuti lik jalan `ground.gdshader` (fungsi baru
+    `_path_centre`), digeser 6 m ke samping supaya di atas rumput, tinggi dari
+    `Field.terrain_height`.
+  - `tools/test_scenery.gd`: gerbang baru — partikel harus ungu (b > r dan
+    b > g), jumlah titik tercetak di diagnostik.
+  - Sisa antrian cicilan (JANGAN digabung): suasana senja + sinar cahaya (cari
+    shader Godot yang sudah ada), shader air.
+
 - 2026-10-02 (sesi ini, cicilan 6) — **RUMPUT RAPAT: HELAI KECIL, MENUTUPI 32 M,
   KARTU LOD SAMPAI 128 M** (lanjutan "rumput jadi kecil, rapat, benar-benar
   terlihat helainya, menutupi semua yang terlihat di jangkauan kamera").
