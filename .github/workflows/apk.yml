@@ -249,6 +249,22 @@ jobs:
           path: ~/.local/share/godot/app_userdata/**/fire-*-test.png
           if-no-files-found: ignore
 
+      - name: Rekam alur animasi lompat (headless)
+        run: |
+          set +e
+          timeout 120 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_jump_trace.gd" 2>&1 | tee jump-trace.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          grep -E "\[jump-trace\]" jump-trace.log | head -40 \
+            | while IFS= read -r line; do echo "::notice::$line"; done
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' jump-trace.log; then
+            grep -E "::error::|ERROR" jump-trace.log | head -10 \
+              | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[jump-trace] HASIL: OK' jump-trace.log
+
       - name: Tes HUD dan multitouch jalan + attack (Mobile Vulkan)
         run: |
           set +e
