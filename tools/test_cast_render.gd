@@ -41,8 +41,16 @@ func _difference(first: Image, second: Image) -> int:
 func _run() -> void:
 	var world := Node3D.new()
 	root.add_child(world)
+	# Latar polos, bukan langit senja: awan bergerak mengikuti TIME, dan gerakan
+	# latar itu ikut terhitung sebagai "piksel berubah" sehingga uji pemulihan
+	# pose jadi rapuh (pernah gagal padahal posenya benar).
 	var environment := WorldEnvironment.new()
-	environment.environment = Dusk.make_environment()
+	environment.environment = Environment.new()
+	environment.environment.background_mode = Environment.BG_COLOR
+	environment.environment.background_color = Color(0.10, 0.12, 0.18)
+	environment.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	environment.environment.ambient_light_color = Color(0.62, 0.68, 0.86)
+	environment.environment.ambient_light_energy = 0.58
 	world.add_child(environment)
 	var light := Dusk.make_sunlight()
 	world.add_child(light)
