@@ -22,9 +22,11 @@
     yang selalu hilang dari shadow map. Renderer Mobile tidak punya SSAO/SSR/
     SSIL/volumetric fog (semuanya Forward+), jadi ini cara mendapat kesan
     "ray tracing". 14 sampel / 21 m, hanya piksel < 55 m dari kamera, fade tepi
-    layar, strength 0,74. render_priority -101 (menggelapkan SEBELUM sinar
-    matahari menambah cahaya). Adaptasi forum Godot "Screen Space Shadows",
-    kredit di `project/licenses/LICENSES.txt`.
+    layar, `blend_mix` ke warna bayangan (0,06/0,05/0,11) dengan strength 0,55
+    (bukan blend_mul: yang terbukti tampil di renderer Mobile hanya blend_add dan
+    blend_mix). render_priority -101 (menggelapkan SEBELUM sinar matahari menambah
+    cahaya). Adaptasi forum Godot "Screen Space Shadows", kredit di
+    `project/licenses/LICENSES.txt`.
   - `src/game/main.gd`: node dipasang di kamera orbit. `src/game/performance_panel.gd`:
     tombol baru **Contact shadow: Nyala/Mati (tes FPS)**
     (`graphics.contact_shadow`, default nyala). `loading/warmup_samples.gd`:

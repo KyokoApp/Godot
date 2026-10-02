@@ -923,8 +923,10 @@ tracing". Cicilan ini hanya suasana/pencahayaan.
   tracing"-nya, karena SSAO/SSR/SSIL/volumetric fog di Godot hanya ada di
   Forward+, sementara proyek ini memakai renderer Mobile. 14 sampel sepanjang
   21 m, hanya untuk piksel di depan kamera (hemat ± setengah layar), memudar di
-  tepi layar, dan pengerasan 0,74 supaya menanam bukan menghitamkan. Adaptasi
-  teknik Screen Space Shadows dari forum Godot (kreditnya di LICENSES.txt).
+  tepi layar, memakai `blend_mix` ke warna bayangan ungu kebiruan (0,06/0,05/0,11)
+  dengan kekuatan 0,55 — bukan `blend_mul`, karena di proyek ini yang terbukti tampil
+  di renderer Mobile hanya blend_add dan blend_mix. Adaptasi teknik Screen Space
+  Shadows dari forum Godot (kreditnya di LICENSES.txt).
 - Tombol baru di panel grafis: **Contact shadow: Nyala/Mati (tes FPS)** —
   kalau HP terasa berat, matikan dulu yang ini.
 - `tools/test_contact_shadows.gd` (gerbang baru) — render A/B (efek nyala vs
