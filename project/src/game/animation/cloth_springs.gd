@@ -573,6 +573,22 @@ func chain_length(chain_index: int) -> float:
 	return total
 
 
+## Contoh nama tulang yang cocok dengan grup mana pun — dipakai log/tes untuk
+## membuktikan pola nama dari importer FBX benar-benar ketemu.
+func bone_name_sample(limit := 24) -> PackedStringArray:
+	var names := PackedStringArray()
+	if _skeleton == null:
+		return names
+	for chain in _chains:
+		if names.size() >= limit:
+			break
+		for bone in chain.bones:
+			if names.size() >= limit:
+				break
+			names.append(_skeleton.get_bone_name(bone))
+	return names
+
+
 func render_diagnostics() -> String:
 	return _diagnostics
 

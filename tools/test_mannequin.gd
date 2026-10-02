@@ -38,7 +38,7 @@ func _run() -> void:
 		return
 	_check(character.rig_model != null and not character.rig_model.visible,
 		"Rig animasi UAL seharusnya tidak digambar")
-	_check(character.retarget != null and character.retarget.mapped_count() >= 40,
+	_check(character.retargets.size() >= 1 and character.retarget.mapped_count() >= 40,
 		"Peta tulang avatar kurang lengkap: %d" %
 		(character.retarget.mapped_count() if character.retarget != null else 0))
 	for node in avatar.find_children("*", "MeshInstance3D", true, false):
@@ -208,7 +208,8 @@ func _test_avatar_motion(character: Character) -> void:
 	character.set_locomotion("Jog_Fwd_Loop", 1.0)
 	for step in range(12):
 		character.animation.advance(1.0 / 30.0)
-		character.retarget.apply()
+		for follower in character.retargets:
+			follower.apply()
 	var moved := 0
 	for bone in range(character.avatar.get_bone_count()):
 		if not before[bone].is_equal_approx(character.avatar.get_bone_pose_rotation(bone)):

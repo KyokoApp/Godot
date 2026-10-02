@@ -51,6 +51,14 @@ const CLOTH_ITERATIONS := 2
 
 var animation: AnimationPlayer
 var skeleton: Skeleton3D
+## Avatar bisa punya lebih dari satu kerangka: importer FBX memecah berkas
+## menjadi satu Skeleton3D per kelompok kulit (badan, rambut, mata) kalau
+## himpunan tulangnya tidak bersambung. Semuanya harus didorong retarget, dan
+## tulang kain di kerangka mana pun harus ikut bergoyang.
+var avatars: Array[Skeleton3D] = []
+var retargets: Array[Retarget] = []
+var cloths: Array[ClothDynamics] = []
+## Kerangka utama (tulang terbanyak) = badan yang dipakai efek kaki dan tes.
 var avatar: Skeleton3D
 var retarget: Retarget
 var cloth: ClothDynamics
@@ -132,29 +140,42 @@ func _build_avatar() -> void:
 	add_child(root)
 	_avatar_root = root
 	avatar_root = root
-	avatar = _first_skeleton(root)
-	if avatar == null:
+	for node in root.find_children("*", "Skeleton3D", true, false):
+		avatars.append(node as Skeleton3D)
+	if avatars.is_empty():
 		push_error("Aurelia: Skeleton3D avatar tidak ditemukan di FBX")
 		return
+	# Kerangka dengan tulang terbanyak = badan; sisanya (rambut/mata) menyusul.
+	avatars.sort_custom(func(a: Skeleton3D, b: Skeleton3D) -> bool:
+		return a.get_bone_count() > b.get_bone_count())
+	avatar = avatars[0]
 	var meshes := Materials.apply(root)
-	retarget = Retarget.new()
-	retarget.name = "Retarget"
-	skeleton.add_child(retarget)
-	retarget.configure(skeleton, avatar)
-	cloth = ClothDynamics.new()
-	cloth.name = "Cloth"
-	avatar.add_child(cloth)
-	cloth.configure(avatar, CLOTH_ITERATIONS)
-	# Efek tapak api memakai tinggi tulang telapak avatar, bukan mannequin.
-	cloth.set_ground_height(0.0)
+	for index in range(avatars.size()):
+		var target := avatars[index]
+		var follower: Retarget = Retarget.new()
+		follower.name = "Retarget%d" % index
+		skeleton.add_child(follower)
+		follower.configure(skeleton, target)
+		retargets.append(follower)
+		var springs: ClothDynamics = ClothDynamics.new()
+		springs.name = "Cloth%d" % index
+		target.add_child(springs)
+		springs.configure(target, CLOTH_ITERATIONS)
+		# Efek tapak api memakai tinggi tulang telapak avatar, bukan mannequin.
+		springs.set_ground_height(0.0)
+		cloths.append(springs)
+	retarget = retargets[0]
+	cloth = cloths[0]
 	_describe_rig()
-	print("[aurelia] %d mesh avatar diberi material" % meshes)
+	print("[aurelia] %d mesh diberi material, %d kerangka (%s)" % [meshes,
+		avatars.size(), _skeleton_summary()])
 
 
-func _first_skeleton(root: Node) -> Skeleton3D:
-	for node in root.find_children("*", "Skeleton3D", true, false):
-		return node as Skeleton3D
-	return null
+func _skeleton_summary() -> String:
+	var parts := PackedStringArray()
+	for index in range(avatars.size()):
+		parts.append("%d:%d tulang" % [index, avatars[index].get_bone_count()])
+	return ", ".join(parts)
 
 
 func _configure_clips() -> void:
@@ -380,9 +401,28 @@ func foot_stride_lift(left: bool) -> float:
 ## Isi `status` dengan ringkasan rig; dipanggil sekali setelah avatar siap.
 func _describe_rig() -> void:
 	var parts := PackedStringArray()
-	if retarget != null:
-		parts.append(retarget.report())
-	if cloth != null and cloth.springs != null:
-		parts.append(cloth.diagnostics())
-		parts.append("[cloth] grup: " + cloth.springs.group_report())
+	var chains := 0
+	var bones := 0
+	for index in range(retargets.size()):
+		parts.append("kerangka %d: %s" % [index, retargets[index].report()])
+	for springs in cloths:
+		if springs.springs == null:
+			continue
+		parts.append(springs.diagnostics())
+		parts.append("[cloth] grup: " + springs.springs.group_report())
+		chains += springs.springs.chain_count()
+		bones += springs.springs.bone_count()
+	parts.append("[cloth] total: %d rantai, %d tulang" % [chains, bones])
+	parts.append("[cloth] nama tulang mirip kain: " + _cloth_bone_sample())
 	status = "\n".join(parts)
+
+
+## Daftar tulang avatar yang namanya mengandung kain/rambut — dipakai untuk
+## memastikan peta grup cocok dengan nama asli dari importer FBX.
+func _cloth_bone_sample() -> String:
+	var found := PackedStringArray()
+	for springs in cloths:
+		if springs.springs == null:
+			continue
+		found.append_array(springs.springs.bone_name_sample(24))
+	return ", ".join(found) if not found.is_empty() else "(tidak ada)"

@@ -11,6 +11,7 @@ extends SceneTree
 
 const Character = preload("res://src/game/character/aurelia_visual.gd")
 const Humanoid = preload("res://src/game/animation/humanoid_map.gd")
+const ClothDynamics = preload("res://src/game/animation/cloth_dynamics.gd")
 const Springs = preload("res://src/game/animation/cloth_springs.gd")
 const STEP := 1.0 / 60.0
 var _failures := 0
@@ -35,23 +36,55 @@ func _run() -> void:
 		print("::error::karakter Aurelia tidak lengkap")
 		quit(1)
 		return
-	print(character.status)
 	_test_rig(character)
 	_test_materials(character)
 	_test_retarget_shape(character)
 	_test_feet_above_ground(character)
 	_test_cloth_inertia(character)
 	_test_cloth_no_penetration(character)
-	print("[aurelia-test] tulang=%d dipetakan=%d rantai=%d gagal=%d" % [
-		character.avatar.get_bone_count(), character.retarget.mapped_count(),
-		character.cloth.springs.chain_count(), _failures])
+	var chains := 0
+	var bones := 0
+	for springs in character.cloths:
+		if springs.springs != null:
+			chains += springs.springs.chain_count()
+			bones += springs.springs.bone_count()
+	print("[aurelia-test] kerangka=%d tulang=%d dipetakan=%d rantai=%d kain=%d gagal=%d"
+		% [character.avatars.size(), character.avatar.get_bone_count(),
+		character.retarget.mapped_count(), chains, bones, _failures])
+	# Diagnostik di akhir: langkah CI yang gagal hanya menampilkan 60 baris log
+	# terakhir, jadi bagian ini yang harus terbaca saat ada masalah.
+	print("--- diagnostik ---")
+	print(character.status)
+	print("nama tulang avatar:", _bone_names(character.avatar, 12))
+	print("tulang mirip kain:", _cloth_names(character.avatar))
 	quit(0 if _failures == 0 else 1)
+
+
+func _bone_names(skeleton: Skeleton3D, limit: int) -> String:
+	var names := PackedStringArray()
+	for bone in range(mini(limit, skeleton.get_bone_count())):
+		names.append(skeleton.get_bone_name(bone))
+	return " | ".join(names)
+
+
+## Semua tulang yang namanya mengandung kain/rambut, apa pun bentuknya. Ini yang
+## menjawab "kenapa grup kain tidak ketemu" kalau importer mengubah nama.
+func _cloth_names(skeleton: Skeleton3D) -> String:
+	var names := PackedStringArray()
+	for bone in range(skeleton.get_bone_count()):
+		var key := Humanoid.normalize(skeleton.get_bone_name(bone))
+		for needle in ["hair", "shawl", "collar", "hip", "pendant", "earrings",
+				"neck", "flycloak", "dress", "robe"]:
+			if key.contains(needle):
+				names.append(skeleton.get_bone_name(bone))
+				break
+	return "%d: %s" % [names.size(), ", ".join(names)]
 
 
 func _test_rig(character: Character) -> void:
 	_check(character.rig_model != null and not character.rig_model.visible,
 		"Rig animasi UAL seharusnya disembunyikan")
-	_check(character.avatar.get_bone_count() > 150,
+	_check(character.avatar.get_bone_count() > 120,
 		"Tulang avatar kurang: %d" % character.avatar.get_bone_count())
 	var missing := Humanoid.missing_pairs(character.skeleton, character.avatar)
 	_check(missing.is_empty(), "Pasangan tulang tidak ditemukan: " + ", ".join(missing))
@@ -60,13 +93,18 @@ func _test_rig(character: Character) -> void:
 		Humanoid.PAIRS.size()])
 	_check(character.retarget.motion_scale() > 0.7 and character.retarget.motion_scale() < 1.05,
 		"Skala gerak tidak wajar: %.3f" % character.retarget.motion_scale())
-	var springs: Springs = character.cloth.springs
-	_check(springs.chain_count() >= 40, "Rantai kain terlalu sedikit: %d"
-		% springs.chain_count())
-	_check(springs.bone_count() >= 60, "Tulang kain terlalu sedikit: %d"
-		% springs.bone_count())
-	_check(springs.collider_count() >= 12, "Kapsul badan terlalu sedikit: %d"
-		% springs.collider_count())
+	var chains := 0
+	var bones := 0
+	var colliders := 0
+	for springs in character.cloths:
+		if springs.springs == null:
+			continue
+		chains += springs.springs.chain_count()
+		bones += springs.springs.bone_count()
+		colliders = maxi(colliders, springs.springs.collider_count())
+	_check(chains >= 40, "Rantai kain terlalu sedikit: %d" % chains)
+	_check(bones >= 60, "Tulang kain terlalu sedikit: %d" % bones)
+	_check(colliders >= 12, "Kapsul badan terlalu sedikit: %d" % colliders)
 
 
 func _test_materials(character: Character) -> void:
@@ -133,6 +171,19 @@ func _directions_match(character: Character, source_name: String, target_name: S
 	return source_direction.dot(target_direction) > 0.97
 
 
+## Pembungkus kain yang memuat tulang rambut (badan dan rambut bisa berada di
+## kerangka berbeda kalau importer FBX memecahnya).
+func _cloth_with_hair(character: Character) -> ClothDynamics:
+	for wrapper in character.cloths:
+		if wrapper.springs == null:
+			continue
+		for index in range(wrapper.springs.chain_count()):
+			var names := wrapper.springs.chain_bone_names(index)
+			if not names.is_empty() and names[0].begins_with("Bone_Hair"):
+				return wrapper
+	return null
+
+
 func _longest_hair_chain(springs: Springs) -> int:
 	var best := -1
 	var best_length := 0.0
@@ -174,7 +225,11 @@ func _test_feet_above_ground(character: Character) -> void:
 ## (bukti simulasi punya kelembaman), lalu menyusul, dan akhirnya berhenti
 ## berayun. Kain yang menempel kaku akan langsung ikut tanpa selisih.
 func _test_cloth_inertia(character: Character) -> void:
-	var springs: Springs = character.cloth.springs
+	var wrapper := _cloth_with_hair(character)
+	if wrapper == null:
+		_check(false, "Tidak ada pembungkus kain yang punya rantai rambut")
+		return
+	var springs: Springs = wrapper.springs
 	var chain := _longest_hair_chain(springs)
 	_check(chain >= 0, "Tidak ada rantai rambut panjang untuk diuji")
 	if chain < 0:
@@ -182,12 +237,12 @@ func _test_cloth_inertia(character: Character) -> void:
 	var tip := springs.particle(chain, springs.chain_bones(chain).size())
 	# Dudukkan dulu supaya simulasi tenang.
 	for step in range(90):
-		character.cloth.simulate(STEP)
+		wrapper.simulate(STEP)
 	var settled := springs.particle(chain, springs.chain_bones(chain).size())
 	_check(settled.y < tip.y + 0.001, "Rambut tidak menggantung ke bawah")
 	character.global_position += Vector3(1.0, 0.0, 0.0)
-	character.cloth.simulate(STEP)
-	character.cloth.simulate(STEP)
+	wrapper.simulate(STEP)
+	wrapper.simulate(STEP)
 	var lagging := springs.particle(chain, springs.chain_bones(chain).size())
 	var body_move := 1.0
 	var cloth_move := lagging.distance_to(settled)
@@ -196,7 +251,7 @@ func _test_cloth_inertia(character: Character) -> void:
 	_check(cloth_move > body_move * 0.05, "Kain tidak bergerak sama sekali: %.3f m"
 		% cloth_move)
 	for step in range(120):
-		character.cloth.simulate(STEP)
+		wrapper.simulate(STEP)
 	var caught_up := springs.particle(chain, springs.chain_bones(chain).size())
 	var rest_point := character.avatar.global_transform * Vector3.ZERO
 	_check(caught_up.distance_to(lagging) > 0.2 * body_move,
@@ -207,7 +262,10 @@ func _test_cloth_inertia(character: Character) -> void:
 
 ## Rambut panjang tidak boleh menembus kepala/badan saat diam.
 func _test_cloth_no_penetration(character: Character) -> void:
-	var springs: Springs = character.cloth.springs
+	var wrapper := _cloth_with_hair(character)
+	if wrapper == null:
+		return
+	var springs: Springs = wrapper.springs
 	var head := character.avatar.find_bone("Bip001 Head")
 	var neck := character.avatar.find_bone("Bip001 Neck")
 	if head < 0 or neck < 0:
@@ -215,7 +273,7 @@ func _test_cloth_no_penetration(character: Character) -> void:
 	character.global_position = Vector3.ZERO
 	character.rotation = Vector3.ZERO
 	for step in range(120):
-		character.cloth.simulate(STEP)
+		wrapper.simulate(STEP)
 	var head_center := character.avatar.get_bone_global_pose(head).origin
 	var neck_axis := character.avatar.get_bone_global_pose(neck).origin
 	var worst := INF

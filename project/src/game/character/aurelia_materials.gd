@@ -17,7 +17,7 @@ extends RefCounted
 ## hitam legap waktu malam, tanpa perlu LightmapGI yang berat untuk HP.
 
 const OUTLINE = preload("res://src/game/character_outline.gdshader")
-const TEXTURE_DIR := "res://assets/aurelia/textures/"
+const TEXTURE_DIR := "res://assets/aurelia/Textures/"
 
 const BODY_DIFFUSE := "Avatar_Boy_Pole_Lohen_Tex_Body_Diffuse.png"
 const BODY_NORMAL := "Avatar_Boy_Pole_Lohen_Tex_Body_Normalmap.png"
