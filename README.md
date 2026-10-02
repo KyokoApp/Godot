@@ -1032,3 +1032,41 @@ Yang TIDAK berubah: pulau 1 km berbentuk bergelombang, palet gelap senja, rumput
 padat, partikel ungu, langit senja + glow, dan bayangan shadow map biasa.
 
 Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-03 — langit jadi MALAM: bintang, bulan bercratere, cahaya bulan
+
+Permintaan: "sky nya juga buat malam hari tapi visual indah bintang langin dan bulan".
+
+- `environment/dusk_sky.gdshader` (nama berkas dibiarkan, isinya sudah malam):
+  - **Bintang** — grid hash di koordinat bola langit (azimut/polar), satu
+    bintang per sel di posisi acak yang tetap, kelip pelan ±15%. Tanpa tekstur.
+    Koordinat hash dibungkus `mod(...,128)` karena `sin()` float 32-bit kehilangan
+    presisi di angka ratusan dan hasilnya belang. Bintang memudar dekat ufuk
+    supaya tidak "menempel" di garis pantai.
+  - **Bulan purnama** — 2,6° jari-jari (± 24 px di render CI), warnanya HDR 2,4
+    supaya mekar di glow engine. Ada **6 kawah analitik** di basis lokal
+    piringan bulan (posisi dari hash, jadi bentuknya tetap tapi tidak seperti
+    lingkaran susun), **limb darkening** di tepi, dan **dua lapis halo**
+    (cincin rapat ±1 jari-jari + lembar lebar ±30°).
+  - **Awan** jadi gelap: sisi atas abu kebiruan (kena bulan), sisi bawah biru
+    sangat tua. Awan yang lewat di depan bulan disinari dari belakang.
+  - Gradien malam: zenith (0,010/0,017/0,042) → ufuk (0,055/0,074/0,125). Sengaja
+    gelap tapi bukan hitam pekat.
+- `environment/dusk_environment.gd`: arah cahaya utama pindah ke **bulan** —
+  `SUN_DIRECTION` jadi `(-0.726, 0.643, -0.247)` (40° di atas ufuk barat daya,
+  sisi laut), jadi jalur kilau bulan membentang di air sampai ke pemain. Cahaya
+  bulan biru dingin (0,68/0,76/0,95) energi 0,35, ambient biru tua (0,24/0,32/0,55)
+  energi 0,35, kabut biru gelap (0,09/0,13/0,24), saturasi turun ke 1,02 (cahaya
+  bulan memang memucat warna), glow intensity 0,30 dengan ambang HDR 1,15 supaya
+  yang mekar hanya bulan + bintang terang.
+- `world/water.gdshader`: kilau air jadi **jalur bulan** biru dingin, warna laut
+  digelapkan (tosca senja → biru malam) supaya tidak menyengat di bawah langit
+  gelap.
+- `tools/test_dusk.gd` — gerbang baru: bulan terang di tengah layar, bulan hilang
+  saat dimatikan, bintang terlihat, halo terlihat, awan terlihat, zenith biru TUA
+  (bukan biru senja terang), arah cahaya = arah bulan, dan tanah tetap terbaca
+  (hijau > 0,12, bukan hitam).
+
+Catatan aset: **tidak ada model pohon atau batu di repo ini** — lihat HANDOVER.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.

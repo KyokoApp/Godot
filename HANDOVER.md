@@ -1,5 +1,64 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-03 (cicilan 12) — **LANGIT JADI MALAM: BINTANG, BULAN BERCRATERE,
+  CAHAYA BULAN** (permintaan: "sky nya juga buat malam hari tapi visual indah
+  bintang langin dan bulan").
+  - `src/game/environment/dusk_sky.gdshader` (nama berkas DIBIARKAN "dusk" supaya
+    diff tetap fokus; isinya sudah malam):
+    - bintang: grid hash di koordinat bola langit (azimut/polar, skala polar
+      digandakan supaya sel tetap persegi), satu bintang per sel di posisi acak
+      yang tetap, kelip pelan `sin(TIME*1.7)`. Koordinat dibungkus
+      `mod(p, vec2(128.0))` SEBELUM di-hash: `sin()` float 32-bit kehilangan
+      presisi di angka ratusan dan grid-nya jadi belang. Bintang memudar
+      `smoothstep(0.0, 0.20, elevation)` supaya tidak menempel di garis pantai.
+    - bulan: `moon_radius 0.045` rad, `moon_brightness 2.4` (HDR -> mekar di glow
+      engine), 6 kawah analitik di basis lokal piringan (posisi dari hash, bentuk
+      tetap tiap frame), limb darkening tepi, dua lapis halo (`pow(align,460)` +
+      `pow(align,18)`). Tidak ada tekstur sama sekali.
+    - awan digelapkan: `cloud_light (0.34,0.40,0.56)`, `cloud_shadow
+      (0.030,0.042,0.075)`, dan awan di depan bulan disinari `pow(dot,6)`.
+    - gradien: zenith (0.010,0.017,0.042) -> ufuk (0.055,0.074,0.125).
+  - `src/game/environment/dusk_environment.gd`:
+    - `SUN_DIRECTION` (nama dibiarkan, dipakai bersama air + tes) sekarang arah
+      **BULAN**: `Vector3(-0.72516, 0.642788, -0.24691)` = 40 derajat di atas
+      ufuk barat daya (sisi laut). Jalur kilau bulan membentang di air.
+    - cahaya: bulan biru dingin `(0.68,0.76,0.95)` energi 0.35 (nama node jadi
+      "Moonlight"); ambient biru tua `(0.24,0.32,0.55)` energi 0.35; kabut
+      `(0.09,0.13,0.24)`; saturasi 1.02 (cahaya bulan memucat warna); kontras
+      1.05; glow_intensity 0.30, ambang HDR 1.15 (yang mekar hanya bulan 2.4 HDR
+      dan bintang terang 1.7 HDR).
+  - `src/game/world/water.gdshader`: kilau air jadi jalur bulan biru dingin
+    (`sun_color (0.62,0.74,0.98)`), warna laut digelapkan (tosca senja -> biru
+    malam) supaya tidak menyengat di bawah langit gelap.
+  - `tools/test_dusk.gd` gerbang ditulis ulang untuk malam: bulan terang di
+    tengah layar (`> 0.55`), halo/bintang/awan terlihat, bulan benar-benar hilang
+    saat dimatikan (`gelap < 0.65x`), zenith biru TUA (`b > r`, `b < 0.30`),
+    arah cahaya = arah bulan, tanah tetap terbaca (`g > 0.12 dan g > r`).
+    PERHATIAN urutan toggle: halo ikut mati kalau `moon_enabled` false, jadi halo
+    diukur DULU dengan bulan masih menyala.
+  - Catatan: efek sinar matahari sudah ditolak 3x (cicilan 9, 10, 11) -- jangan
+    diusulkan lagi.
+  - **JAWABAN PERTANYAAN ASET (pohon / batu / rumput)**: di repo Godot ini TIDAK
+    ADA model pohon atau batu. Isi `project/assets/` hanya:
+    `mannequin/UAL1_Standard.glb` (7,6 MB) + `combat/UAL2_Standard.glb` (8,1 MB)
+    = dua pustaka animasi mannequin, `nature/grass_cards.png` +
+    `nature/meadow_cover.png` = dua TEKSTUR (dibuat prosedural oleh
+    `tools/make_meadow_textures.py`), dan 13 berkas audio wav.
+    - rumput: ADA, tapi prosedural (MultiMesh ± 400 ribu segitiga) +
+      tekstur `grass_cards.png`.
+    - batu: ADA, tapi prosedural — `world/scenery.gd` membangun bukit, tebing,
+      batu, dan reruntuhan dari ArrayMesh berwarna vertex.
+    - pohon: TIDAK ADA. Pohon raksasa prosedural (cicilan 9) baru dihapus di
+      cicilan 11. `tools/fetch_assets.sh` hanya mengunduh 2 GLB UAL + sampul
+      padang dari rilis `assets-v1`, dan riwayat git tidak pernah berisi model
+      nature.
+    Pack Quaternius Stylized Nature (CommonTree_1, Pine_1, Rock_Medium_1, ...)
+    yang dicatat di LICENSES.txt tinggal di repo LAM pengguna
+    (`KyokoApp/Unity` branch `archive`), BUKAN di repo ini. Kalau pengguna mau
+    pohon/batu sungguhan, unggah GLB-nya ke `project/assets/` (mis. ke
+    `project/assets/nature/`) lalu bilang -- pemasangannya bisa dibuat tanpa
+    mengubah kode lain.
+
 - 2026-10-03 (cicilan 11) — **SINAR MATAHARI, CONTACT SHADOW ("RAY TRACING"), DAN
   POHON RAKSASA SEMUANYA DIHAPUS** atas permintaan pengguna: "ternyata jelek ih
   hapus total ajh lah trus yang ray tracing awal aku request juga hapus ajh trus

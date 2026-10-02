@@ -179,9 +179,14 @@ created for A-Sekai, not copied from an icon pack or third-party image.
   `tools/prepare_pet_fire.py` rebuilds the 8-second crossfaded companion loop.
 
 #### Night environment
-`environment/dusk_sky.gdshader`: original procedural dusk sky for A-Sekai,
-seeded sparse stars, small moon with analytic crater marks and subtle halo.
-No downloaded sky image, shader-site code, or third-party celestial artwork.
+`environment/dusk_sky.gdshader` (nama berkas masih "dusk" sejak cicilan 8):
+original procedural NIGHT sky for A-Sekai - deep blue gradient, a starfield
+built from a wrapped hash grid on the celestial sphere with slow twinkle, a
+full moon with six analytic craters, limb darkening and a two-part halo, plus
+dark moonlit clouds. `environment/dusk_environment.gd` supplies the matching
+cool moonlight, dark blue fog and glow. No downloaded sky image, no noise
+texture, no shader-site code, and no third-party celestial artwork; every star,
+crater and cloud is generated in code.
 
 #### Archived nature and stone footpath — riwayat, sudah dihapus
 Eleven actual glTF models from the user's `KyokoApp/Unity` archive
