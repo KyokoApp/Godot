@@ -54,6 +54,12 @@ func _run() -> void:
 	camera.current = true
 	var character := Character.new()
 	world.add_child(character)
+	# Goyangan kain/rambut punya KELEMBAMAN: setelah cast selesai, helai rambut
+	# masih berayun beberapa ratus milidetik, dan itu bukan "pose tidak pulih".
+	# Uji ini mengukur pose tulang, jadi simpulnya dimatikan dulu.
+	for wrapper in character.cloths:
+		if wrapper != null:
+			wrapper.set_enabled(false)
 	character.animation.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
 	character.cast_layer.set_physics_process(false)
 	# Nama sinyal engine bisa berbeda antar rilis 4.x: pakai connect berbasis nama,
