@@ -4,6 +4,7 @@ extends Node3D
 ## goyangan kain/rambut simulasi verlet.
 
 const Field = preload("res://src/game/world/field.gd")
+const Scenery = preload("res://src/game/world/scenery.gd")
 const Fence = preload("res://src/game/world/boundary_fence.gd")
 const Grass = preload("res://src/game/grass_field.gd")
 const Player = preload("res://src/game/player.gd")
@@ -44,6 +45,7 @@ var warmup_complete := false
 var warmup_report: Dictionary = {}
 var _previous_occlusion := false
 var _field: Field
+var _scenery: Scenery
 var _grass: Grass
 var _player: Player
 var _visual: Character
@@ -97,6 +99,11 @@ func _build_environment() -> void:
 func _build_world() -> void:
 	_field = Field.new()
 	add_child(_field)
+	# Pemandangan di luar pagar: bukit, tebing, laut, reruntuhan batu, titik
+	# cahaya — disusun seperti ilustrasi layar muat. Tanpa collision, jadi
+	# gameplay di dalam padang tidak berubah.
+	_scenery = Scenery.new()
+	add_child(_scenery)
 	add_child(Fence.new())
 
 

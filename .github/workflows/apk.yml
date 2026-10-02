@@ -532,6 +532,7 @@ jobs:
         run: |
           shopt -s globstar nullglob
           SHOTS=(~/.local/share/godot/app_userdata/**/avatar-*-test.png \
+            ~/.local/share/godot/app_userdata/**/world-*-test.png \
             ~/.local/share/godot/app_userdata/**/casting-*-test.png)
           if [ ${#SHOTS[@]} -eq 0 ]; then
             echo "tidak ada screenshot untuk pratinjau"

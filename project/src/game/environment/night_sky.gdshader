@@ -3,6 +3,12 @@ shader_type sky;
 uniform vec3 moon_direction = vec3(-0.31, 0.24, -0.92);
 uniform float moon_radius = 0.0055;
 uniform bool stars_enabled = true;
+// Pita senja: sisi barat (-x) tempat matahari baru terbenam, seperti di ilustrasi
+// layar muat. Hanya di dekat horizon; zenith tetap biru malam supaya bintang dan
+// bulan tidak tenggelam.
+uniform bool dusk_enabled = true;
+uniform vec3 dusk_direction = vec3(-0.97, 0.0, -0.24);
+uniform vec4 dusk_color : source_color = vec4(1.0, 0.62, 0.36, 1.0);
 uniform bool moon_enabled = true;
 
 float hash(vec2 p) {
@@ -16,6 +22,14 @@ void sky() {
 	vec3 color = mix(horizon, zenith, pow(elevation, 0.45));
 	color += vec3(0.009, 0.005, 0.014) * exp(-pow(elevation * 9.0, 2.0));
 	color = mix(vec3(0.008, 0.012, 0.022), color, smoothstep(-0.12, 0.02, direction.y));
+	if (dusk_enabled) {
+		float towards = max(dot(normalize(vec3(direction.x, 0.0, direction.z)),
+			normalize(dusk_direction)), 0.0);
+		float band = exp(-pow(max(direction.y, 0.0) * 5.5, 1.4));
+		float glow = pow(towards, 3.0) * band;
+		color = mix(color, dusk_color.rgb * 0.85, glow * 0.75);
+		color += dusk_color.rgb * glow * 0.28;
+	}
 	if (stars_enabled) {
 		vec2 uv = vec2(atan(direction.x, direction.z) / 6.283185 + 0.5,
 			acos(clamp(direction.y, -1.0, 1.0)) / 3.141593);
