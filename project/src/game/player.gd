@@ -2,10 +2,12 @@ extends CharacterBody3D
 ## Pemain di pulau 1 km. Gerak mengikuti animasi, bukan sebaliknya.
 ##
 ## Satu keputusan gait per frame dipakai bersama oleh badan dan animasi:
-##   kecepatan input → gait (dengan histeresis) → kecepatan alami klip × skala
-## Karena badan bergerak tepat secepat yang dimaksud klipnya, kaki tidak
-## meluncur. Inilah perbaikan utama dibanding versi lama yang menaikkan
-## speed_scale sembarangan (mis. ×3 saat boost) lalu membiarkan langkah meluncur.
+##   kecepatan input → gait (band dari kecepatan alami terukur) → skala main
+## Badan bergerak secepat yang diminta analog, dan kecepatan main animasi
+## disesuaikan supaya kaki tidak meluncur. Dulu kecepatan badan DIPOTONG ikut
+## kecepatan alami klip (natural × skala maks 1,5): kalau klip jalannya lambat,
+## badan ikut lambat dan analog terasa lemas — itulah "jalan geraknya lambat
+## banget". Sekarang badan yang menentukan, animasi yang menyesuaikan diri.
 
 const Character = preload("res://src/game/mannequin.gd")
 const Field = preload("res://src/game/world/field.gd")
@@ -35,12 +37,25 @@ const IDLE_EXIT := 0.20
 ## tengah lari. Klip mendarat hanya dipakai untuk pendaratan pelan/diam.
 const LANDING_SKIP_SPEED := 1.2
 ## Combo serangan: tiap tekan tombol lanjut ke klip berikutnya lalu berulang.
-const ATTACK_COMBO := ["Punch_Jab", "Punch_Cross", "Melee_Hook"]
+const ATTACK_COMBO := ["Punch_Jab", "Punch_Cross"]
 const COMBO_RESET := 1.1
 const ACCEL := 16.0
 const TURN_SPEED := 13.0
 const BOOST_MULTIPLIER := 1.35
-const MAX_SPEED := 5.2
+## Kecepatan paling tinggi saat analog penuh. Dinaikkan dari 5,2: dulu kecepatan
+## badan DIPOTONG ikut kecepatan alami klip (natural x skala maks 1,5), jadi
+## kalau klip jalannya lambat badannya juga lambat dan analog terasa lemas.
+const MAX_SPEED := 6.0
+## Dash: satu dorongan lurus sebentar, pakai klip Melee_Hook (gerakannya memang
+## seperti dash di game aksi). Dipisah dari combo serang supaya tidak membingungkan.
+const DASH_CLIP := "Melee_Hook"
+const DASH_SPEED := 12.0
+const DASH_TIME := 0.22
+const DASH_COOLDOWN := 0.85
+## Jalan mundur pakai klip berbeda (Walk_Formal_Loop) supaya arah gerak terbaca.
+## UAL tidak punya klip strafe kiri/kanan — lihat catatan di _apply_animation.
+const BACKWARD_CLIP := "Walk_Formal_Loop"
+const BACKWARD_DOT := -0.35
 const CROUCH_SPEED := 1.2
 const SCALE_MIN := 0.62
 const SCALE_MAX := 1.5
@@ -58,14 +73,11 @@ const JUMP_LAND := "Jump_Land"
 const CROUCH_IDLE := "Crouch_Idle_Loop"
 const CROUCH_WALK := "Crouch_Fwd_Loop"
 
-## Band kecepatan tiap klip lokomosi (m/s). Histeresis menjaga tidak berkedip
-## saat kecepatan berada tepat di batas band.
-const GAITS := [
-	{"clip": IDLE, "min": 0.0, "max": 0.15},
-	{"clip": "Walk_Loop", "min": 0.15, "max": 2.2},
-	{"clip": "Jog_Fwd_Loop", "min": 2.2, "max": 4.4},
-	{"clip": "Sprint_Loop", "min": 4.4, "max": MAX_SPEED * BOOST_MULTIPLIER + 1.0},
-]
+## Urutan klip lokomosi dari paling lambat. Batas band TIDAK ditulis sebagai
+## angka tetap: dihitung dari kecepatan alami tiap klip yang diukur dari tulang
+## kaki (lihat _gait_bands()). Angka tebak bikin kaki meluncur (klip jalan dipakai
+## untuk kecepatan lari) atau klip lari dipakai untuk jalan pelan.
+const GAIT_CLIPS := ["Walk_Loop", "Jog_Fwd_Loop", "Sprint_Loop"]
 
 var joystick: Joystick
 var orbit: Orbit
@@ -78,9 +90,13 @@ var speed_scale := 1.0
 var gait := IDLE
 var grounded := true
 var combo_index := 0
+var dash_cooldown := 0.0
 var _airborne := false
 var _air_time := 0.0
 var _combo_timer := 0.0
+var _dash_left := 0.0
+var _dash_cooldown := 0.0
+var _bands: Array = []
 
 
 func _ready() -> void:
@@ -130,6 +146,32 @@ func attack() -> String:
 	return clip
 
 
+func request_dash() -> bool:
+	# Dash lurus sebentar. Arah mengikuti analog (relatif kamera); kalau analog
+	# dilepas, memakai arah laju badan yang sekarang. Tidak bisa di udara.
+	if _dash_cooldown > 0.0 or _airborne or visual == null:
+		return false
+	var direction := Vector3.ZERO
+	var stick := Vector2.ZERO
+	if joystick != null and joystick.input_enabled:
+		stick = joystick.direction
+	if stick.length() > 0.15 and orbit != null:
+		direction = orbit.movement_direction(stick)
+	elif Vector2(velocity.x, velocity.z).length() > 0.3:
+		direction = Vector3(velocity.x, 0.0, velocity.z).normalized()
+	if direction.length() < 0.05:
+		return false
+	direction.y = 0.0
+	direction = direction.normalized()
+	_dash_left = DASH_TIME
+	_dash_cooldown = DASH_COOLDOWN
+	dash_cooldown = DASH_COOLDOWN
+	velocity.x = direction.x * DASH_SPEED
+	velocity.z = direction.z * DASH_SPEED
+	visual.play_action(DASH_CLIP)
+	return true
+
+
 func toggle_crouch() -> void:
 	crouching = not crouching
 
@@ -141,6 +183,11 @@ func toggle_boost() -> void:
 func _physics_process(delta: float) -> void:
 	if field == null or visual == null:
 		return
+	if _dash_cooldown > 0.0:
+		_dash_cooldown = maxf(0.0, _dash_cooldown - delta)
+		dash_cooldown = _dash_cooldown
+	if _dash_left > 0.0:
+		_dash_left = maxf(0.0, _dash_left - delta)
 	var stick := Vector2.ZERO
 	if joystick != null and joystick.input_enabled:
 		stick = joystick.direction
@@ -148,16 +195,19 @@ func _physics_process(delta: float) -> void:
 		_combo_timer = maxf(0.0, _combo_timer - delta)
 		if _combo_timer <= 0.0:
 			combo_index = 0
-	var desired := _desired_speed(stick)
+	var desired := 0.0 if _dash_left > 0.0 else _desired_speed(stick)
 	# Gait ikut laju badan yang sebenarnya, bukan cuma input: begitu analog
 	# dilepas, badan yang masih meluncur tidak boleh langsung berpose Idle —
 	# itulah "berhenti sekejap" yang terlihat. Badan melambat lewat klip
 	# Sprint -> Jog -> Walk -> Idle, sama seperti kakinya.
-	gait = select_gait(maxf(desired, move_speed), gait)
+	gait = select_gait(maxf(desired, move_speed), gait, stick, velocity)
 	var target := _target_velocity(stick, desired)
 	var flat := Vector2(velocity.x, velocity.z)
 	var blended := flat
-	if _airborne:
+	if _dash_left > 0.0:
+		# Dorongan dash tidak dikurangi input sampai durasinya habis.
+		blended = flat
+	elif _airborne:
 		# Di udara badan tidak mengerem sendiri: laju saat menolak dibawa sampai
 		# mendarat. Arah masih bisa dikoreksi, dan lompatan dari diam tetap boleh
 		# mengejar input (lebih pelan daripada di darat).
@@ -190,11 +240,21 @@ func _physics_process(delta: float) -> void:
 			1.0 - exp(-TURN_SPEED * delta))
 
 
+## Kecepatan tertinggi mengikuti kecepatan alami klip lari tercepat (hasil ukur
+## tulang kaki), bukan angka tetap. Kalau badan lebih cepat dari yang bisa
+## ditandingi klip tercepat, kakinya meluncur dan tes anti-meluncur gagal.
+func max_speed() -> float:
+	if visual == null:
+		return MAX_SPEED
+	var natural: float = visual.natural_speed(GAIT_CLIPS[GAIT_CLIPS.size() - 1])
+	return maxf(MAX_SPEED * 0.5, natural * 1.5)
+
+
 func _desired_speed(stick: Vector2) -> float:
 	var strength := minf(stick.length(), 1.0)
 	if strength < 0.02:
 		return 0.0
-	var speed := MAX_SPEED * strength
+	var speed := max_speed() * strength
 	if boosted:
 		speed *= BOOST_MULTIPLIER
 	if crouching:
@@ -203,14 +263,14 @@ func _desired_speed(stick: Vector2) -> float:
 
 
 func _target_velocity(stick: Vector2, desired: float) -> Vector3:
-	if desired <= 0.02 or field == null:
-		speed_scale = 1.0
+	# Badan bergerak secepat yang diminta analog. Dulu laju badan dipaksa ikut
+	# kecepatan alami klip (natural x skala yang dipotong di 1,5), jadi klip jalan
+	# yang lambat membuat badan lambat juga — analog terasa lemas dan band gait
+	# tidak pernah naik ke lari. Sekarang badan yang menentukan; kecepatan main
+	# animasi yang disesuaikan supaya kaki tidak meluncur.
+	if desired <= 0.02 or field == null or orbit == null:
 		return Vector3.ZERO
-	var direction := orbit.movement_direction(stick)
-	var natural := visual.natural_speed(gait)
-	speed_scale = clampf(desired / natural, SCALE_MIN,
-		SCALE_MAX_BOOST if boosted else SCALE_MAX)
-	return direction * natural * speed_scale
+	return orbit.movement_direction(stick) * desired
 
 
 func _apply_animation(desired: float) -> void:
@@ -220,7 +280,7 @@ func _apply_animation(desired: float) -> void:
 		if visual.gait != AIR_FALL and _air_time >= JUMP_POSE_TIME:
 			visual.set_air_clip(AIR_FALL, 1.0)
 		return
-	# Aksi sekali jalan dan klip pilihan panel tidak boleh ditimpa.
+	# Aksi sekali jalan (termasuk dash) dan klip pilihan panel tidak boleh ditimpa.
 	if visual.is_busy():
 		return
 	# Klip gait mengikuti laju badan (bukan cuma input tekanan analog): saat
@@ -228,22 +288,51 @@ func _apply_animation(desired: float) -> void:
 	var reference := maxf(desired, move_speed)
 	var scale := 1.0
 	if reference > 0.05:
-		scale = clampf(reference / visual.natural_speed(gait), SCALE_MIN,
+		var natural: float = visual.natural_speed(gait)
+		scale = clampf(reference / natural, SCALE_MIN,
 			SCALE_MAX_BOOST if boosted else SCALE_MAX)
+	speed_scale = scale
 	visual.set_locomotion(gait, scale)
 
 
+## Band kecepatan tiap klip, dihitung dari kecepatan alami yang diukur dari
+## tulang kaki. Batas atas tiap band = 1,5x kecepatan alaminya, batas bawah =
+## batas atas band sebelumnya. Dengan begitu klip jalan tidak pernah dipaksa
+## muter jauh dari 1x (kaki meluncur) dan klip lari tidak dipakai untuk jalan
+## pelan (kaki muter kencang tanpa badan bergerak).
+func _gait_bands() -> Array:
+	if not _bands.is_empty():
+		return _bands
+	if visual == null:
+		return []
+	var previous_max := IDLE_EXIT
+	for clip in GAIT_CLIPS:
+		var natural: float = visual.natural_speed(str(clip))
+		var top: float = natural * 1.5
+		_bands.append({"clip": str(clip), "min": previous_max, "max": top})
+		previous_max = top
+	return _bands
+
+
 func _band_for(speed: float) -> String:
-	for entry in GAITS:
+	var bands := _gait_bands()
+	for entry in bands:
 		if speed >= float(entry["min"]) and speed <= float(entry["max"]):
 			return str(entry["clip"])
-	return "Sprint_Loop"
+	return GAIT_CLIPS[GAIT_CLIPS.size() - 1]
 
 
-func select_gait(speed: float, current: String) -> String:
+func select_gait(speed: float, current: String, stick := Vector2.ZERO,
+		body_velocity := Vector3.ZERO) -> String:
 	if crouching:
 		return CROUCH_WALK if speed > 0.12 else CROUCH_IDLE
 	var target := _band_for(speed)
+	# Jalan MUNDUR pakai klip berbeda supaya arah gerak terbaca. UAL tidak punya
+	# klip strafe kiri/kanan (sudah diperiksa langsung dari isi GLB UAL1 & UAL2),
+	# jadi gerak menyamping tetap memakai klip jalan depan — badan yang berputar
+	# ke arah gerak, dan itu tetap terbaca benar.
+	if speed > IDLE_EXIT and _moving_backward(stick, body_velocity):
+		target = BACKWARD_CLIP
 	if target == current:
 		return current
 	# Histeresis menahan klip supaya tidak berkedip di ambang antarband lari.
@@ -252,13 +341,35 @@ func select_gait(speed: float, current: String) -> String:
 	# jalan — kelihatan seperti jalan di tempat meski badan diam.
 	if current == IDLE:
 		return current if speed <= IDLE_EXIT else target
-	for entry in GAITS:
+	if current == BACKWARD_CLIP:
+		return current if speed > IDLE_EXIT else IDLE
+	for entry in _gait_bands():
 		if str(entry["clip"]) != current:
 			continue
 		var low := maxf(float(entry["min"]) - HYSTERESIS, IDLE_EXIT)
 		if speed >= low and speed <= float(entry["max"]) + HYSTERESIS:
 			return current
 	return target
+
+
+## True kalau pemain bergerak ke belakang relatif hadapan kamera. Dibaca dari
+## ARAH ANALOG dulu (bukan laju badan): saat baru mulai bergerak, arah laju masih
+## berisik dan klip mundur akan berkedip. Laju badan dipakai sebagai cadangan
+## saat analog sudah dilepas tapi badan masih meluncur.
+func _moving_backward(stick: Vector2, body_velocity: Vector3) -> bool:
+	if orbit == null:
+		return false
+	var forward := orbit.camera_forward()
+	if forward.length() < 0.05:
+		return false
+	var flat_forward := Vector2(forward.x, forward.z).normalized()
+	if stick.length() > 0.15:
+		var wish := orbit.movement_direction(stick)
+		return Vector2(wish.x, wish.z).normalized().dot(flat_forward) < BACKWARD_DOT
+	var move := Vector2(body_velocity.x, body_velocity.z)
+	if move.length() < 0.2:
+		return false
+	return move.normalized().dot(flat_forward) < BACKWARD_DOT
 
 
 func _update_air_state(delta: float) -> void:

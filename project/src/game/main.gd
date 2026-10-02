@@ -34,11 +34,13 @@ const SPEED_ICON = preload("res://src/game/ui/speed.svg")
 const SWORD_ICON = preload("res://src/game/ui/sword.svg")
 const JUMP_ICON = preload("res://src/game/ui/jump.svg")
 const CROUCH_ICON = preload("res://src/game/ui/crouch.svg")
+const DASH_ICON = preload("res://src/game/ui/dash.svg")
 const SPAWN := Vector2(0, 7)
 ## HUD gaya game aksi: satu tombol serang besar, tombol aksi bulat di sekitarnya.
 const ATTACK_DIAMETER := 136.0
 const FIRE_DIAMETER := 100.0
 const ACTION_DIAMETER := 94.0
+const DASH_DIAMETER := 94.0
 const SPEED_DIAMETER := 88.0
 const RUNE_DIAMETER := 68.0
 
@@ -65,6 +67,7 @@ var _settings: RuneButton
 var _speed_button: SpeedButton
 var _jump: Button
 var _crouch: Button
+var _dash: Button
 var _catalog_button: Button
 var _banner: ClipBanner
 var _panel: AnimationPanel
@@ -198,23 +201,27 @@ func _build_hud() -> void:
 	_attack.name = "AttackRune"
 	_attack.tooltip_text = "Serangan combo: tekan berulang untuk lanjut"
 	layer.add_child(_attack)
-	_place(_attack, Control.PRESET_BOTTOM_RIGHT, -184, -184)
+	# Serang sengaja TIDAK di pojok: dulu pas di sudut layar dan susah ditekan
+	# dengan ibu jari. Sekarang tombolnya berhenti ±130 px dari tepi kanan/bawah
+	# (zona nyaman ibu jari), dan tombol lain disebar melengkung di sekitarnya
+	# dengan jarak lega supaya tidak salah pencet.
+	_place(_attack, Control.PRESET_BOTTOM_RIGHT, -200, -200)
 	_attack.pressed.connect(_attack_action)
 	_fire_button = _rune("TEMBAK", FIRE_DIAMETER, FIRE_ICON)
 	_fire_button.name = "FireRune"
 	_fire_button.tooltip_text = "Tembakan api pet"
 	layer.add_child(_fire_button)
-	_place(_fire_button, Control.PRESET_BOTTOM_RIGHT, -318, -196)
+	_place(_fire_button, Control.PRESET_BOTTOM_RIGHT, -360, -215)
 	_fire_button.pressed.connect(_fire_action)
 	_jump = _rune("LOMPAT", ACTION_DIAMETER, JUMP_ICON)
 	_jump.name = "JumpRune"
 	layer.add_child(_jump)
-	_place(_jump, Control.PRESET_BOTTOM_RIGHT, -166, -334)
+	_place(_jump, Control.PRESET_BOTTOM_RIGHT, -196, -370)
 	_jump.pressed.connect(_player.request_jump)
 	_crouch = _rune("JONGKOK", ACTION_DIAMETER, CROUCH_ICON)
 	_crouch.name = "CrouchRune"
 	layer.add_child(_crouch)
-	_place(_crouch, Control.PRESET_BOTTOM_RIGHT, -384, -308)
+	_place(_crouch, Control.PRESET_BOTTOM_RIGHT, -470, -215)
 	_crouch.pressed.connect(_toggle_crouch)
 	_speed_button = SpeedButton.new()
 	_speed_button.name = "SpeedBoost"
@@ -224,8 +231,16 @@ func _build_hud() -> void:
 	# 0 dan tombol ini jadi nol piksel (tidak bisa ditekan sama sekali).
 	_speed_button.custom_minimum_size = Vector2(SPEED_DIAMETER, SPEED_DIAMETER)
 	layer.add_child(_speed_button)
-	_place(_speed_button, Control.PRESET_BOTTOM_RIGHT, -286, -338)
+	_place(_speed_button, Control.PRESET_BOTTOM_RIGHT, -460, -330)
 	_speed_button.pressed.connect(_toggle_speed)
+	# Dash: dorongan lurus sebentar, animasi Melee_Hook (gerakannya memang seperti
+	# dash di game aksi). Ditaruh di atas tombol serang, mudah dijangkau.
+	_dash = _rune("DASH", DASH_DIAMETER, DASH_ICON)
+	_dash.name = "DashRune"
+	_dash.tooltip_text = "Dash: menerjang lurus sebentar"
+	layer.add_child(_dash)
+	_place(_dash, Control.PRESET_BOTTOM_RIGHT, -330, -390)
+	_dash.pressed.connect(_dash_action)
 	_build_graphics_drawer(layer)
 	_panel = AnimationPanel.new()
 	_panel.character = _visual
@@ -233,9 +248,9 @@ func _build_hud() -> void:
 	_panel.closed.connect(_close_panel)
 	# Analog tidak boleh ikut aktif saat tombol HUD ditekan.
 	_joystick.input_exclusions = [_panel, _graphics_drawer, _settings, _catalog_button,
-		_attack, _fire_button, _jump, _crouch, _speed_button]
+		_attack, _fire_button, _jump, _crouch, _speed_button, _dash]
 	_orbit.exclusions = [_panel, _graphics_drawer, _settings, _catalog_button,
-		_attack, _fire_button, _jump, _crouch, _speed_button]
+		_attack, _fire_button, _jump, _crouch, _speed_button, _dash]
 
 
 func _rune(caption: String, diameter: float, glyph: Texture2D = null) -> RuneButton:
@@ -307,6 +322,10 @@ func _toggle_speed() -> void:
 	_speed_button.queue_redraw()
 
 
+func _dash_action() -> void:
+	_player.request_dash()
+
+
 func _toggle_crouch() -> void:
 	_player.toggle_crouch()
 	_crouch.caption = "BERDIRI" if _player.crouching else "JONGKOK"
@@ -341,6 +360,7 @@ func _apply_input_state() -> void:
 	_jump.visible = not overlay
 	_crouch.visible = not overlay
 	_speed_button.visible = not overlay
+	_dash.visible = not overlay
 	_catalog_button.visible = not _graphics_drawer.visible
 	_banner.visible = not overlay
 
@@ -376,6 +396,9 @@ func _physics_process(delta: float) -> void:
 func _process(_delta: float) -> void:
 	_fire_button.cooldown_fraction = clampf(_pet.cooldown / FirePet.COOLDOWN, 0, 1)
 	_fire_button.queue_redraw()
+	# Sapuan cooldown dash: busur mengikuti sisa waktu tunggu.
+	_dash.cooldown_fraction = clampf(_player.dash_cooldown / Player.DASH_COOLDOWN, 0, 1)
+	_dash.queue_redraw()
 	if _speed_button.boosted != _player.boosted:
 		_speed_button.boosted = _player.boosted
 		_speed_button.queue_redraw()

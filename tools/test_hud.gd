@@ -105,14 +105,37 @@ func _run() -> void:
 	_check(not player.crouching and crouch.get("caption") == "JONGKOK",
 		"Jongkok tidak dibatalkan")
 	# Serangan combo: tiap tekan ganti klip, lalu berputar dari awal lagi.
+	# Combo sekarang dua pukulan; Melee_Hook dipindah jadi animasi DASH.
 	var attack_point := attack.get_global_rect().get_center()
-	for expected in ["Punch_Jab", "Punch_Cross", "Melee_Hook", "Punch_Jab"]:
+	for expected in ["Punch_Jab", "Punch_Cross", "Punch_Jab", "Punch_Cross"]:
 		_touch(2, attack_point, true)
 		_touch(2, attack_point, false)
 		_check(visual.clip == expected,
 			"Combo tidak berurutan: harusnya %s, dapat %s" % [expected, visual.clip])
-	_check(int(player.get("combo_index")) == 1, "Indeks combo tidak berputar")
+	_check(int(player.get("combo_index")) == 0, "Indeks combo tidak berputar")
 	_check(orbit.get("_touches").is_empty(), "Tombol serang ikut memutar kamera")
+	# Dash: klip Melee_Hook + dorongan jauh lebih cepat dari lari biasa, dengan
+	# cooldown supaya tidak bisa dipakai berulang tanpa jeda.
+	stick.set("direction", Vector2.RIGHT)
+	for frame in range(24):
+		await physics_frame
+	var running_speed: float = player.get("move_speed")
+	var dash_button: Button = game.get("_dash")
+	var dash_point := dash_button.get_global_rect().get_center()
+	_touch(20, dash_point, true)
+	_touch(20, dash_point, false)
+	_check(visual.clip == "Melee_Hook",
+		"Dash tidak memakai klip Melee_Hook: %s" % visual.clip)
+	for frame in range(3):
+		await physics_frame
+	_check(player.move_speed > running_speed + 1.5,
+		"Dash tidak mempercepat badan: %.2f -> %.2f" % [running_speed, player.move_speed])
+	_check(float(player.get("dash_cooldown")) > 0.0, "Dash tidak memasang cooldown")
+	stick.set("direction", Vector2.ZERO)
+	for frame in range(30):
+		await physics_frame
+	_check(visual.gait.ends_with("_Loop") or visual.gait == "Idle_Loop",
+		"Setelah dash animasi tidak kembali ke gait: " + visual.gait)
 	# Lompat: langsung melompat, animasi tolakan menempel di badan yang sudah naik.
 	var before_y := player.position.y
 	_touch(11, jump.get_global_rect().get_center(), true)

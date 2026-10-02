@@ -1,5 +1,29 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-03 (cicilan 14) — **GERAK DIPERBAIKI + DASH + POSISI UI + KAKI DI TANAH**
+  (permintaan: "masa jalan gerak nya lambat banget ... animasi jalan kanan kiri
+  depan belakang ,miring ... rapihin posisi ui ... attack pojok bawah susah
+  nekennya ... melee hook ... buat dash ... kaki jongkok masih tenggelam").
+  - `src/game/player.gd`:
+    - **akar "jalan lambat"**: laju badan dulu dipotong ikut kecepatan alami klip
+      (natural × skala maks 1,5) → badan lambat DAN band gait tidak pernah naik.
+      Sekarang badan ikut analog, animasi yang menyesuaikan.
+    - band gait dari kecepatan alami terukur (`_gait_bands()`), bukan angka tebak;
+      `max_speed()` ikut klip lari tercepat supaya kaki tidak meluncur.
+    - DASH baru: `request_dash()` — 12 m/s / 0,22 s / cooldown 0,85 s, klip
+      **Melee_Hook**, tidak bisa di udara. Combo serang jadi 2 pukulan.
+    - jalan mundur → `Walk_Formal_Loop`, deteksi dari arah analog relatif
+      hadapan kamera.
+  - `src/game/orbit_camera.gd`: `camera_forward()` baru (hadap kamera diratakan).
+  - `src/game/animation/anim_metrics.gd`: margin sol 3,5 cm, sampling gait
+    30 → 60 Hz, MAX_OFFSET 0,25 → 0,45.
+  - `src/game/main.gd`: tombol DASH (ikon `ui/dash.svg` baru), tombol SERANG
+    dilepas dari pojok (±130 px dari tepi) + jarak antar tombol dilebarkan.
+  - `tools/test_hud.gd`: combo diupdate jadi 2 pukulan + tes dash.
+  - **PENTING**: UAL1 & UAL2 di repo ini TIDAK punya klip strafe kiri/kanan
+    (sudah diperiksa dari isi GLB). Kalau pengguna minta klip strafe, harus
+    tambah aset animasi baru — jangan janjikan bisa dari UAL yang ada.
+
 - 2026-10-03 (cicilan 13) — **LANGIT MALAM DIPERBAIKI + HUD GAYA GAME AKSI**
   (permintaan: "masih kurang realistis langit nya kalo bulan dah cakep banget
   tapi bintang dan langit kayak png ada garis garis gitu dan juga rapih kan ui

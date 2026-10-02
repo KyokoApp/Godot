@@ -1145,3 +1145,47 @@ tiru ui attack,lompat dan lain lain kayak genshin atau wuwa".
     dihapus; banner cukup menampilkan nama klip + progres.
 
 Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-03 — gerak diperbaiki (lambat & kaki meluncur), dash Melee_Hook, posisi UI, kaki tidak tenggelam
+
+Permintaan: "animasi jalan tolong diperbaikin lagi gk sesuai jalan dan jaraknya
+jadi masa jalan gerak nya lambat banget ... ada animasi jalan kanan kiri depan
+belakang ,miring juga ada ... rapihin posisi ui ... masa attack pojok bawah
+susah nekennya ... animasi melee hook ... bisa di modif buat dash ... fix juga
+kaki jalan atau jongkok kaki nya masih ada yang tenggelam sedikit ketanah".
+
+- **Kenapa jalan terasa lambat** (`player.gd`): kecepatan badan dulu DIPOTONG ikut
+  kecepatan alami klip (`natural x skala` dengan skala maksimal 1,5). Kalau klip
+  jalannya lambat, badan ikut lambat — dan karena gait dipilih dari kecepatan
+  badan, band gait tidak pernah naik ke lari (lingkaran setan yang membuat analog
+  terasa lemas). Sekarang badan bergerak secepat yang diminta analog, dan
+  kecepatan main animasi yang menyesuaikan.
+- **Band gait tidak lagi angka tebak** (`player.gd`): batas band dihitung dari
+  kecepatan alami tiap klip yang diukur dari tulang kaki (batas atas = 1,5x
+  kecepatan alaminya). Kecepatan tertinggi pun ikut klip lari tercepat
+  (`max_speed()`), jadi badan tidak pernah lebih cepat dari yang bisa ditandingi
+  klip tercepat — kaki tidak meluncur.
+- **Dash** (`player.gd` + `main.gd`): tombol DASH baru memakai klip
+  **Melee_Hook** (0,47 s, gerakannya memang seperti dash game aksi): dorongan
+  12 m/s selama 0,22 s, cooldown 0,85 s dengan sapuan busur di tombol, tidak bisa
+  di udara. Combo serang jadi dua pukulan (Punch_Jab -> Punch_Cross) karena
+  Melee_Hook dipindah ke dash.
+- **Jalan mundur** memakai klip berbeda (`Walk_Formal_Loop`) supaya arah gerak
+  terbaca; deteksi "mundur" dibaca dari arah analog relatif hadapan kamera
+  (`orbit.camera_forward()`).
+- **Animasi strafe kiri/kanan/depan/belakang TIDAK ADA di UAL** — sudah diperiksa
+  langsung dari isi GLB: UAL1 (43 klip) dan UAL2 (43 klip) sama-sama tidak punya
+  klip strafe (tidak ada `Walk_Left/Right/Back`). Yang paling mendekati: jalan
+  depan (`Walk/Jog/Sprint`), jalan formal (dipakai untuk mundur), `Sword_Dash`,
+  `Shield_Dash`, dan `Slide_*`.
+- **Kaki tidak tenggelam lagi** (`anim_metrics.gd`): tiga sebab diperbaiki —
+  (1) tulang `foot_l/foot_r` ada di ATAS sol, jadi ditambah margin sol 3,5 cm;
+  (2) sampling klip gait dinaikkan 30 -> 60 Hz supaya titik terendah sesungguhnya
+  tidak terlewat di antara sampel; (3) batas koreksi naik dinaikkan 25 -> 45 cm
+  (klip jongkok menurunkan kaki jauh lebih dari 25 cm).
+- **Posisi UI** (`main.gd`): tombol SERANG tidak lagi nempel pojok — berhenti
+  ±130 px dari tepi kanan/bawah (zona nyaman ibu jari), tombol lain disebar
+  melengkung di sekitarnya dengan jarak lega supaya tidak salah pencet. Ikon
+  baru `ui/dash.svg`.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.

@@ -166,3 +166,11 @@ func _apply_orbit() -> void:
 
 func movement_direction(stick: Vector2) -> Vector3:
 	return Vector3(stick.x, 0.0, stick.y).rotated(Vector3.UP, yaw)
+
+
+## Arah hadap kamera diratakan ke tanah (tanpa komponen y). Kamera berdiri di
+## (sin yaw, 0, cos yaw) dari fokus dan melihat ke arah sebaliknya, jadi hadap
+## kamera = -(sin yaw, 0, cos yaw). Dipakai pemain untuk membedakan jalan depan
+## dan jalan mundur.
+func camera_forward() -> Vector3:
+	return Vector3(-sin(yaw), 0.0, -cos(yaw))

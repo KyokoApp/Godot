@@ -5,17 +5,26 @@ extends RefCounted
 ##  - natural_speed : kecepatan gerak yang sebenarnya diwakili siklus itu (m/s)
 ##  - foot_min_y    : titik terendah tulang kaki selama klip
 ##  - ground_offset : koreksi naik supaya kaki tidak tenggelam ke tanah
+##                    (termasuk tebal sol, lihat SOLE)
 ##
 ## Semua klip UAL dimainkan di tempat (root tidak bergerak), jadi satu-satunya
 ## cara jujur mencocokkan animasi dengan gerak badan adalah mengukur langkahnya
 ## lebih dulu lalu menyetel kecepatan main. Itulah yang menghilangkan kaki
 ## meluncur (foot sliding) yang sebelumnya terjadi.
 
-const SAMPLE_RATE := 30.0
-const IDLE_RATE := 12.0
+const SAMPLE_RATE := 60.0
+const IDLE_RATE := 20.0
 const FOOT_LEFT := "foot_l"
 const FOOT_RIGHT := "foot_r"
-const MAX_OFFSET := 0.25
+## Batas koreksi naik. Dinaikkan dari 0,25: klip jongkok/meluncur membuat kaki
+## turun jauh lebih dari 25 cm, dan kalau koreksinya dipotong di sana kakinya
+## tetap tenggelam.
+const MAX_OFFSET := 0.45
+## Tebal sol kaki. Tulang foot_l/foot_r ada di ATAS permukaan sol, jadi kalau
+## kaki diposisikan tepat di titik tulang, solnya masih masuk beberapa sentimeter
+## ke tanah. Inilah sisa "kaki tenggelam sedikit" yang terlihat saat jalan dan
+## jongkok. Angkanya diukur kasar dari bentuk mesh UAL (pergelangan ke ujung kaki).
+const SOLE := 0.035
 
 
 static func measure(player: AnimationPlayer, skeleton: Skeleton3D, clip: String,
@@ -79,7 +88,7 @@ static func measure_catalog(player: AnimationPlayer, skeleton: Skeleton3D,
 		var measured: Dictionary = metrics[name]
 		measured["ground_offset"] = 0.0
 		if measured["foot_min_y"] < INF:
-			var drop := baseline - float(measured["foot_min_y"])
+			var drop := baseline - float(measured["foot_min_y"]) + SOLE
 			measured["ground_offset"] = clampf(drop, 0.0, MAX_OFFSET)
 	return metrics
 
