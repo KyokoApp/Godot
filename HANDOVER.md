@@ -1,5 +1,23 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-02 (sesi ini, cicilan 5) — **PALET SENJA: TANAH & RUMPUT GELAP TAPI
+  TETAP TERBACA** (lanjutan "tanah dan rumput jadi gelap tapi tetap kelihatan,
+  dan rumput satu warna dengan tanah"). HANYA warna.
+  - `src/game/world/field.gd`: `GRASS_COLOR` 8fce63 → **3f6b34**,
+    `GRASS_DARK` 6aa845 → **2d4f27** (± 45% lebih gelap), `SAND_COLOR` c9a873 →
+    **9a8260** (± 25%). Dipilih supaya kanal hijau tanah tetap > 0,22 setelah
+    dicahaya senja (batas gerbang `test_dusk`).
+  - `src/game/grass.gdshader` + `src/game/world/grass_distance.gdshader`:
+    `top_color`/`bottom_color` helai = warna tanah yang sama → rumput dan tanah
+    SATU warna. Ujung tetap sedikit lebih terang dari akar supaya helai masih
+    terbaca 3D.
+  - `tools/test_dusk.gd`: warna uji diambil dari `Field.GRASS_COLOR` (dulu
+    ditulis ulang `8fce63` di dalam tes, jadi menguji warna yang sudah tidak
+    dipakai). Janji gerbang jadi "tanah GELAP pun masih terbaca".
+  - `world/scenery.gd`: `DIRT_COLOR` (konstanta mati) ikut meredup.
+  - Sisa antrian cicilan (JANGAN digabung): rumput rapat menutupi seluruh
+    jangkauan kamera, partikel ungu, suasana senja + sinar cahaya, shader air.
+
 - 2026-10-02 (sesi ini, cicilan 4) — **DUNIA JADI PULAU 1 KM × 1 KM, GARIS
   PANTAI BERGELOMBANG** (permintaan: "world nya 1km, pinggirannya jangan bulat
   atau kotak tapi kayak pulau gitu bergelombang"). Cicilan ini HANYA ukuran dunia

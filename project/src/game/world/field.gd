@@ -44,9 +44,14 @@ const GRASS_MIN_HEIGHT := 0.55
 ## Jarak minimum rumput dari garis pantai (meter) supaya pasir tetap polos.
 const GRASS_SHORE_MARGIN := 5.0
 
-const GRASS_COLOR := Color("8fce63")
-const GRASS_DARK := Color("6aa845")
-const SAND_COLOR := Color("c9a873")
+## Palet senja: hijau tua yang MASIH terbaca (bukan hitam). Permintaan pengguna:
+## "tanah dan rumput jadi gelap tapi tetap kelihatan, dan rumput satu warna dengan
+## tanah". Angkanya ± 45% dari hijau muda lama (8fce63) supaya di bawah cahaya
+## senja hasilnya tetap di atas 0,22 kanal hijau — batas gerbang test_dusk.
+const GRASS_COLOR := Color("3f6b34")
+const GRASS_DARK := Color("2d4f27")
+## Pasir juga meredup: senja bukan siang. ± 25% dari c9a873.
+const SAND_COLOR := Color("9a8260")
 # Jalan tanah berliku (digambar shader, tanpa mesh/collision tambahan).
 const PATH_WIDTH := 3.0
 ## Lekuk 42 m dengan panjang gelombang ± 520 m: jalan berkeluk 2-3 kali sepanjang

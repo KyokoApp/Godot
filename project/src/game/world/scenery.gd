@@ -44,7 +44,7 @@ const ROCK_COLOR := Color("8fa6b8")
 const ROCK_SHADE := Color("65808f")
 const STONE_COLOR := Color("c8c3b4")
 const MOSS_COLOR := Color("7fae63")
-const DIRT_COLOR := Color("c9a873")
+const DIRT_COLOR := Color("9a8260")
 const MOTE_COLOR := Color("ffe9b0")
 
 var hills: Node3D

@@ -830,3 +830,28 @@ gate 104 s (termasuk tes pulau baru `[island-test] gagal=0`), render-c 209 s,
 render-a 189 s, render-b 175 s, package 90 s. Belum diuji di HP — sandbox tidak
 bisa menjalankan Godot, jadi bentuk pulau dinilai dari gambar render CI
 (`world-pulau/pantai/pemandangan/jalan/laut`) dan dari HP pengguna.
+
+### 2026-10-02 — palet senja: tanah & rumput gelap tapi tetap terbaca
+
+Lanjutan permintaan "tanah dan rumput jadi gelap tapi tetap kelihatan, dan
+rumput satu warna dengan tanah". Cicilan ini HANYA warna (rumput rapat, partikel
+ungu, sinar cahaya, dan shader air menyusul).
+
+- `world/field.gd` — satu sumber warna untuk shader tanah: `GRASS_COLOR`
+  `8fce63 → 3f6b34`, `GRASS_DARK` `6aa845 → 2d4f27` (± 45% lebih gelap),
+  `SAND_COLOR` `c9a873 → 9a8260` (± 25%, senja bukan siang). Angkanya dipilih
+  supaya kanal hijau tanah tetap di atas 0,22 setelah dicahaya senja — batas
+  gerbang `test_dusk`.
+- `grass.gdshader` dan `world/grass_distance.gdshader` — warna helai
+  (`top_color`/`bottom_color`) diambil dari warna tanah yang sama, jadi rumput
+  dan tanah terbaca sebagai SATU warna. Ujung helai sedikit lebih terang dari
+  akarnya; itu yang masih membuat helai terbaca sebagai benda 3D setelah
+  warnanya disamakan.
+- `tools/test_dusk.gd` — gerbang "tanah hijau terbaca" dulu memakai hijau muda
+  `8fce63` yang ditulis ulang di dalam tes, padangkan dunianya sudah berubah:
+  tesnya menguji warna yang tidak dipakai lagi. Sekarang warnanya diambil dari
+  `Field.GRASS_COLOR`, jadi janjinya jadi "tanah GELAP pun masih terbaca".
+- `world/scenery.gd` — konstanta `DIRT_COLOR` yang tidak terpakai ikut meredup
+  supaya tidak menyesatkan.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.

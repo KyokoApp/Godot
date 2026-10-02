@@ -2,8 +2,9 @@ shader_type spatial;
 render_mode cull_disabled, world_vertex_coords, diffuse_burley, specular_disabled;
 uniform sampler2D blade_mask : filter_linear_mipmap, repeat_disable;
 uniform vec3 player_position;
-uniform vec3 bottom_color : source_color = vec3(0.29, 0.53, 0.19);
-uniform vec3 top_color : source_color = vec3(0.38, 0.65, 0.24);
+// Sama dengan grass.gdshader dan field.gd: satu warna gelap dengan tanah.
+uniform vec3 bottom_color : source_color = vec3(0.176, 0.310, 0.153);
+uniform vec3 top_color : source_color = vec3(0.247, 0.420, 0.204);
 void vertex() {
 	vec3 root = (MODEL_MATRIX * vec4(0, 0, 0, 1)).xyz;
 	float distance = length(root.xz - player_position.xz);

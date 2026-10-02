@@ -9,9 +9,11 @@ extends SceneTree
 ##   2. awan ada (hilang kalau clouds_enabled dimatikan),
 ##   3. zenith biru lavender DAN terang (bukan biru malam),
 ##   4. arah cahaya matahari sama dengan Dusk.SUN_DIRECTION,
-##   5. tanah hijau cukup terang untuk dibaca di bawah cahaya senja itu.
+##   5. tanah hijau GELAP (palet senja) pun cukup terang untuk dibaca di bawah
+##      cahaya senja itu — bukan hitam.
 
 const Dusk = preload("res://src/game/environment/dusk_environment.gd")
+const Field = preload("res://src/game/world/field.gd")
 var _failures := 0
 
 
@@ -87,13 +89,16 @@ func _run() -> void:
 	light.look_at_from_position(Vector3.ZERO, -Dusk.SUN_DIRECTION)
 	_check(light.global_basis.z.dot(Dusk.SUN_DIRECTION) > 0.999,
 		"Arah pencahayaan tidak sesuai matahari senja")
-	# 5. Tanah hijau harus terbaca (terang dan tetap hijau, bukan hitam).
+	# 5. Tanah hijau GELAP harus tetap terbaca (tetap hijau, bukan hitam).
+	# Warnanya diambil dari field.gd, bukan ditulis ulang di sini: dulu tes ini
+	# memakai hijau muda 8fce63 sementara dunianya sudah jadi hijau tua, jadi
+	# gerbangnya menguji warna yang tidak dipakai lagi.
 	var ground := MeshInstance3D.new()
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(30, 30)
 	ground.mesh = plane
 	var grass := StandardMaterial3D.new()
-	grass.albedo_color = Color("8fce63")
+	grass.albedo_color = Field.GRASS_COLOR
 	grass.roughness = 1.0
 	ground.material_override = grass
 	world.add_child(ground)
