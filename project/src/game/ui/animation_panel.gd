@@ -30,6 +30,13 @@ var _slow_button: Button
 var _scroll: ScrollContainer
 var _list: VBoxContainer
 var _ignore_touch_until := 0
+## Scroll ditangani sendiri: ScrollContainer bawaan tidak menerima drag saat
+## jari mendarat di atas tombol baris, dan itulah keluhan "scroll susah, harus
+## dari pojok". Di sini drag dari titik mana pun di daftar selalu menggeser.
+var _drag_finger := -1
+var _drag_from_y := 0.0
+var _drag_start_scroll := 0.0
+var _drag_travelled := 0.0
 var _reel := false
 var _repeat := true
 var _slow := false
@@ -86,9 +93,7 @@ func _build() -> void:
 	_scroll.name = "ClipScroll"
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_scroll.mouse_filter = Control.MOUSE_FILTER_STOP
-	# Sedikit toleransi supaya ketukan ringan saat menekan baris tidak dianggap drag.
-	_scroll.scroll_deadzone = 8
+	_scroll.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(_scroll)
 	_list = VBoxContainer.new()
 	_list.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -169,9 +174,9 @@ func _row(clip: String, label: String) -> Button:
 	button.clip_text = true
 	button.custom_minimum_size = Vector2(0, 54)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	# PASS: baris tetap bisa ditekan, tapi drag diteruskan ke daftar sehingga
-	# scroll bisa dimulai di mana saja — bukan hanya di pojok/tepi.
-	button.mouse_filter = Control.MOUSE_FILTER_PASS
+	# Baris hanya tampilan: sentuhan diatur panel supaya drag = scroll dan
+	# ketukan pendek = pilih klip, tanpa saling makan.
+	button.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_rows[clip] = button
 	return button
 
@@ -179,6 +184,46 @@ func _row(clip: String, label: String) -> Button:
 func contains_point(point: Vector2) -> bool:
 	var local := get_global_transform_with_canvas().affine_inverse() * point
 	return Rect2(Vector2.ZERO, size).has_point(local)
+
+
+func list_rect() -> Rect2:
+	if _scroll == null:
+		return Rect2()
+	return Rect2(_scroll.global_position, _scroll.size)
+
+
+func _input(event: InputEvent) -> void:
+	if not visible:
+		return
+	if event is InputEventScreenTouch:
+		var touch := event as InputEventScreenTouch
+		if touch.pressed and _drag_finger == -1 and list_rect().has_point(touch.position):
+			_drag_finger = touch.index
+			_drag_from_y = touch.position.y
+			_drag_start_scroll = float(_scroll.scroll_vertical)
+			_drag_travelled = 0.0
+		elif not touch.pressed and touch.index == _drag_finger:
+			var tapped := _drag_travelled < 14.0
+			_drag_finger = -1
+			if tapped:
+				_select_row_at(touch.position)
+	elif event is InputEventScreenDrag:
+		var drag := event as InputEventScreenDrag
+		if drag.index != _drag_finger:
+			return
+		var offset := _drag_from_y - drag.position.y
+		_drag_travelled = maxf(_drag_travelled, absf(offset))
+		_scroll.scroll_vertical = int(_drag_start_scroll + offset)
+
+
+func _select_row_at(point: Vector2) -> void:
+	if not list_rect().has_point(point):
+		return
+	for clip: String in _rows:
+		var row := _rows[clip]
+		if row.visible and row.get_global_rect().has_point(point):
+			_select(clip, false)
+			return
 
 
 func _resize_window() -> void:
