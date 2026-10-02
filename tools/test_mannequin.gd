@@ -41,13 +41,18 @@ func _run() -> void:
 	_check(character.retargets.size() >= 1 and character.retarget.mapped_count() >= 40,
 		"Peta tulang avatar kurang lengkap: %d" %
 		(character.retarget.mapped_count() if character.retarget != null else 0))
+	# Material dipasang PER SURFACE (mesh Body punya surface rambut + badan +
+	# dress), jadi yang diperiksa tiap surface, bukan material_override.
 	for node in avatar.find_children("*", "MeshInstance3D", true, false):
 		var mesh := node as MeshInstance3D
-		if not mesh.visible:
+		if not mesh.visible or mesh.mesh == null:
 			continue
-		var material := mesh.material_override as StandardMaterial3D
-		_check(material != null and material.next_pass is ShaderMaterial,
-			"Outline/material avatar hilang: " + mesh.name)
+		for surface in range(mesh.mesh.get_surface_count()):
+			var material := mesh.get_surface_override_material(surface) as StandardMaterial3D
+			_check(material != null and material.albedo_texture != null
+				and material.next_pass is ShaderMaterial,
+				"Material avatar hilang di %s[%s]" % [mesh.name,
+				mesh.mesh.surface_get_name(surface)])
 	_test_catalog(character, animation, skeleton)
 	_test_metrics(character)
 	_test_state_machine(character)
