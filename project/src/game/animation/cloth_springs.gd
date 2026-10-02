@@ -2,13 +2,14 @@ extends RefCounted
 ## Inti simulasi goyangan kain & rambut (tanpa node, bisa diuji headless).
 ##
 ## Cara kerjanya: setiap rantai tulang kain (rok "Shawl", "Hair", "Collar", "Hip",
-## "Pendant", "Earrings", "Neck", "+Flycloak") diperlakukan sebagai rantai
-## partikel yang disimulasikan dengan verlet di RUANG DUNIA:
+## "Pendant", "Earrings", "+Flycloak") diperlakukan sebagai rantai partikel yang
+## disimulasikan dengan verlet di RUANG DUNIA:
 ##
 ##   1. partikel pertama selalu menempel di tulang badannya (dari animasi),
 ##   2. sisanya jatuh karena gravitasi + angin, dan menyimpan kecepatan sendiri,
 ##   3. tiap iterasi: panjang segmen dijaga, arah segmen ditarik balik ke bentuk
-##      rest-nya (kekakuan kain), lalu didorong keluar dari kapsul badan,
+##      rest-nya (kekakuan kain), lalu didorong keluar dari kapsul badan DAN dari
+##      kapsul kain lain yang lebih dalam (aturan lapisan, lihat WEAVE_RADIUS),
 ##   4. arah partikel diterjemahkan kembali menjadi rotasi tulang.
 ##
 ## Kenapa di ruang dunia dan bukan ruang model: supaya kain punya KELEMBAMAN.
@@ -42,25 +43,52 @@ const BASIS_FOLLOW := 6.0
 ##   drag      : redaman kecepatan (1/detik)
 ##   gravity   : pengali gravitasi (rambut sedikit lebih ringan dari rok)
 ##   wind      : pengali angin
-##   jitter    : kecepatan tambahan kecil supaya tidak beku sempurna
+##   weave     : ikut aturan lapisan kain-vs-kain (lihat WEAVE_RADIUS)
+##
+## Kekakuan kain dipilih rendah (9,5/detik) karena inilah yang membedakan
+## "kain" dari "karton": dengan rest-shape yang ditarik perlahan, panel baru
+## kembali ke bentuk aslinya setelah beberapa saat, jadi terlihat mengalir.
+##
+## Leher TIDAK ada di daftar ini. Geometri leher digerakkan `Bone_NeckA01_M`
+## (476 titik, anak `Bip001 Neck`); saat ikut disimulasikan, kulit leher
+## tertarik ke arah gravitasi sehingga leher terlihat kurus dan memanjang.
+## Leher cukup mengikuti animasi badan seperti tulang tubuh lainnya.
 const GROUPS := [
 	{"prefix": "Bone_Hair", "stiffness": 34.0, "drag": 2.6, "gravity": 1.0,
-		"wind": 0.55},
-	{"prefix": "Bone_Shawl", "stiffness": 15.0, "drag": 1.7, "gravity": 1.0,
-		"wind": 0.85},
+		"wind": 0.55, "weave": false},
+	{"prefix": "Bone_Shawl", "stiffness": 9.5, "drag": 1.45, "gravity": 1.0,
+		"wind": 0.85, "weave": true},
 	{"prefix": "Bone_Collar", "stiffness": 30.0, "drag": 2.4, "gravity": 1.0,
-		"wind": 0.7},
-	{"prefix": "Bone_Neck", "stiffness": 26.0, "drag": 2.2, "gravity": 1.0,
-		"wind": 0.7},
+		"wind": 0.7, "weave": true},
 	{"prefix": "Bone_Hip", "stiffness": 40.0, "drag": 3.0, "gravity": 1.0,
-		"wind": 0.5},
+		"wind": 0.5, "weave": true},
 	{"prefix": "Bone_Pendant", "stiffness": 42.0, "drag": 3.2, "gravity": 1.0,
-		"wind": 0.4},
+		"wind": 0.4, "weave": false},
 	{"prefix": "Bone_Earrings", "stiffness": 48.0, "drag": 3.4, "gravity": 1.0,
-		"wind": 0.3},
+		"wind": 0.3, "weave": false},
 	{"prefix": "Flycloak", "stiffness": 12.0, "drag": 1.6, "gravity": 1.0,
-		"wind": 0.9},
+		"wind": 0.9, "weave": true},
 ]
+
+## Tulang kain yang TIDAK boleh disimulasikan. `Bone_ShawlJ01_L` dan
+## `Bone_ShawlK01_L` menggantung di `Bone_ShawlArmTwistA01_L` (anak
+## `Bip001 L UpperArm`), jadi mereka berputar bersama lengan. Kalau digoyangkan
+## gravitasi, panel lengan itu menyayat jubah badan setiap lengan diangkat;
+## lebih baik kaku mengikuti lengan seperti aslinya.
+const SKIP_BONES := ["Bone_ShawlArmTwist", "Bone_ShawlJ", "Bone_ShawlK"]
+
+## Kain vs kain: tiap rantai dihitung "lapisan"-nya (rata-rata jarak titik rest
+## ke kapsul badan). Rantai yang lebih LUAR tidak boleh masuk ke kapsul rantai
+## yang lebih dalam — inilah yang menghentikan kain menembus kain lain, bukan
+## cuma menembus badan. Radiusnya kecil (2 cm) supaya kain tetap terlihat
+## menempel; yang dijaga hanya URUTAN lapisannya.
+const WEAVE_RADIUS := 0.02
+## Selisih jarak minimum supaya dua rantai dianggap beda lapisan.
+const WEAVE_LAYER_EPS := 0.005
+## Hanya segmen kain lain yang sedekat ini (di rest pose) yang diikutkan.
+const WEAVE_REACH := 0.10
+## Batas kapsul kain per rantai supaya biaya per frame tetap kecil.
+const MAX_WEAVE_CAPSULES := 6
 
 ## Kapsul tabrakan badan: [tulang A, tulang B, ekor, radius].
 ## Segmen = A.origin -> B.origin (kalau B kosong: A.origin lanjut ke arah
@@ -89,6 +117,8 @@ const COLLIDERS := [
 
 class Capsule:
 	var bone := -1
+	## Indeks rantai kain pemilik kapsul ini; -1 berarti kapsul badan.
+	var chain := -1
 	var from_local := Vector3.ZERO
 	var to_local := Vector3.ZERO
 	var radius := 0.1
@@ -136,6 +166,8 @@ class Strand:
 ## Keterangan partikel paling dalam yang menembus kapsul (diisi
 ## `penetration_report()`), supaya gerbang bisa menunjuk rantai dan tulangnya.
 var last_penetration := ""
+## Keterangan terburuk untuk kain menembus kain lain (diisi `weave_report()`).
+var last_weave := ""
 var _chains: Array[Strand] = []
 var _colliders: Array[Capsule] = []
 var _skeleton: Skeleton3D
@@ -180,6 +212,7 @@ func configure(skeleton: Skeleton3D, iterations := 2) -> void:
 	if _chains.is_empty() and not _warned:
 		_warned = true
 		push_error("ClothSprings: tidak ada tulang kain/rambut yang cocok")
+	_build_weaves()
 	_init_particles(skeleton)
 	_diagnostics = "[cloth] %d rantai, %d tulang, %d kapsul" % [
 		chain_count(), bone_count(), _colliders.size()]
@@ -193,12 +226,22 @@ func _group_bones(skeleton: Skeleton3D) -> Array[PackedInt32Array]:
 		groups.append(PackedInt32Array())
 	for bone in range(skeleton.get_bone_count()):
 		var key := Humanoid.normalize(skeleton.get_bone_name(bone))
+		if _is_skipped(key):
+			continue
 		for group: int in range(GROUPS.size()):
 			var prefix: String = GROUPS[group]["prefix"]
 			if key.begins_with(Humanoid.normalize(prefix)):
 				groups[group].append(bone)
 				break
 	return groups
+
+
+## Tulang kain yang dipasang di lengan (lihat SKIP_BONES).
+func _is_skipped(key: String) -> bool:
+	for prefix: String in SKIP_BONES:
+		if key.begins_with(Humanoid.normalize(prefix)):
+			return true
+	return false
 
 
 func _build_group_chains(skeleton: Skeleton3D, group: int,
@@ -326,6 +369,10 @@ func _build_colliders() -> void:
 
 ## Pilih kapsul yang mungkin bersinggungan dengan rantai (dihitung sekali dari
 ## rest pose). Tanpa saringan ini tiap partikel harus diuji ke semua kapsul.
+## `allowed` diisi per KAPSUL lalu per partikel, dan `_resolve()` membacanya
+## dengan pola yang sama (kolom `slot`, baris `partikel`) — mask yang tertukar
+## membuat simulasi mendorong partikel yang salah dan itulah sumber kain yang
+## tetap menembus badan.
 func _attach_colliders(chain: Strand, rest_points: PackedVector3Array) -> void:
 	for index in range(_colliders.size()):
 		var collider := _colliders[index]
@@ -341,6 +388,114 @@ func _attach_colliders(chain: Strand, rest_points: PackedVector3Array) -> void:
 		for point in rest_points:
 			var distance := _distance_to_segment(point, from_point, to_point)
 			chain.allowed.append(1 if distance >= collider.radius * 0.92 else 0)
+
+
+# --------------------------------------------------------- kain vs kain -----
+
+## Lapisan tiap rantai dari rest pose: rata-rata jarak titik-titik rantai ke
+## kapsul badan terdekat. Makin besar nilainya, makin di luar posisinya.
+func _chain_layer(index: int) -> float:
+	var chain := _chains[index]
+	var parent_rest := _skeleton.get_bone_global_rest(chain.parent_bone)
+	var total := 0.0
+	for value in chain.rest_local:
+		var point := parent_rest * value
+		var nearest := INF
+		for collider in _colliders:
+			if collider.chain >= 0:
+				continue
+			var rest_a := _skeleton.get_bone_global_rest(collider.bone)
+			nearest = minf(nearest, _distance_to_segment(point, rest_a * collider.from_local,
+				rest_a * collider.to_local))
+		total += nearest
+	return total / maxf(1.0, float(chain.rest_local.size()))
+
+
+## Apakah grup ini ikut aturan lapisan kain-vs-kain.
+func _group_weaves(group: int) -> bool:
+	return GROUPS[group]["weave"] == true
+
+
+## Bangun kapsul kain-vs-kain: hanya antara rantai yang BERBEDA lapisan, dan
+## hanya untuk segmen yang memang berdekatan di rest pose (biaya per frame
+## dijaga kecil, jadi tidak perlu menguji semua pasangan).
+func _build_weaves() -> void:
+	var layers := PackedFloat32Array()
+	for index in range(_chains.size()):
+		layers.append(_chain_layer(index))
+	for target in range(_chains.size()):
+		var chain := _chains[target]
+		if not _group_weaves(chain.group):
+			continue
+		var slots: Array[int] = []
+		for other in range(_chains.size()):
+			if slots.size() >= MAX_WEAVE_CAPSULES:
+				break
+			if other == target or not _group_weaves(_chains[other].group):
+				continue
+			if layers[target] <= layers[other] + WEAVE_LAYER_EPS:
+				continue # rantai ini bukan lapisan luar dari `other`
+			_weave_pair(target, other, slots)
+		for slot in slots:
+			_attach_weave(chain, slot)
+
+
+## Tambahkan kapsul dari segmen rantai `inner` yang paling dekat dengan rantai
+## `outer` (sampai batas `MAX_WEAVE_CAPSULES` untuk seluruh rantai).
+func _weave_pair(outer: int, inner: int, slots: Array[int]) -> void:
+	var chain := _chains[inner]
+	var parent_rest := _skeleton.get_bone_global_rest(chain.parent_bone)
+	var points := PackedVector3Array()
+	for value in chain.rest_local:
+		points.append(parent_rest * value)
+	var chosen := PackedInt32Array()
+	var chosen_distance := PackedFloat32Array()
+	for index in range(points.size() - 1):
+		var distance := _chain_segment_distance(outer, points[index], points[index + 1])
+		if distance > WEAVE_RADIUS + WEAVE_REACH:
+			continue
+		chosen.append(index)
+		chosen_distance.append(distance)
+	while not chosen.is_empty() and slots.size() < MAX_WEAVE_CAPSULES:
+		var best := 0
+		for index in range(1, chosen.size()):
+			if chosen_distance[index] < chosen_distance[best]:
+				best = index
+		slots.append(_make_weave(chain, points, chosen[best], inner))
+		chosen.remove_at(best)
+		chosen_distance.remove_at(best)
+
+
+## Jarak terdekat titik-titik rest rantai `index` ke satu segmen kain.
+func _chain_segment_distance(index: int, from_point: Vector3, to_point: Vector3) -> float:
+	var chain := _chains[index]
+	var parent_rest := _skeleton.get_bone_global_rest(chain.parent_bone)
+	var nearest := INF
+	for value in chain.rest_local:
+		nearest = minf(nearest, _distance_to_segment(parent_rest * value, from_point, to_point))
+	return nearest
+
+
+func _make_weave(chain: Strand, points: PackedVector3Array, index: int, inner: int) -> int:
+	var bone := chain.bones[mini(index, chain.bones.size() - 1)]
+	var rest := _skeleton.get_bone_global_rest(bone)
+	var capsule := Capsule.new()
+	capsule.bone = bone
+	capsule.chain = inner
+	capsule.radius = WEAVE_RADIUS
+	capsule.from_local = rest.affine_inverse() * points[index]
+	capsule.to_local = rest.affine_inverse() * points[index + 1]
+	_colliders.append(capsule)
+	return _colliders.size() - 1
+
+
+## Kapsul kain tidak memakai mask "tertanam saat rest" seperti kapsul badan:
+## rantai luar memang menempel pada rantai dalam, jadi lapisan luar selalu
+## boleh didorong keluar. Urutan penulisannya harus sama dengan `_attach_colliders`.
+func _attach_weave(chain: Strand, slot: int) -> void:
+	chain.colliders.append(slot)
+	for _point in chain.rest_local:
+		chain.allowed.append(1)
 
 
 func _init_particles(skeleton: Skeleton3D) -> void:
@@ -406,15 +561,18 @@ func _simulate_chain(chain: Strand, dt: float, world: Transform3D, skeleton: Ske
 		for index in range(1, chain.points.size()):
 			_keep_length(chain, index)
 			_keep_shape(chain, index, step_k)
-			_collide(chain, index)
+			_resolve(chain, index, false)
+			_resolve(chain, index, true)
 		if _ground_y > -INF:
 			for index in range(1, chain.points.size()):
 				_keep_above_ground(chain, index, dt)
 	# Tabrakan ditutup paling akhir: pembatas tanah dan penjaga panjang bisa
 	# mendorong partikel masuk kembali ke kapsul, jadi keadaan akhir langkah harus
-	# selalu bebas dari tembus badan.
+	# selalu bebas dari tembus badan. Kain-vs-kain didahulukan supaya dorongan
+	# pemisahan lapisan tidak menarik partikel kembali ke dalam badan.
 	for index in range(1, chain.points.size()):
-		_collide(chain, index)
+		_resolve(chain, index, true)
+		_resolve(chain, index, false)
 
 
 ## Panjang segmen: hanya partikel anak yang digeser (rantai "ikuti pemimpin"),
@@ -443,12 +601,17 @@ func _keep_shape(chain: Strand, index: int, k: float) -> void:
 	chain.points[index] = chain.points[index - 1] + current.lerp(rest_offset, k)
 
 
-func _collide(chain: Strand, index: int) -> void:
+## Dorong partikel keluar dari kapsul. `weaves_only` memilih kapsul kain
+## (bukan kapsul badan). Mask dibaca per KAPSUL lalu per partikel — sama seperti
+## urutan penulisannya di `_attach_colliders`/`_attach_weave`.
+func _resolve(chain: Strand, index: int, weaves_only: bool) -> void:
 	var count := chain.colliders.size()
 	for slot in range(count):
-		if chain.allowed[index * count + slot] == 0:
+		if chain.allowed[slot * chain.points.size() + index] == 0:
 			continue
 		var collider := _colliders[chain.colliders[slot]]
+		if (collider.chain >= 0) != weaves_only:
+			continue
 		var closest := _closest_on_segment(chain.points[index], collider.from_world,
 			collider.to_world)
 		var delta := chain.points[index] - closest
@@ -492,34 +655,60 @@ func _write_chain(chain: Strand, skeleton: Skeleton3D, world: Transform3D) -> vo
 		skeleton.set_bone_pose_rotation(chain.bones[index], local.basis.get_rotation_quaternion())
 
 
-## Laporan tembus badan: x = jumlah rantai yang tidak punya kapsul sama sekali
-## (rantai seperti itu pasti menembus badan saat bergerak), y = kedalaman tembus
-## terburuk dalam meter (0 kalau tidak ada). Partikel yang memang tertanam di
-## rest pose (allowed = 0) dilewati. Dipakai gerbang supaya "kain menembus
-## badan" jadi angka, bukan pendapat.
+## Laporan tembus badan: x = jumlah rantai yang tidak punya kapsul badan sama
+## sekali (rantai seperti itu pasti menembus badan saat bergerak), y = kedalaman
+## tembus terburuk dalam meter (0 kalau tidak ada). Partikel yang memang
+## tertanam di rest pose (allowed = 0) dilewati. Dipakai gerbang supaya "kain
+## menembus badan" jadi angka, bukan pendapat.
 func penetration_report() -> Vector2:
 	var worst := 0.0
 	var uncovered := 0
 	for chain in _chains:
-		if chain.colliders.is_empty():
+		var bodies := 0
+		for slot in chain.colliders:
+			if _colliders[slot].chain < 0:
+				bodies += 1
+		if bodies == 0:
 			uncovered += 1
-			continue
-		var slots := chain.colliders.size()
-		for index in range(1, chain.points.size()):
-			for slot in range(slots):
-				if chain.allowed[index * slots + slot] == 0:
-					continue
-				var collider := _colliders[chain.colliders[slot]]
-				var closest := _closest_on_segment(chain.points[index],
-					collider.from_world, collider.to_world)
-				var depth := collider.radius - chain.points[index].distance_to(closest)
-				if depth > worst:
-					worst = depth
-					last_penetration = "grup %d partikel %d (%s) vs kapsul %s" % [
-						chain.group, index,
-						_skeleton.get_bone_name(chain.bones[chain.bones.size() - 1]),
-						_skeleton.get_bone_name(collider.bone)]
+		worst = maxf(worst, _penetration_depth(chain, false))
 	return Vector2(uncovered, worst)
+
+
+## Kedalaman kain menembus KAIN LAIN (aturan lapisan). Dipakai gerbang supaya
+## "nembus baju lain" juga jadi angka.
+func weave_report() -> float:
+	var worst := 0.0
+	for chain in _chains:
+		worst = maxf(worst, _penetration_depth(chain, true))
+	return worst
+
+
+func _penetration_depth(chain: Strand, weaves_only: bool) -> float:
+	var worst := 0.0
+	var slots := chain.colliders.size()
+	for index in range(1, chain.points.size()):
+		for slot in range(slots):
+			if chain.allowed[slot * chain.points.size() + index] == 0:
+				continue
+			var collider := _colliders[chain.colliders[slot]]
+			if (collider.chain >= 0) != weaves_only:
+				continue
+			var closest := _closest_on_segment(chain.points[index],
+				collider.from_world, collider.to_world)
+			var depth := collider.radius - chain.points[index].distance_to(closest)
+			if depth <= worst:
+				continue
+			worst = depth
+			var against := "kapsul " + _skeleton.get_bone_name(collider.bone)
+			if weaves_only:
+				against = "kain rantai %d" % collider.chain
+			var detail := "grup %d partikel %d (%s) vs %s" % [chain.group, index,
+				_skeleton.get_bone_name(chain.bones[chain.bones.size() - 1]), against]
+			if weaves_only:
+				last_weave = detail
+			else:
+				last_penetration = detail
+	return worst
 
 
 func _update_colliders(skeleton: Skeleton3D) -> void:

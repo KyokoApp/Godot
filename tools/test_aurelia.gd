@@ -371,11 +371,20 @@ func _test_cloth_penetration(character: Character) -> void:
 		_worst_detail(character)])
 	_check(worst_idle < 0.02, "Kain menembus badan saat diam: %.3f m" % worst_idle)
 	_check(worst_walk < 0.03, "Kain menembus badan saat lari: %.3f m" % worst_walk)
+	# "Nembus di baju lain" (kain menembus kain) diukur terpisah dari badan:
+	# aturan lapisan di cloth_springs menjaga panel luar tetap di luar panel dalam.
+	var weave_idle := _worst_penetration(character, "", true)
+	var weave_walk := _worst_penetration(character, "Jog_Fwd_Loop", true)
+	_notes.append("tembus kain vs kain: diam=%.4f m, lari=%.4f m (%s)" % [weave_idle,
+		weave_walk, _weave_detail(character)])
+	_check(weave_idle < 0.012, "Kain menembus kain lain saat diam: %.3f m" % weave_idle)
+	_check(weave_walk < 0.02, "Kain menembus kain lain saat lari: %.3f m" % weave_walk)
 
 
 ## Jalankan simulasi beberapa detik (opsional dengan klip lokomosi) lalu
-## kembalikan kedalaman tembus terburuk dari semua kerangka.
-func _worst_penetration(character: Character, motion: String) -> float:
+## kembalikan kedalaman tembus terburuk dari semua kerangka. `weave` = true
+## mengukur kain menembus kain lain (bukan kain menembus badan).
+func _worst_penetration(character: Character, motion: String, weave := false) -> float:
 	character.set_locomotion("Idle_Loop" if motion.is_empty() else motion, 1.0)
 	character.animation.advance(0.0)
 	var worst := 0.0
@@ -387,8 +396,19 @@ func _worst_penetration(character: Character, motion: String) -> float:
 			if wrapper == null:
 				continue
 			wrapper.simulate(STEP)
-			worst = maxf(worst, wrapper.springs.penetration_report().y)
+			var springs: Springs = wrapper.springs
+			worst = maxf(worst, springs.weave_report() if weave
+				else springs.penetration_report().y)
 	return worst
+
+
+## Keterangan partikel kain yang paling dalam menembus kain lain.
+func _weave_detail(character: Character) -> String:
+	for wrapper in character.cloths:
+		if wrapper != null and wrapper.springs != null \
+				and not wrapper.springs.last_weave.is_empty():
+			return wrapper.springs.last_weave
+	return "tidak ada"
 
 
 ## Keterangan dari pembungkus kain: partikel paling dalam menembus kapsul apa.
