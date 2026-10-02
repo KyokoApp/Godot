@@ -9,7 +9,7 @@ extends SceneTree
 ## di HP: jempol pindah dari analog ke tombol. Dulu di situ badan kehilangan laju
 ## di udara, mendarat pelan, lalu memutar pose jongkok sebelum jalan lagi.
 
-const Character = preload("res://src/game/mannequin.gd")
+const Character = preload("res://src/game/character/aurelia_visual.gd")
 
 var _failures := 0
 var _frame := 0

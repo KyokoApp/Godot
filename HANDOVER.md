@@ -1,5 +1,60 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-02 (malam, sesi ini) — **MANNEQUIN DIGANTI AVATAR AURELIA** (FBX
+  `Avatar_Boy_Pole_Lohen` dari folder `aurelia-debug/`, 209 tulang Biped) dan
+  **kain + rambut diberi simulasi goyangan** seperti permintaan pengguna.
+  - `src/game/character/aurelia_visual.gd` = pengganti `mannequin.gd` (berkas itu
+    DIHAPUS). API-nya sama persis (set_locomotion, play_action, foot_pose,
+    metrics, cast_layer, ...), jadi pemain, HUD, tapak api, bayangan kecepatan,
+    dan panel animasi tidak perlu diubah.
+  - Animasi tetap dimainkan di **rig UAL yang disembunyikan** (85 klip utuh),
+    lalu pose-nya disalin ke tulang avatar oleh
+    `src/game/animation/retarget_modifier.gd` (SkeletonModifier3D, anak ke-2 rig
+    sumber supaya gerakan casting ikut tersalin).
+  - **Penting: retarget ini BUKAN rumus "selisih rest" bawaan Godot.** Mannequin
+    UAL berdiri T-pose, avatar Aurelia A-pose (lengan ±50° ke bawah). Kalau
+    selisih-rest yang dipakai, lengan avatar selalu 50° lebih rendah dan tangan
+    masuk ke badan. Rumus yang dipakai = arah tulang avatar disamakan dengan
+    arah tulang animasi (swing terpendek) + puntiran global diurai swing/twist
+    (`_twist_angle`). Diverifikasi gerbang `tools/test_aurelia.gd`
+    (`dot(arah avatar, arah animasi) > 0,97` untuk lengan, betis, tangan).
+  - Peta tulang UAL ↔ Biped ada di `src/game/animation/humanoid_map.gd`
+    (54 pasangan, termasuk jari). Nama dibandingkan setelah dinormalisasi, jadi
+    spasi/tanda `+` dari importer tidak merusak peta.
+  - Goyangan kain/rambut: `animation/cloth_springs.gd` (inti verlet, bisa diuji
+    headless) + `animation/cloth_dynamics.gd` (pembungkus SkeletonModifier3D
+    pada kerangka avatar). 55 rantai: 26 rambut, 18 rok/syal, sisanya kerah,
+    kalung, anting, tudung. Rantai dibentuk dari tulang asli avatar
+    (Bone_Hair*, Bone_Shawl*, Bone_Collar*, Bone_Hip*, Bone_Pendant*,
+    Bone_Earrings*, Bone_Neck*, +Flycloak).
+    - Kain disimulasikan **di ruang dunia**, jadi punya kelembaman: saat badan
+      berbalik/berlari, kain tertinggal di belakang lalu menyusul. Kain yang
+      hanya mengikuti tulang (tanpa simulasi) akan terlihat kaku seperti karton.
+    - Ada kekakuan (kembali ke bentuk rest di ruang tulang penggantung), angin
+      berkecepatan relatif (mengembang saat berlari), tabrakan kapsul badan
+      (kepala, dada, pinggul, lengan, kaki) dan gesekan tanah.
+    - Catatan teknis: `_keep_shape` menarik POSISI ke rest (`rest_basis *
+      rest_local`) dan `_write_chain` selalu memakai rumus yang sama untuk kedua
+      tulang rantai — kalau hanya tulang kedua yang dipaksa ke arah rest, akan
+      muncul patahan di sambungan.
+  - Material: FBX ini memakai shader Unity dan hanya menyimpan SATU material
+    untuk semua poligon (tekstur tertukar semua). Material dipilih dari NAMA
+    MESH di `character/aurelia_materials.gd` (Body/Bang/Face/Brow/Pupil/
+    EyeStar), plus tekstur lightmap dipakai sebagai pancaran lembut supaya
+    jubah navy tidak jadi hitam legap di malam hari. Mesh `EffectMesh`
+    disembunyikan.
+  - Aset biner (±24 MB) TIDAK lagi di git: `tools/fetch_assets.sh` mengunduhnya
+    dari lampiran rilis `assets-v1` (workflow `publish-assets`, sumbernya riwayat
+    commit `0d56df0`), dengan cadangan `--from-git` kalau rilis belum ada. CI
+    menjalankan langkah ini sebelum `--import`; **tanpa langkah itu import pasti
+    gagal** karena FBX & GLB tidak ada.
+  - Gerbang baru: `tools/test_aurelia.gd` (peta tulang lengkap 54 pasangan,
+    arah tulang avatar = arah animasi, tidak T-pose, telapak tidak menembus
+    tanah, kain tertinggal-saat-badan-bergerak lalu menyusul, rambut tidak
+    menembus kepala/badan). Waktu tunggu langkah tes yang memuat seluruh game
+    dinaikkan 90/120 → 180 detik karena avatar menambah beban boot.
+
+
 - Terbaru (2026-10-01): dunia dirombak jadi **padang rumput 100 m × 100 m**
   (`world/field.gd` + `grass_field.gd` + `world/boundary_fence.gd`). Pulau 1 km,
   laut, sungai, arena, jalan batu dan aset nature model DIHAPUS dari repo.

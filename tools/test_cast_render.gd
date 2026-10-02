@@ -2,7 +2,7 @@ extends SceneTree
 ## Exercise native post-animation modifier + skinning, not just manually sampled bones.
 
 const Catalog = preload("res://src/game/animation/catalog.gd")
-const Character = preload("res://src/game/mannequin.gd")
+const Character = preload("res://src/game/character/aurelia_visual.gd")
 const Night = preload("res://src/game/environment/night_environment.gd")
 var _failures := 0
 var _processed := 0

@@ -3,7 +3,7 @@ extends Node
 
 const Field = preload("res://src/game/world/field.gd")
 const WorldAudio = preload("res://src/game/audio/world_audio.gd")
-const Mannequin = preload("res://src/game/mannequin.gd")
+const Mannequin = preload("res://src/game/character/aurelia_visual.gd")
 const EDGE_DIRT := 45.0
 
 var audio: WorldAudio

@@ -7,7 +7,7 @@ extends CharacterBody3D
 ## meluncur. Inilah perbaikan utama dibanding versi lama yang menaikkan
 ## speed_scale sembarangan (mis. ×3 saat boost) lalu membiarkan langkah meluncur.
 
-const Mannequin = preload("res://src/game/mannequin.gd")
+const Mannequin = preload("res://src/game/character/aurelia_visual.gd")
 const Field = preload("res://src/game/world/field.gd")
 const Joystick = preload("res://src/game/virtual_joystick.gd")
 const Orbit = preload("res://src/game/orbit_camera.gd")

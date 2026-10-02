@@ -1,14 +1,27 @@
 extends Node3D
-## Mannequin UAL — satu-satunya karakter. Satu skeleton, dua perpustakaan animasi
-## (UAL1 + UAL2 = 85 klip) yang dimuat ke SATU AnimationPlayer, jadi transisi,
-## cross-fade, dan lapisan tubuh atas berjalan di clock yang sama.
+## Karakter Aurelia ("Avatar_Boy_Pole_Lohen") yang digerakkan pustaka animasi UAL.
 ##
-## Perbaikan animasi yang dikerjakan di sini:
-##  1. Tidak ada lagi rig bayangan + penyalinan pose tiap frame (dulu UAL2 diputar
-##     di model tersembunyi lalu pose-nya disalin manual — lambat dan patah).
-##  2. Mode loop tiap klip disetel benar dari katalog (loop vs sekali vs tahan).
-##  3. Kecepatan main dicocokkan dengan langkah hasil ukur (tidak meluncur).
-##  4. Offset tanah per klip menjaga kaki tidak tenggelam di klip rendah.
+## Susunannya:
+##
+##   Visual (node ini)
+##   ├── UAL rig (umpan balik)   <- klip UAL diputar di sini, TIDAK digambar
+##   │   ├── AnimationPlayer     : 85 klip (UAL1 + UAL2)
+##   │   ├── Skeleton3D sumber   : tulang gaya Unreal (spine_01, thigh_l, ...)
+##   │   ├── CastLayer           : lapisan tubuh atas, diproses lebih dulu
+##   │   └── Retarget            : salin pose sumber -> tulang avatar (anak ke-2,
+##   │                             jadi pose cast ikut tersalin)
+##   └── Avatar (FBX)            <- yang terlihat: 209 tulang Biped
+##       └── Skeleton3D avatar
+##           └── ClothDynamics   : goyangan rambut/rok/syal (verlet)
+##
+## Kenapa animasi tidak langsung diputar di tulang avatar: klip UAL menyebut
+## tulang milik rig mannequin, dan sumbu/rest pose Biped berbeda. Menyalin pose
+## (bukan menulis ulang klip) berarti SEMUA 85 klip langsung jalan di avatar,
+## termasuk combo serangan, casting, dan lompat.
+##
+## Kesetaraan: seluruh API mannequin.gd dipertahankan (set_locomotion,
+## play_action, foot_pose, metrics, ...) supaya pemain, HUD, tapak api, dan tes
+## tidak perlu diubah.
 
 signal clip_changed(clip: String)
 
@@ -16,10 +29,15 @@ enum Mode { LOCOMOTION, ACTION, SHOWCASE, HELD }
 
 const MODEL = preload("res://assets/mannequin/UAL1_Standard.glb")
 const COMBAT_MODEL = preload("res://assets/combat/UAL2_Standard.glb")
-const OUTLINE = preload("res://src/game/character_outline.gdshader")
+const AVATAR = preload("res://assets/aurelia/Avatar_Boy_Pole_Lohen.fbx")
+const Materials = preload("res://src/game/character/aurelia_materials.gd")
+const Retarget = preload("res://src/game/animation/retarget_modifier.gd")
+const ClothDynamics = preload("res://src/game/animation/cloth_dynamics.gd")
+const Humanoid = preload("res://src/game/animation/humanoid_map.gd")
 const CastLayer = preload("res://src/game/animation/cast_layer.gd")
 const Catalog = preload("res://src/game/animation/catalog.gd")
 const Metrics = preload("res://src/game/animation/anim_metrics.gd")
+
 const IDLE := "Idle_Loop"
 const AIR_CLIP := "Jump_Loop"
 const COMBAT_LIBRARY := "ual2"
@@ -28,9 +46,14 @@ const FADE := 0.18
 ## kembali ke gait supaya tidak terasa berhenti mendadak.
 const LAND_RECOVERY := 0.28
 const OFFSET_SPEED := 6.0
+## Dua iterasi cukup untuk kain panjang; empat terlalu mahal untuk HP.
+const CLOTH_ITERATIONS := 2
 
 var animation: AnimationPlayer
 var skeleton: Skeleton3D
+var avatar: Skeleton3D
+var retarget: Retarget
+var cloth: ClothDynamics
 var cast_layer: CastLayer
 var metrics: Dictionary = {}
 var mode := Mode.LOCOMOTION
@@ -38,36 +61,51 @@ var clip := IDLE
 var gait := IDLE
 var ground_offset := 0.0
 var playback_scale := 1.0
+## Node rig UAL (alat umpan balik animasi, disembunyikan) dan node avatar FBX.
+var rig_model: Node3D
+var avatar_root: Node3D
+## Ringkasan keadaan rig (tulang terpetakan, rantai kain) untuk log dan tes.
+var status := ""
+var _model: Node3D
+var _avatar_root: Node3D
 var _hold_after := false
 var _action_left := 0.0
-var _model: Node3D
 var _library: AnimationLibrary
 
 
 func _ready() -> void:
-	var model: Node3D = MODEL.instantiate()
-	# Koreksi arah model yang dipakai project lama (menghadap -Z Godot).
-	model.rotation.y = PI
-	add_child(model)
-	_model = model
-	animation = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
-	skeleton = model.find_child("Skeleton3D", true, false) as Skeleton3D
+	_build_source()
 	if animation == null or skeleton == null:
-		push_error("Mannequin: AnimationPlayer/Skeleton3D hilang")
 		return
-	# Klip sekali jalan yang sudah habis langsung menyerahkan badan ke gait;
-	# tanpa ini ada jendela diam di frame terakhir (terlihat seperti jalan di tempat
-	# atau pose kaku) sebelum timer aksi selesai.
 	animation.animation_finished.connect(_on_animation_finished)
 	_merge_combat_library()
-	_apply_material()
 	_configure_clips()
+	# CastLayer dulu, Retarget sesudah: urutan anak = urutan proses modifier.
+	_setup_cast_layer()
+	_build_avatar()
 	metrics = Metrics.measure_catalog(animation, skeleton, Catalog)
 	animation.play(Catalog.play_name(IDLE), 0.0)
 	animation.advance(0.0)
-	_setup_cast_layer()
-	print("[mannequin] %d klip dimuat, %d metrik terukur" % [
-		animation.get_animation_list().size(), metrics.size()])
+	print("[aurelia] %d klip, %d metrik terukur, %d tulang avatar" % [
+		animation.get_animation_list().size(), metrics.size(), avatar.get_bone_count()])
+	print(status)
+
+
+func _build_source() -> void:
+	var model: Node3D = MODEL.instantiate()
+	# Koreksi arah model (menghadap -Z Godot). Avatar memakai koreksi yang sama
+	# supaya wajah keduanya menghadap arah yang sama.
+	model.rotation.y = PI
+	# Rig ini hanya alat umpan balik animasi: tulangnya yang penting, badannya
+	# tidak boleh ikut tergambar di samping avatar.
+	model.visible = false
+	add_child(model)
+	_model = model
+	rig_model = model
+	animation = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	skeleton = model.find_child("Skeleton3D", true, false) as Skeleton3D
+	if animation == null or skeleton == null:
+		push_error("Aurelia: AnimationPlayer/Skeleton3D sumber hilang")
 
 
 func _merge_combat_library() -> void:
@@ -76,29 +114,47 @@ func _merge_combat_library() -> void:
 	var source: Node3D = COMBAT_MODEL.instantiate()
 	var source_player := source.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if source_player == null:
-		push_error("Mannequin: UAL2 tidak punya AnimationPlayer")
+		push_error("Aurelia: UAL2 tidak punya AnimationPlayer")
 		source.free()
 		return
 	_library = source_player.get_animation_library("")
 	if _library == null:
-		push_error("Mannequin: pustaka UAL2 kosong")
+		push_error("Aurelia: pustaka UAL2 kosong")
 		source.free()
 		return
 	animation.add_animation_library(COMBAT_LIBRARY, _library)
 	source.free()
 
 
-func _apply_material() -> void:
-	const MATERIAL := Color(0.68, 0.58, 0.84)
-	for node in _model.find_children("*", "MeshInstance3D", true, false):
-		var mesh := node as MeshInstance3D
-		var material := StandardMaterial3D.new()
-		material.albedo_color = MATERIAL
-		material.roughness = 0.85
-		var outline := ShaderMaterial.new()
-		outline.shader = OUTLINE
-		material.next_pass = outline
-		mesh.material_override = material
+func _build_avatar() -> void:
+	var root: Node3D = AVATAR.instantiate()
+	root.rotation.y = PI
+	add_child(root)
+	_avatar_root = root
+	avatar_root = root
+	avatar = _first_skeleton(root)
+	if avatar == null:
+		push_error("Aurelia: Skeleton3D avatar tidak ditemukan di FBX")
+		return
+	var meshes := Materials.apply(root)
+	retarget = Retarget.new()
+	retarget.name = "Retarget"
+	skeleton.add_child(retarget)
+	retarget.configure(skeleton, avatar)
+	cloth = ClothDynamics.new()
+	cloth.name = "Cloth"
+	avatar.add_child(cloth)
+	cloth.configure(avatar, CLOTH_ITERATIONS)
+	# Efek tapak api memakai tinggi tulang telapak avatar, bukan mannequin.
+	cloth.set_ground_height(0.0)
+	_describe_rig()
+	print("[aurelia] %d mesh avatar diberi material" % meshes)
+
+
+func _first_skeleton(root: Node) -> Skeleton3D:
+	for node in root.find_children("*", "Skeleton3D", true, false):
+		return node as Skeleton3D
+	return null
 
 
 func _configure_clips() -> void:
@@ -106,7 +162,7 @@ func _configure_clips() -> void:
 		var name: String = entry["name"]
 		var play_name: String = Catalog.play_name(name)
 		if not animation.has_animation(play_name):
-			push_error("Mannequin: klip hilang dari berkas: " + play_name)
+			push_error("Aurelia: klip hilang dari berkas: " + play_name)
 			continue
 		var source := animation.get_animation(play_name)
 		source.loop_mode = Animation.LOOP_LINEAR if Catalog.is_loop(name) \
@@ -115,14 +171,14 @@ func _configure_clips() -> void:
 
 func _setup_cast_layer() -> void:
 	if not animation.has_animation(CastLayer.CLIP):
-		push_error("Mannequin: klip casting hilang")
+		push_error("Aurelia: klip casting hilang")
 		return
 	cast_layer = CastLayer.new()
 	cast_layer.name = "UpperBodyCast"
 	skeleton.add_child(cast_layer)
 	cast_layer.configure(animation.get_animation(CastLayer.CLIP))
 	if cast_layer.tracks.is_empty():
-		push_error("Mannequin: filter tulang casting kosong")
+		push_error("Aurelia: filter tulang casting kosong")
 
 
 # ------------------------------------------------------------- lokomosi ----
@@ -287,29 +343,46 @@ func _physics_process(delta: float) -> void:
 	var measured: Dictionary = metrics.get(clip, {})
 	var target := float(measured.get("ground_offset", 0.0))
 	ground_offset = lerpf(ground_offset, target, 1.0 - exp(-OFFSET_SPEED * delta))
-	_model.position.y = ground_offset
+	if _model != null:
+		_model.position.y = ground_offset
+	if _avatar_root != null:
+		_avatar_root.position.y = ground_offset
 
 
-# ----------------------------------------------- kontak kaki untuk efek ----
+# --------------------------------------------- kontak kaki untuk efek api ----
 
 func foot_pose(left: bool) -> Transform3D:
-	var bone := skeleton.find_bone("foot_l" if left else "foot_r")
-	if bone < 0:
+	# Dipakai tapak api: harus dari telapak yang BENAR-BENAR digambar (avatar),
+	# bukan rig animasi yang tidak terlihat.
+	var foot := Humanoid.find_bone(avatar, "Bip001 L Foot" if left else "Bip001 R Foot")
+	if foot < 0 or avatar == null:
 		return global_transform
-	return skeleton.global_transform * skeleton.get_bone_global_pose(bone)
+	return avatar.global_transform * avatar.get_bone_global_pose(foot)
 
 
 func foot_clearance(left: bool) -> float:
-	var bone := skeleton.find_bone("foot_l" if left else "foot_r")
-	if bone < 0:
+	var foot := Humanoid.find_bone(avatar, "Bip001 L Foot" if left else "Bip001 R Foot")
+	if foot < 0:
 		return 0.1
-	var rest := skeleton.get_bone_global_rest(bone)
-	return clampf(rest.origin.y, 0.06, 0.18)
+	return clampf(avatar.get_bone_global_rest(foot).origin.y, 0.06, 0.18)
 
 
 func foot_stride_lift(left: bool) -> float:
-	var bone := skeleton.find_bone("foot_l" if left else "foot_r")
-	if bone < 0:
+	var foot := Humanoid.find_bone(avatar, "Bip001 L Foot" if left else "Bip001 R Foot")
+	if foot < 0:
 		return 0.0
-	return skeleton.get_bone_global_pose(bone).origin.y \
-		- skeleton.get_bone_global_rest(bone).origin.y
+	return avatar.get_bone_global_pose(foot).origin.y \
+		- avatar.get_bone_global_rest(foot).origin.y
+
+
+# ---------------------------------------------------------------- tambahan ----
+
+## Isi `status` dengan ringkasan rig; dipanggil sekali setelah avatar siap.
+func _describe_rig() -> void:
+	var parts := PackedStringArray()
+	if retarget != null:
+		parts.append(retarget.report())
+	if cloth != null and cloth.springs != null:
+		parts.append(cloth.diagnostics())
+		parts.append("[cloth] grup: " + cloth.springs.group_report())
+	status = "\n".join(parts)

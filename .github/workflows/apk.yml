@@ -28,6 +28,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Aset biner besar (FBX avatar + tekstur + pustaka UAL) tidak disimpan di
+      # git; diambil dari lampiran rilis `assets-v1` (cadangan: riwayat git).
+      - name: Ambil aset biner
+        run: tools/fetch_assets.sh
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -134,7 +139,7 @@ jobs:
       - name: Tes joystick dan gerak (headless)
         run: |
           set +e
-          timeout 90 ./godot --headless --path project \
+          timeout 180 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_movement.gd" 2>&1 | tee movement-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
@@ -144,10 +149,10 @@ jobs:
             exit 1
           fi
 
-      - name: Tes mannequin dan animasi tulang
+      - name: Tes karakter dan animasi tulang
         run: |
           set +e
-          timeout 120 ./godot --headless --path project \
+          timeout 180 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_mannequin.gd" 2>&1 | tee mannequin-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
@@ -157,10 +162,24 @@ jobs:
             exit 1
           fi
 
+      # Avatar Aurelia: retarget tulang (T-pose -> A-pose) + goyangan kain/rambut.
+      - name: Tes avatar Aurelia (retarget + kain)
+        run: |
+          set +e
+          timeout 300 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_aurelia.gd" 2>&1 | tee aurelia-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' aurelia-test.log; then
+            tail -60 aurelia-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[aurelia-test]' aurelia-test.log
+
       - name: Tes kontak tapak api 3D (headless)
         run: |
           set +e
-          timeout 120 ./godot --headless --path project \
+          timeout 180 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_motion_flair.gd" 2>&1 | tee motion-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
@@ -173,7 +192,7 @@ jobs:
       - name: Tes mannequin dan kontrol performa
         run: |
           set +e
-          timeout 90 ./godot --headless --path project \
+          timeout 180 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_performance.gd" 2>&1 | tee performance-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
@@ -186,7 +205,7 @@ jobs:
       - name: Tes pet api, attack, collision dan cleanup
         run: |
           set +e
-          timeout 90 ./godot --headless --path project \
+          timeout 180 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_fire_pet.gd" 2>&1 | tee fire-pet-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
@@ -199,7 +218,7 @@ jobs:
       - name: Tes mask dan streaming rumput
         run: |
           set +e
-          timeout 90 ./godot --headless --path project \
+          timeout 180 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_grass.gd" 2>&1 | tee grass-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
@@ -228,7 +247,7 @@ jobs:
       - name: Render projectile dan impact (Mobile Vulkan software)
         run: |
           set +e
-          timeout 120 xvfb-run -a env \
+          timeout 180 xvfb-run -a env \
             VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
             ./godot --path project --rendering-method mobile --rendering-driver vulkan \
             --audio-driver Dummy --resolution 480x270 \
@@ -252,7 +271,7 @@ jobs:
       - name: Rekam alur animasi lompat (headless)
         run: |
           set +e
-          timeout 120 ./godot --headless --path project \
+          timeout 180 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_jump_trace.gd" 2>&1 | tee jump-trace.log
           STATUS=${PIPESTATUS[0]}
           set -e
@@ -317,7 +336,7 @@ jobs:
       - name: Tes speed, boost dan anti-meluncur
         run: |
           set +e
-          timeout 120 ./godot --headless --path project \
+          timeout 180 ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/test_speed.gd" 2>&1 | tee speed-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
@@ -377,7 +396,7 @@ jobs:
       - name: Tes audio mixer, jarak, panning, occlusion dan langkah
         run: |
           set +e
-          timeout 120 ./godot --headless --audio-driver Dummy --path project \
+          timeout 180 ./godot --headless --audio-driver Dummy --path project \
             --script "$GITHUB_WORKSPACE/tools/test_audio.gd" 2>&1 | tee audio-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
@@ -390,7 +409,7 @@ jobs:
       - name: Render malam, bintang, bulan dan keterbacaan tanah (Mobile Vulkan)
         run: |
           set +e
-          timeout 120 xvfb-run -a env \
+          timeout 180 xvfb-run -a env \
             VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
             ./godot --path project --rendering-method mobile --rendering-driver vulkan \
             --audio-driver Dummy --resolution 480x270 \

@@ -6,7 +6,7 @@ signal closed
 signal clip_selected(clip: String)
 
 const Catalog = preload("res://src/game/animation/catalog.gd")
-const Mannequin = preload("res://src/game/mannequin.gd")
+const Mannequin = preload("res://src/game/character/aurelia_visual.gd")
 const PANEL_COLOR := Color(0.035, 0.04, 0.06, 0.94)
 const ROW_COLOR := Color(0.15, 0.14, 0.24)
 const ROW_ACTIVE := Color(0.36, 0.28, 0.56)
