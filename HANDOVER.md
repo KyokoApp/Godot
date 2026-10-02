@@ -33,6 +33,25 @@
      (nama runtime wajib unik, klip loop tanpa sufiks terpantau).
   2. **Joystick tidak pernah tersambung ke pemain** (`_player.joystick` tidak
      pernah di-set di `main.gd`), jadi sentuhan tidak menggerakkan karakter.
+- 2026-10-02 (sore) — **AKAR "layar abu polos" DI HP DITEMUKAN**: paket utama
+  APK hanya memuat `launcher.gdc` + ikon. `backdrop.gd`, `chunk_policy.gd`, dan
+  `chunk_store.gd` TIDAK ikut, padahal `launcher.gd` mem-preload ketiganya →
+  skrip launcher gagal dimuat → UI tidak pernah digambar → yang tampak di HP
+  hanya warna latar bawaan Godot (abu rata, tanpa teks, app tetap hidup).
+  Penyebab: filter ekspor `scenes` hanya mengikuti dependensi *scene*, bukan
+  dependensi *skrip*. Diperbaiki dengan `export_files` + `include_filter` untuk
+  seluruh berkas launcher, `main.tscn` membawa tekstur ilustrasi sebagai
+  ext_resource, dan `backdrop.gd` tidak lagi mem-preload tekstur (preload yang
+  gagal mematikan seluruh launcher).
+  Karena CI selama ini menjalankan tes dari **folder proyek** (semua berkas
+  sumber masih ada), bug ini tidak pernah terdeteksi. Sekarang ada dua gerbang
+  baru: `Audit isi APK` (memastikan berkas launcher/bootstrap benar-benar ada,
+  menerima bentuk `.gd` maupun `.gdc`+`.remap`) dan `tools/test_apk_launcher.gd`
+  yang mem-boot launcher dari **isi APK** (`--path build/apk-audit/assets`).
+  Catatan: ilustrasi `loading.jpg` masih belum ikut ke APK, jadi launcher memakai
+  latar polos; fungsional, tinggal kosmetik.
+- PERINGATAN: memperbaiki paket APK **butuh install APK baru**; update konten
+  (PCK) tidak bisa memperbaiki launcher yang rusak.
 - Tes yang diperketat: `_check()` mencetak `::error::` supaya CI memberi alasan;
   step tes memakai `tee` + langkah "Ringkasan kegagalan" menampilkan 24 baris
   terakhir tiap log sebagai anotasi.

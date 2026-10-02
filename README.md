@@ -644,3 +644,23 @@ animasi yang benar-benar diperbaiki.
   tiap log sebagai anotasi.
 - Hasil: CI hijau penuh (37 langkah, termasuk ekspor PCK + APK dan rilis
   `A-Sekai build-3b29806`). Menunggu tes di HP.
+
+### 2026-10-02 — akar layar abu-abu di HP: paket APK kehilangan skrip launcher
+
+Layar HP yang abu rata **tanpa teks apa pun** ternyata bukan masalah shader atau
+HP: warna itu warna latar bawaan Godot, artinya tidak ada satu pun UI yang
+digambar. Penyebabnya paket utama APK hanya berisi `launcher.gdc` dan ikon —
+`backdrop.gd`, `chunk_policy.gd`, `chunk_store.gd` tidak ikut, sementara
+`launcher.gd` mem-preload ketiganya, sehingga skrip launcher gagal dimuat dan
+seluruh launcher mati sebelum menggambar apa pun. Filter ekspor `scenes` hanya
+mengikuti dependensi *scene*, bukan dependensi *skrip*.
+
+- `export_presets.cfg` (preset Android): berkas launcher masuk `export_files` +
+  `include_filter`; `main.tscn` membawa ilustrasi sebagai ext_resource.
+- `backdrop.gd` tidak lagi mem-preload tekstur; kalau teksturnya tidak ada,
+  launcher memakai latar polos (bukan mati total).
+- Gerbang baru di CI: `Audit isi APK` dan `tools/test_apk_launcher.gd` yang
+  mem-boot launcher dari isi APK, bukan dari folder proyek — satu-satunya cara
+  menangkap kelas bug ini.
+- Konsekuensi penting: **perbaikan ini butuh install APK baru**; update konten
+  lewat PCK tidak bisa memperbaiki launcher yang rusak.
