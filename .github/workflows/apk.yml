@@ -458,8 +458,6 @@ jobs:
           mkdir -p build/apk-audit
           (cd build/apk-audit && unzip -q ../asekai.apk)
           echo "::notice::berkas di assets: $(find build/apk-audit/assets -type f | wc -l)"
-          find build/apk-audit/assets -type f | sort \
-            | while IFS= read -r line; do echo "::notice::$line"; done
           missing=0
           # Skrip/adegan boleh ada sebagai sumber (.gd/.tscn) ATAU bentuk ekspor
           # (.gdc bytecode + .remap); yang penting salah satunya benar-benar ada.
@@ -480,9 +478,17 @@ jobs:
           require "launcher/backdrop.gd" launcher/backdrop.gdc launcher/backdrop.gd launcher/backdrop.gd.remap
           require "launcher/chunk_policy.gd" launcher/chunk_policy.gdc launcher/chunk_policy.gd launcher/chunk_policy.gd.remap
           require "launcher/chunk_store.gd" launcher/chunk_store.gdc launcher/chunk_store.gd launcher/chunk_store.gd.remap
-          require "launcher/art/loading.jpg" launcher/art/loading.jpg.remap launcher/art/loading.jpg
           require "bootstrap/base.pck" bootstrap/base.pck
           require "bootstrap/base.json" bootstrap/base.json
+          # Ilustrasi tidak wajib: kalau tidak ikut, launcher memakai latar polos.
+          if [ -f build/apk-audit/assets/launcher/art/loading.jpg.remap ] \
+              || [ -f build/apk-audit/assets/launcher/art/loading.jpg ]; then
+            echo "::notice::ilustrasi loading ikut ke APK"
+          else
+            echo "::notice::ilustrasi loading TIDAK ikut (launcher pakai latar polos)"
+          fi
+          find build/apk-audit/assets/launcher build/apk-audit/assets/bootstrap -type f \
+            | sort | while IFS= read -r line; do echo "::notice::$line"; done
           test "$missing" = 0 || exit 1
 
       - name: Uji boot launcher dari isi APK (headless)

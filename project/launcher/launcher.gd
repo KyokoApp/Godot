@@ -68,7 +68,7 @@ func _build_ui() -> void:
 		background.set_script(backdrop_script)
 	add_child(background)
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	move_child(background, 0)
+	# Urutan gambar: penanda boot (paling bawah) -> ilustrasi dari scene -> vignette.
 	move_child(boot, 0)
 	var title := Label.new()
 	title.text = "A - S E K A I"
@@ -125,6 +125,10 @@ func _build_ui() -> void:
 		else:
 			button.pressed.connect(_launch)
 	_buttons.hide()
+	# UI lengkap sudah berdiri: penanda boot tidak diperlukan lagi. Kalau ada
+	# bagian di atas yang gagal, penanda ini tetap terlihat sebagai jejak.
+	boot.hide()
+	boot_label.hide()
 
 
 func _check_update() -> void:
