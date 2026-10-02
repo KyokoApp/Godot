@@ -60,22 +60,37 @@ func _run() -> void:
 		orbit.yaw = float(view["yaw"])
 		orbit.pitch = float(view["pitch"])
 		await _capture("avatar-%s" % view["name"])
-	# Pose rendah (jongkok): rok paling mungkin menembus paha di pose ini.
-	(game.get("_visual") as Node).set_locomotion("Crouch_Fwd_Loop", 1.0)
+	# Pose bergerak HARUS lewat joystick: kalau klip dipanggil langsung, pemain
+	# menimpanya lagi tiap frame dan semua gambar jadi pose diam (kejadian di
+	# versi pertama tes ini — HUD-nya masih tertulis Idle_Loop).
+	var player: CharacterBody3D = game.get("_player")
+	var stick: Control = game.get("_joystick")
+	var visual: Node = game.get("_visual")
 	orbit.yaw = PI * 0.5
-	for frame in range(30):
-		await physics_frame
-	await _capture("avatar-jongkok")
-	# Pose jalan: kaki mengayun, jadi kain/rok ikut bergerak dan bisa diperiksa
-	# apakah ada panel yang menembus badan.
-	(game.get("_visual") as Node).set_locomotion("Walk_Loop", 1.0)
-	for frame in range(24):
+	stick.set("direction", Vector2.UP)
+	for frame in range(90):
 		await physics_frame
 	await _capture("avatar-jalan")
-	(game.get("_visual") as Node).set_locomotion("Jog_Fwd_Loop", 1.0)
-	for frame in range(30):
+	player.set("boosted", true)
+	for frame in range(90):
 		await physics_frame
 	await _capture("avatar-lari")
+	player.set("boosted", false)
+	stick.set("direction", Vector2.ZERO)
+	for frame in range(60):
+		await physics_frame
+	# Jongkok: lewat tombol pemain juga, supaya animasinya konsisten.
+	player.toggle_crouch()
+	stick.set("direction", Vector2.UP)
+	for frame in range(60):
+		await physics_frame
+	await _capture("avatar-jongkok")
+	stick.set("direction", Vector2.ZERO)
+	player.toggle_crouch()
+	for frame in range(30):
+		await physics_frame
+	print("[avatar-render-test] klip terakhir: ", visual.get("clip"))
+
 	print("[avatar-render-test] HASIL: ", "OK" if _failures == 0 else "GAGAL")
 	game.queue_free()
 	for frame in range(4):
