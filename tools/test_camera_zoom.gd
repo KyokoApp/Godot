@@ -63,13 +63,15 @@ func _pinch(orbit: Orbit, spread_from: float, spread_to: float, steps: int) -> v
 	var size := root.get_visible_rect().size
 	var center := Vector2(size.x * 0.75, size.y * 0.5)
 	var axis := Vector2(1.0, 0.0)
-	orbit._input(_touch(3, center + axis * spread_from, true))
+	# Dua jari di sisi BERLAWANAN dari titik tengah: kalau keduanya diletakkan di
+	# titik yang sama, panjang cubit selalu nol dan zoom tidak pernah terjadi.
+	orbit._input(_touch(3, center - axis * spread_from, true))
 	orbit._input(_touch(7, center + axis * spread_from, true))
 	for step in range(1, steps + 1):
 		var spread := lerpf(spread_from, spread_to, float(step) / float(steps))
-		orbit._input(_drag(3, center + axis * spread))
+		orbit._input(_drag(3, center - axis * spread))
 		orbit._input(_drag(7, center + axis * spread))
-	orbit._input(_touch(3, center + axis * spread_to, false))
+	orbit._input(_touch(3, center - axis * spread_to, false))
 	orbit._input(_touch(7, center + axis * spread_to, false))
 
 
@@ -92,7 +94,9 @@ func _test_pinch_in(orbit: Orbit) -> void:
 	var before := orbit.distance
 	# Jarak jari 40 px -> 320 px = kamera mendekat 8x.
 	_pinch(orbit, 40.0, 320.0, 8)
-	_check(orbit.distance < before, "Cubit menjauhkan jari tidak mendekatkan kamera")
+	_check(orbit.distance < before,
+		"Cubit menjauhkan jari tidak mendekatkan kamera: %.3f -> %.3f"
+		% [before, orbit.distance])
 	_check(orbit._touches.is_empty(), "Sentuhan tidak dilepas setelah cubit")
 	# Cubit terus sampai batas; langkah berlebih memastikan mentok di ujung.
 	for round_index in range(20):
