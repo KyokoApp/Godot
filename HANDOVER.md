@@ -1,6 +1,48 @@
 # STATUS TERBARU — prioritas dari pengguna
 
-- 2026-10-02 (malam, sesi ini) — **MANNEQUIN DIGANTI AVATAR AURELIA** (FBX
+- 2026-10-02 (sesi ini) — **KARAKTER: MANNEQUIN POLOS + KULIT BERANIMASI**,
+  lalu **DUNIA: SENJA SEPERTI ILUSTRASI LAYAR MUAT**.
+  - Permintaan pengguna: avatar FBX Aurelia dibuang SELURUHNYA ("jangan tersisa")
+    karena terlalu sulit dianimasikan; kembali ke mannequin UAL, tetapi seluruh
+    tubuhnya ditutup **kulit beranimasi** (mirip afterimage, tapi selalu menimpa)
+    supaya tulang/badan mannequin polos tidak pernah terlihat; dan dunia dibuat
+    semirip mungkin dengan `project/launcher/art/loading.jpg`.
+  - **Kulit**: `src/game/character/skin_shell.gd` + `skin_shell.gdshader`.
+    Setiap mesh mannequin disalin (`SkinMirror` + salinan bertipe sama), salinan
+    digelembungkan 22 mm (`grow`), berdenyut mengikuti kecepatan badan
+    (`PULSE_SPEED` 6,0), bergaris tepi tipis, dan posenya disalin pada sinyal
+    `skeleton_updated` DITAMBAH sekali per frame (`_process`) — di headless
+    sinyal itu tidak berbunyi; sebelum cadangan itu ada, kulit tertinggal
+    0,43 m dan gerbang CI yang menangkapnya (`worst_pose_gap`).
+  - **Dibuang tanpa sisa**: `aurelia_visual.gd`, `aurelia_materials.gd`,
+    `humanoid_map.gd`, `retarget_modifier.gd`, `cloth_springs.gd`,
+    `cloth_dynamics.gd`, `tools/test_aurelia.gd`, `tools/fbx_inspect.py`, folder
+    `aurelia-debug/`; 17 berkas dialihkan ke `src/game/mannequin.gd`, dan CI
+    menolak build kalau berkas itu muncul lagi.
+  - **Pemandangan** (`src/game/world/scenery.gd`): dua sabuk bukit (puncak 26 m
+    dan 62 m) dengan kabut warna, laut tosca + pulau kecil di barat, 9 blok
+    tebing di timur, 2 gapura + 3 tiang batu, 3 titik kunang-kunang; semuanya
+    TANPA collision. Jalan tanah berliku digambar di `ground.gdshader` —
+    sekaligus memperbaiki varying `world_position` yang tidak pernah diisi
+    sehingga semua pola tanah (dan jalan) membaca satu titik nol.
+  - **Langit senja** menggantikan malam: `environment/dusk_environment.gd` +
+    `dusk_sky.gdshader`. Warna diambil dari piksel ilustrasi (zenith #7C95CD,
+    tengah #9DB0D6, pita hangat #D1C2CC, pendar ufuk #F7CEC1), awan pita panjang
+    dari fbm 4+2 oktav yang bergerak pelan, ambient/kabut jauh lebih terang,
+    saturasi 1,08. Bulan dan bintang DIHAPUS (ilustrasinya bersih); sinar bulan
+    menjadi sinar matahari (`god_rays/sun_rays.gd`) dari `Dusk.SUN_DIRECTION`
+    yang sama dengan kilau air, dan tombol panel performa kini berbunyi
+    "Sinar matahari".
+  - **Gerbang baru**: `tools/test_skin_shell.gd` (selisih pose < 0,0005 m,
+    denyut, klip bergerak), `tools/test_scenery.gd` (bagian lengkap, tata letak,
+    nol collision, parameter jalan tanah, tebing benar-benar di luar padang),
+    `tools/render_world.gd` (4 sudut lebar: pemandangan/jalan/tebing/laut),
+    `tools/test_dusk.gd` (pendar matahari, awan, zenith biru terang, arah
+    cahaya, keterbacaan tanah), `tools/test_sun_rays.gd`. Langkah CI, artefak,
+    dan ringkasan angka ikut berganti nama.
+
+- 2026-10-02 (malam, **HISTORI — sudah dibatalkan pengguna**, lihat entri di atas)
+  — MANNEQUIN DIGANTI AVATAR AURELIA (FBX
   `Avatar_Boy_Pole_Lohen` dari folder `aurelia-debug/`, 209 tulang Biped) dan
   **kain + rambut diberi simulasi goyangan** seperti permintaan pengguna.
   - `src/game/character/aurelia_visual.gd` = pengganti `mannequin.gd` (berkas itu
@@ -487,7 +529,19 @@ still authoritative. No added geometry beyond existing 80k triangles.
 Tests: terrain shader/material colors, centerline/curvature/slope, grass bounds,
 pet outline budget, real Mobile Vulkan road color render and pet regressions.
 
-## Night scene milestone
+## Dusk sky (2026-10-02) — pengganti malam
+`environment/dusk_environment.gd` + `dusk_sky.gdshader` (dulu `night_environment.gd`
+dan `night_sky.gdshader`). Palette diambil dari ilustrasi layar muat: zenith
+#7C95CD, tengah #9DB0D6, pita hangat #D1C2CC, pendar ufuk #F7CEC1. Awan memakai
+value-noise fbm 4 oktav (bentuk) + 2 oktav (bayangan) dan bergerak pelan lewat
+TIME; `glow_enabled`/`clouds_enabled` bisa dimatikan supaya `tools/test_dusk.gd`
+membuktikan pendar dan awan benar-benar terlihat. Bulan, bintang, dan uniformnya
+dihapus — di ilustrasi langitnya bersih. Sinar bulan menjadi
+`god_rays/sun_rays.gd` (arah `Dusk.SUN_DIRECTION`), panel performa berbunyi
+"Sinar matahari", dan tes render malam menjadi
+"Render langit senja, awan, matahari dan keterbacaan tanah".
+
+## Night scene milestone (DIHAPUS 2026-10-02, lihat bagian di atas)
 User declined color-reducer for now; requested beautiful night, sparse stars,
 small moon. `environment/night_environment.gd` is a shared static preset used
 by main and renderer test. `night_sky.gdshader` is original procedural art,

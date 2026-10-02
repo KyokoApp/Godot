@@ -34,6 +34,7 @@ const FAR_HEIGHT := 62.0
 ## Warnanya sama dengan ilustrasi: hijau pastel, batu biru keabuan, tanah hangat.
 const HILL_COLOR := Color("6fae4f")
 const HILL_LIGHT := Color("9ed37a")
+const HILL_SHADE := Color("4c9a3d")
 const ROCK_COLOR := Color("8fa6b8")
 const ROCK_SHADE := Color("65808f")
 const STONE_COLOR := Color("c8c3b4")
@@ -130,7 +131,7 @@ func _add_ridge(inner: float, outer: float, height: float, phase: float,
 		var outer_point := direction * outer
 		var inner_point := direction * inner
 		vertices.append(Vector3(inner_point.x, -4.0, inner_point.z))
-		colors.append(HILL_LIGHT * Color(0.82, 0.82, 0.82))
+		colors.append(HILL_SHADE)
 		vertices.append(Vector3(inner_point.x * 0.92, top * 0.45, inner_point.z * 0.92))
 		colors.append(HILL_COLOR)
 		vertices.append(Vector3(outer_point.x * 0.6 + inner_point.x * 0.4,

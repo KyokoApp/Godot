@@ -25,24 +25,25 @@ static func make_environment() -> Environment:
 	environment.sky = sky
 	# Senja yang terang: cahaya sekitar biru lavender, bukan biru malam pekat.
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color(0.66, 0.70, 0.86)
-	environment.ambient_light_energy = 0.62
+	environment.ambient_light_color = Color(0.62, 0.68, 0.86)
+	environment.ambient_light_energy = 0.58
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	# Kabut jarak (bukan volumetrik): bukit jauh memucat seperti cat air, langit
 	# tidak ikut berkabut supaya awan dan pendar matahari tetap tajam.
 	environment.fog_enabled = true
 	environment.fog_mode = Environment.FOG_MODE_DEPTH
-	environment.fog_depth_begin = 45.0
-	environment.fog_depth_end = 340.0
-	environment.fog_density = 0.30
-	environment.fog_depth_curve = 1.35
-	environment.fog_light_color = Color(0.74, 0.72, 0.82)
-	environment.fog_light_energy = 0.70
+	environment.fog_depth_begin = 60.0
+	environment.fog_depth_end = 420.0
+	environment.fog_density = 0.20
+	environment.fog_depth_curve = 1.30
+	environment.fog_light_color = Color(0.70, 0.70, 0.80)
+	environment.fog_light_energy = 0.55
 	environment.fog_sky_affect = 0.0
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	# Sedikit lebih jenuh supaya rumput tetap hijau segar di bawah cahaya hangat.
 	environment.adjustment_enabled = true
-	environment.adjustment_saturation = 1.08
+	environment.adjustment_saturation = 1.12
+	environment.adjustment_contrast = 1.06
 	return environment
 
 

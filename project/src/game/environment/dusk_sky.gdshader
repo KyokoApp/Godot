@@ -9,18 +9,18 @@ shader_type sky;
 // cahaya yang terlihat adalah kunang-kunang di dekat tanah (lihat world/scenery.gd).
 
 uniform vec3 sun_direction = vec3(-0.94, 0.09, -0.32);
-uniform vec4 sun_color : source_color = vec4(1.0, 0.85, 0.70, 1.0);
-uniform vec4 zenith_color : source_color = vec4(0.486, 0.584, 0.804, 1.0);
-uniform vec4 middle_color : source_color = vec4(0.616, 0.690, 0.839, 1.0);
-uniform vec4 horizon_color : source_color = vec4(0.800, 0.760, 0.835, 1.0);
+uniform vec4 sun_color : source_color = vec4(1.0, 0.88, 0.74, 1.0);
+uniform vec4 zenith_color : source_color = vec4(0.341, 0.463, 0.761, 1.0);
+uniform vec4 middle_color : source_color = vec4(0.502, 0.600, 0.831, 1.0);
+uniform vec4 horizon_color : source_color = vec4(0.706, 0.702, 0.824, 1.0);
 uniform vec4 glow_color : source_color = vec4(0.972, 0.808, 0.757, 1.0);
 uniform bool glow_enabled = true;
 uniform bool clouds_enabled = true;
-uniform float cloud_coverage = 0.48;
-uniform float cloud_softness = 0.22;
+uniform float cloud_coverage = 0.46;
+uniform float cloud_softness = 0.20;
 uniform float cloud_scale = 2.4;
 uniform vec4 cloud_light : source_color = vec4(1.0, 0.97, 0.97, 1.0);
-uniform vec4 cloud_shadow : source_color = vec4(0.62, 0.63, 0.80, 1.0);
+uniform vec4 cloud_shadow : source_color = vec4(0.545, 0.573, 0.780, 1.0);
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -62,8 +62,8 @@ void sky() {
 	float towards = max(dot(normalize(vec3(direction.x, 0.0, direction.z)),
 		normalize(vec3(sun.x, 0.0, sun.z))), 0.0);
 	vec3 color = mix(horizon_color.rgb, middle_color.rgb,
-		smoothstep(0.0, 0.34, elevation));
-	color = mix(color, zenith_color.rgb, smoothstep(0.26, 0.92, elevation));
+		smoothstep(0.0, 0.26, elevation));
+	color = mix(color, zenith_color.rgb, smoothstep(0.20, 0.78, elevation));
 	// Pita hangat di atas ufuk, paling kuat ke arah matahari yang rendah.
 	float band = exp(-pow(elevation * 6.5, 1.15));
 	float glow = pow(towards, 2.4) * band;

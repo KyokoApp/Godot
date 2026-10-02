@@ -116,6 +116,13 @@ func _test_no_collision(scenery: Scenery) -> void:
 	_check(bodies == 0, "Pemandangan menambah %d collision" % bodies)
 
 
+## Angka parameter shader; null (belum disetel) dihitung 0 tanpa membuat
+## SCRIPT ERROR, supaya gerbangnya gagal dengan pesan yang jelas.
+func _number(material: ShaderMaterial, name: String) -> float:
+	var value: Variant = material.get_shader_parameter(name)
+	return float(value) if value is float else 0.0
+
+
 ## Jalan tanah digambar oleh shader tanah; kalau parameternya hilang/mati,
 ## jalan akan lenyap tanpa error apa pun.
 func _test_ground_path() -> void:
@@ -131,9 +138,12 @@ func _test_ground_path() -> void:
 	_check(shader.contains("world_position = (MODEL_MATRIX"),
 		"world_position tidak diisi di vertex(): pola tanah & jalan akan rata")
 	_check(shader.contains("path_enabled"), "Shader tanah tidak punya jalan")
-	var width := float(material.get_shader_parameter("path_width"))
+	var width := _number(material, "path_width")
+	var curve := _number(material, "path_curve")
+	var frequency := _number(material, "path_frequency")
 	_check(width > 0.5, "Lebar jalan tidak masuk akal: %.2f" % width)
+	_check(curve > 1.0, "Lekuk jalan tidak masuk akal: %.1f m" % curve)
+	_check(frequency > 0.001, "Frekuensi lekuk jalan nol: %.3f" % frequency)
 	_notes.append("jalan: lebar %.1f m, lekuk %.0f m, world_position diisi=%s"
-		% [width, float(material.get_shader_parameter("path_curve")),
-		"ya" if shader.contains("MODEL_MATRIX") else "tidak"])
+		% [width, curve, "ya" if shader.contains("MODEL_MATRIX") else "tidak"])
 	field.queue_free()
