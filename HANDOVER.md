@@ -56,6 +56,13 @@
     bersih (72 berkas), dan seluruh angka gerbang disimulasikan ulang di Python
     (radius 285-368 m, luas 0,35 km², garis pantai tepat 0,000 m, 36 chunk hidup,
     selisih grid vs analitik 0,014 m). Godot TIDAK bisa dijalankan di sandbox.
+  - Dua bug yang HANYA ketahuan di CI (pelajaran untuk cicilan berikutnya):
+    1. `var blend := t - floor(t)` — fungsi global `floor()` mengembalikan
+       Varian, dan `:=` dari Varian adalah COMPILE ERROR di Godot 4.5 (persis
+       pelajaran di kepala `tools/compile_check.gd`). Pakai `floorf()`.
+    2. `arm.collide_with_bodies` TIDAK ADA di `SpringArm3D` — cara mematikan
+       tabrakan SpringArm adalah `arm.collision_mask = 0`. Keduanya membuat
+       gerbang `gate` gagal dan render ikut gagal.
   - BELUM diuji di HP (sandbox tidak bisa render Godot).
 
 - 2026-10-02 (sesi ini, cicilan 2) — **KULIT MANNEQUIN: HITAM POLOS** (garis

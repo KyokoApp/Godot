@@ -73,8 +73,11 @@ func _test_coast_is_wavy() -> void:
 	var radii := PackedFloat32Array()
 	for step in range(STEPS):
 		radii.append(Field.island_radius(TAU * float(step) / float(STEPS)))
-	var min_radius := radii.min()
-	var max_radius := radii.max()
+	var min_radius := radii[0]
+	var max_radius := radii[0]
+	for value in radii:
+		min_radius = minf(min_radius, value)
+		max_radius = maxf(max_radius, value)
 	var spread := (max_radius - min_radius) / max_radius
 	# Bergelombang: radius harus berubah jauh antar arah. Lingkaran sempurna
 	# memberi 0%, pulau sungguhan memberi di atas 15%.

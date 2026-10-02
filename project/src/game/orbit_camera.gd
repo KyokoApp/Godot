@@ -153,9 +153,10 @@ func _apply_orbit() -> void:
 	rotation.y = yaw
 	arm.rotation.x = -pitch
 	arm.spring_length = distance
-	# Zoom dekat: jangan tembus tanah/wajah. Zoom jauh: tabrakan dimatikan,
-	# kalau tidak kamera terjepit di bukit pertama dan pulau tak pernah terlihat.
-	arm.collide_with_bodies = distance < ARM_COLLISION_LIMIT
+	# Zoom dekat: jangan tembus tanah/wajah. Zoom jauh: tabrakan dimatikan lewat
+	# mask 0 (SpringArm3D tidak punya sakelar collide_with_bodies), kalau tidak
+	# kamera terjepit di bukit pertama dan pulau tak pernah terlihat.
+	arm.collision_mask = 1 if distance < ARM_COLLISION_LIMIT else 0
 	if camera != null:
 		# Bidang dekat mengikuti jarak: pada 0,1 m jarak tetap, kamera yang sudah
 		# menempel masih memotong wajah/rambut. Saat menjauh, angka kecil justru

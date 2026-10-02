@@ -54,11 +54,12 @@ void fragment() {
 	// Jalan berliku: jarak ke kurva z = curve * sin(x * frequency), dilebarkan
 	// sedikit oleh noise supaya tepinya tidak terlihat seperti hasil rumus.
 	if (path_enabled) {
-		// Fasa 0,37 dipilih supaya jalan melintas tepat di dekat titik muncul
-		// pemain (0, 7): dengan fasa lama (1,7) jalannya mulai 19 m di utara
-		// spawn dan pemain harus berjalan dulu untuk melihatnya.
+		// Dua gelombang supaya jalannya berkeluk tidak berulang; fasa 0,59
+		// dipilih agar jalan melintas TEPAT di titik muncul pemain (0, 7) —
+		// dengan fasa lama jalannya mulai 19 m di utara spawn dan pemain harus
+		// berjalan dulu untuk melihatnya.
 		float centre = path_curve * sin(world_position.x * path_frequency)
-			+ path_curve * 0.35 * sin(world_position.x * 0.031 + 0.37);
+			+ path_curve * 0.3 * sin(world_position.x * 0.019 + 0.59);
 		float wobble = (fine - 0.5) * 1.1;
 		float distance_to_path = abs(world_position.z - centre) + wobble;
 		float path = 1.0 - smoothstep(path_width * 0.55, path_width * 1.25,

@@ -12,8 +12,9 @@ extends SceneTree
 ##   * "jalan"       : sejajar jalan tanah, seperti pemain berjalan pulang
 ##   * "laut"        : menyusuri garis pantai: bukit, tebing, dan ufuk senja
 ##
-## Arah hadap kamera orbit adalah (sin yaw, 0, cos yaw); kamera berdiri di
-## arah berlawanan dari titik bidik.
+## Kamera orbit BERDIRI di arah (sin yaw, 0, cos yaw) dari titik bidik dan
+## melihat ke arah SEBALIKNYA. Jadi untuk "melihat ke laut" dari titik pantai
+## pada sudut theta: yaw = -(theta + PI/2).
 
 const Orbit = preload("res://src/game/orbit_camera.gd")
 const Field = preload("res://src/game/world/field.gd")
@@ -50,16 +51,24 @@ func _run() -> void:
 	var shore_angle := 2.4
 	var shore := Vector3(cos(shore_angle), 0.0, sin(shore_angle)) \
 		* (Field.island_radius(shore_angle) - 6.0)
-	var outward := PI * 0.5 - shore_angle
+	var outward := -(shore_angle + PI * 0.5)
 	var views := [
+		# Seluruh pulau dari udara: kamera tinggi di timur laut, melihat ke
+		# barat daya. Inilah gambar yang menjawab "bulat atau kotak?".
 		{"name": "pulau", "distance": 620.0, "yaw": PI * 0.25, "pitch": 1.10,
 			"offset": Vector3(0.0, 40.0, 0.0)},
+		# Dari dataran menghadap garis pantai dan laut.
 		{"name": "pemandangan", "distance": 120.0, "yaw": outward, "pitch": 0.22,
 			"offset": shore * 0.55 + Vector3(0.0, 4.0, 0.0)},
-		{"name": "pantai", "distance": 26.0, "yaw": outward + 0.6, "pitch": 0.16,
+		# Pita pasir dan garis air dari dekat.
+		{"name": "pantai", "distance": 26.0, "yaw": outward + 0.35, "pitch": 0.16,
 			"offset": shore + Vector3(0.0, 3.0, 0.0)},
-		{"name": "jalan", "distance": 16.0, "yaw": PI * 0.5, "pitch": 0.08,
+		# Sejajar jalan tanah: jalannya melintas tepat di titik spawn (0, 7) dan
+		# menanjak 0,70 m ke utara tiap meter ke timur, jadi kamera diambil
+		# searah (yaw 0,96) supaya jalannya lurus di tengah layar.
+		{"name": "jalan", "distance": 16.0, "yaw": 0.96, "pitch": 0.08,
 			"offset": Vector3(0.0, 3.0, 0.0)},
+		# Menyusuri garis pantai: bukit, tebing, dan ufuk senja.
 		{"name": "laut", "distance": 90.0, "yaw": outward + PI * 0.5,
 			"pitch": 0.30, "offset": shore + Vector3(0.0, 10.0, 0.0)},
 	]

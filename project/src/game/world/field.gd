@@ -49,8 +49,11 @@ const GRASS_DARK := Color("6aa845")
 const SAND_COLOR := Color("c9a873")
 # Jalan tanah berliku (digambar shader, tanpa mesh/collision tambahan).
 const PATH_WIDTH := 3.0
-const PATH_CURVE := 55.0
-const PATH_FREQUENCY := 0.021
+## Lekuk 42 m dengan panjang gelombang ± 520 m: jalan berkeluk 2-3 kali sepanjang
+## pulau tapi kemiringannya tetap di bawah 37° (jalan setengah menanjak 55 m /
+## frekuensi 0,021 dulu condong ke 60° — terbaca garis diagonal, bukan jalan).
+const PATH_CURVE := 42.0
+const PATH_FREQUENCY := 0.012
 
 ## Tabel radius pulau per sudut (dihitung sekali): tanpa ini setiap pemeriksaan
 ## "di dalam pulau?" harus menghitung noise, dan rumput memanggilnya 11 ribu
@@ -109,7 +112,9 @@ static func island_radius(angle: float) -> float:
 	var steps := _radius_table.size()
 	var t := fposmod(angle, TAU) / TAU * float(steps)
 	var index := int(t) % steps
-	var blend := t - floor(t)
+	# floorf(), bukan floor(): fungsi global floor() mengembalikan Variant dan
+	# `:=` dari Varian adalah COMPILE ERROR di Godot 4.5.
+	var blend: float = t - floorf(t)
 	var near := _radius_table[index]
 	var far := _radius_table[(index + 1) % steps]
 	return lerpf(near, far, blend)
