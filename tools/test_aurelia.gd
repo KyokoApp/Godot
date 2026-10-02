@@ -146,7 +146,7 @@ func _test_materials(character: Character) -> void:
 			problems.append("%s tanpa surface" % mesh.name)
 			continue
 		for surface in range(surfaces):
-			var surface_name := mesh.mesh.surface_get_name(surface)
+			var surface_name: String = mesh.mesh.surface_get_name(surface)
 			var material := mesh.get_surface_override_material(surface) as StandardMaterial3D
 			if material == null:
 				problems.append("%s[%s] tanpa material" % [mesh.name, surface_name])
@@ -179,7 +179,7 @@ func _test_materials(character: Character) -> void:
 		var has_hair := false
 		var has_skin := false
 		for surface in range(body.mesh.get_surface_count()):
-			var name := body.mesh.surface_get_name(surface)
+			var name: String = body.mesh.surface_get_name(surface)
 			if name.ends_with("Mat_Hair"):
 				has_hair = true
 			if name.ends_with("Mat_Body") or name.ends_with("Mat_Dress"):
@@ -200,6 +200,32 @@ func _expected_texture(material_name: String) -> String:
 		"avatarboypolelohenmatface", "avatarboypolelohenmatbrow":
 			return "Avatar_Boy_Pole_Lohen_Tex_Face_Diffuse"
 	return ""
+
+
+## Arah tulang avatar harus sama dengan arah tulang animasi — inilah bukti
+## retarget benar. Kalau rumusnya memakai selisih rest (T-pose vs A-pose),
+## lengannya berbeda ±50 derajat dan uji ini gagal.
+func _test_retarget_shape(character: Character) -> void:
+	for motion in ["Idle_Loop", "Jog_Fwd_Loop", "Sprint_Loop", "Crouch_Fwd_Loop"]:
+		character.set_locomotion(motion, 1.0)
+		character.animation.advance(0.0)
+		for step in range(20):
+			character.animation.advance(STEP)
+			character.retarget.apply()
+			if step % 4 != 0:
+				continue
+			_check_direction(character, "lowerarm_l", "Bip001 L Forearm", motion)
+			_check_direction(character, "calf_l", "Bip001 L Calf", motion)
+			_check_direction(character, "hand_r", "Bip001 R Hand", motion)
+		# Bukti tambahan: pose avatar BUKAN T-pose.
+		var upper := character.avatar.find_bone("Bip001 L UpperArm")
+		var rest := character.avatar.get_bone_global_rest(upper)
+		var now := character.avatar.get_bone_global_pose(upper)
+		var angle := rest.basis.get_rotation_quaternion().angle_to(
+			now.basis.get_rotation_quaternion())
+		if motion == "Idle_Loop":
+			_check(angle > 0.25, "Lengan avatar masih T-pose saat idle: %.1f derajat"
+				% rad_to_deg(angle))
 
 
 ## Arah sumbu tulang (tulang -> anak yang ikut dipetakan) harus sama dengan
@@ -339,7 +365,7 @@ func _test_cloth_penetration(character: Character) -> void:
 		if wrapper != null and wrapper.springs != null:
 			uncovered += int(wrapper.springs.penetration_report().x)
 	_check(uncovered == 0, "Ada %d rantai kain tanpa kapsul badan" % uncovered)
-	var worst_idle := _worst_penetration(character, null)
+	var worst_idle := _worst_penetration(character, "")
 	var worst_walk := _worst_penetration(character, "Jog_Fwd_Loop")
 	_notes.append("tembus kain: diam=%.4f m, lari=%.4f m" % [worst_idle, worst_walk])
 	_check(worst_idle < 0.02, "Kain menembus badan saat diam: %.3f m" % worst_idle)
