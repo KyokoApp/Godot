@@ -46,12 +46,24 @@ jobs:
             > dist/UAL2_Standard.glb
           ls -la dist
           # Jaring pengaman: berkas kosong/terpotong jangan sampai diterbitkan.
+          # Beberapa tekstur memang kecil (ramp bayangan 504 bita), jadi ambang
+          # dipisah: model besar wajib > 1 MB, tekstur > 100 bita.
           for f in dist/*; do
             size=$(stat -c%s "$f")
-            if [ "$size" -lt 1024 ]; then
-              echo "::error::$f terlalu kecil ($size bita)"
-              exit 1
-            fi
+            case "$f" in
+              *.fbx|*.glb)
+                if [ "$size" -lt 1000000 ]; then
+                  echo "::error::$f terlalu kecil ($size bita)"
+                  exit 1
+                fi
+                ;;
+              *)
+                if [ "$size" -lt 100 ]; then
+                  echo "::error::$f terlalu kecil ($size bita)"
+                  exit 1
+                fi
+                ;;
+            esac
           done
           echo "total: $(du -sh dist | cut -f1), $(ls -1 dist | wc -l) berkas"
 

@@ -86,10 +86,25 @@ fetch() { # fetch <nama-di-rilis> <tujuan>
 	return 0
 }
 
+# Klon CI biasanya hanya punya commit terakhir (shallow). Kalau commit sumber
+# belum ada di klon, ambil satu commit itu saja — jauh lebih murah daripada
+# mengunduh seluruh riwayat.
+ensure_commit() {
+	if git -C "$ROOT" cat-file -e "$COMMIT^{commit}" 2>/dev/null; then
+		return 0
+	fi
+	echo "  commit $COMMIT belum ada di klon, mengambil satu commit..."
+	git -C "$ROOT" fetch --depth=1 origin "$COMMIT" >/dev/null 2>&1 || return 1
+	git -C "$ROOT" cat-file -e "$COMMIT^{commit}" 2>/dev/null
+}
+
 git_file() { # git_file <path-di-repo> <tujuan>
 	local src="$1" dest="$2"
 	if ok "$dest"; then
 		return 0
+	fi
+	if ! ensure_commit; then
+		return 1
 	fi
 	if ! git -C "$ROOT" cat-file -e "$COMMIT:$src" 2>/dev/null; then
 		return 1
