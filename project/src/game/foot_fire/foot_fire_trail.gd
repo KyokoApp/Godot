@@ -68,11 +68,16 @@ func _physics_process(delta: float) -> void:
 
 
 func _sample(side: int) -> void:
-	# Mocap stance/swing gates the wider contact band needed by retarget proportions.
-	# Placement still comes from the destination foot, never a body-centered timer.
+	# Fase tumpuan dinilai terhadap ukuran telapak KARAKTER, bukan angka tetap:
+	# avatar FBX (kaki 4 % lebih pendek, tulang pergelangan 3 cm lebih dekat ke
+	# telapak) berhenti 4 cm lebih tinggi daripada mannequin UAL saat menapak,
+	# sehingga ambang 0.04 yang disetel untuk mannequin tidak pernah tercapai.
+	# Penempatan tapak tetap dari kaki yang menyentuh, bukan pengatur waktu.
+	var clearance := character.foot_clearance(side == 0)
+	var band := maxf(clearance, 0.04) + 0.03
 	var lift := character.foot_stride_lift(side == 0)
-	if lift > 0.04:
-		if lift > 0.075:
+	if lift > band:
+		if lift > band * 1.6:
 			_contact[side] = false
 		return
 	var pose := character.foot_pose(side == 0)
@@ -85,11 +90,8 @@ func _sample(side: int) -> void:
 	var point: Vector3 = hit["position"]
 	var normal: Vector3 = hit["normal"]
 	var distance := pose.origin.y - point.y
-	var clearance := character.foot_clearance(side == 0)
 	# Tidak ada foot IK: pose stance mocap diproyeksikan ke permukaan padang.
-	# Ambangnya diukur dari tebal telapak KARAKTER, bukan angka tetap: avatar FBX
-	# dan mannequin UAL punya tinggi pergelangan yang berbeda, dan retarget
-	# membuat telapak berhenti beberapa senti di atas tanah pada klip lokomosi.
+	# Ambang jarak juga diukur dari tebal telapak karakter.
 	var margin := maxf(clearance * 0.9, 0.055)
 	if distance > clearance + margin + 0.055 or normal.y < 0.6:
 		_contact[side] = false
