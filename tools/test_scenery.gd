@@ -121,8 +121,11 @@ func _test_layout(scenery: Scenery) -> void:
 			"Pulau batu terlalu dekat pantai: x=%.1f (pantai barat %.1f)"
 			% [island_bounds.position.x + island_bounds.size.x, west_coast])
 	var sea_width := sea_mesh.size.x if sea_mesh != null else 0.0
-	_notes.append("tata letak: laut %.0f x %.0f m di y=%.2f mengelilingi pulau 1 km, "
-		+ "bukit & tebing di luar garis pantai"
+	# Tanda kurung WAJIB: tanpa itu % hanya menempel pada potongan terakhir yang
+	# tidak punya placeholder, dan GDScript melaporkan "not all arguments
+	# converted" sementara catatannya keluar tanpa angka.
+	_notes.append(("tata letak: laut %.0f x %.0f m di y=%.2f mengelilingi pulau 1 km, "
+		+ "bukit & tebing di luar garis pantai")
 		% [sea_width, sea_width, sea_position.y])
 
 

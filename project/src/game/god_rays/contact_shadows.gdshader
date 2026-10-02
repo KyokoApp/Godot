@@ -13,6 +13,9 @@ shader_type spatial;
 //                                               // mengikuti layar, TANPA flip
 //   view = INV_PROJECTION_MATRIX * vec4(ndc, 1.0); posisi = view.xyz / view.w
 //   depth buffer reverse-Z: DEKAT = 1.0, JAUH = 0.0
+//
+// Catatan Godot: 'return' TIDAK boleh dipakai di fragment(), jadi alurnya
+// dibagi ke fungsi kecil _march() yang memang boleh return.
 render_mode unshaded, blend_mul, cull_disabled, depth_draw_never, depth_test_disabled,
 	shadows_disabled, fog_disabled;
 uniform sampler2D depth_tex : hint_depth_texture, repeat_disable, filter_nearest;
@@ -30,42 +33,42 @@ void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
 }
 
-void fragment() {
-	float raw = texture(depth_tex, SCREEN_UV).r;
-	// Langit (reverse-Z: tak hingga = 0) tidak butuh contact shadow.
-	if (raw < 0.00001) {
-		ALBEDO = vec3(1.0);
-		ALPHA = 0.0;
-		return;
-	}
-	vec3 ndc = vec3(SCREEN_UV * 2.0 - 1.0, raw);
-	vec4 corner = INV_PROJECTION_MATRIX * vec4(ndc, 1.0);
-	vec3 origin = corner.xyz / corner.w;
-	// Jauh dari kamera kontaknya tidak terbaca lagi: hemat setengah layar.
-	if (length(origin) > max_distance) {
-		ALBEDO = vec3(1.0);
-		ALPHA = 0.0;
-		return;
-	}
+// Menembakkan satu sinar dari posisi piksel ke arah matahari. Mengembalikan 1.0
+// kalau sinar kena geometri (bayangan), 0.0 kalau langit terang.
+float _march(vec3 origin) {
 	vec3 sun_view = (VIEW_MATRIX * vec4(sun_direction, 0.0)).xyz;
 	sun_view = normalize(sun_view);
 	vec3 step = sun_view * (ray_length / float(SAMPLE_COUNT));
 	vec3 ray = origin;
-	float shadow = 0.0;
 	for (int i = 0; i < SAMPLE_COUNT; i++) {
 		ray += step;
 		vec4 clip = PROJECTION_MATRIX * vec4(ray, 1.0);
 		vec2 uv = (clip.xy / clip.w) * 0.5 + 0.5;
 		// Sinar yang keluar layar tidak boleh meninggalkan garis di tepi.
 		if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
-			break;
+			return 0.0;
 		}
 		float ray_depth = clip.z / clip.w;
 		float scene = texture(depth_tex, uv).r;
 		// Reverse-Z: benda yang lebih DEKAT ke kamera punya nilai lebih BESAR.
 		if (scene > ray_depth + bias) {
-			shadow = 1.0;
-			break;
+			return 1.0;
+		}
+	}
+	return 0.0;
+}
+
+void fragment() {
+	float raw = texture(depth_tex, SCREEN_UV).r;
+	float shadow = 0.0;
+	// Langit (reverse-Z: tak hingga = 0) tidak butuh contact shadow.
+	if (raw >= 0.00001) {
+		vec3 ndc = vec3(SCREEN_UV * 2.0 - 1.0, raw);
+		vec4 corner = INV_PROJECTION_MATRIX * vec4(ndc, 1.0);
+		vec3 origin = corner.xyz / corner.w;
+		// Jauh dari kamera kontaknya tidak terbaca lagi: hemat setengah layar.
+		if (length(origin) <= max_distance) {
+			shadow = _march(origin);
 		}
 	}
 	// Memudar di 10% tepi layar: ray yang keluar layar jangan membuat tepian.
