@@ -23,7 +23,12 @@ const MIN_DELTA := 1.0 / 240.0
 const MAX_DELTA := 1.0 / 30.0
 ## Kain yang lebih panjang dari ini tetap dihitung, tapi rantai yang bercabang
 ## tidak digabung (rok punya banyak panel; tiap panel = satu rantai).
-const MAX_COLLIDER_MARGIN := 0.22
+## Seberapa jauh (dari rest pose) sebuah kapsul badan masih diikutkan ke rantai.
+## Nilai kecil (0,22) membuat rok/rambut tidak pernah bertabrakan dengan kaki:
+## saat kaki mengayun ke depan, kain yang menggantung di dekat pinggul sudah
+## menembus paha sebelum kapsulnya dihitung. 0,55 cukup untuk semua panel rok
+## pada avatar ini tanpa perlu menguji 16 kapsul untuk tiap partikel.
+const MAX_COLLIDER_MARGIN := 0.55
 const GROUND_FRICTION := 0.55
 ## Iterasi penjaga bentuk untuk mode normal (mode ringan memakai 1).
 const DEFAULT_ITERATIONS := 2
@@ -479,6 +484,31 @@ func _write_chain(chain: Strand, skeleton: Skeleton3D, world: Transform3D) -> vo
 		skeleton.set_bone_pose_rotation(chain.bones[index], local.basis.get_rotation_quaternion())
 
 
+## Laporan tembus badan: x = jumlah rantai yang tidak punya kapsul sama sekali
+## (rantai seperti itu pasti menembus badan saat bergerak), y = kedalaman tembus
+## terburuk dalam meter (0 kalau tidak ada). Partikel yang memang tertanam di
+## rest pose (allowed = 0) dilewati. Dipakai gerbang supaya "kain menembus
+## badan" jadi angka, bukan pendapat.
+func penetration_report() -> Vector2:
+	var worst := 0.0
+	var uncovered := 0
+	for chain in _chains:
+		if chain.colliders.is_empty():
+			uncovered += 1
+			continue
+		var slots := chain.colliders.size()
+		for index in range(1, chain.points.size()):
+			for slot in range(slots):
+				if chain.allowed[index * slots + slot] == 0:
+					continue
+				var collider := _colliders[chain.colliders[slot]]
+				var closest := _closest_on_segment(chain.points[index],
+					collider.from_world, collider.to_world)
+				var depth := collider.radius - chain.points[index].distance_to(closest)
+				worst = maxf(worst, depth)
+	return Vector2(uncovered, worst)
+
+
 func _update_colliders(skeleton: Skeleton3D) -> void:
 	for collider in _colliders:
 		var pose := skeleton.global_transform * skeleton.get_bone_global_pose(collider.bone)
@@ -528,14 +558,6 @@ func set_enabled(value: bool) -> void:
 	_enabled = value
 
 
-func is_enabled() -> bool:
-	return _enabled
-
-
-func set_gravity(value: float) -> void:
-	_gravity = clampf(value, 0.0, 40.0)
-
-
 func set_wind(strength: float, direction: Vector3) -> void:
 	_wind_strength = maxf(strength, 0.0)
 	if direction.length_squared() > 0.000001:
@@ -561,7 +583,7 @@ func collider_count() -> int:
 	return _colliders.size()
 
 
-func group_of(chain_index: int) -> int:
+func _group_of(chain_index: int) -> int:
 	if chain_index < 0 or chain_index >= _chains.size():
 		return -1
 	return _chains[chain_index].group

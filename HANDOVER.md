@@ -92,6 +92,44 @@
     gagal dicetak di AKHIR log tes.
 
 
+- 2026-10-02 (lanjutan) — **material avatar diperbaiki dari sumber aslinya**.
+  Keluhan pengguna: "model karakter masih banyak bug" (rambut tampak seperti
+  helm navy, wajah/mata bercak warna, kain menembus badan). Akarnya ketemu di
+  paket aslinya, folder `aurelia-debug/`:
+  - Ada **berkas material Unity** (`Materials/*.json`) yang selama ini terlewat:
+    masing-masing menunjuk tekstur resminya (`_MainTex`, `_BumpMap`). Peta:
+    Mat_Hair→Hair_Diffuse, Mat_Body→Body_Diffuse, Mat_Dress→Body_Diffuse,
+    Mat_Face/Mat_Brow→Face_Diffuse, Mat_Pupil→**Hair_Diffuse** (pulau iris kecil
+    di atlas rambut), Avatar_Default_Mat→mesh efek (disembunyikan).
+  - `LayerElementMaterial` di FBX memang menunjuk material per poligon (bukan
+    [0,...] seperti dugaan lama): mesh **Body punya 3 surface** —
+    Mat_Hair 20.798 poligon, Mat_Body 12.871, Mat_Dress 1.123 (urutan koneksi
+    material ke mesh: Hair, Body, Dress). Versi lama menimpa ketiganya dengan
+    satu material, jadi rambut depan memakai atlas jubah navy.
+  - Importer FBX Godot menamai tiap **surface** dengan nama material FBX
+    (`mat_name` di `modules/fbx/fbx_document.cpp`), jadi material sekarang
+    dipilih dari nama surface dan dipasang dengan `set_surface_override_material`
+    (satu mesh boleh beda material per surface; `material_override` hanya bisa
+    satu dan itulah sumber bug).
+  - `_CullMode` dari material Unity: Body/Hair/Face/Brow/Pupil = 2 (single
+    sided), hanya **Dress = 0 (double sided)**. Versi lama memaksa semua
+    `CULL_DISABLED`, sehingga sisi dalam rambut tergambar menembus wajah.
+  - Tekstur `*_Lightmap` dan `Avatar_Tex_Face01_Shadow` adalah peta BAYANGAN
+    toon (lavender), bukan warna kulit. Versi lama memakainya sebagai pancaran
+    -> wajah tampak kebiruan. Sekarang tidak dipakai.
+  - Gerbang `tools/test_aurelia.gd` memeriksa per surface: tekstur ada, garis
+    luar ada, cull mode sesuai material aslinya, dan **mesh Body wajib punya
+    surface rambut + badan** (penjaga regresi untuk bug helm navy).
+  - **Kain menembus badan**: filter kapsul `MAX_COLLIDER_MARGIN` 0,22 → 0,55,
+    supaya panel rok/rambut juga bertabrakan dengan kapsul kaki yang baru
+    mengayun. Ditambah `penetration_report()` (rantai tanpa kapsul + kedalaman
+    tembus terburuk) yang diperiksa gerbang saat diam dan saat lari.
+  - **Pratinjau render di CI**: artefak/log GitHub tidak bisa diunduh dari
+    lingkungan agen, jadi langkah baru merender avatar dari kamera pemain
+    (`tools/render_avatar.gd`: 0,4 m / 0,85 m / 2,2 m + pose jalan & lari),
+    mengecilkannya jadi JPEG (`tools/make_preview.gd`) dan menempelkannya
+    sebagai base64 di komentar commit. Ini cara memeriksa bug yang hanya
+    terlihat mata.
 - 2026-10-02 (lanjutan) — **zoom kamera bisa menempel ke karakter**. Batas
   terdekat dulu 2,4 m (seluruh badan saja). Sekarang `MIN_DISTANCE = 0,35 m`:
   karena titik pandang kamera ada di setinggi kepala (1,45 m), pada jarak itu

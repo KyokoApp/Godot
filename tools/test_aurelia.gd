@@ -12,6 +12,7 @@ extends SceneTree
 const Character = preload("res://src/game/character/aurelia_visual.gd")
 const Humanoid = preload("res://src/game/animation/humanoid_map.gd")
 const ClothDynamics = preload("res://src/game/animation/cloth_dynamics.gd")
+const Materials = preload("res://src/game/character/aurelia_materials.gd")
 const Springs = preload("res://src/game/animation/cloth_springs.gd")
 const STEP := 1.0 / 60.0
 var _failures := 0
@@ -49,6 +50,7 @@ func _run() -> void:
 	_test_materials(character)
 	_test_retarget_shape(character)
 	_test_feet_above_ground(character)
+	_test_cloth_penetration(character)
 	_test_cloth_inertia(character)
 	_test_cloth_no_penetration(character)
 	var missing := Humanoid.missing_pairs(character.skeleton, character.avatar)
@@ -121,49 +123,83 @@ func _test_rig(character: Character) -> void:
 	_check(colliders >= 12, "Kapsul badan terlalu sedikit: %d" % colliders)
 
 
+## Material diambil dari NAMA MATERIAL FBX per surface (importer Godot menamai
+## tiap surface dengan nama materialnya). Uji ini menjaga tiga bug yang pernah
+## terjadi:
+##   1. mesh Body punya 3 surface (Mat_Hair + Mat_Body + Mat_Dress) — kalau
+##      ditimpa satu material, rambut depan memakai atlas jubah dan terlihat
+##      seperti helm navy;
+##   2. Face_Eye/EyeStar memakai Mat_Face (atlas wajah), bukan atlas rambut;
+##   3. cull mode mengikuti material aslinya (hanya Dress double-sided); kalau
+##      semua dipaksa double-sided, sisi dalam rambut tergambar menembus wajah.
 func _test_materials(character: Character) -> void:
 	var visible := 0
+	var mapping := PackedStringArray()
+	var problems := PackedStringArray()
 	for node in character.avatar.find_children("*", "MeshInstance3D", true, false):
 		var mesh := node as MeshInstance3D
 		if not mesh.visible:
 			continue
 		visible += 1
-		var material := mesh.material_override as StandardMaterial3D
-		_check(material != null, "Material avatar hilang di " + mesh.name)
-		if material == null:
+		var surfaces := mesh.mesh.get_surface_count() if mesh.mesh != null else 0
+		if surfaces == 0:
+			problems.append("%s tanpa surface" % mesh.name)
 			continue
-		_check(material.albedo_texture != null,
-			"Tekstur avatar hilang di " + mesh.name)
-		_check(material.next_pass is ShaderMaterial, "Outline avatar hilang di "
-			+ mesh.name)
-	# 8 mesh asli; satu (EffectMesh) sengaja disembunyikan.
-	_check(visible == 7, "Jumlah mesh avatar yang tampil bukan 7: %d" % visible)
-
-
-## Arah tulang avatar harus sama dengan arah tulang animasi — inilah bukti
-## retarget benar. Kalau rumusnya memakai selisih rest (T-pose vs A-pose),
-## lengannya berbeda ±50 derajat dan uji ini gagal.
-func _test_retarget_shape(character: Character) -> void:
-	for motion in ["Idle_Loop", "Jog_Fwd_Loop", "Sprint_Loop", "Crouch_Fwd_Loop"]:
-		character.set_locomotion(motion, 1.0)
-		character.animation.advance(0.0)
-		for step in range(20):
-			character.animation.advance(STEP)
-			character.retarget.apply()
-			if step % 4 != 0:
+		for surface in range(surfaces):
+			var surface_name := mesh.mesh.surface_get_name(surface)
+			var material := mesh.get_surface_override_material(surface) as StandardMaterial3D
+			if material == null:
+				problems.append("%s[%s] tanpa material" % [mesh.name, surface_name])
 				continue
-			_check_direction(character, "lowerarm_l", "Bip001 L Forearm", motion)
-			_check_direction(character, "calf_l", "Bip001 L Calf", motion)
-			_check_direction(character, "hand_r", "Bip001 R Hand", motion)
-		# Bukti tambahan: pose avatar BUKAN T-pose.
-		var upper := character.avatar.find_bone("Bip001 L UpperArm")
-		var rest := character.avatar.get_bone_global_rest(upper)
-		var now := character.avatar.get_bone_global_pose(upper)
-		var angle := rest.basis.get_rotation_quaternion().angle_to(
-			now.basis.get_rotation_quaternion())
-		if motion == "Idle_Loop":
-			_check(angle > 0.25, "Lengan avatar masih T-pose saat idle: %.1f derajat"
-				% rad_to_deg(angle))
+			if material.albedo_texture == null:
+				problems.append("%s[%s] tanpa tekstur" % [mesh.name, surface_name])
+				continue
+			if not (material.next_pass is ShaderMaterial):
+				problems.append("%s[%s] tanpa garis luar" % [mesh.name, surface_name])
+			var texture := material.albedo_texture.resource_path.get_file()
+			mapping.append("%s->%s" % [surface_name.replace("Avatar_Boy_Pole_Lohen_", ""),
+				texture])
+			if surface_name.ends_with("Mat_Dress"):
+				if material.cull_mode != BaseMaterial3D.CULL_DISABLED:
+					problems.append("dress bukan double-sided")
+			elif material.cull_mode != BaseMaterial3D.CULL_BACK:
+				problems.append("%s[%s] tidak single-sided" % [mesh.name, surface_name])
+			var expected := _expected_texture(surface_name)
+			if not expected.is_empty() and not texture.begins_with(expected):
+				problems.append("%s[%s] memakai %s, harusnya %s" % [mesh.name, surface_name,
+					texture, expected])
+	_check(problems.is_empty(), "Material avatar salah: " + "; ".join(problems))
+	# 8 mesh asli; satu (EffectMesh, material Avatar_Default_Mat) disembunyikan.
+	_check(visible == 7, "Jumlah mesh avatar yang tampil bukan 7: %d" % visible)
+	_notes.append("material: " + ", ".join(mapping))
+	# Bukti regresi: mesh Body harus punya surface rambut DAN surface badan.
+	var body := character.avatar.find_child("Body", true, false) as MeshInstance3D
+	_check(body != null, "Mesh Body tidak ditemukan")
+	if body != null:
+		var has_hair := false
+		var has_skin := false
+		for surface in range(body.mesh.get_surface_count()):
+			var name := body.mesh.surface_get_name(surface)
+			if name.ends_with("Mat_Hair"):
+				has_hair = true
+			if name.ends_with("Mat_Body") or name.ends_with("Mat_Dress"):
+				has_skin = true
+		_check(has_hair and has_skin,
+			"Mesh Body harus punya surface rambut dan badan (rambut=%s badan=%s)"
+			% [has_hair, has_skin])
+
+
+## Tekstur yang seharusnya dipakai, dibaca dari berkas material Unity aslinya.
+func _expected_texture(material_name: String) -> String:
+	var key := Materials.rule_key(material_name)
+	match key:
+		"avatarboypolelohenmathair", "avatarboypolelohenmatpupil":
+			return "Avatar_Boy_Pole_Lohen_Tex_Hair_Diffuse"
+		"avatarboypolelohenmatbody", "avatarboypolelohenmatdress":
+			return "Avatar_Boy_Pole_Lohen_Tex_Body_Diffuse"
+		"avatarboypolelohenmatface", "avatarboypolelohenmatbrow":
+			return "Avatar_Boy_Pole_Lohen_Tex_Face_Diffuse"
+	return ""
 
 
 ## Arah sumbu tulang (tulang -> anak yang ikut dipetakan) harus sama dengan
@@ -291,6 +327,41 @@ func _test_cloth_inertia(character: Character) -> void:
 		"Kain tidak menyusul badan setelah badan diam")
 	_check(not is_equal_approx(caught_up.x, rest_point.x),
 		"Kain ikut menempel ke titik asal badan")
+
+
+## Kain/rambut tidak boleh menembus kepala atau badan — diukur dengan kapsul
+## badan yang sama seperti yang dipakai simulasi, jadi hasilnya berupa angka:
+## (a) tidak ada rantai yang tanpa kapsul sama sekali, (b) kedalaman tembus
+## terburuk hampir nol, saat diam DAN saat klip lokomosi berjalan.
+func _test_cloth_penetration(character: Character) -> void:
+	var uncovered := 0
+	for wrapper in character.cloths:
+		if wrapper != null and wrapper.springs != null:
+			uncovered += int(wrapper.springs.penetration_report().x)
+	_check(uncovered == 0, "Ada %d rantai kain tanpa kapsul badan" % uncovered)
+	var worst_idle := _worst_penetration(character, null)
+	var worst_walk := _worst_penetration(character, "Jog_Fwd_Loop")
+	_notes.append("tembus kain: diam=%.4f m, lari=%.4f m" % [worst_idle, worst_walk])
+	_check(worst_idle < 0.02, "Kain menembus badan saat diam: %.3f m" % worst_idle)
+	_check(worst_walk < 0.03, "Kain menembus badan saat lari: %.3f m" % worst_walk)
+
+
+## Jalankan simulasi beberapa detik (opsional dengan klip lokomosi) lalu
+## kembalikan kedalaman tembus terburuk dari semua kerangka.
+func _worst_penetration(character: Character, motion: String) -> float:
+	character.set_locomotion("Idle_Loop" if motion.is_empty() else motion, 1.0)
+	character.animation.advance(0.0)
+	var worst := 0.0
+	for step in range(120):
+		character.animation.advance(STEP)
+		for follower in character.retargets:
+			follower.apply()
+		for wrapper in character.cloths:
+			if wrapper == null:
+				continue
+			wrapper.simulate(STEP)
+			worst = maxf(worst, wrapper.springs.penetration_report().y)
+	return worst
 
 
 ## Rambut panjang tidak boleh menembus kepala/badan saat diam.

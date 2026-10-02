@@ -444,6 +444,70 @@ jobs:
           path: ~/.local/share/godot/app_userdata/**/night-*-test.png
           if-no-files-found: ignore
 
+      # Render avatar dari kamera pemain (0,4 m / 0,85 m / 2,2 m + pose jalan):
+      # bug material & kain hanya terlihat dari gambar, bukan dari angka.
+      - name: Render avatar dekat (Mobile Vulkan software)
+        run: |
+          set +e
+          timeout 240 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --script "$GITHUB_WORKSPACE/tools/render_avatar.gd" 2>&1 | tee avatar-render.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' avatar-render.log; then
+            tail -60 avatar-render.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[avatar-render-test] HASIL: OK' avatar-render.log
+
+      - name: Simpan screenshot avatar
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: avatar-screenshots
+          path: ~/.local/share/godot/app_userdata/**/avatar-*-test.png
+          if-no-files-found: ignore
+
+      # Pratinjau untuk pemeriksa: screenshot dikecilkan jadi JPEG lalu ditempel
+      # base64 di komentar commit (artefak & log GitHub tidak bisa diunduh dari
+      # luar CI). Satu gambar = satu komentar supaya tidak kena batas 64 KB.
+      - name: Pratinjau render (komentar commit)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s globstar nullglob
+          SHOTS=(~/.local/share/godot/app_userdata/**/avatar-*-test.png \
+            ~/.local/share/godot/app_userdata/**/casting-*-test.png)
+          if [ ${#SHOTS[@]} -eq 0 ]; then
+            echo "tidak ada screenshot untuk pratinjau"
+            exit 0
+          fi
+          mkdir -p preview
+          cp "${SHOTS[@]}" preview/
+          ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/make_preview.gd" -- "$PWD/preview" 560 \
+            > /dev/null 2>&1 || true
+          for jpg in preview/*.jpg; do
+            [ -f "$jpg" ] || continue
+            SIZE=$(stat -c%s "$jpg")
+            # Lewati yang terlalu besar: satu komentar maksimal 64 KB.
+            [ "$SIZE" -le 42000 ] || { echo "lewat: $jpg ($SIZE B)"; continue; }
+            NAME=$(basename "$jpg")
+            {
+              echo "### pratinjau: $NAME"
+              echo
+              echo '```'
+              base64 -w 0 "$jpg"
+              echo
+              echo '```'
+            } > body.md
+            jq -Rs '{body: .}' body.md > body.json
+            gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/comments" \
+              --input body.json --jq '.html_url' || echo "komentar $NAME gagal"
+          done
+
       - name: Tes warmup GPU, skip, boot marker dan cleanup (Mobile Vulkan)
         run: |
           set +e
