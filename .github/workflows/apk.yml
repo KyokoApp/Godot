@@ -447,6 +447,7 @@ jobs:
       # Render avatar dari kamera pemain (0,4 m / 0,85 m / 2,2 m + pose jalan):
       # bug material & kain hanya terlihat dari gambar, bukan dari angka.
       - name: Render avatar dekat (Mobile Vulkan software)
+        if: always()
         run: |
           set +e
           timeout 240 xvfb-run -a env \

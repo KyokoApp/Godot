@@ -133,6 +133,9 @@ class Strand:
 		return bones.size()
 
 
+## Keterangan partikel paling dalam yang menembus kapsul (diisi
+## `penetration_report()`), supaya gerbang bisa menunjuk rantai dan tulangnya.
+var last_penetration := ""
 var _chains: Array[Strand] = []
 var _colliders: Array[Capsule] = []
 var _skeleton: Skeleton3D
@@ -407,6 +410,11 @@ func _simulate_chain(chain: Strand, dt: float, world: Transform3D, skeleton: Ske
 		if _ground_y > -INF:
 			for index in range(1, chain.points.size()):
 				_keep_above_ground(chain, index, dt)
+	# Tabrakan ditutup paling akhir: pembatas tanah dan penjaga panjang bisa
+	# mendorong partikel masuk kembali ke kapsul, jadi keadaan akhir langkah harus
+	# selalu bebas dari tembus badan.
+	for index in range(1, chain.points.size()):
+		_collide(chain, index)
 
 
 ## Panjang segmen: hanya partikel anak yang digeser (rantai "ikuti pemimpin"),
@@ -505,7 +513,12 @@ func penetration_report() -> Vector2:
 				var closest := _closest_on_segment(chain.points[index],
 					collider.from_world, collider.to_world)
 				var depth := collider.radius - chain.points[index].distance_to(closest)
-				worst = maxf(worst, depth)
+				if depth > worst:
+					worst = depth
+					last_penetration = "grup %d partikel %d (%s) vs kapsul %s" % [
+						chain.group, index,
+						_skeleton.get_bone_name(chain.bones[chain.bones.size() - 1]),
+						_skeleton.get_bone_name(collider.bone)]
 	return Vector2(uncovered, worst)
 
 

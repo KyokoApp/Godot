@@ -367,7 +367,8 @@ func _test_cloth_penetration(character: Character) -> void:
 	_check(uncovered == 0, "Ada %d rantai kain tanpa kapsul badan" % uncovered)
 	var worst_idle := _worst_penetration(character, "")
 	var worst_walk := _worst_penetration(character, "Jog_Fwd_Loop")
-	_notes.append("tembus kain: diam=%.4f m, lari=%.4f m" % [worst_idle, worst_walk])
+	_notes.append("tembus kain: diam=%.4f m, lari=%.4f m (%s)" % [worst_idle, worst_walk,
+		_worst_detail(character)])
 	_check(worst_idle < 0.02, "Kain menembus badan saat diam: %.3f m" % worst_idle)
 	_check(worst_walk < 0.03, "Kain menembus badan saat lari: %.3f m" % worst_walk)
 
@@ -388,6 +389,15 @@ func _worst_penetration(character: Character, motion: String) -> float:
 			wrapper.simulate(STEP)
 			worst = maxf(worst, wrapper.springs.penetration_report().y)
 	return worst
+
+
+## Keterangan dari pembungkus kain: partikel paling dalam menembus kapsul apa.
+func _worst_detail(character: Character) -> String:
+	for wrapper in character.cloths:
+		if wrapper != null and wrapper.springs != null \
+				and not wrapper.springs.last_penetration.is_empty():
+			return wrapper.springs.last_penetration
+	return "tidak ada"
 
 
 ## Rambut panjang tidak boleh menembus kepala/badan saat diam.
