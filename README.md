@@ -1001,3 +1001,34 @@ tautan [God Rays shader — inspired by pend00 (Godot 4.5)](https://godotshaders
 - Kredit pend00 + CC0 tercatat di `project/licenses/LICENSES.txt`.
 
 Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-03 — sinar matahari, contact shadow, dan pohon raksasa DIHAPUS
+
+Umpan balik: "ternyata jelek ih hapus total ajh lah trus yang ray tracing awal aku
+request juga hapus ajh trus lanjut pohon hilangin ajh".
+
+- `god_rays/light_shafts.gd` + `.gdshader` (sinar pend00) **DIHAPUS** — efeknya
+  sendiri tidak disukai.
+- `god_rays/contact_shadows.gd` + `.gdshader` **DIHAPUS** — ini efek "kesan ray
+  tracing" yang diminta di cicilan 8. Seluruh folder `god_rays/` kini kosong dan
+  hilang dari repo.
+- `world/world_tree.gd` **DIHAPUS** — pohon raksasa prosedural 31 m di
+  (0, tanah, −95) beserta pemasangannya di `main.gd`. Pulau sekarang kembali
+  bersih: hanya tanah, rumput, pemandangan, air, dan karakter.
+- `performance_panel.gd` — dua tombol hilang (**Sinar matahari** dan **Contact
+  shadow**), kunci config `sun_rays` dan `contact_shadow` juga dibuang. Sisa
+  tombol: Resolusi 3D, Rumput, Bayangan, Batas FPS.
+- `loading/warmup_samples.gd` — STAGES 14 → 13 (tahap pemanasan sinar + contact
+  shadow dibuang), jadi layar muat sedikit lebih cepat.
+- Gerbang CI yang dihapus: `test_light_shafts.gd`, `test_contact_shadows.gd`,
+  `test_world_tree.gd`, beserta langkah render, artefak screenshot, daftar berkas
+  wajib, dan grep ringkasan commit di `apk.yml`.
+- `render_world.gd` / `render_mannequin.gd` — `_shafts` dikeluarkan dari daftar
+  efek yang disembunyikan.
+- Catatan riwayat + kredit pend00 (CC0) tetap ada di `LICENSES.txt`, ditandai
+  "sudah dihapus".
+
+Yang TIDAK berubah: pulau 1 km berbentuk bergelombang, palet gelap senja, rumput
+padat, partikel ungu, langit senja + glow, dan bayangan shadow map biasa.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.

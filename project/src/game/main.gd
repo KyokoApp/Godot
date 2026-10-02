@@ -5,15 +5,12 @@ extends Node3D
 
 const Field = preload("res://src/game/world/field.gd")
 const Scenery = preload("res://src/game/world/scenery.gd")
-const WorldTree = preload("res://src/game/world/world_tree.gd")
 const Grass = preload("res://src/game/grass_field.gd")
 const Player = preload("res://src/game/player.gd")
 const Character = preload("res://src/game/mannequin.gd")
 const Orbit = preload("res://src/game/orbit_camera.gd")
 const Joystick = preload("res://src/game/virtual_joystick.gd")
 const Dusk = preload("res://src/game/environment/dusk_environment.gd")
-const LightShafts = preload("res://src/game/god_rays/light_shafts.gd")
-const ContactShadows = preload("res://src/game/god_rays/contact_shadows.gd")
 const WorldAudio = preload("res://src/game/audio/world_audio.gd")
 const Footsteps = preload("res://src/game/audio/footsteps.gd")
 const FootFire = preload("res://src/game/foot_fire/foot_fire_trail.gd")
@@ -47,14 +44,11 @@ var warmup_report: Dictionary = {}
 var _previous_occlusion := false
 var _field: Field
 var _scenery: Scenery
-var _world_tree: WorldTree
 var _grass: Grass
 var _player: Player
 var _visual: Character
 var _orbit: Orbit
 var _sun: DirectionalLight3D
-var _shafts: LightShafts
-var _contact: ContactShadows
 var _audio: WorldAudio
 var _footsteps: Footsteps
 var _foot_fire: FootFire
@@ -107,11 +101,6 @@ func _build_world() -> void:
 	# gameplay di pulau tidak berubah.
 	_scenery = Scenery.new()
 	add_child(_scenery)
-	# Pohon raksasa di pedalaman: penanda arah + peneduh besar. Dibangun
-	# prosedural (tidak ada aset model pohon di repo), jadi tidak menambah
-	# unduhan apa pun.
-	_world_tree = WorldTree.new()
-	add_child(_world_tree)
 
 
 func _build_player() -> void:
@@ -144,11 +133,6 @@ func _build_grass() -> void:
 
 
 func _build_effects() -> void:
-	# Contact shadow (sinar vs buffer kedalaman) mendaftar lebih dulu supaya
-	# digabung sebelum sinar matahari menambah cahaya.
-	_contact = ContactShadows.new()
-	_contact.camera = _orbit.camera
-	_orbit.camera.add_child(_contact)
 	_audio = WorldAudio.new()
 	_audio.listener = _orbit.camera
 	add_child(_audio)
@@ -181,12 +165,6 @@ func _build_effects() -> void:
 func _build_hud() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
-	# Sinar matahari gaya pend00: ColorRect layar penuh, digambar paling bawah
-	# supaya tombol dan panel tetap di atas sinar.
-	_shafts = LightShafts.new()
-	_shafts.name = "LightShafts"
-	_shafts.camera = _orbit.camera
-	layer.add_child(_shafts)
 	_joystick = Joystick.new()
 	layer.add_child(_joystick)
 	_joystick.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -300,8 +278,6 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 	title.add_theme_color_override("font_color", Color.WHITE)
 	content.add_child(title)
 	_performance = PerformancePanel.new()
-	_performance.rays = _shafts
-	_performance.contact = _contact
 	_performance.sun = _sun
 	_performance.grass = _grass
 	_performance.character = _visual

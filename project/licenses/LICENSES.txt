@@ -297,35 +297,32 @@ Status: arena, aurora dan fog lokal DIHAPUS pada milestone padang rumput;
 yang tersisa hanya styling HUD orisinal dan pagar batas padang.
 
 
-#### Sinar matahari gaya pend00 (god rays)
+#### Sinar matahari gaya pend00 (god rays) — riwayat, sudah dihapus
 - Sumber shader: **pend00**, "God rays", Godot Shaders — CC0 1.0.
 - Halaman asli: https://godotshaders.com/shader/god-rays/
   Versi Godot 4.5 yang diminta pengguna:
   https://godotshaders.com/shader/god-rays-shader-inspired-by-pend00-godot-4-5/
 - Halaman menyatakan kode shader berlisensi **CC0 1.0**:
   https://creativecommons.org/publicdomain/zero/1.0/ . Gambar/video pada halaman
-  tidak termasuk lisensi tersebut dan tidak disalin ke proyek ini.
-- Implementasi: `project/src/game/god_rays/light_shafts.gdshader` memakai value
-  noise dua lapisan (tanpa tekstur noise sama sekali) dan pencampuran "screen"
-  dengan SCREEN_TEXTURE, dipasang sebagai ColorRect layar penuh di bawah HUD.
-  Perubahan proyek: pusat pantulan sinar diubah dari skalar `position` menjadi
-  vec2 `ray_origin` supaya sinar bisa dipusatkan tepat di posisi matahari di
-  layar, warna serta kekuatan diatur dari skrip tiap frame, dan efek memudar
-  lalu hilang saat matahari ada di belakang kamera atau keluar layar.
-- Riwayat: dua implementasi sinar matahari sebelumnya (shader depth-march
-  layar-penuh) sudah DIHAPUS atas permintaan pengguna dan tidak lagi dipakai.
+  tidak termasuk lisensi tersebut dan tidak pernah disalin ke proyek ini.
+- Status: **DIHAPUS** atas permintaan pengguna. Tidak ada kode pend00 yang
+  tersisa di proyek ini; bagian ini hanya mencatat riwayat pemakaian.
+- Riwayat sebelumnya: dua implementasi sinar matahari lain (shader depth-march
+  layar-penuh) juga sudah dihapus atas permintaan pengguna.
 
 
-#### Screen-space contact shadows
+#### Screen-space contact shadows — riwayat, sudah dihapus
 - Method reference: forum Godot, "Screen Space Shadows" — ray march dari setiap
   piksel ke arah cahaya lalu bandingkan dengan buffer kedalaman,
   https://forum.godotengine.org/t/screen-space-shadows/70197
-- Implementasi proyek: shader Godot 4 orisinal untuk renderer MOBILE (SSAO, SSR,
-  SSIL, dan volumetric fog hanya ada di Forward+), dengan perbandingan depth
-  reverse-Z, 14 sampel sepanjang 21 m, pemudaran tepi layar, dan batas jarak
-  kamera. Postingan forum hanya menyuplai potongan GLSL untuk mesin/versi lain;
-  tidak ada kode yang disalin apa adanya. Kredit menandai inspirasi metode, bukan
-  salinan verbatim atau jaminan performa.
+- Implementasi proyek (sudah dihapus): shader Godot 4 orisinal untuk renderer
+  MOBILE (SSAO, SSR, SSIL, dan volumetric fog hanya ada di Forward+), dengan
+  perbandingan depth reverse-Z, 14 sampel sepanjang 21 m, pemudaran tepi layar,
+  dan batas jarak kamera. Postingan forum hanya menyuplai potongan GLSL untuk
+  mesin/versi lain; tidak ada kode yang disalin apa adanya. Kredit menandai
+  inspirasi metode, bukan salinan verbatim atau jaminan performa.
+- Status: **DIHAPUS** atas permintaan pengguna (bagian dari efek "ray tracing"
+  yang tidak disukai). Bagian ini hanya mencatat riwayat.
 
 
 #### Universal Animation Library 2 Standard — combat

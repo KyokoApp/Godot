@@ -1,6 +1,6 @@
 extends RefCounted
 ## Render resource asli: material tanah, rumput MultiMesh, avatar ber-skinning,
-## lapisan tubuh atas, tapak api, aura cepat, sinar matahari, dan contact shadow.
+## lapisan tubuh atas, tapak api, dan aura cepat.
 
 const Field = preload("res://src/game/world/field.gd")
 const Character = preload("res://src/game/mannequin.gd")
@@ -9,9 +9,7 @@ const Projectile = preload("res://src/game/fire_projectile.gd")
 const Burst = preload("res://src/game/fire_burst.gd")
 const FootFire = preload("res://src/game/foot_fire/foot_fire_trail.gd")
 const SpeedAura = preload("res://src/game/speed/speed_aura.gd")
-const LightShafts = preload("res://src/game/god_rays/light_shafts.gd")
-const ContactShadows = preload("res://src/game/god_rays/contact_shadows.gd")
-const STAGES := 14
+const STAGES := 13
 
 
 static func populate(stage: int, world: Node3D, game: Node3D) -> void:
@@ -30,8 +28,6 @@ static func populate(stage: int, world: Node3D, game: Node3D) -> void:
 		_foot_fire(world)
 	elif stage == 10 or stage == 11:
 		_speed(world, game, stage == 11)
-	elif stage == 12:
-		_rays(world)
 	else:
 		_field_ground(world, game)
 
@@ -123,22 +119,6 @@ static func _speed(world: Node3D, game: Node3D, with_ghosts: bool) -> void:
 			character.position.z += 0.08
 			trail.update_motion(1.0 / 60.0, 15, true)
 	character.hide()
-
-
-static func _rays(world: Node3D) -> void:
-	# Sinar gaya pend00 (shader canvas_item): cukup dipasang dan dibuat terlihat
-	# sekali supaya shader-nya sudah dikompilasi sebelum dipakai di layar.
-	var shafts := LightShafts.new()
-	shafts.size = Vector2(64, 64)
-	world.add_child(shafts)
-	shafts.set_process(false)
-	shafts.visible = true
-	# Contact shadow memakai shader baru (satu layar penuh, 14 sampel): panaskan
-	# di sini supaya tidak ada sekali jeda saat efek pertama kali tampil.
-	var contact := ContactShadows.new()
-	world.add_child(contact)
-	contact.set_process(false)
-	contact.visible = true
 
 
 static func _add_grass(world: Node3D, mesh: Mesh, source: ShaderMaterial,

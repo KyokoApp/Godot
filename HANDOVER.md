@@ -1,5 +1,33 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-03 (cicilan 11) — **SINAR MATAHARI, CONTACT SHADOW ("RAY TRACING"), DAN
+  POHON RAKSASA SEMUANYA DIHAPUS** atas permintaan pengguna: "ternyata jelek ih
+  hapus total ajh lah trus yang ray tracing awal aku request juga hapus ajh trus
+  lanjut pohon hilangin ajh".
+  - `src/game/god_rays/light_shafts.gd` + `.gdshader` (sinar gaya pend00) DIHAPUS.
+    Catatan: efek sinar matahari sudah DITOLAK TIGA KALI (depth-march 16 sampel,
+    shaft 40 sampel, lalu pend00) -- jangan pernah mengusulkan efek sinar matahari
+    lagi kalau pengguna tidak memintanya lebih dulu.
+  - `src/game/god_rays/contact_shadows.gd` + `.gdshader` DIHAPUS. Ini efek "kesan
+    ray tracing" cicilan 8 yang dulu diterima, sekarang dibatalkan. Folder
+    `god_rays/` sekarang KOSONG dan tidak ada lagi di repo.
+  - `src/game/world/world_tree.gd` DIHAPUS + pemasangannya di
+    `main.gd::_build_world()`. Pohon prosedural 31 m di (0, tanah, -95) hilang.
+  - `performance_panel.gd`: tombol **Sinar matahari** dan **Contact shadow**
+    dibuang beserta kunci config `sun_rays` dan `contact_shadow`. Sisa tombol:
+    Resolusi 3D, Rumput, Bayangan, Batas FPS.
+  - `loading/warmup_samples.gd`: STAGES 14 -> 13 (tahap `_rays()` dibuang), layar
+    muat sedikit lebih cepat.
+  - Gerbang CI dibuang: `test_light_shafts.gd`, `test_contact_shadows.gd`,
+    `test_world_tree.gd` + langkah render + artefak screenshot + daftar berkas
+    wajib + grep ringkasan di `apk.yml`. Job render-a tetap 7 job.
+  - `render_world.gd` / `render_mannequin.gd`: `_shafts` keluar dari daftar efek
+    yang disembunyikan.
+  - `LICENSES.txt`: bagian pend00 dan contact shadow ditandai "riwayat, sudah
+    dihapus" (kredit CC0 pend00 tetap tercatat sebagai riwayat).
+  - TIDAK berubah: pulau 1 km, palet gelap senja, rumput padat, partikel ungu,
+    langit senja + glow, dan bayangan shadow map biasa.
+
 - 2026-10-03 (cicilan 10, umpan balik HP) — **SINAR MATAHARI DIGANTI TOTAL DENGAN
   GOD RAYS GAYA PEND00** (keluhan: "jelek ah itu ray nya hapus total trus ganti
   pake ini" + tautan shader Godot 4.5 pend00).

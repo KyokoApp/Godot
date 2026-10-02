@@ -39,7 +39,7 @@ func _run() -> void:
 		return
 	orbit.exclusions = []
 	# Efek yang menutupi pandangan disembunyikan; yang dinilai di sini dunianya.
-	for node_name in ["_pet", "_speed_aura", "_foot_fire", "_shafts", "_banner"]:
+	for node_name in ["_pet", "_speed_aura", "_foot_fire", "_banner"]:
 		var effect: Node = game.get(node_name)
 		if effect != null:
 			effect.set("visible", false)
