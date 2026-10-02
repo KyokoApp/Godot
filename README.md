@@ -756,3 +756,22 @@ Hasil ukur setelah dipecah (run `37002663347`, semuanya hijau):
 Bottleneck sekarang render-c (render avatar); kalau nanti mau lebih cepat lagi,
 langkah termurah adalah memindah "Render pemandangan dunia" ke render-a yang
 masih punya ruang, atau memecah render-c jadi dua pekerjaan.
+
+### 2026-10-02 — kulit mannequin: hitam POLOS (garis energi dibuang)
+
+Lanjutan permintaan "hitam gelap + outline putih tipis": kali ini garis energi
+yang mengalir dan percikan kecil DIHAPUS, jadi tubuh benar-benar hitam polos.
+
+- `character/skin_shell.gdshader`: perhitungan `band`/`vein`/`sparkle` dan
+  `vein_speed` dibuang. Yang tersisa: gradasi sangat gelap kaki→kepala
+  (`skin_dark` 0,010 → `skin_light` 0,050), satu bercak hash halus supaya tidak
+  seperti plastik, dan rim abu tipis di pinggir siluet yang menguat saat lari
+  (`pulse`) atau menyerang (`charge`) — tanpa gelombang yang berjalan, jadi
+  tubuhnya tetap polos.
+- Uniform `vein_color`/`vein_scale`/`vein_width` sengaja MASIH dideklarasikan
+  supaya `set_light_cloth()` (mode grafis Ringan) tidak menyetel parameter yang
+  tidak ada; nilainya sudah tidak dipakai shader.
+- `set_light_cloth()` di `mannequin.gd` tetap ada (dipakai `performance_panel.gd`)
+  tapi tidak lagi mengubah tampilan — mode Ringan kini hanya memengaruhi
+  resolusi/bayangan/rumput seperti sebelumnya.
+- Outline putih tipis (5 mm) tidak berubah. Belum diuji di HP.

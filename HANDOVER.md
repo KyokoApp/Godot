@@ -1,5 +1,19 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-02 (sesi ini, cicilan 2) — **KULIT MANNEQUIN: HITAM POLOS** (garis
+  energi & percikan dibuang; lanjutan "hitam gelap + outline putih tipis").
+  - `src/game/character/skin_shell.gdshader`: perhitungan `band`/`vein`/
+    `sparkle` dan uniform `vein_speed` DIHAPUS. Sisa: gradasi sangat gelap
+    kaki→kepala (`skin_dark` 0,010 → `skin_light` 0,050), satu bercak hash
+    halus, dan rim abu tipis di pinggir siluet yang menguat saat lari/attacks
+    (`pulse`/`charge`) TANPA gelombang berjalan — tubuh tetap polos.
+  - Uniform `vein_color`/`vein_scale`/`vein_width` sengaja masih dideklarasikan
+    supaya `set_light_cloth()` (mode grafis Ringan, dipanggil
+    `performance_panel.gd`) tidak menyetel parameter yang tidak ada di shader.
+  - `set_light_cloth()` di `mannequin.gd` tetap ada tapi sudah tidak mengubah
+    tampilan kulit; mode Ringan kini hanya soal resolusi/bayangan/rumput.
+  - Outline putih tipis (5 mm) tidak berubah. Belum diuji di HP.
+
 - 2026-10-02 (sesi ini) — **BUILD CI DIPARALELKAN: 12 MENIT JADI 4 MENIT**
   (keluhan pengguna: "build di github lama banget dah kan update nya nyicil
   nyicil" — tiap perubahan kecil membayar build penuh).

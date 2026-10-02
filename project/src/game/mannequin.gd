@@ -142,14 +142,16 @@ func visible_meshes() -> Array[MeshInstance3D]:
 	return skin.covers()
 
 
-## Mode ringan: kurangi kerumitan bahan kulit (pola energi & percikan) tanpa
-## mengubah siluetnya, jadi HP kelas bawah tetap dapat karakter yang sama.
+## Mode ringan: dulu mengubah kerumitan pola energi kulit. Sejak kulit jadi
+## HITAM POLOS (garis energi dihapus), tidak ada lagi pola yang bisa dikurangi —
+## pemanggil di `performance_panel.gd` tetap memakai fungsi ini, dan parameter
+## `vein_*` yang masih dideklarasikan di shader tetap diberi nilai valid supaya
+## tidak ada setelan yang menggantung. Tampilan kulit tidak berubah lagi.
 func set_light_cloth(light: bool) -> void:
 	if _skin_material == null:
 		return
-	# Mode ringan tetap memakai pola yang sama, hanya sedikit lebih kasar —
-	# kalau angkanya jauh berbeda, kulit terlihat berganti model saat setelan
-	# grafis diubah (band bawaan 15,5/0,115).
+	# Kulit polos: satu hash bercak + rim statis. Nilai ini sudah tidak dipakai
+	# shader, tapi tetap disetel supaya bahan tidak menyimpan parameter kosong.
 	_skin_material.set_shader_parameter("vein_scale", 12.0 if light else 16.5)
 	_skin_material.set_shader_parameter("vein_width", 0.130 if light else 0.105)
 	if skin != null and skin.skin != null:
