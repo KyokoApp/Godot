@@ -21,7 +21,7 @@ uniform bool moon_enabled = true;
 uniform vec4 moon_color : source_color = vec4(1.0, 0.97, 0.90, 1.0);
 uniform float moon_radius = 0.045;
 // HDR (> 1) supaya bulan mekar sedikit di glow engine, bukan cakram kertas.
-uniform float moon_brightness = 2.4;
+uniform float moon_brightness = 1.8;
 
 // --- bintang ---------------------------------------------------------------
 uniform bool stars_enabled = true;
@@ -35,13 +35,13 @@ uniform float star_brightness = 1.7;
 uniform float star_twinkle = 0.30;
 
 // --- gradien + awan --------------------------------------------------------
-uniform vec4 zenith_color : source_color = vec4(0.010, 0.017, 0.042, 1.0);
-uniform vec4 middle_color : source_color = vec4(0.024, 0.037, 0.078, 1.0);
-uniform vec4 horizon_color : source_color = vec4(0.055, 0.074, 0.125, 1.0);
+uniform vec4 zenith_color : source_color = vec4(0.022, 0.038, 0.095, 1.0);
+uniform vec4 middle_color : source_color = vec4(0.042, 0.062, 0.135, 1.0);
+uniform vec4 horizon_color : source_color = vec4(0.085, 0.110, 0.190, 1.0);
 uniform vec4 glow_color : source_color = vec4(0.40, 0.55, 0.88, 1.0);
 uniform bool glow_enabled = true;
 uniform bool clouds_enabled = true;
-uniform float cloud_coverage = 0.46;
+uniform float cloud_coverage = 0.55;
 uniform float cloud_softness = 0.20;
 uniform float cloud_scale = 2.4;
 // Awan malam: sisi atas kena bulan (abu kebiruan), sisi bawah biru sangat tua.

@@ -123,7 +123,7 @@ func _run() -> void:
 	camera.look_at(Vector3(0.0, 1.0, 0.35))
 	var zenith: Image = await _capture()
 	var top := zenith.get_pixel(zenith.get_width() / 2, 8)
-	_check(top.b > top.r and top.b > 0.01,
+	_check(top.b > top.r and top.b > 0.012,
 		"Langit malam bukan biru: %s" % top)
 	_check(top.b < 0.30,
 		"Zenith terlalu terang untuk malam (masih senja?): %s" % top)
