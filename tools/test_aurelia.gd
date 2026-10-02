@@ -302,17 +302,29 @@ func _mapped_child(skeleton: Skeleton3D, bone: int) -> int:
 func _test_clip_motion(character: Character) -> void:
 	for motion in ["Idle_Loop", "Crouch_Idle_Loop", "Crouch_Fwd_Loop", "Jog_Fwd_Loop"]:
 		var travel := _clip_travel(character, motion)
-		_notes.append("gerak klip %s: %.4f m/frame ujung, %.3f m total" % [motion,
-			travel.x, travel.y])
+		_notes.append("gerak klip %s=%s: %.4f m/frame, %.3f m total" % [motion,
+			character.animation.current_animation, travel.x, travel.y])
 
 
 ## Gerak per frame terbesar (salah satu tulang) + total jarak semua tulang yang
 ## dipantau selama satu putaran klip. Diukur di AVATAR (hasil retarget), jadi
 ## sekaligus membuktikan klipnya benar-benar sampai ke tulang avatar.
+##
+## Nama klip runtime BUKAN nama di katalog: importer glTF membuang akhiran
+## "_Loop" ("Crouch_Idle_Loop" -> "Crouch_Idle") dan klip UAL2 tinggal di
+## pustaka "ual2". Karena itu yang diukur adalah klip yang BENAR-BENAR diputar
+## (`current_animation` sesudah set_locomotion) — versi pertama diagnosa ini
+## mencari nama katalog mentah, tidak menemukannya, lalu melaporkan 0,000 untuk
+## semua klip seolah-olah semuanya statis.
 func _clip_travel(character: Character, motion: String) -> Vector2:
-	var animation := character.animation.get_animation(motion)
+	character.set_locomotion(motion, 1.0)
+	character.animation.advance(0.0)
+	var playing := character.animation.current_animation
+	if playing.is_empty():
+		return Vector2(-1.0, -1.0)
+	var animation := character.animation.get_animation(playing)
 	if animation == null:
-		return Vector2.ZERO
+		return Vector2(-1.0, -1.0)
 	var bones := PackedInt32Array()
 	for name in ["Bip001 Head", "Bip001 L Hand", "Bip001 R Hand", "Bip001 Pelvis"]:
 		var bone := character.avatar.find_bone(name)
@@ -320,8 +332,6 @@ func _clip_travel(character: Character, motion: String) -> Vector2:
 			bones.append(bone)
 	if bones.is_empty() or animation.length <= 0.0:
 		return Vector2.ZERO
-	character.set_locomotion(motion, 1.0)
-	character.animation.advance(0.0)
 	var previous := PackedVector3Array()
 	for bone in bones:
 		previous.append(character.avatar.get_bone_global_pose(bone).origin)
