@@ -176,6 +176,20 @@ jobs:
           fi
           grep -F '[aurelia-test]' aurelia-test.log
 
+      # Zoom kamera: cubit dua jari harus benar-benar menempel ke karakter.
+      - name: Tes zoom kamera (headless)
+        run: |
+          set +e
+          timeout 180 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_camera_zoom.gd" 2>&1 | tee zoom-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' zoom-test.log; then
+            tail -60 zoom-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[camera-zoom-test]' zoom-test.log
+
       - name: Tes kontak tapak api 3D (headless)
         run: |
           set +e

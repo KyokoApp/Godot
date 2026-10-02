@@ -92,8 +92,25 @@
     gagal dicetak di AKHIR log tes.
 
 
+- 2026-10-02 (lanjutan) — **zoom kamera bisa menempel ke karakter**. Batas
+  terdekat dulu 2,4 m (seluruh badan saja). Sekarang `MIN_DISTANCE = 0,35 m`:
+  karena titik pandang kamera ada di setinggi kepala (1,45 m), pada jarak itu
+  yang tampak hanya wajah/rambut. Tambahan:
+  - `camera.near` mengikuti jarak (`jarak * 0,15`, dibatasi 0,03-0,1 m). Dengan
+    nilai tetap 0,1 m, kamera yang sudah menempel masih memotong wajah dan
+    rambut; kalau dikecilkan permanen, kejauhan jadi z-fighting.
+  - `zoom_by(factor)` = satu tempat untuk semua masukan (cubit dua jari, roda
+    tetikus untuk main di desktop/editor, dan tes), jadi batasnya konsisten.
+  - Gerbang baru `tools/test_camera_zoom.gd`: mencubit dua jari di separuh kanan
+    layar sampai mentok, lalu memeriksa di RUANG DUNIA — jarak kamera ke tulang
+    kepala < 0,9 m, kepala di tengah pandangan (dot > 0,85), kamera tidak di
+    bawah tanah (y > 0,2), bidang dekat ikut mengecil, roda tetikus sepadan, dan
+    setelah dicubit menjauh kamera benar-benar berhenti di 8 m.
+  - Kalau nanti ingin lebih menempel lagi, ubah `MIN_DISTANCE` di
+    `orbit_camera.gd`; tesnya otomatis ikut (tidak ada angka 2,4 yang tertanam
+    di tempat lain).
 - 2026-10-02 (lanjutan) — **CI HIJAU PENUH dengan avatar Aurelia** (run
-  36962861782, commit `21a54e1`): 25 langkah lulus, termasuk Tes avatar Aurelia
+  36968488634, commit `02f1d13`): 25 langkah lulus, termasuk Tes avatar Aurelia
   (retarget + kain), tapak api, semua render Vulkan, ekspor PCK + APK, audit isi
   APK, boot launcher, dan rilis `A-Sekai build-21a54e1`. Sisa langkah yang belum
   diverifikasi di HP pengguna: tes main di perangkat.
