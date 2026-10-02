@@ -1,5 +1,21 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-02 (sesi ini, lanjutan) — **KULIT MANNEQUIN: HITAM GELAP + OUTLINE
+  PUTIH TIPIS**. Hanya ganti warna; struktur kulit, mirror pose, denyut, dan
+  gerbang tes (`tools/test_skin_shell.gd`) tidak berubah.
+  - `src/game/character/skin_shell.gdshader`: `skin_dark` 0,150/0,195/0,300 →
+    0,010 (nyaris hitam), `skin_light` 0,330/0,420/0,575 → 0,050 — gradasi
+    gelap kaki→kepala tetap ada supaya bentuk badan masih terbaca. Garis energi
+    `vein_color` dan rim `rim_color` jadi abu gelap, jadi tubuh tetap terbaca
+    hitam dan tidak rata seperti plastik; rim sekarang benar-benar memakai
+    `rim_color` (dulu uniform itu tidak terpakai sama sekali).
+  - `src/game/character_outline.gdshader`: warna bawaan gelap → PUTIH, lebar
+    bawaan 6 mm → 5 mm (tipis). Putih itu juga dipasang eksplisit di
+    `src/game/mannequin.gd` (`_apply_material`) dan
+    `src/game/character/skin_shell.gd` (`_make_outline`) supaya kedua jalur
+    outline (mesh dalam + salinan kulit) tidak mungkin berbeda.
+  - Belum diuji di HP; tidak ada tes yang mengunci warna lama.
+
 - 2026-10-02 (sesi ini) — **KARAKTER: MANNEQUIN POLOS + KULIT BERANIMASI**,
   lalu **DUNIA: SENJA SEPERTI ILUSTRASI LAYAR MUAT**.
   - Permintaan pengguna: avatar FBX Aurelia dibuang SELURUHNYA ("jangan tersisa")

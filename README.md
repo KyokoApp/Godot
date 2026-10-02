@@ -696,3 +696,23 @@ mengikuti dependensi *scene*, bukan dependensi *skrip*.
   sendiri sehingga drag bisa dimulai di baris mana pun (dulu hanya dari pojok),
   ketukan pendek memilih klip, dan ketukan di luar jendela menutup panel.
 - Tombol HUD tidak lagi ikut memulai analog (`input_exclusions`).
+
+### 2026-10-02 — kulit mannequin: hitam gelap + outline putih tipis
+
+Permintaan pengguna: skin mannequin diganti jadi **hitam gelap** dengan
+**garis tepi putih tipis**. Hanya warna yang berubah — struktur kulit (salinan
+mesh + `grow` 22 mm), mirror pose, denyut mengikuti kecepatan, dan gerbang tes
+`tools/test_skin_shell.gd` tetap sama.
+
+- `character/skin_shell.gdshader`: `skin_dark` 0,150/0,195/0,300 → 0,010 (nyaris
+  hitam), `skin_light` 0,330/0,420/0,575 → 0,050 — gradasi gelap kaki→kepala
+  dipertahankan supaya bentuk badan masih terbaca dari jauh. Garis energi
+  `vein_color` dan rim `rim_color` jadi abu gelap: tubuh tetap terbaca hitam,
+  tidak rata seperti plastik. Rim sekarang benar-benar memakai `rim_color`
+  (sebelumnya uniform itu tidak terpakai).
+- `character_outline.gdshader`: warna bawaan gelap → **PUTIH**, lebar bawaan
+  6 mm → 5 mm (tipis). Putih dipasang eksplisit di `mannequin.gd`
+  (`_apply_material`) dan `character/skin_shell.gd` (`_make_outline`) supaya
+  outline mesh dalam dan salinan kulit tidak mungkin berbeda warna.
+- Belum diuji di HP; gerbang CI (parse, compile, tes kulit/animasi) tidak
+  mengunci warna lama, jadi tidak ada tes yang perlu diubah.

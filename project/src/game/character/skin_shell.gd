@@ -193,6 +193,8 @@ func _make_outline() -> ShaderMaterial:
 	var outline := ShaderMaterial.new()
 	outline.shader = OUTLINE
 	outline.set_shader_parameter("outline_width", 0.005)
+	# Putih: badan mannequin hitam gelap butuh tepi terang supaya tidak larut.
+	outline.set_shader_parameter("outline_color", Color.WHITE)
 	return outline
 
 

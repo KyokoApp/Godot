@@ -111,6 +111,8 @@ func _apply_material() -> void:
 	var outline := ShaderMaterial.new()
 	outline.shader = OUTLINE
 	outline.set_shader_parameter("outline_width", 0.005)
+	# Putih tipis: mesh mannequin kini hitam gelap, jadi tepinya harus terang.
+	outline.set_shader_parameter("outline_color", Color.WHITE)
 	_skin_material.next_pass = outline
 	for node in _model.find_children("*", "MeshInstance3D", true, false):
 		(node as MeshInstance3D).material_override = _skin_material
