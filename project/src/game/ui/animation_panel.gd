@@ -29,6 +29,7 @@ var _repeat_button: Button
 var _slow_button: Button
 var _scroll: ScrollContainer
 var _list: VBoxContainer
+var _ignore_touch_until := 0
 var _reel := false
 var _repeat := true
 var _slow := false
@@ -192,9 +193,17 @@ func _resize_window() -> void:
 
 
 func _backdrop_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed \
-			and not (event as InputEventScreenTouch).canceled:
-		close_panel()
+	# Hanya sentuhan jari (bukan mouse emulasi) yang menutup, dan tidak dari event
+	# yang baru saja membuka panel. Tanpa ini, satu ketukan pada tombol ANIM
+	# membuka lalu langsung menutup panelnya sendiri.
+	if not (event is InputEventScreenTouch):
+		return
+	var touch := event as InputEventScreenTouch
+	if not touch.pressed or touch.canceled:
+		return
+	if Time.get_ticks_msec() < _ignore_touch_until:
+		return
+	close_panel()
 
 
 func window_rect() -> Rect2:
@@ -205,6 +214,7 @@ func window_rect() -> Rect2:
 
 func open() -> void:
 	visible = true
+	_ignore_touch_until = Time.get_ticks_msec() + 250
 	_resize_window()
 	_refresh_active()
 	_report()

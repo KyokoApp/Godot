@@ -134,7 +134,10 @@ func _physics_process(delta: float) -> void:
 	var target := _target_velocity(stick, desired)
 	var blended := Vector2(velocity.x, velocity.z).lerp(
 		Vector2(target.x, target.z), 1.0 - exp(-ACCEL * delta))
-	if is_on_floor():
+	# Saat baru menolak, badan masih menempel lantai satu frame — kalau kecepatan
+	# vertikalnya dinolkan di sini, lompatannya langsung hilang.
+	var rising := _airborne and velocity.y > 0.0
+	if is_on_floor() and not rising:
 		velocity = Vector3(blended.x, 0.0, blended.y)
 	else:
 		velocity = Vector3(blended.x, velocity.y - GRAVITY * delta, blended.y)
