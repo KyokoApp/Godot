@@ -27,7 +27,7 @@ func _ready() -> void:
 	# memakai -100, jadi -101 menggambar contact shadow LEBIH DULU — gelapkan
 	# dulu, baru sinar matahari menambah cahaya. Urutan yang lebih masuk akal.
 	_material.render_priority = -101
-	_material.set_shader_parameter("sun_direction", Dusk.SUN_DIRECTION)
+	_material.set_shader_parameter("sun_direction_view", Dusk.SUN_DIRECTION)
 	material_override = _material
 	visible = false
 
@@ -36,4 +36,9 @@ func _process(_delta: float) -> void:
 	if not enabled or not is_instance_valid(camera) or not camera.current:
 		visible = false
 		return
+	# Shader butuh arah matahari dalam ruang KAMERA (VIEW_MATRIX tidak tersedia di
+	# sana), dan kamera orbit berputar terus — jadi dihitung ulang tiap frame.
+	var to_view: Transform3D = camera.global_transform.affine_inverse()
+	_material.set_shader_parameter("sun_direction_view",
+		(to_view.basis * Dusk.SUN_DIRECTION).normalized())
 	visible = true

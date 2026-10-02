@@ -14,12 +14,16 @@ shader_type spatial;
 //   view = INV_PROJECTION_MATRIX * vec4(ndc, 1.0); posisi = view.xyz / view.w
 //   depth buffer reverse-Z: DEKAT = 1.0, JAUH = 0.0
 //
-// Catatan Godot: 'return' TIDAK boleh dipakai di fragment(), jadi alurnya
-// dibagi ke fungsi kecil _march() yang memang boleh return.
+// Catatan Godot: 'return' dan 'break' TIDAK boleh dipakai di fragment(), dan
+// matriks bawaan (VIEW_MATRIX, PROJECTION_MATRIX) hanya dikenali di vertex()
+// atau fragment() — bukan di fungsi buatan sendiri.
 render_mode unshaded, blend_mul, cull_disabled, depth_draw_never, depth_test_disabled,
 	shadows_disabled, fog_disabled;
 uniform sampler2D depth_tex : hint_depth_texture, repeat_disable, filter_nearest;
-uniform vec3 sun_direction = vec3(-0.94, 0.09, -0.32);
+// Arah matahari SUDAH dalam ruang kamera (dihitung contact_shadows.gd): Godot
+// tidak mengenal VIEW_MATRIX di fungsi buatan sendiri, dan di fragment() ia
+// mahal dihitung ulang per piksel.
+uniform vec3 sun_direction_view = vec3(-0.94, 0.09, -0.32);
 // Sinar 21 m dengan langkah 1,5 m: cukup jauh untuk kontak objek setinggi
 // karakter, cukup pendek supaya 14 sampel tetap murah di HP.
 uniform float ray_length = 21.0;
@@ -33,31 +37,6 @@ void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
 }
 
-// Menembakkan satu sinar dari posisi piksel ke arah matahari. Mengembalikan 1.0
-// kalau sinar kena geometri (bayangan), 0.0 kalau langit terang.
-float _march(vec3 origin) {
-	vec3 sun_view = (VIEW_MATRIX * vec4(sun_direction, 0.0)).xyz;
-	sun_view = normalize(sun_view);
-	vec3 step = sun_view * (ray_length / float(SAMPLE_COUNT));
-	vec3 ray = origin;
-	for (int i = 0; i < SAMPLE_COUNT; i++) {
-		ray += step;
-		vec4 clip = PROJECTION_MATRIX * vec4(ray, 1.0);
-		vec2 uv = (clip.xy / clip.w) * 0.5 + 0.5;
-		// Sinar yang keluar layar tidak boleh meninggalkan garis di tepi.
-		if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
-			return 0.0;
-		}
-		float ray_depth = clip.z / clip.w;
-		float scene = texture(depth_tex, uv).r;
-		// Reverse-Z: benda yang lebih DEKAT ke kamera punya nilai lebih BESAR.
-		if (scene > ray_depth + bias) {
-			return 1.0;
-		}
-	}
-	return 0.0;
-}
-
 void fragment() {
 	float raw = texture(depth_tex, SCREEN_UV).r;
 	float shadow = 0.0;
@@ -68,7 +47,26 @@ void fragment() {
 		vec3 origin = corner.xyz / corner.w;
 		// Jauh dari kamera kontaknya tidak terbaca lagi: hemat setengah layar.
 		if (length(origin) <= max_distance) {
-			shadow = _march(origin);
+			// Sinar ditembakkan ke arah matahari. Semua matriks bawaan Godot
+			// dipakai DI SINI (fragment), bukan di fungsi terpisah: Godot tidak
+			// mengenali VIEW_MATRIX di fungsi buatan sendiri. Tanpa 'return' dan
+			// tanpa 'break' — keduanya dilarang di fragment().
+			vec3 step = sun_direction_view * (ray_length / float(SAMPLE_COUNT));
+			vec3 ray = origin;
+			bool blocked = false;
+			for (int i = 0; i < SAMPLE_COUNT && !blocked; i++) {
+				ray += step;
+				vec4 clip = PROJECTION_MATRIX * vec4(ray, 1.0);
+				vec2 uv = (clip.xy / clip.w) * 0.5 + 0.5;
+				// Sinar yang keluar layar dilewati, bukan menghentikan loop.
+				if (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0) {
+					float ray_depth = clip.z / clip.w;
+					float scene = texture(depth_tex, uv).r;
+					// Reverse-Z: benda lebih DEKAT ke kamera = nilai lebih BESAR.
+					blocked = scene > ray_depth + bias;
+				}
+			}
+			shadow = blocked ? 1.0 : 0.0;
 		}
 	}
 	// Memudar di 10% tepi layar: ray yang keluar layar jangan membuat tepian.

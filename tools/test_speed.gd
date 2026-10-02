@@ -47,12 +47,15 @@ func _run() -> void:
 	_check(trail.strength > 0.4, "Aura cepat tidak aktif saat boost")
 	_check(trail.ghosts.ghosts.size() == 3, "Jumlah bayangan bukan 3")
 	_check(trail.tint == Trail.TINT, "Warna aura bukan ungu mannequin")
+	var glow_before: bool = trail.environment.glow_enabled
 	_check(trail.environment.glow_enabled and trail.wash.visible, "Bloom/wash speed mati")
 	stick.set("direction", Vector2.ZERO)
 	for frame in range(60):
 		await physics_frame
 	_check(trail.strength == 0 and not trail.wash.visible, "Aura tidak memudar")
-	_check(not trail.environment.glow_enabled, "Bloom tidak dipulihkan")
+	# Glow senja sekarang menyala sejak awal, jadi yang dijamin adalah bloom
+	# KEMBALI ke keadaan sebelum boost (bukan harus mati).
+	_check(trail.environment.glow_enabled == glow_before, "Bloom tidak dipulihkan")
 	game._toggle_speed()
 	_check(not player.boosted, "Toggle normal gagal")
 	game.queue_free()
