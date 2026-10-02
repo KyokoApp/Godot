@@ -51,20 +51,25 @@ void fragment() {
 	float band = sin((flow_uv.x + flow_uv.y) * vein_scale - TIME * vein_speed * 6.283185);
 	float band_b = sin((flow_uv.x * 0.6 - flow_uv.y * 1.3) * vein_scale * 0.7
 		+ TIME * vein_speed * 4.1);
+	// Gumpalan: kilau hanya muncul di sebagian badan dan bergerak pelan, jadi
+	// tidak ada garis menerus yang membelit badan seperti perban.
+	float patch = 0.5 + 0.5 * sin(flow_uv.y * 1.7 + flow_uv.x * 0.9
+		- TIME * vein_speed * 2.4);
+	patch = smoothstep(0.35, 0.95, patch);
 	// Garis energi TIPIS di puncak gelombang, bukan pita lebar: makin besar
 	// `vein_width`, makin lebar garisnya (di sini sekitar 1/7 periode).
 	float half_width = clamp(vein_width * 0.12, 0.005, 0.25);
 	float vein = smoothstep(1.0 - half_width * 2.0, 1.0, abs(band))
 		+ smoothstep(1.0 - half_width * 2.0, 1.0, abs(band_b)) * 0.5;
-	vein = clamp(vein, 0.0, 1.0);
+	vein = clamp(vein, 0.0, 1.0) * patch;
 
 	// Denyut: menguat saat pemain bergerak (pulse) dan saat menyerang/mantra
 	// (charge). Fase berbeda-beda di sepanjang badan supaya terasa mengalir.
 	float wave = 0.5 + 0.5 * sin(VERTEX.y * 6.0 - TIME * (2.0 + 4.0 * pulse));
 	float beat = mix(0.35, 1.0, wave) * (0.35 + 0.65 * pulse + 0.5 * charge);
 
-	vec3 albedo = mix(base, vein_color.rgb, vein * 0.78);
-	albedo += vein_color.rgb * vein * beat * 0.22;
+	vec3 albedo = mix(base, vein_color.rgb, vein * 0.38);
+	albedo += vein_color.rgb * vein * beat * 0.18;
 
 	// Percikan kecil tetap di permukaan supaya kulit tidak terlihat datar.
 	float sparkle = shell_hash(floor(flow_uv * 26.0)) * smoothstep(0.985, 1.0,
