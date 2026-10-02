@@ -112,14 +112,25 @@ static func missing_pairs(source: Skeleton3D, target: Skeleton3D) -> PackedStrin
 ## anak langsung tulang target. Inilah arah yang dipakai retarget dan yang harus
 ## sama persis antara animasi dan avatar; tes memakainya supaya mengukur hal yang
 ## sama (anak pertama biasa bisa tulang puntir atau tulang hias).
+## Urutannya SAMA dengan retarget_modifier._measure(): anak dengan indeks tulang
+## terkecil. Kalau urutannya berbeda, tes bisa mengukur jari manis sementara
+## retarget mengarahkan jari telunjuk (selisih 30 derajat yang menyesatkan).
 static func axis_child(source: Skeleton3D, target: Skeleton3D, source_bone: int,
 		target_bone: int) -> Vector2i:
+	if source == null or target == null:
+		return Vector2i(-1, -1)
+	var pairs := {}
 	for pair: Vector2i in resolve(source, target):
-		if source.get_bone_parent(pair.x) != source_bone:
+		pairs[pair.x] = pair.y
+	for child in range(source.get_bone_count()):
+		if source.get_bone_parent(child) != source_bone:
 			continue
-		if target.get_bone_parent(pair.y) != target_bone:
+		if not pairs.has(child):
 			continue
-		return pair
+		var target_child: int = pairs[child]
+		if target.get_bone_parent(target_child) != target_bone:
+			continue
+		return Vector2i(child, target_child)
 	return Vector2i(-1, -1)
 
 
