@@ -1,5 +1,38 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-03 (cicilan 12b) — **REVISI MALAM: AWAN DIBUANG, BINTANG DIKURANGI,
+  BULAN DITURUNKAN, JALAN BERSIH DARI RUMPUT** (permintaan: "terlalu rame banget
+  itu awannya ilangin trus bintang nya buat lebih sedikit jangan terlalu rame dan
+  juga bulannya jangan diatas soalnya aku gk mungkin trus trusan arah kamera di
+  atas dan juga optimalisasi fps dan juga jalanan malah ketutupun rumput pas di
+  deketin").
+  - `src/game/environment/dusk_sky.gdshader`:
+    - **awan DIHAPUS TOTAL** (bukan dimatikan): `fbm4`/`fbm2`/`value_noise` dan
+      semua uniform `cloud_*` hilang, gerbang awan di `tools/test_dusk.gd` juga.
+      Ini penghemat FPS terbesar — awan dulu pakai ± 24-36 `sin()` per piksel di
+      layar penuh.
+    - bintang lebih sedikit: `star_amount` 0,045 -> 0,016 (± 4,4x lebih sedikit),
+      `star_density` 42 -> 34.
+    - hemat: **satu** `wrapped_hash` per piksel (offset & kecerahan bintang
+      diturunkan dari hash yang sama), bintang hanya kalau `elevation > 0.03`,
+      kawah bulan hanya kalau `angle < moon_radius*1.7`, cincin halo rapat hanya
+      kalau `angle < 0.25`.
+  - `src/game/environment/dusk_environment.gd`: bulan **40 derajat → 15 derajat**
+    di atas ufuk barat daya, `SUN_DIRECTION` -> `(-0.914, 0.259, -0.311)`. Energi
+    cahaya bulan 0,35 -> 0,50 dan ambient 0,35 -> 0,40 supaya tanah tetap terbaca
+    (gerbang tanah di test dilonggarkan ke hijau > 0,10).
+  - `src/game/world/water.gdshader`: default `sun_direction` disamakan dengan arah
+    bulan baru.
+  - `src/game/world/field.gd`: `can_grow()` menolak rumput yang jaraknya ke garis
+    tengah jalan < 5 m (`GRASS_PATH_MARGIN` + `path_centre()`, rumus yang sama
+    dengan shader tanah). Menyelesaikan "jalan ketutupun rumput"; berlaku untuk
+    rumput dekat (`grass_field.gd`) dan jauh (`world/distant_grass.gd`) karena
+    keduanya memakai `can_grow()`.
+  - kalau masih berat di HP: `GRID` di `src/game/grass_field.gd` (rumput dekat
+    336.864 segitiga) + `src/game/world/distant_grass.gd` (63.504) = 400.368
+    segitiga; tombol "Rumput" di panel performa sudah bisa mematikannya saat
+    bermain.
+
 - 2026-10-03 (cicilan 12) — **LANGIT JADI MALAM: BINTANG, BULAN BERCRATERE,
   CAHAYA BULAN** (permintaan: "sky nya juga buat malam hari tapi visual indah
   bintang langin dan bulan").

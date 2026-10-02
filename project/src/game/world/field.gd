@@ -59,6 +59,11 @@ const PATH_WIDTH := 3.0
 ## frekuensi 0,021 dulu condong ke 60° — terbaca garis diagonal, bukan jalan).
 const PATH_CURVE := 42.0
 const PATH_FREQUENCY := 0.012
+## Jarak minimum rumput dari garis tengah jalan tanah. Shader tanah menggambar
+## jalan selebar ± 1,25x PATH_WIDTH (plus noise tepi ± 0,55 m), jadi 5 m sudah
+## lebih dari cukup. Tanpa batas ini rumput tumbuh tepat di atas jalan dan pas
+## pemain mendekat, jalan terlihat "hilang" ditelan rumput.
+const GRASS_PATH_MARGIN := 5.0
 
 ## Tabel radius pulau per sudut (dihitung sekali): tanpa ini setiap pemeriksaan
 ## "di dalam pulau?" harus menghitung noise, dan rumput memanggilnya 11 ribu
@@ -232,6 +237,15 @@ func surface_height(x: float, z: float) -> float:
 ## Titik dianggap di dalam pulau kalau berjarak minimal `margin` dari garis
 ## pantai. Sengaja radial (bukan berdasarkan tinggi) supaya `clamp_inside` yang
 ## memakai proyeksi radial selalu menghasilkan titik yang benar-benar di dalam.
+
+## Garis tengah jalan tanah di koordinat dunia. HARUS sama persis dengan rumus
+## `centre` di ground.gdshader: shader yang menggambar jalan, dan fungsi ini yang
+## menahan rumput keluar dari jalan, jadi kalau salah satu berubah jalan dan
+## rumput jadi tidak sejajar.
+static func path_centre(x: float) -> float:
+	return PATH_CURVE * sin(x * PATH_FREQUENCY) + PATH_CURVE * 0.3 * sin(x * 0.019 + 0.59)
+
+
 static func is_inside(x: float, z: float, margin := 0.0) -> bool:
 	var point := Vector2(x, z)
 	return (island_radius(point.angle()) - point.length()) >= margin
@@ -253,6 +267,9 @@ func can_grow(x: float, z: float) -> bool:
 		surface_height(x + 0.5, z) - surface_height(x - 0.5, z),
 		surface_height(x, z + 0.5) - surface_height(x, z - 0.5))
 	if gradient.length() > MAX_SLOPE:
+		return false
+	# Jalan tanah tetap bersih: tidak ada rumput di sepanjangnya.
+	if absf(z - path_centre(x)) < GRASS_PATH_MARGIN:
 		return false
 	return true
 

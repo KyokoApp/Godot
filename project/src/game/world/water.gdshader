@@ -7,7 +7,9 @@ render_mode diffuse_burley, specular_schlick_ggx, cull_back;
 uniform vec4 deep_color : source_color = vec4(0.020, 0.055, 0.105, 1.0);
 uniform vec4 shallow_color : source_color = vec4(0.075, 0.150, 0.215, 1.0);
 uniform vec4 sun_color : source_color = vec4(0.62, 0.74, 0.98, 1.0);
-uniform vec3 sun_direction = vec3(-0.73, 0.64, -0.25);
+// Default-nya dibalik dari arah bulan (15 derajat, barat daya); dikirim juga dari
+// main.gd, jadi di layar dan di gambar tes nilainya sama.
+uniform vec3 sun_direction = vec3(-0.91, 0.26, -0.31);
 uniform float ripple = 0.35;
 uniform float horizon_fade = 1400.0;
 

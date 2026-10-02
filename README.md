@@ -1043,30 +1043,65 @@ Permintaan: "sky nya juga buat malam hari tapi visual indah bintang langin dan b
     Koordinat hash dibungkus `mod(...,128)` karena `sin()` float 32-bit kehilangan
     presisi di angka ratusan dan hasilnya belang. Bintang memudar dekat ufuk
     supaya tidak "menempel" di garis pantai.
-  - **Bulan purnama** — 2,6° jari-jari (± 24 px di render CI), warnanya HDR 2,4
-    supaya mekar di glow engine. Ada **6 kawah analitik** di basis lokal
+  - **Bulan purnama** — 2,6° jari-jari (± 24 px di render CI), warnanya HDR 1,8
+    supaya mekar di glow engine (2,4 memotong jadi putih dan kawahnya hilang). Ada **6 kawah analitik** di basis lokal
     piringan bulan (posisi dari hash, jadi bentuknya tetap tapi tidak seperti
     lingkaran susun), **limb darkening** di tepi, dan **dua lapis halo**
     (cincin rapat ±1 jari-jari + lembar lebar ±30°).
-  - **Awan** jadi gelap: sisi atas abu kebiruan (kena bulan), sisi bawah biru
-    sangat tua. Awan yang lewat di depan bulan disinari dari belakang.
-  - Gradien malam: zenith (0,010/0,017/0,042) → ufuk (0,055/0,074/0,125). Sengaja
-    gelap tapi bukan hitam pekat.
+  - Gradien malam: zenith (0,022/0,038/0,095) → ufuk (0,085/0,110/0,190). Sengaja
+    gelap tapi bukan hitam pekat (tonemap filmik menekan nilai kecil sekali).
 - `environment/dusk_environment.gd`: arah cahaya utama pindah ke **bulan** —
-  `SUN_DIRECTION` jadi `(-0.726, 0.643, -0.247)` (40° di atas ufuk barat daya,
-  sisi laut), jadi jalur kilau bulan membentang di air sampai ke pemain. Cahaya
-  bulan biru dingin (0,68/0,76/0,95) energi 0,35, ambient biru tua (0,24/0,32/0,55)
-  energi 0,35, kabut biru gelap (0,09/0,13/0,24), saturasi turun ke 1,02 (cahaya
+  `SUN_DIRECTION` jadi arah bulan (awalnya 40° di atas ufuk barat daya, sisi laut,
+  lalu diturunkan ke 15° — lihat entri di bawah), jadi jalur kilau bulan membentang di air sampai ke pemain. Cahaya
+  bulan biru dingin (0,68/0,76/0,95), ambient biru tua (0,24/0,32/0,55), kabut biru gelap (0,09/0,13/0,24), saturasi turun ke 1,02 (cahaya
   bulan memang memucat warna), glow intensity 0,30 dengan ambang HDR 1,15 supaya
   yang mekar hanya bulan + bintang terang.
 - `world/water.gdshader`: kilau air jadi **jalur bulan** biru dingin, warna laut
   digelapkan (tosca senja → biru malam) supaya tidak menyengat di bawah langit
   gelap.
 - `tools/test_dusk.gd` — gerbang baru: bulan terang di tengah layar, bulan hilang
-  saat dimatikan, bintang terlihat, halo terlihat, awan terlihat, zenith biru TUA
-  (bukan biru senja terang), arah cahaya = arah bulan, dan tanah tetap terbaca
-  (hijau > 0,12, bukan hitam).
+  saat dimatikan, bintang terlihat, halo terlihat, zenith biru TUA (bukan biru
+  senja terang), arah cahaya = arah bulan, dan tanah tetap terbaca (hijau > 0,10,
+  bukan hitam).
 
 Catatan aset: **tidak ada model pohon atau batu di repo ini** — lihat HANDOVER.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-03 — malam direvisi: awan dibuang, bintang dikurangi, bulan diturunkan, jalan bersih dari rumput
+
+Permintaan: "terlalu rame banget itu awannya ilangin trus bintang nya buat lebih
+sedikit jangan terlalu rame dan juga bulannya jangan diatas soalnya aku gk mungkin
+trus trusan arah kamera di atas dan juga optimalisasi fps dan juga jalanan malah
+ketutupun rumput pas di deketin".
+
+- `environment/dusk_sky.gdshader`:
+  - **Awan dibuang total** — bukan cuma dimatikan. Fungsi `fbm4`/`fbm2`/
+    `value_noise` dan semua uniform `cloud_*` dihapus, bersama gerbang awan di
+    `tools/test_dusk.gd`. Ini juga hemat FPS terbesar: awan dulu memakai ± 24-36
+    pemanggilan `sin()` per piksel di layar penuh, dan itu yang membuat langit
+    berat di HP.
+  - **Bintang dikurangi** — `star_amount` 0,045 → 0,016 (± 4,4x lebih sedikit,
+    dari ± 1.600 bintang terlihat menjadi ± 360) dan `star_density` 42 → 34.
+  - **Hemat bintang**: empat pemanggilan `wrapped_hash` per piksel jadi **satu**
+    — offset dan kecerahan bintang diturunkan dari hash yang sama
+    (`fract(roll*73.17)`, `fract(roll*191.31)`, `fract(roll*331.79)`).
+  - **Hemat lain**: bintang hanya dihitung kalau `elevation > 0.03` (setengah
+    bawah layar = tanah/pantai langsung dilewati), kawah bulan hanya dihitung
+    kalau sudut < 1,7x jari-jari bulan (menghemat 6 hash + `smoothstep`), dan
+    cincin halo rapat hanya kalau sudut < 0,25 rad.
+- `environment/dusk_environment.gd`: bulan diturunkan dari **40° ke 15°** di atas
+  ufuk barat daya (`SUN_DIRECTION` → `(-0.914, 0.259, -0.311)`) supaya terlihat
+  dari posisi bermain biasa tanpa mengarahkan kamera ke atas terus. Karena cos
+  sudut bulan jauh lebih kecil, energi cahaya bulan dinaikkan 0,35 → 0,50 dan
+  ambient 0,35 → 0,40 supaya tanah tetap terbaca (gerbang tanah dilonggarkan ke
+  hijau > 0,10).
+- `world/water.gdshader`: default `sun_direction` disamakan dengan arah bulan baru.
+- `world/field.gd`: **jalan tanah tidak lagi ditutupi rumput**. `can_grow()` kini
+  menolak klumpe rumput yang jaraknya ke garis tengah jalan < 5 m
+  (`GRASS_PATH_MARGIN`), memakai `path_centre()` yang memakai rumus yang sama
+  persis dengan shader tanah (karena jalan itu digambar shader, bukan mesh).
+  Berlaku untuk rumput dekat maupun rumput jauh, karena keduanya memakai
+  `can_grow()`.
 
 Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
