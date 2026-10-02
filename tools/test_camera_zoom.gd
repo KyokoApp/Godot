@@ -112,8 +112,8 @@ func _test_camera_geometry(orbit: Orbit, character: Character) -> void:
 	_check(head >= 0, "Tulang kepala avatar tidak ditemukan")
 	if head < 0:
 		return
-	var head_point := character.avatar.global_transform \
-		* character.avatar.get_bone_global_pose(head)
+	var head_point: Vector3 = (character.avatar.global_transform \
+		* character.avatar.get_bone_global_pose(head)).origin
 	var gap := camera.global_position.distance_to(head_point)
 	_check(gap < 0.9, "Kamera tidak benar-benar dekat ke kepala: %.2f m" % gap)
 	# Arah pandang: kepala harus ada di tengah layar, bukan di pinggir.
@@ -150,8 +150,8 @@ func _test_pinch_out(orbit: Orbit, character: Character) -> void:
 	_check(orbit.camera.near > 0.09, "Bidang dekat tidak kembali saat jauh: %.3f"
 		% orbit.camera.near)
 	var head := Humanoid.find_bone(character.avatar, "Bip001 Head")
-	var head_point := character.avatar.global_transform \
-		* character.avatar.get_bone_global_pose(head)
+	var head_point: Vector3 = (character.avatar.global_transform \
+		* character.avatar.get_bone_global_pose(head)).origin
 	var gap := orbit.camera.global_position.distance_to(head_point)
 	_check(gap > 4.0, "Kamera tidak menjauh lagi: %.2f m" % gap)
 	_notes.append("jauh: kepala %.2f m, near=%.3f" % [gap, orbit.camera.near])
