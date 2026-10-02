@@ -34,9 +34,9 @@ func _test_avatar_cost(character: Character, panel: PerfPanel) -> void:
 	var step := 1.0 / 60.0
 	var cloth_start := Time.get_ticks_usec()
 	for frame in range(frames):
-		for wrapper in character.cloths:
-			if wrapper != null:
-				wrapper.simulate(step)
+		for cloth in character.cloths:
+			if cloth != null:
+				cloth.simulate(step)
 	var cloth_ms := float(Time.get_ticks_usec() - cloth_start) / float(frames) / 1000.0
 	var retarget_start := Time.get_ticks_usec()
 	for frame in range(frames):
