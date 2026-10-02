@@ -17,7 +17,10 @@ shader_type spatial;
 // Catatan Godot: 'return' dan 'break' TIDAK boleh dipakai di fragment(), dan
 // matriks bawaan (VIEW_MATRIX, PROJECTION_MATRIX) hanya dikenali di vertex()
 // atau fragment() — bukan di fungsi buatan sendiri.
-render_mode unshaded, blend_mul, cull_disabled, depth_draw_never, depth_test_disabled,
+// blend_mix (bukan blend_mul): di proyek ini yang terbukti tampil di renderer
+// Mobile adalah blend_add dan blend_mix. blend_mul memakai faktor DST_COLOR yang
+// urutan gambarnya berbeda, dan contact shadow butuh hasil yang bisa dipercaya.
+render_mode unshaded, blend_mix, cull_disabled, depth_draw_never, depth_test_disabled,
 	shadows_disabled, fog_disabled;
 uniform sampler2D depth_tex : hint_depth_texture, repeat_disable, filter_nearest;
 // Arah matahari SUDAH dalam ruang kamera (dihitung contact_shadows.gd): Godot
@@ -28,8 +31,14 @@ uniform vec3 sun_direction_view = vec3(-0.94, 0.09, -0.32);
 // karakter, cukup pendek supaya 14 sampel tetap murah di HP.
 uniform float ray_length = 21.0;
 uniform float max_distance = 55.0;
-// Pengerasan sedikit di bawah 1,0 supaya efeknya menanam, bukan menghitamkan.
-uniform float strength = 0.74;
+// Seberapa kuat warna bayangan dicampur ke layar (0,55 = separuh jalan).
+uniform float strength = 0.55;
+// Warna bayangan senja: ungu kebiruan yang dalam, bukan hitam datar.
+uniform vec3 shadow_color : source_color = vec3(0.06, 0.05, 0.11);
+// Mode diagnosa (hanya dipakai test_contact_shadows): "flat" menggelapkan
+// seluruh layar tanpa hitungan, "depth" menampilkan nilai kedalaman mentah.
+uniform bool debug_flat = false;
+uniform bool debug_depth = false;
 uniform float bias = 0.0004;
 const int SAMPLE_COUNT = 14;
 
@@ -69,9 +78,19 @@ void fragment() {
 			shadow = blocked ? 1.0 : 0.0;
 		}
 	}
-	// Memudar di 10% tepi layar: ray yang keluar layar jangan membuat tepian.
-	vec2 fade = max(vec2(0.0), 10.0 * abs(SCREEN_UV - 0.5) - 4.0);
-	float edge = clamp(dot(fade, fade), 0.0, 1.0);
-	ALBEDO = vec3(mix(1.0, strength, shadow * (1.0 - edge)));
-	ALPHA = 1.0;
+	if (debug_flat) {
+		ALBEDO = vec3(0.0, 0.0, 0.0);
+		ALPHA = 0.5;
+	} else if (debug_depth) {
+		ALBEDO = vec3(raw);
+		ALPHA = 1.0;
+	} else {
+		// Memudar di 10% tepi layar: ray yang keluar layar jangan membuat tepian.
+		vec2 fade = max(vec2(0.0), 10.0 * abs(SCREEN_UV - 0.5) - 4.0);
+		float edge = clamp(dot(fade, fade), 0.0, 1.0);
+		// blend_mix: dst = mix(dst, ALBEDO, ALPHA). Tanpa bayangan ALPHA = 0,
+		// jadi layar tidak berubah sama sekali.
+		ALBEDO = shadow_color;
+		ALPHA = clamp(strength * shadow * (1.0 - edge), 0.0, 1.0);
+	}
 }

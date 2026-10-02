@@ -55,15 +55,42 @@ func _run() -> void:
 	var contact := ContactShadows.new()
 	contact.camera = camera
 	camera.add_child(contact)
-	for frame in range(4):
-		await process_frame
-	await RenderingServer.frame_post_draw
-	var on: Image = root.get_texture().get_image()
+	var material: ShaderMaterial = contact.material_override
+	# 1) Dasar perbandingan: efek MATI.
 	contact.enabled = false
 	for frame in range(4):
 		await process_frame
 	await RenderingServer.frame_post_draw
 	var off: Image = root.get_texture().get_image()
+	_check(not contact.visible, "Contact shadow masih terlar saat dimatikan")
+	# 2) Diagnosa: quad + blend harus tampil. Kalau langkah ini gagal, masalahnya
+	#    di penggambaran, bukan di hitungan sinar.
+	contact.enabled = true
+	material.set_shader_parameter("debug_flat", true)
+	for frame in range(4):
+		await process_frame
+	await RenderingServer.frame_post_draw
+	_check(contact.visible, "Contact shadow tidak menyala saat kamera aktif")
+	var flat: Image = root.get_texture().get_image()
+	var flat_mean := _mean_luma(flat)
+	_check(flat_mean < 0.9 * _mean_luma(off),
+		"Quad contact shadow tidak tampil sama sekali (diagnosa): %f" % flat_mean)
+	# 2b) Diagnosa kedua: nilai kedalaman mentah di titik uji (0 berarti buffer
+	#     kedalaman tidak terbaca — bukan hitungannya yang salah).
+	material.set_shader_parameter("debug_flat", false)
+	material.set_shader_parameter("debug_depth", true)
+	for frame in range(4):
+		await process_frame
+	await RenderingServer.frame_post_draw
+	var depths: Image = root.get_texture().get_image()
+	print("[contact-test] kedalaman di titik uji=%.4f (0 berarti buffer kosong)"
+		% depths.get_pixelv(camera.unproject_position(Vector3(2.0, 0.05, 0.0))).r)
+	material.set_shader_parameter("debug_depth", false)
+	# 3) Efek nyala: hitungan sinar sungguhan.
+	for frame in range(4):
+		await process_frame
+	await RenderingServer.frame_post_draw
+	var on: Image = root.get_texture().get_image()
 	on.save_png("user://contact-shadow-on.png")
 	off.save_png("user://contact-shadow-off.png")
 	# Matahari di barat (-x): bayangan harus jatuh ke +x (belakang balok),
@@ -97,6 +124,17 @@ func _run() -> void:
 ## Seberapa besar sebuah titik menggelap saat efek NYALA dibanding MATI.
 ## Rata-rata patch 7x7 supaya satu piksel noise renderer software tidak
 ## menentukan hasil.
+## Rata-rata kecerahan seluruh gambar, untuk diagnosa tampil/tidak.
+func _mean_luma(image: Image) -> float:
+	var total := 0.0
+	var count := 0
+	for y in range(0, image.get_height(), 4):
+		for x in range(0, image.get_width(), 4):
+			total += image.get_pixel(x, y).get_luminance()
+			count += 1
+	return total / maxf(float(count), 1.0)
+
+
 func _darkening(off: Image, on: Image, point: Vector2) -> float:
 	var total := 0.0
 	var count := 0
