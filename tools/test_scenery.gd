@@ -97,8 +97,8 @@ func _test_layout(scenery: Scenery) -> void:
 			var island_bounds := scenery.island.get_aabb()
 			_check(island_bounds.position.x + island_bounds.size.x
 				< -Field.HALF * 4.0,
-				"Pulau terlalu dekat: x=%.1f" % island_bounds.position.x
-					+ island_bounds.size.x)
+				"Pulau terlalu dekat: x=%.1f" % (island_bounds.position.x
+					+ island_bounds.size.x))
 			_check(island_bounds.position.y + island_bounds.size.y
 				> scenery.sea.position.y,
 				"Puncak pulau tenggelam")
