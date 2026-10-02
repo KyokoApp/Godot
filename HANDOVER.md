@@ -23,6 +23,22 @@
   - **PENTING**: UAL1 & UAL2 di repo ini TIDAK punya klip strafe kiri/kanan
     (sudah diperiksa dari isi GLB). Kalau pengguna minta klip strafe, harus
     tambah aset animasi baru — jangan janjikan bisa dari UAL yang ada.
+  - **PELAJARAN CI (2 push gagal sebelum hijau, jadi commit `ffd1f40`)**:
+    1. CI menjalankan `tools/test_hud.gd` di resolusi **640x360** (`--resolution
+       640x360` di `render-b`), sementara HP memakai 1280x720. Offset tombol HUD
+       adalah piksel absolut dari pojok kanan-bawah, dan tes menyentuh tombol pada
+       titik TENGAHnya - jadi offset vertikal wajib dibatasi ±300 px dan
+       horizontal ±470 px supaya tengah tombol tetap masuk layar 640x360.
+       Tombol yang jatuh di luar layar = tombol tidak tersentuh = tes gagal.
+    2. gdlint/gdparse **tidak** menangkap deklarasi `var` ganda dalam satu fungsi
+       (itu Parse Error GDScript murni). Nama var di `_run()` tes harus unik.
+    3. `tools/test_mannequin.gd` dulu menuntut `ground_offset` pose Idle TEPAT 0,0.
+       Itu bentrok dengan margin sol kaki (SOLE) yang justru menahan kaki tidak
+       tenggelam - penjagaannya diganti jadi "idle <= SOLE dan idle <= offset
+       klip jalan".
+    4. `concurrency: apk` (tanpa cancel-in-progress) membuat run mengantre; satu
+       push kadang baru memicu run beberapa menit kemudian. Jangan dikira push-nya
+       gagal - tunggu, atau push commit kosong untuk memicu ulang.
 
 - 2026-10-03 (cicilan 13) — **LANGIT MALAM DIPERBAIKI + HUD GAYA GAME AKSI**
   (permintaan: "masih kurang realistis langit nya kalo bulan dah cakep banget
