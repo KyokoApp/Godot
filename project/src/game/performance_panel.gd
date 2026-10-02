@@ -67,7 +67,7 @@ func _load_settings() -> void:
 	grass_enabled = bool(config.get_value("graphics", "grass", true))
 	shadows_enabled = bool(config.get_value("graphics", "shadows", false))
 	uncapped = bool(config.get_value("graphics", "uncapped", false))
-	rays_enabled = bool(config.get_value("graphics", "moon_rays", true))
+	rays_enabled = bool(config.get_value("graphics", "sun_rays", true))
 
 
 func _save_settings() -> void:
@@ -76,7 +76,7 @@ func _save_settings() -> void:
 	config.set_value("graphics", "grass", grass_enabled)
 	config.set_value("graphics", "shadows", shadows_enabled)
 	config.set_value("graphics", "uncapped", uncapped)
-	config.set_value("graphics", "moon_rays", rays_enabled)
+	config.set_value("graphics", "sun_rays", rays_enabled)
 	config.save(SETTINGS)
 
 
@@ -99,7 +99,7 @@ func apply_settings() -> void:
 	_limit.text = "Batas FPS: " + ("Bebas*" if uncapped else "60")
 	if rays != null:
 		rays.set("enabled", rays_enabled)
-	_rays_button.text = "Sinar bulan: " + ("Nyala" if rays_enabled else "Mati (tes FPS)")
+	_rays_button.text = "Sinar matahari: " + ("Nyala" if rays_enabled else "Mati (tes FPS)")
 	_frames.clear()
 	_elapsed = 0.0
 	_stats.text = "Mengukur frame…\n* Tetap mengikuti VSync / layar HP"

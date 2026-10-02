@@ -18,6 +18,7 @@ extends Node3D
 
 const Field = preload("res://src/game/world/field.gd")
 const WATER_SHADER = preload("res://src/game/world/water.gdshader")
+const Dusk = preload("res://src/game/environment/dusk_environment.gd")
 
 ## Radius cincin bukit pertama dan kedua (di luar pagar 50 m).
 const HILL_RADIUS := 96.0
@@ -44,12 +45,14 @@ var hills: Node3D
 var sea: MeshInstance3D
 var ruins: Node3D
 var motes: Node3D
+var island: MeshInstance3D
 var cliff_count := 0
 
 
 func _ready() -> void:
 	name = "Scenery"
 	_build_sea()
+	_build_island()
 	_build_hills()
 	_build_cliffs()
 	_build_ruins()
@@ -65,6 +68,8 @@ func _build_sea() -> void:
 	plane.subdivide_depth = 24
 	var material := ShaderMaterial.new()
 	material.shader = WATER_SHADER
+	# Kilau di air harus searah dengan matahari senja, bukan arah bawaan shader.
+	material.set_shader_parameter("sun_direction", Dusk.SUN_DIRECTION)
 	sea = MeshInstance3D.new()
 	sea.name = "Sea"
 	sea.mesh = plane
@@ -74,6 +79,23 @@ func _build_sea() -> void:
 	# terdekatnya (pantai) berada tepat di tepi barat padang.
 	sea.position = Vector3(-SEA_SIZE * 0.5 + 2.0, SEA_LEVEL, 0.0)
 	add_child(sea)
+
+
+## Pulau kecil di seberang laut, seperti di ilustrasi: sisi batu dengan puncak
+## hijau. Dasarnya jauh di bawah permukaan laut supaya tidak terlihat sebagai
+## balok. Tidak ada collision — hanya latar.
+func _build_island() -> void:
+	var vertices := PackedVector3Array()
+	var colors := PackedColorArray()
+	var indices := PackedInt32Array()
+	# Dua blok: yang utama panjang dan rendah, yang kedua lebih kecil di
+	# belakangnya supaya siluetnya tidak terlihat seperti satu balok.
+	_add_rock_block(vertices, colors, indices, Vector3(-430.0, SEA_LEVEL - 10.0, 46.0),
+		Vector3(74.0, 26.0, 34.0), 3)
+	_add_rock_block(vertices, colors, indices, Vector3(-512.0, SEA_LEVEL - 12.0, 84.0),
+		Vector3(48.0, 20.0, 26.0), 7)
+	_commit(vertices, colors, indices, "Island", self)
+	island = get_node("Island") as MeshInstance3D
 
 
 # ----------------------------------------------------------------- bukit ----
@@ -141,7 +163,9 @@ func _build_cliffs() -> void:
 	var colors := PackedColorArray()
 	var indices := PackedInt32Array()
 	var blocks := 9
-	var base_x := Field.HALF + 6.0
+	# Muka terdekat blok = base_x - depth/2; depth maksimum 12 m, jadi base_x
+	# harus >= Field.HALF + 6 + 6 supaya tebing tidak menyentuh padang.
+	var base_x := Field.HALF + 13.0
 	for block in range(blocks):
 		var center_z := -Field.HALF + 12.0 + float(block) * 12.5
 		var height := 16.0 + 7.0 * sin(float(block) * 1.7)

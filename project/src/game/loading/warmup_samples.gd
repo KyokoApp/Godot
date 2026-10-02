@@ -1,6 +1,6 @@
 extends RefCounted
 ## Render resource asli: material tanah, rumput MultiMesh, avatar ber-skinning,
-## lapisan tubuh atas, tapak api, aura cepat, dan sinar bulan.
+## lapisan tubuh atas, tapak api, aura cepat, dan sinar matahari.
 
 const Field = preload("res://src/game/world/field.gd")
 const Character = preload("res://src/game/mannequin.gd")
@@ -9,7 +9,7 @@ const Projectile = preload("res://src/game/fire_projectile.gd")
 const Burst = preload("res://src/game/fire_burst.gd")
 const FootFire = preload("res://src/game/foot_fire/foot_fire_trail.gd")
 const SpeedAura = preload("res://src/game/speed/speed_aura.gd")
-const MoonRays = preload("res://src/game/god_rays/moon_rays.gd")
+const SunRays = preload("res://src/game/god_rays/sun_rays.gd")
 const STAGES := 14
 
 
@@ -113,7 +113,7 @@ static func _speed(world: Node3D, game: Node3D, with_ghosts: bool) -> void:
 	character.set_locomotion("Sprint_Loop", 1.0)
 	var trail := SpeedAura.new()
 	trail.character = character
-	var environment := game.get_node("NightEnvironment") as WorldEnvironment
+	var environment := game.get_node("DuskEnvironment") as WorldEnvironment
 	trail.environment = environment.environment
 	world.add_child(trail)
 	trail.update_motion(0.11, 15, with_ghosts)
@@ -125,7 +125,7 @@ static func _speed(world: Node3D, game: Node3D, with_ghosts: bool) -> void:
 
 
 static func _rays(world: Node3D) -> void:
-	var rays := MoonRays.new()
+	var rays := SunRays.new()
 	world.add_child(rays)
 	rays.set_process(false)
 	rays.visible = true

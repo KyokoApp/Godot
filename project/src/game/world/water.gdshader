@@ -1,12 +1,12 @@
 shader_type spatial;
 render_mode diffuse_burley, specular_schlick_ggx, cull_back;
-// Laut di kejauhan: gradasi biru tua -> tosca dekat pantai, kilau matahari
-// terbenam, dan riak halus. Dipakai satu bidang besar di luar padang (bukan
+// Laut di kejauhan: gradasi biru tosca -> hijau pucat dekat pantai, kilau
+// matahari senja, dan riak halus. Dipakai satu bidang besar di luar padang (bukan
 // bagian gameplay), jadi biayanya hanya satu draw call + beberapa sin().
 
-uniform vec4 deep_color : source_color = vec4(0.055, 0.145, 0.28, 1.0);
-uniform vec4 shallow_color : source_color = vec4(0.19, 0.55, 0.62, 1.0);
-uniform vec4 sun_color : source_color = vec4(1.0, 0.79, 0.52, 1.0);
+uniform vec4 deep_color : source_color = vec4(0.125, 0.415, 0.541, 1.0);
+uniform vec4 shallow_color : source_color = vec4(0.361, 0.780, 0.741, 1.0);
+uniform vec4 sun_color : source_color = vec4(1.0, 0.86, 0.70, 1.0);
 uniform vec3 sun_direction = vec3(-0.94, 0.10, -0.32);
 uniform float ripple = 0.35;
 uniform float horizon_fade = 380.0;

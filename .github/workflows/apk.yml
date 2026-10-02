@@ -402,28 +402,28 @@ jobs:
           fi
           grep -F '[speed-test] HASIL: OK' speed-test.log
 
-      - name: Render sinar bulan dan occlusion (Mobile Vulkan)
+      - name: Render sinar matahari dan occlusion (Mobile Vulkan)
         run: |
           set +e
           timeout 180 xvfb-run -a env \
             VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
             ./godot --path project --rendering-method mobile --rendering-driver vulkan \
             --audio-driver Dummy --resolution 480x270 \
-            --script "$GITHUB_WORKSPACE/tools/test_god_rays.gd" 2>&1 | tee god-rays.log
+            --script "$GITHUB_WORKSPACE/tools/test_sun_rays.gd" 2>&1 | tee sun-rays.log
           STATUS=${PIPESTATUS[0]}
           set -e
-          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' god-rays.log; then
-            tail -60 god-rays.log | while IFS= read -r line; do echo "::error::$line"; done
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' sun-rays.log; then
+            tail -60 sun-rays.log | while IFS= read -r line; do echo "::error::$line"; done
             exit 1
           fi
-          grep -F '[god-rays-test] HASIL: OK' god-rays.log
+          grep -F '[sun-rays-test] HASIL: OK' sun-rays.log
 
-      - name: Simpan screenshot sinar bulan
+      - name: Simpan screenshot sinar matahari
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: moon-rays-screenshots
-          path: ~/.local/share/godot/app_userdata/**/moon-rays-test.png
+          name: sun-rays-screenshots
+          path: ~/.local/share/godot/app_userdata/**/sun-rays-test.png
 
       - name: Simpan screenshot motion flair
         if: always()
@@ -462,28 +462,28 @@ jobs:
           fi
           grep -F '[audio-test] HASIL: OK' audio-test.log
 
-      - name: Render malam, bintang, bulan dan keterbacaan tanah (Mobile Vulkan)
+      - name: Render langit senja, awan, matahari dan keterbacaan tanah (Mobile Vulkan)
         run: |
           set +e
           timeout 180 xvfb-run -a env \
             VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
             ./godot --path project --rendering-method mobile --rendering-driver vulkan \
             --audio-driver Dummy --resolution 480x270 \
-            --script "$GITHUB_WORKSPACE/tools/test_night.gd" 2>&1 | tee night-test.log
+            --script "$GITHUB_WORKSPACE/tools/test_dusk.gd" 2>&1 | tee dusk-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
-          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' night-test.log; then
-            tail -50 night-test.log | while IFS= read -r line; do echo "::error::$line"; done
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' dusk-test.log; then
+            tail -50 dusk-test.log | while IFS= read -r line; do echo "::error::$line"; done
             exit 1
           fi
-          grep -F '[night-test] HASIL: OK' night-test.log
+          grep -F '[dusk-test] HASIL: OK' dusk-test.log
 
-      - name: Simpan screenshot malam
+      - name: Simpan screenshot senja
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: night-screenshots
-          path: ~/.local/share/godot/app_userdata/**/night-*-test.png
+          name: dusk-screenshots
+          path: ~/.local/share/godot/app_userdata/**/dusk-*-test.png
           if-no-files-found: ignore
 
       # Render avatar dari kamera pemain (0,4 m / 0,85 m / 2,2 m + pose jalan):
@@ -554,6 +554,8 @@ jobs:
               skin-test.log zoom-test.log performance-test.log avatar-render.log 2>/dev/null | tail -40
             grep -hE '\[scenery-test\]|\[world-render-test\]' \
               scenery-test.log world-render.log 2>/dev/null | tail -30
+            grep -hE '\[dusk-test\]|\[sun-rays-test\]' \
+              dusk-test.log sun-rays.log 2>/dev/null | tail -10
             echo '```'
             if [ -s fetch-assets.log ]; then
               echo

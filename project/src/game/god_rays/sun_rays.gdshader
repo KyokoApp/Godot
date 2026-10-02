@@ -1,5 +1,5 @@
 shader_type spatial;
-// Original depth-mask adaptation of a radial-scattering method.
+// Sinar matahari: adaptasi depth-mask dari metode radial scattering.
 // Attribution and license terms: project/licenses/LICENSES.txt.
 // No SubViewport / duplicate world render. Reverse-Z, Godot 4.3+ Mobile / Forward+.
 render_mode unshaded, blend_add, cull_disabled, depth_draw_never, depth_test_disabled,
@@ -29,6 +29,6 @@ void fragment() {
 			decay *= 0.96;
 		}
 	}
-	ALBEDO = vec3(0.55, 0.69, 1.0);
+	ALBEDO = vec3(1.0, 0.86, 0.66);
 	ALPHA = rays * strength / 16.0;
 }

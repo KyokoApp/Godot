@@ -51,7 +51,7 @@ func _run() -> void:
 
 
 func _test_parts(scenery: Scenery) -> void:
-	for part in ["Hills", "Sea", "Cliffs", "Ruins", "LightMotes"]:
+	for part in ["Hills", "Sea", "Cliffs", "Island", "Ruins", "LightMotes"]:
 		var node := scenery.get_node_or_null(part)
 		_check(node != null, "Bagian pemandangan hilang: " + part)
 	if scenery.hills == null or scenery.sea == null or scenery.ruins == null \
@@ -92,6 +92,16 @@ func _test_layout(scenery: Scenery) -> void:
 		var bounds := cliffs.get_aabb()
 		_check(bounds.position.x > Field.HALF,
 			"Tebing masuk ke dalam padang: x=%.1f" % bounds.position.x)
+		if scenery.island != null:
+			# Pulau harus jauh di laut barat, dan puncaknya di atas permukaan air.
+			var island_bounds := scenery.island.get_aabb()
+			_check(island_bounds.position.x + island_bounds.size.x
+				< -Field.HALF * 4.0,
+				"Pulau terlalu dekat: x=%.1f" % island_bounds.position.x
+					+ island_bounds.size.x)
+			_check(island_bounds.position.y + island_bounds.size.y
+				> scenery.sea.position.y,
+				"Puncak pulau tenggelam")
 		_notes.append("tata letak: laut y=%.1f x=%.1f, tebing x=%.1f..%.1f"
 			% [sea_position.y, sea_position.x, bounds.position.x,
 			bounds.position.x + bounds.size.x])

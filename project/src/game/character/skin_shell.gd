@@ -80,7 +80,7 @@ func configure(source: Skeleton3D) -> void:
 		# ikut menggambar bayangan yang sama dua kali.
 		cover.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		origin.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		# Garis tepi tipis supaya siluetnya tetap terbaca di malam hari.
+		# Garis tepi tipis supaya siluetnya tetap terbaca saat langit terang.
 		skin.next_pass = _make_outline()
 		_meshes.append(cover)
 		_sources.append(origin)

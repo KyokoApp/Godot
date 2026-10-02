@@ -11,8 +11,8 @@ const Player = preload("res://src/game/player.gd")
 const Character = preload("res://src/game/mannequin.gd")
 const Orbit = preload("res://src/game/orbit_camera.gd")
 const Joystick = preload("res://src/game/virtual_joystick.gd")
-const Night = preload("res://src/game/environment/night_environment.gd")
-const MoonRays = preload("res://src/game/god_rays/moon_rays.gd")
+const Dusk = preload("res://src/game/environment/dusk_environment.gd")
+const SunRays = preload("res://src/game/god_rays/sun_rays.gd")
 const WorldAudio = preload("res://src/game/audio/world_audio.gd")
 const Footsteps = preload("res://src/game/audio/footsteps.gd")
 const FootFire = preload("res://src/game/foot_fire/foot_fire_trail.gd")
@@ -51,7 +51,7 @@ var _player: Player
 var _visual: Character
 var _orbit: Orbit
 var _sun: DirectionalLight3D
-var _moon_rays: MoonRays
+var _sun_rays: SunRays
 var _audio: WorldAudio
 var _footsteps: Footsteps
 var _foot_fire: FootFire
@@ -88,12 +88,12 @@ func _ready() -> void:
 
 func _build_environment() -> void:
 	var world_environment := WorldEnvironment.new()
-	world_environment.name = "NightEnvironment"
-	world_environment.environment = Night.make_environment()
+	world_environment.name = "DuskEnvironment"
+	world_environment.environment = Dusk.make_environment()
 	add_child(world_environment)
-	_sun = Night.make_moonlight()
+	_sun = Dusk.make_sunlight()
 	add_child(_sun)
-	_sun.look_at_from_position(Vector3.ZERO, -Night.MOON_DIRECTION)
+	_sun.look_at_from_position(Vector3.ZERO, -Dusk.SUN_DIRECTION)
 
 
 func _build_world() -> void:
@@ -134,9 +134,9 @@ func _build_grass() -> void:
 
 
 func _build_effects() -> void:
-	_moon_rays = MoonRays.new()
-	_moon_rays.camera = _orbit.camera
-	_orbit.camera.add_child(_moon_rays)
+	_sun_rays = SunRays.new()
+	_sun_rays.camera = _orbit.camera
+	_orbit.camera.add_child(_sun_rays)
 	_audio = WorldAudio.new()
 	_audio.listener = _orbit.camera
 	add_child(_audio)
@@ -153,7 +153,7 @@ func _build_effects() -> void:
 	add_child(_foot_fire)
 	_speed_aura = SpeedAura.new()
 	_speed_aura.character = _visual
-	_speed_aura.environment = get_node("NightEnvironment").environment
+	_speed_aura.environment = get_node("DuskEnvironment").environment
 	add_child(_speed_aura)
 	_pet = FirePet.new()
 	_pet.player = _player
@@ -282,7 +282,7 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 	title.add_theme_color_override("font_color", Color.WHITE)
 	content.add_child(title)
 	_performance = PerformancePanel.new()
-	_performance.rays = _moon_rays
+	_performance.rays = _sun_rays
 	_performance.sun = _sun
 	_performance.grass = _grass
 	_performance.character = _visual

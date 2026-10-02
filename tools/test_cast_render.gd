@@ -3,7 +3,7 @@ extends SceneTree
 
 const Catalog = preload("res://src/game/animation/catalog.gd")
 const Character = preload("res://src/game/mannequin.gd")
-const Night = preload("res://src/game/environment/night_environment.gd")
+const Dusk = preload("res://src/game/environment/dusk_environment.gd")
 var _failures := 0
 var _processed := 0
 
@@ -42,11 +42,11 @@ func _run() -> void:
 	var world := Node3D.new()
 	root.add_child(world)
 	var environment := WorldEnvironment.new()
-	environment.environment = Night.make_environment()
+	environment.environment = Dusk.make_environment()
 	world.add_child(environment)
-	var light := Night.make_moonlight()
+	var light := Dusk.make_sunlight()
 	world.add_child(light)
-	light.look_at_from_position(Vector3.ZERO, -Night.MOON_DIRECTION)
+	light.look_at_from_position(Vector3.ZERO, -Dusk.SUN_DIRECTION)
 	var camera := Camera3D.new()
 	world.add_child(camera)
 	camera.position = Vector3(2.3, 1.7, 3.2)

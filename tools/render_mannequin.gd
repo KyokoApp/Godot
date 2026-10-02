@@ -40,8 +40,8 @@ func _run() -> void:
 		return
 	orbit.exclusions = []
 	# Sembunyikan efek yang menghalangi pandangan (pet api, aura kecepatan, tapak
-	# api, sinar bulan): yang diperiksa di sini avatar-nya, bukan efeknya.
-	for node_name in ["_pet", "_speed_aura", "_foot_fire", "_moon_rays", "_banner"]:
+	# api, sinar matahari): yang diperiksa di sini avatar-nya, bukan efeknya.
+	for node_name in ["_pet", "_speed_aura", "_foot_fire", "_sun_rays", "_banner"]:
 		var effect: Node = game.get(node_name)
 		if effect is Node3D:
 			(effect as Node3D).visible = false
