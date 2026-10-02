@@ -13,7 +13,9 @@ on:
     branches: [main, "arena/**"]
   workflow_dispatch:
 
-concurrency: apk
+# Grup per cabang: dua sesi yang bekerja di cabang berbeda tidak saling
+# membatalkan build (dulu `concurrency: apk` membatalkan run cabang lain).
+concurrency: apk-${{ github.ref }}
 
 permissions:
   contents: write
