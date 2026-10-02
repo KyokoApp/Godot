@@ -716,3 +716,27 @@ mesh + `grow` 22 mm), mirror pose, denyut mengikuti kecepatan, dan gerbang tes
   outline mesh dalam dan salinan kulit tidak mungkin berbeda warna.
 - Belum diuji di HP; gerbang CI (parse, compile, tes kulit/animasi) tidak
   mengunci warna lama, jadi tidak ada tes yang perlu diubah.
+
+### 2026-10-02 — build CI diparalelkan: ± 8 menit jadi ± 3 menit
+
+Update project ini nyicil (satu perubahan kecil = satu push), tapi build lama ± 8 menit
+dan hampir seluruhnya di render Mobile Vulkan software (lavapipe, runner 2 core).
+Dari data run `36999636319`: render = 302 s dari total 467 s, sisanya lint 32 s,
+apt 29 s, tes headless 34 s, ekspor 27 s.
+
+- Workflow `apk` dipecah jadi 6 pekerjaan: **gate** (lint + compile + semua tes
+  headless, ± 2 menit), **render-a/b/c** (render Mobile Vulkan dibagi berimbang
+  ± 100 s masing-masing, jalan bersamaan), **package** (PCK + APK + audit + rilis,
+  TUNGGU gate hijau), **ringkasan** (komentar angka/pratinjau/log gagal, selalu
+  jalan), dan **build** (gerbang agregat).
+- Aturan lama **"compile lolos dulu, baru ekspor APK"** tetap dijaga: `package`
+  menunggu `gate`. Render sengaja tidak menunggu gate supaya push kecil tidak
+  menunggu dua kali.
+- Setiap gerbang/periksa yang lama TIDAK dihapus — hanya dipindah; audit otomatis
+  membandingkan 60 blok perintah lama vs baru (0 langkah hilang, 0 beda isi).
+- Komentar commit pindah ke pekerjaan `ringkasan` yang `if: always()`: dulu kalau
+  tes gagal di tengah, angka diagnostik ikut hilang. Log tiap pekerjaan kini
+  diunggah sebagai artefak `logs-*`, pratinjau JPEG dibuat di pekerjaan render.
+- Job `build` agregat mempertahankan nama status check lama (`apk / build`)
+  supaya required check di Settings tidak perlu diubah.
+- Verifikasi lokal: YAML valid, 60/60 blok `run:` lolos `bash -n`.

@@ -1,5 +1,31 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-02 (sesi ini) — **BUILD CI DIPARALELKAN: ± 8 MENIT JADI ± 3 MENIT**
+  (keluhan pengguna: "build di github lama banget dah kan update nya nyicil
+  nyicil" — tiap perubahan kecil membayar build penuh).
+  - Data run lama `36999636319`: total langkah 467 s, dan **302 s di antaranya
+    render Mobile Vulkan software** (lavapipe, runner 2 core): avatar 67 s, HUD
+    50 s, warmup 49 s, dunia 37 s, rumput 31 s, sinar 20 s, tapak 15 s, senja
+    15 s, api 9 s, casting 9 s. Sisanya lint 32 s, apt 29 s, tes headless 34 s,
+    ekspor APK/PCK 27 s.
+  - `.github/workflows/apk.yml` dipecah jadi 6 pekerjaan paralel: **gate** (lint +
+    compile + SEMUA tes headless), **render-a/b/c** (render dibagi berimbang
+    ± 100 s masing-masing), **package** (PCK + APK + audit + rilis), **ringkasan**
+    (komentar commit), **build** (gerbang agregat).
+  - Aturan lama "compile lolos dulu, baru ekspor APK" DIPERTAHANKAN: `package`
+    `needs: gate`. Render sengaja jalan bersamaan dengan gate supaya push kecil
+    tidak menunggu dua kali.
+  - Tidak ada gerbang yang dihapus: audit otomatis membandingkan 60 blok perintah
+    lama vs baru (0 langkah hilang, 0 beda isi), YAML valid, 60/60 blok `run:`
+    lolos `bash -n`.
+  - Komentar commit (angka penting, pratinjau, log gagal) pindah ke pekerjaan
+    `ringkasan` yang `if: always()` — dulu kalau tes gagal di tengah, angka
+    diagnostik ikut hilang. Log tiap pekerjaan diunggah sebagai artefak `logs-*`;
+    JPEG pratinjau dibuat di pekerjaan render (bukan di ringkasan) supaya
+    ringkasan tidak perlu mengunduh Godot lagi.
+  - Job `build` agregat mempertahankan nama status check lama (`apk / build`)
+    untuk required check di Settings.
+
 - 2026-10-02 (sesi ini, lanjutan) — **KULIT MANNEQUIN: HITAM GELAP + OUTLINE
   PUTIH TIPIS**. Hanya ganti warna; struktur kulit, mirror pose, denyut, dan
   gerbang tes (`tools/test_skin_shell.gd`) tidak berubah.
