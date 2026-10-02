@@ -82,7 +82,11 @@ func _run() -> void:
 		"Arah contact shadow tidak meyakinkan: belakang %f vs depan %f"
 		% [shadow_darkening, lit_darkening])
 	# Sakelar grafis harus benar-benar mematikan lapisan ini.
+	contact.enabled = false
+	await process_frame
+	_check(not contact.visible, "Contact shadow masih terlihat setelah dimatikan")
 	contact.enabled = true
+	await process_frame
 	_check(contact.visible, "Contact shadow tidak menyala setelah diaktifkan")
 	world.queue_free()
 	await process_frame

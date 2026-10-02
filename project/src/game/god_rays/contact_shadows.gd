@@ -21,11 +21,12 @@ func _ready() -> void:
 	extra_cull_margin = 16384
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	gi_mode = GeometryInstance3D.GI_MODE_DISABLED
-	# Ditaruh SEBELUM sinar matahari (yang menambah cahaya): gelapkan dulu,
-	# baru tambahkan sinar — urutan yang lebih masuk akal secara cahaya.
-	render_priority = -101
 	_material = ShaderMaterial.new()
 	_material.shader = SHADER
+	# render_priority milik MATERIAL (BaseMaterial3D), bukan node: sinar matahari
+	# memakai -100, jadi -101 menggambar contact shadow LEBIH DULU — gelapkan
+	# dulu, baru sinar matahari menambah cahaya. Urutan yang lebih masuk akal.
+	_material.render_priority = -101
 	_material.set_shader_parameter("sun_direction", Dusk.SUN_DIRECTION)
 	material_override = _material
 	visible = false
