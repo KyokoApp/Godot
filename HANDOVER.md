@@ -829,3 +829,42 @@ Semua akarnya ada di `animation/cloth_springs.gd`:
   kepalanya 23 cm — setelah simulasi dilepas, leher tampil seperti aslinya. Bila
   pengguna tetap ingin lebih tebal, itu koreksi bentuk (skala tulang leher),
   bukan bug simulasi.
+
+## Kain jatuh seperti kain + pose "kayak difoto" (2026-10-02, lanjutan)
+Keluhan: "kain belakang nya belom smooth bukan kayak kain malah kaku banget…
+bagian bokong masih ada yang blom diperbaiki… pas make animasi jongkok malah
+kayak difoto." Tiga akar terpisah, semuanya sudah ada gerbang/angkanya:
+- **Cape kaku seperti papan.** Pose rest FBX ini pose patung: cape terbentang ke
+  belakang. Penjaga bentuk (`_keep_shape`) menarik tiap partikel kembali ke sudut
+  itu dengan kaku ~50× gravitasi, jadi berapa pun angin/gravitasi ditambah panel
+  tetap terbentang. Sekarang arah acuan tiap segmen diputar ke arah gravitasi
+  sebesar `hang` (naik dari pangkal ke ujung lewat `HANG_RAMP_FROM`), dan arah
+  datar panel dipertahankan `HANG_SPREAD` 0,45 supaya panel dari dada tidak
+  semuanya jatuh ke satu titik (jubah berubah jadi tenda kalau 0). Setelan:
+  Shawl 0,80; Flycloak 0,90; Hip 0,75; Collar 0,40; Hair 0,30; Pendant 0,60.
+- **"Kayak difoto" ada bug nyata.** Sesudah klip aksi yang menahan frame terakhir
+  (mis. menyerang), mode `HELD` membuat `set_locomotion` menolak mengganti klip —
+  badan berjalan/meluncur sambil benar-benar membeku, dan HUD tetap menulis nama
+  gait sehingga tidak terlihat seperti pose tahan. Sekarang `HELD` dilepas begitu
+  pemain meminta gait; gerbangnya di `tools/test_aurelia.gd` (`_test_hold_release`).
+- **Jongkok memang bergerak.** Diagnosa baru "gerak klip" mengukur jarak tulang
+  avatar per frame: Crouch_Idle 0,1705 m/frame (2,311 m total), Crouch_Fwd 0,0118
+  m/frame — jadi klipnya hidup; yang dulu terlihat "difoto" adalah dua sebab di
+  atas (kain kaku + mode tahan). Pelajaran nama: nama klip runtime BUKAN nama
+  katalog — importer glTF membuang akhiran `_Loop` dan klip UAL2 ada di pustaka
+  `ual2`; diagnosa pertama mencari nama katalog mentah sehingga melaporkan 0,000
+  untuk semua klip. Selalu ukur lewat `current_animation`.
+- **Angka akhir** (commit `4e0fc09`, CI hijau): tembus kain diam 0,0002 m / lari
+  0,0001 m; tembus kain vs kain 0,0000 / 0,0073 m (gerbang 0,012/0,02); biaya
+  kain+retarget 4,30 ms/frame (anggaran 6,0); pose tahan lepas; zoom OK.
+- **Pratinjau baru**: `avatar-bokong` (dari belakang, 1,05 m) dan
+  `avatar-jongkok_jalan` (merangkak) — dua sudut yang diminta pengguna.
+- **Pelajaran proses**: satu commit pernah membawa indeks klon yang rusak
+  (pekerjaan Aurelia hilang, `mannequin.gd` lama kembali) dan baru ketahuan di
+  langkah "Ambil aset biner" dengan pesan `No such file or directory`. Sekarang
+  langkah lint memeriksa daftar berkas wajib dalam hitungan detik. Sebelum
+  push, selalu `git diff --stat <commit-hijau>` dan pastikan hanya berkas yang
+  diniatkan yang berubah; kalau pohon ter-revert, `git checkout <commit-hijau>
+  -- .` lalu tulis ulang hanya perubahan yang diniatkan (tanpa force-push).
+- Log langkah "Ambil aset biner" sekarang di-`tee` ke `fetch-assets.log` dan
+  ekornya ikut dikirim di komentar "angka penting".

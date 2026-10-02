@@ -62,6 +62,23 @@ jobs:
           python3 tools/test_chunk_content.py
           # Gerbang tanpa engine: 85 klip UAL + ukur ulang langkah kaki.
           python3 tools/check_animation_catalog.py
+          # Berkas wajib ada. Satu commit pernah membawa indeks klon yang rusak
+          # (pekerjaan Aurelia hilang, mannequin.gd lama kembali); kegagalannya
+          # baru muncul di langkah ambil aset dengan pesan yang menyesatkan.
+          # Daftar ini membuat "pohon berkas ter-revert" ketahuan dalam hitungan
+          # detik, sebelum apa pun diunduh.
+          for wajib in tools/fetch_assets.sh tools/fbx_inspect.py tools/render_avatar.gd \
+                tools/test_aurelia.gd tools/test_camera_zoom.gd \
+                project/src/game/character/aurelia_visual.gd \
+                project/src/game/character/aurelia_materials.gd \
+                project/src/game/animation/cloth_springs.gd \
+                project/src/game/animation/humanoid_map.gd \
+                project/src/game/animation/retarget_modifier.gd \
+                .github/workflows/assets.yml; do
+            [ -f "$wajib" ] || { echo "::error::berkas wajib hilang: $wajib"; exit 1; }
+          done
+          [ ! -f project/src/game/mannequin.gd ] \
+            || { echo "::error::mannequin.gd lama muncul lagi"; exit 1; }
 
       # --- 2. dependensi + Godot ----------------------------------------
       - name: Dependensi sistem
