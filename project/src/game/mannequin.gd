@@ -21,8 +21,12 @@ const CastLayer = preload("res://src/game/animation/cast_layer.gd")
 const Catalog = preload("res://src/game/animation/catalog.gd")
 const Metrics = preload("res://src/game/animation/anim_metrics.gd")
 const IDLE := "Idle_Loop"
+const AIR_CLIP := "Jump_Loop"
 const COMBAT_LIBRARY := "ual2"
 const FADE := 0.18
+## Pemulihan setelah mendarat: klip mendarat hanya dipakai sesaat, lalu badan
+## kembali ke gait supaya tidak terasa berhenti mendadak.
+const LAND_RECOVERY := 0.28
 const OFFSET_SPEED := 6.0
 
 var animation: AnimationPlayer
@@ -51,6 +55,10 @@ func _ready() -> void:
 	if animation == null or skeleton == null:
 		push_error("Mannequin: AnimationPlayer/Skeleton3D hilang")
 		return
+	# Klip sekali jalan yang sudah habis langsung menyerahkan badan ke gait;
+	# tanpa ini ada jendela diam di frame terakhir (terlihat seperti jalan di tempat
+	# atau pose kaku) sebelum timer aksi selesai.
+	animation.animation_finished.connect(_on_animation_finished)
 	_merge_combat_library()
 	_apply_material()
 	_configure_clips()
@@ -160,6 +168,29 @@ func play_action(name: String) -> float:
 	return length
 
 
+func play_landing(name: String) -> void:
+	# Dipakai saat pemain menyentuh tanah: klip mendarat dimainkan sebentar saja.
+	_hold_after = false
+	var length := length_of(name)
+	if length <= 0.0 or not animation.has_animation(Catalog.play_name(name)):
+		return_to_locomotion()
+		return
+	mode = Mode.ACTION
+	_action_left = minf(length, LAND_RECOVERY)
+	_play(name, 0.10, 1.0)
+
+
+func _on_animation_finished(finished: String) -> void:
+	if mode != Mode.ACTION or animation == null:
+		return
+	if animation.current_animation != finished:
+		return # Klip lama yang di-cross-fade, bukan aksi yang sedang jalan.
+	if _hold_after:
+		freeze_at_last_frame()
+	else:
+		return_to_locomotion()
+
+
 func play_showcase(name: String) -> void:
 	# Dipilih manual dari panel animasi: loop klip loop, tahan klip sekali.
 	_hold_after = Catalog.holds_last_frame(name)
@@ -172,6 +203,11 @@ func return_to_locomotion() -> void:
 	_hold_after = false
 	_action_left = 0.0
 	mode = Mode.LOCOMOTION
+	# gait bisa saja masih berisi klip udara (set_air_clip menimpanya). Jangan
+	# diputar lagi di darat — pulang ke Idle, lalu pemain memilih gait aslinya
+	# di frame berikutnya.
+	if gait == AIR_CLIP:
+		gait = IDLE
 	_play(gait, 0.24, 1.0)
 
 

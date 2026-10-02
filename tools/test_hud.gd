@@ -120,16 +120,58 @@ func _run() -> void:
 	_check(player.velocity.y > 1.0, "Lompat tidak langsung mendorong badan")
 	_check(visual.clip == "Jump_Start", "Animasi tolakan bukan Jump_Start")
 	var climbed := false
-	for frame in range(12):
+	var flown := false
+	for frame in range(60):
 		await physics_frame
 		if player.position.y > before_y + 0.05:
 			climbed = true
-	_check(climbed, "Badan tidak naik setelah lompat")
-	for frame in range(90):
-		await physics_frame
-		if player.is_on_floor():
+		if visual.clip == "Jump_Loop":
+			flown = true
+		if player.is_on_floor() and climbed:
 			break
-	_check(player.is_on_floor(), "Pemain tidak mendarat kembali")
+	_check(climbed, "Badan tidak naik setelah lompat")
+	_check(flown, "Klip melayang Jump_Loop tidak pernah dipakai di udara")
+	# Setelah mendarat, animasi harus cepat kembali ke gait, bukan diam di klip
+	# mendarat sampai selesai (keluhan: "kayak jalan tapi gak gerak").
+	var relaxed := false
+	for frame in range(40):
+		await physics_frame
+		if not visual.is_busy():
+			relaxed = true
+			break
+	_check(relaxed, "Animasi tidak kembali ke gait setelah mendarat")
+	var landing_gait: String = player.gait
+	_check(landing_gait == "Idle_Loop" or landing_gait.ends_with("_Loop"),
+		"Gait setelah mendarat tidak masuk akal: " + landing_gait)
+	# Diuji juga: saat diam, yang diputar memang klip Idle.
+	_check(visual.gait == "Idle_Loop",
+		"Setelah mendarat, klip yang diputar bukan Idle: " + visual.gait)
+	# Lari -> lompat -> lari: klip mendarat harus DILEWATI supaya tidak ada jeda
+	# pose jongkok/patung di tengah lari.
+	stick.set("direction", Vector2.RIGHT)
+	for frame in range(40):
+		await physics_frame
+	var running_speed := float(player.get("move_speed"))
+	_check(running_speed > 1.5, "Pemain tidak berlari sebelum lompat: %.2f" % running_speed)
+	_touch(11, jump.get_global_rect().get_center(), true)
+	_touch(11, jump.get_global_rect().get_center(), false)
+	var landing_clip := ""
+	var landed := false
+	for frame in range(80):
+		await physics_frame
+		if player.is_on_floor() and player.position.y > before_y:
+			landing_clip = str(visual.clip)
+			landed = true
+			break
+	_check(landed, "Pemain berlari tidak mendarat kembali")
+	_check(landing_clip != "Jump_Land",
+		"Masih memutar klip mendarat saat berlari: " + landing_clip)
+	_check(landing_clip.ends_with("_Loop"),
+		"Setelah mendarat sambil lari animasi tidak lanjut ke gait: " + landing_clip)
+	_check(not visual.is_busy(), "Animasi terkunci setelah mendarat sambil lari")
+	stick.set("direction", Vector2.ZERO)
+	for frame in range(30):
+		await physics_frame
 	# Tembakan api pet + analog jalan bersamaan.
 	var left := root.get_visible_rect().size * Vector2(0.22, 0.66)
 	var hit := fire.get_global_rect().get_center()

@@ -63,6 +63,13 @@ func _run() -> void:
 	for frame in range(20):
 		await physics_frame
 	_check(absf(player.velocity.x) < 0.05, "Pemain tidak berhenti")
+	# Regresi "jalan di tempat": klip jalan tidak boleh bertahan saat badan diam.
+	_check(player.gait == "Idle_Loop",
+		"Gait tidak kembali ke Idle saat berhenti: " + player.gait)
+	_check(player.select_gait(0.0, "Walk_Loop") == "Idle_Loop",
+		"Histeresis masih menahan klip jalan saat kecepatan nol")
+	_check(player.select_gait(3.0, "Jog_Fwd_Loop") == "Jog_Fwd_Loop",
+		"Histeresis Jog hilang (berkedip antar klip)")
 	_check(int(stick.get("_finger")) == -1, "Analog tidak disembunyikan setelah dilepas")
 	_touch(stick, 2, center, true)
 	_drag(stick, 2, center + Vector2(0, -86))

@@ -16,8 +16,16 @@ const HEIGHT := 1.8
 const RADIUS := 0.3
 const GRAVITY := 20.0
 const JUMP_VELOCITY := 7.0
-## Pose tolakan hanya sekejap; setelah itu klip melayang yang mengambil alih.
-const JUMP_POSE_TIME := 0.30
+## Pose tolakan hanya sekejap; setelah itu klip melayang (loop) mengambil alih.
+const JUMP_POSE_TIME := 0.16
+## Di atas kecepatan ini barulah klip jalan dipakai; di bawahnya Idle. Tanpa batas
+## ini, pemain yang sudah berhenti tetap memutar klip jalan (jalan di tempat).
+const IDLE_EXIT := 0.20
+## Kalau menyentuh tanah sambil masih bergerak (lari/jalan), klip mendarat
+## DILEWATI: badannya langsung nyambung ke klip lari lagi. Klip mendarat berpose
+## seperti jongkok-menyerap, dan itulah yang terlihat seperti "jeda patung" di
+## tengah lari. Klip mendarat hanya dipakai untuk pendaratan pelan/diam.
+const LANDING_SKIP_SPEED := 1.2
 ## Combo serangan: tiap tekan tombol lanjut ke klip berikutnya lalu berulang.
 const ATTACK_COMBO := ["Punch_Jab", "Punch_Cross", "Melee_Hook"]
 const COMBO_RESET := 1.1
@@ -176,13 +184,14 @@ func _target_velocity(stick: Vector2, desired: float) -> Vector3:
 
 
 func _apply_animation(desired: float) -> void:
+	# Di udara, animasi melayang selalu menang: klip tolakan/mendarat yang panjang
+	# tidak boleh mengunci badan sampai terlihat berhenti.
+	if _airborne:
+		if visual.gait != AIR_FALL and _air_time >= JUMP_POSE_TIME:
+			visual.set_air_clip(AIR_FALL, 1.0)
+		return
 	# Aksi sekali jalan dan klip pilihan panel tidak boleh ditimpa.
 	if visual.is_busy():
-		return
-	if _airborne:
-		# Pose tolakan hanya sebentar; setelah itu klip melayang.
-		if visual.gait != AIR_FALL and _air_time > JUMP_POSE_TIME:
-			visual.set_air_clip(AIR_FALL, 1.1)
 		return
 	var scale := 1.0
 	if desired > 0.02:
@@ -191,19 +200,32 @@ func _apply_animation(desired: float) -> void:
 	visual.set_locomotion(gait, scale)
 
 
+func _band_for(speed: float) -> String:
+	for entry in GAITS:
+		if speed >= float(entry["min"]) and speed <= float(entry["max"]):
+			return str(entry["clip"])
+	return "Sprint_Loop"
+
+
 func select_gait(speed: float, current: String) -> String:
 	if crouching:
 		return CROUCH_WALK if speed > 0.12 else CROUCH_IDLE
+	var target := _band_for(speed)
+	if target == current:
+		return current
+	# Histeresis menahan klip supaya tidak berkedip di ambang antarband lari.
+	# Band Idle TIDAK diperpanjang ke bawah dan band jalan tidak boleh turun
+	# sampai nol: kalau boleh, pemain yang sudah berhenti tetap memutar klip
+	# jalan — kelihatan seperti jalan di tempat meski badan diam.
+	if current == IDLE:
+		return current if speed <= IDLE_EXIT else target
 	for entry in GAITS:
-		if entry["clip"] == current:
-			var low: float = entry["min"] - HYSTERESIS
-			var high: float = entry["max"] + HYSTERESIS
-			if speed >= low and speed <= high:
-				return current
-	for entry in GAITS:
-		if speed >= float(entry["min"]) and speed <= float(entry["max"]):
-			return entry["clip"]
-	return "Sprint_Loop"
+		if str(entry["clip"]) != current:
+			continue
+		var low := maxf(float(entry["min"]) - HYSTERESIS, IDLE_EXIT)
+		if speed >= low and speed <= float(entry["max"]) + HYSTERESIS:
+			return current
+	return target
 
 
 func _update_air_state(delta: float) -> void:
@@ -216,7 +238,12 @@ func _update_air_state(delta: float) -> void:
 	if grounded and velocity.y <= 0.0:
 		_airborne = false
 		_air_time = 0.0
-		visual.play_action(JUMP_LAND)
+		if move_speed <= LANDING_SKIP_SPEED:
+			# Pendaratan pelan/diam: klip mendarat sebentar, lalu lanjut gait.
+			visual.play_landing(JUMP_LAND)
+		# Kalau masih berlari, tidak ada yang perlu dilakukan: frame yang sama
+		# langsung memanggil set_locomotion(gait) di _apply_animation, jadi
+		# lari -> lompat -> lari tersambung tanpa jeda dan tanpa pose jongkok.
 	elif not visual.is_busy() and visual.gait != AIR_FALL:
 		visual.set_air_clip(AIR_FALL, 1.1)
 
