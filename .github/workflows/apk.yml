@@ -478,6 +478,7 @@ jobs:
           require "launcher/backdrop.gd" launcher/backdrop.gdc launcher/backdrop.gd launcher/backdrop.gd.remap
           require "launcher/chunk_policy.gd" launcher/chunk_policy.gdc launcher/chunk_policy.gd launcher/chunk_policy.gd.remap
           require "launcher/chunk_store.gd" launcher/chunk_store.gdc launcher/chunk_store.gd launcher/chunk_store.gd.remap
+          require "launcher/boot_trace.gd" launcher/boot_trace.gdc launcher/boot_trace.gd launcher/boot_trace.gd.remap
           require "bootstrap/base.pck" bootstrap/base.pck
           require "bootstrap/base.json" bootstrap/base.json
           # Ilustrasi tidak wajib: kalau tidak ikut, launcher memakai latar polos.

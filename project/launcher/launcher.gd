@@ -2,12 +2,15 @@ extends Control
 ## Launcher v2. Network blocks are never mounted; only a verified complete pack is.
 const Policy = preload("res://launcher/chunk_policy.gd")
 const Store = preload("res://launcher/chunk_store.gd")
+const Trace = preload("res://launcher/boot_trace.gd")
 const MANIFEST_URL := "https://github.com/KyokoApp/Godot/releases/latest/download/content-v2.json"
 const PENDING := "user://content_boot_pending"
 const TEMP := Store.ROOT + "download.part"
 const GAME := "res://src/game/main.tscn"
 
 var _status: Label
+var _version: Label
+var _previous_stage := ""
 var _bar: ProgressBar
 var _buttons: HBoxContainer
 var _request: HTTPRequest
@@ -23,6 +26,7 @@ var _next := 0
 
 
 func _ready() -> void:
+	_previous_stage = Trace.start()
 	_build_ui()
 	DirAccess.make_dir_recursive_absolute(Store.ROOT)
 	_recovery = FileAccess.file_exists(PENDING)
@@ -31,6 +35,7 @@ func _ready() -> void:
 		DirAccess.remove_absolute(PENDING)
 	_active = Store.read_index(Store.ACTIVE)
 	_seed = Store.read_index(Store.SEED_INDEX)
+	_show_version()
 	if not _recovery:
 		Store.cleanup()
 	_request = HTTPRequest.new()
@@ -125,6 +130,22 @@ func _build_ui() -> void:
 		else:
 			button.pressed.connect(_launch)
 	_buttons.hide()
+	# Versi konten (hash rilis) supaya pengguna bisa memastikan build mana yang
+	# sedang jalan saat melaporkan masalah, plus jejak sesi sebelumnya.
+	_version = Label.new()
+	_version.name = "ContentVersion"
+	_version.add_theme_font_size_override("font_size", 14)
+	_version.add_theme_color_override("font_color", Color("8f86ab"))
+	_version.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
+	_version.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	add_child(_version)
+	_version.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	_version.offset_left = 20
+	_version.offset_right = 460
+	_version.offset_top = -34
+	_version.offset_bottom = -6
+	if not _previous_stage.is_empty() and _previous_stage != Trace.READY:
+		_status.text = "Sesi sebelumnya berhenti di tahap: %s" % _previous_stage
 	# UI lengkap sudah berdiri: penanda boot tidak diperlukan lagi. Kalau ada
 	# bagian di atas yang gagal, penanda ini tetap terlihat sebagai jejak.
 	boot.hide()
@@ -156,6 +177,8 @@ func _manifest_done(
 		_offer("Manifest tidak kompatibel. Main offline atau periksa APK terbaru.")
 		return
 	_remote = data
+	Trace.write("manifest ok")
+	_show_version()
 	if _matching_local():
 		_busy = false
 		_launch()
@@ -172,6 +195,13 @@ func _manifest_done(
 	_request.request_completed.disconnect(_manifest_done)
 	_request.request_completed.connect(_download_done)
 	await _download_next()
+
+
+func _show_version() -> void:
+	if _version == null:
+		return
+	var version := str(_remote.get("version", _seed.get("version", "")))
+	_version.text = "konten: %s" % (version if not version.is_empty() else "tidak diketahui")
 
 
 func _matching_local() -> bool:
@@ -268,9 +298,12 @@ func _launch() -> void:
 			marker.store_string(str(_active.sha256))
 			marker.close()
 		if not ProjectSettings.load_resource_pack(path, true):
+			Trace.write("pack gagal")
 			_status.text = "Paket gagal dibuka. Tutup dan buka aplikasi untuk pemulihan."
 			return # Never mix a partially mounted pack with another build in this process.
+	Trace.write("pack terpasang")
 	_bar.value = 100
 	# Editor/tests may use unpacked gameplay; production APK has only the bundled seed.
 	if get_tree().change_scene_to_file(GAME) != OK:
+		Trace.write("scene gagal")
 		_status.text = "Konten gagal dibuka. Tutup dan buka aplikasi untuk pemulihan."

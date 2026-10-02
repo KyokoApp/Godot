@@ -23,6 +23,11 @@ const ClipBanner = preload("res://src/game/ui/clip_banner.gd")
 const Catalog = preload("res://src/game/animation/catalog.gd")
 const PerformancePanel = preload("res://src/game/performance_panel.gd")
 const ShaderWarmup = preload("res://src/game/loading/shader_warmup.gd")
+## Jejak boot ditulis langsung ke berkas yang sama dengan launcher (lihat
+## project/launcher/boot_trace.gd). Tidak boleh preload skrip launcher di sini:
+## main.gd ikut ke PCK sedangkan launcher/* justru dikecualikan dari PCK.
+const BOOT_TRACE := "user://boot_trace.txt"
+const BOOT_READY := "game ready"
 const FIRE_ICON = preload("res://src/game/ui/flame.svg")
 const SETTINGS_ICON = preload("res://src/game/ui/settings.svg")
 const SPEED_ICON = preload("res://src/game/ui/speed.svg")
@@ -369,6 +374,20 @@ func _process(_delta: float) -> void:
 func _confirm_boot() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
+	# Jejak untuk mendiagnosis "aplikasi berhenti": kalau baris ini tidak pernah
+	# muncul, masalahnya terjadi sebelum gameplay benar-benar siap.
+	_write_boot_marker()
+
+
+func _write_boot_marker() -> void:
+	var file := FileAccess.open(BOOT_TRACE, FileAccess.READ_WRITE)
+	if file == null:
+		file = FileAccess.open(BOOT_TRACE, FileAccess.WRITE)
+	if file == null:
+		return
+	file.seek_end()
+	file.store_line("%s %s" % [Time.get_datetime_string_from_system(false, true), BOOT_READY])
+	file.close()
 	# Produksi saja; tes terisolasi memakai alurnya sendiri.
 	if DisplayServer.get_name() != "headless" and (
 			get_tree().current_scene == self or warmup_requested):

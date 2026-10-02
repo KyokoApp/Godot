@@ -41,10 +41,16 @@ func _run() -> void:
 			"ada" if art.texture != null else "tidak ada (latar polos)")
 	var status := launcher.get("_status") as Label
 	_check(status != null and not status.text.is_empty(), "Teks status launcher kosong")
+	var version := launcher.find_child("ContentVersion", true, false) as Label
+	_check(version != null, "Label versi konten tidak ada di launcher")
+	if version != null:
+		print("[apk-launcher-test] label versi: ", version.text)
 	var policy: GDScript = load("res://launcher/chunk_policy.gd") as GDScript
 	_check(policy != null, "chunk_policy.gd tidak ada di paket utama APK")
 	var store: GDScript = load("res://launcher/chunk_store.gd") as GDScript
 	_check(store != null, "chunk_store.gd tidak ada di paket utama APK")
+	var trace: GDScript = load("res://launcher/boot_trace.gd") as GDScript
+	_check(trace != null, "boot_trace.gd tidak ada di paket utama APK")
 	_finish()
 
 
