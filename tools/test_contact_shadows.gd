@@ -62,7 +62,7 @@ func _run() -> void:
 		await process_frame
 	await RenderingServer.frame_post_draw
 	var off: Image = root.get_texture().get_image()
-	_check(not contact.visible, "Contact shadow masih terlar saat dimatikan")
+	_check(not contact.visible, "Contact shadow masih terlihat saat dimatikan")
 	# 2) Diagnosa: quad + blend harus tampil. Kalau langkah ini gagal, masalahnya
 	#    di penggambaran, bukan di hitungan sinar.
 	contact.enabled = true
@@ -84,7 +84,8 @@ func _run() -> void:
 	await RenderingServer.frame_post_draw
 	var depths: Image = root.get_texture().get_image()
 	print("[contact-test] kedalaman di titik uji=%.4f (0 berarti buffer kosong)"
-		% depths.get_pixelv(camera.unproject_position(Vector3(2.0, 0.05, 0.0))).r)
+		% depths.get_pixelv(
+			_screen_point(camera, depths, Vector3(2.0, 0.05, 0.0))).r)
 	material.set_shader_parameter("debug_depth", false)
 	# 3) Efek nyala: hitungan sinar sungguhan.
 	for frame in range(4):
@@ -95,8 +96,8 @@ func _run() -> void:
 	off.save_png("user://contact-shadow-off.png")
 	# Matahari di barat (-x): bayangan harus jatuh ke +x (belakang balok),
 	# sisi -x (menghadap matahari) harus tetap terang.
-	var shadow_point := camera.unproject_position(Vector3(2.0, 0.05, 0.0))
-	var lit_point := camera.unproject_position(Vector3(-4.0, 0.05, 0.0))
+	var shadow_point := _screen_point(camera, on, Vector3(2.0, 0.05, 0.0))
+	var lit_point := _screen_point(camera, on, Vector3(-4.0, 0.05, 0.0))
 	var shadow_darkening: float = _darkening(off, on, shadow_point)
 	var lit_darkening: float = _darkening(off, on, lit_point)
 	print("[contact-test] gelap di belakang balok=", shadow_darkening,
@@ -110,10 +111,12 @@ func _run() -> void:
 		% [shadow_darkening, lit_darkening])
 	# Sakelar grafis harus benar-benar mematikan lapisan ini.
 	contact.enabled = false
-	await process_frame
+	for frame in range(4):
+		await process_frame
 	_check(not contact.visible, "Contact shadow masih terlihat setelah dimatikan")
 	contact.enabled = true
-	await process_frame
+	for frame in range(4):
+		await process_frame
 	_check(contact.visible, "Contact shadow tidak menyala setelah diaktifkan")
 	world.queue_free()
 	await process_frame
@@ -121,9 +124,17 @@ func _run() -> void:
 	quit(0 if _failures == 0 else 1)
 
 
-## Seberapa besar sebuah titik menggelap saat efek NYALA dibanding MATI.
-## Rata-rata patch 7x7 supaya satu piksel noise renderer software tidak
-## menentukan hasil.
+## Titik dunia -> piksel pada GAMBAR hasil tangkapan. Penting: CI merender di
+## 480x270 sementara viewport proyek tetap 1280x720, jadi hasil unproject harus
+## diskalakan. Tanpa ini piksel jatuh di luar gambar dan A/B selalu membaca 0.
+func _screen_point(camera: Camera3D, image: Image, world_point: Vector3) -> Vector2:
+	var viewport_size: Vector2 = camera.get_viewport().get_visible_rect().size
+	var at: Vector2 = camera.unproject_position(world_point)
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return at
+	return at * (Vector2(image.get_size()) / viewport_size)
+
+
 ## Rata-rata kecerahan seluruh gambar, untuk diagnosa tampil/tidak.
 func _mean_luma(image: Image) -> float:
 	var total := 0.0
