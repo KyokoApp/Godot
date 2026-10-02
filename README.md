@@ -717,7 +717,7 @@ mesh + `grow` 22 mm), mirror pose, denyut mengikuti kecepatan, dan gerbang tes
 - Belum diuji di HP; gerbang CI (parse, compile, tes kulit/animasi) tidak
   mengunci warna lama, jadi tidak ada tes yang perlu diubah.
 
-### 2026-10-02 — build CI diparalelkan: ± 8 menit jadi ± 3 menit
+### 2026-10-02 — build CI diparalelkan: 12 menit jadi 4 menit
 
 Update project ini nyicil (satu perubahan kecil = satu push), tapi build lama ± 8 menit
 dan hampir seluruhnya di render Mobile Vulkan software (lavapipe, runner 2 core).
@@ -740,3 +740,19 @@ apt 29 s, tes headless 34 s, ekspor 27 s.
 - Job `build` agregat mempertahankan nama status check lama (`apk / build`)
   supaya required check di Settings tidak perlu diubah.
 - Verifikasi lokal: YAML valid, 60/60 blok `run:` lolos `bash -n`.
+
+Hasil ukur setelah dipecah (run `37002663347`, semuanya hijau):
+
+| Pekerjaan | Durasi | Isi |
+|---|---|---|
+| render-c | 3,6 menit | avatar dekat + pemandangan dunia |
+| render-b | 3,1 menit | HUD + warmup GPU |
+| render-a | 2,1 menit | rumput, api, casting, tapak, sinar, senja |
+| gate | 1,8 menit | lint + compile + tes headless |
+| package | 1,1 menit | PCK + APK + audit + rilis (jalan setelah gate) |
+| ringkasan | 0,3 menit | komentar angka/pratinjau/log |
+
+**Waktu yang dirasakan pengguna (push → run selesai): 11 menit 59 s → 4 menit 6 s.**
+Bottleneck sekarang render-c (render avatar); kalau nanti mau lebih cepat lagi,
+langkah termurah adalah memindah "Render pemandangan dunia" ke render-a yang
+masih punya ruang, atau memecah render-c jadi dua pekerjaan.

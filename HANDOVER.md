@@ -1,8 +1,12 @@
 # STATUS TERBARU — prioritas dari pengguna
 
-- 2026-10-02 (sesi ini) — **BUILD CI DIPARALELKAN: ± 8 MENIT JADI ± 3 MENIT**
+- 2026-10-02 (sesi ini) — **BUILD CI DIPARALELKAN: 12 MENIT JADI 4 MENIT**
   (keluhan pengguna: "build di github lama banget dah kan update nya nyicil
   nyicil" — tiap perubahan kecil membayar build penuh).
+  - Hasil ukur: run lama `36999636319` 11 menit 59 s (push → selesai), run baru
+    `37002663347` 4 menit 6 s. Durasi pekerjaan: render-c 3,6 menit (bottleneck,
+    render avatar), render-b 3,1, render-a 2,1, gate 1,8, package 1,1,
+    ringkasan 0,3. Semua hijau.
   - Data run lama `36999636319`: total langkah 467 s, dan **302 s di antaranya
     render Mobile Vulkan software** (lavapipe, runner 2 core): avatar 67 s, HUD
     50 s, warmup 49 s, dunia 37 s, rumput 31 s, sinar 20 s, tapak 15 s, senja
