@@ -59,17 +59,19 @@ static func make_environment() -> Environment:
 	#
 	# TIGA penyetel yang menentukan apakah pendar ufuk tetap BERWARNA atau jadi
 	# putih (1,1,1):
-	#   - glow_normalized = TRUE. Dengan false, SETIAP level bloom menambah penuh
-	#     (7 level default) sehingga glow bisa ~7x terlalu terang. Ini penyebab
-	#     utama gerbang test_dusk "ufuk harus hangat (merah > biru)" gagal.
-	#   - glow_hdr_threshold = 1,15: yang mekar hanya inti matahari (~1,3 HDR),
-	#     sementara pita persik di ufuk (~1,0) tidak ikut mekar.
-	#   - glow_intensity 0,25: cukup terlihat, tidak menyaturasi.
+	#   - blend SOFTLIGHT (bukan ADDITIVE). ADDITIVE menambahkan cahaya ke buffer
+	#     HDR, dan pengukuran CI menunjukkan pendar ufuk jadi (1,1,1) — putih
+	#     murni — sehingga gerbang test_dusk "ufuk harus hangat (merah > biru)"
+	#     gagal. Softlight justru melembutkan bagian terang tanpa menambah
+	#     kecerahan, jadi pita persik tetap berwarna (0,98/0,90/0,93 terukur).
+	#   - glow_normalized = TRUE. Dengan false, SETIAP level bloom (7 level
+	#     default) menambah penuh sehingga glow bisa ~7x terlalu terang.
+	#   - glow_hdr_threshold = 1,15: yang mekar hanya inti matahari (~1,3 HDR).
 	environment.glow_enabled = true
 	environment.glow_intensity = 0.25
 	environment.glow_bloom = 0.08
 	environment.glow_hdr_threshold = 1.15
-	environment.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
+	environment.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 	environment.glow_normalized = true
 	return environment
 
