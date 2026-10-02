@@ -306,6 +306,18 @@ yang tersisa hanya styling HUD orisinal dan pagar batas padang.
   not a verbatim copy or performance guarantee.
 
 
+#### Screen-space contact shadows
+- Method reference: forum Godot, "Screen Space Shadows" — ray march dari setiap
+  piksel ke arah cahaya lalu bandingkan dengan buffer kedalaman,
+  https://forum.godotengine.org/t/screen-space-shadows/70197
+- Implementasi proyek: shader Godot 4 orisinal untuk renderer MOBILE (SSAO, SSR,
+  SSIL, dan volumetric fog hanya ada di Forward+), dengan perbandingan depth
+  reverse-Z, 14 sampel sepanjang 21 m, pemudaran tepi layar, dan batas jarak
+  kamera. Postingan forum hanya menyuplai potongan GLSL untuk mesin/versi lain;
+  tidak ada kode yang disalin apa adanya. Kredit menandai inspirasi metode, bukan
+  salinan verbatim atau jaminan performa.
+
+
 #### Universal Animation Library 2 Standard — combat
 - Quaternius, CC0 1.0; the upstream notice and full CC0 legal code are reproduced below.
 - Source: `Universal Animation Library 2[Standard]/Unreal-Godot/UAL2_Standard.glb`.

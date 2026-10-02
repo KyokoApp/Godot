@@ -897,3 +897,34 @@ Lanjutan permintaan "partikel ungu". Cicilan ini hanya partikel.
   merah dan > hijau), dan jumlah titik ikut tercetak di diagnostik.
 
 Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-02 — suasana senja: glow, matahari lebih jingga, contact shadow ala ray tracing
+
+Lanjutan permintaan "suasana senja dengan sinar cahaya dan kesan seperti ray
+tracing". Cicilan ini hanya suasana/pencahayaan.
+
+- `environment/dusk_environment.gd` — glow (bloom) dinyalakan: satu-satunya efek
+  "sinema" yang didukung renderer Mobile. Yang mekar hanya bagian terang (pendar
+  matahari, kunang-kunang ungu, tepi bercahaya). Matahari jadi lebih jingga dan
+  sedikit lebih kuat (1,0 / 0,83 / 0,64, energi 1,05), cahaya sekitar lebih
+  dingin dan redup supaya terbaca senja — tapi tidak turun jauh, karena janji
+  `test_dusk` adalah "bukan malam pekat". Kabut ikut menghangat.
+- `environment/dusk_sky.gdshader` — zenith lavender lebih dalam, ufuk lebih
+  persik. Warna sengaja tidak dibuat gelap sekali.
+- `god_rays/sun_rays.gd(+shader)` — sinar matahari sedikit lebih kuat
+  (0,16 → 0,22) dan lebih hangat.
+- `god_rays/contact_shadows.gd(+shader)` (BARU) — sinar ditembakkan dari setiap
+  piksel ke arah matahari lalu dibandingkan dengan buffer kedalaman: bayangan
+  KONTAK di kaki objek yang selalu hilang dari shadow map. Inilah "kesan ray
+  tracing"-nya, karena SSAO/SSR/SSIL/volumetric fog di Godot hanya ada di
+  Forward+, sementara proyek ini memakai renderer Mobile. 14 sampel sepanjang
+  21 m, hanya untuk piksel di depan kamera (hemat ± setengah layar), memudar di
+  tepi layar, dan pengerasan 0,74 supaya menanam bukan menghitamkan. Adaptasi
+  teknik Screen Space Shadows dari forum Godot (kreditnya di LICENSES.txt).
+- Tombol baru di panel grafis: **Contact shadow: Nyala/Mati (tes FPS)** —
+  kalau HP terasa berat, matikan dulu yang ini.
+- `tools/test_contact_shadows.gd` (gerbang baru) — render A/B (efek nyala vs
+  mati) memastikan bayangan jatuh di sisi BERLAWANAN dari matahari, bukan
+  terbalik. Ini menangkap bug flip NDC Y dan salah baca reverse-Z.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.

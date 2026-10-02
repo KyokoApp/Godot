@@ -29,6 +29,6 @@ void fragment() {
 			decay *= 0.96;
 		}
 	}
-	ALBEDO = vec3(1.0, 0.86, 0.66);
+	ALBEDO = vec3(1.0, 0.82, 0.58);
 	ALPHA = rays * strength / 16.0;
 }

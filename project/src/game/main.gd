@@ -12,6 +12,7 @@ const Orbit = preload("res://src/game/orbit_camera.gd")
 const Joystick = preload("res://src/game/virtual_joystick.gd")
 const Dusk = preload("res://src/game/environment/dusk_environment.gd")
 const SunRays = preload("res://src/game/god_rays/sun_rays.gd")
+const ContactShadows = preload("res://src/game/god_rays/contact_shadows.gd")
 const WorldAudio = preload("res://src/game/audio/world_audio.gd")
 const Footsteps = preload("res://src/game/audio/footsteps.gd")
 const FootFire = preload("res://src/game/foot_fire/foot_fire_trail.gd")
@@ -51,6 +52,7 @@ var _visual: Character
 var _orbit: Orbit
 var _sun: DirectionalLight3D
 var _sun_rays: SunRays
+var _contact: ContactShadows
 var _audio: WorldAudio
 var _footsteps: Footsteps
 var _foot_fire: FootFire
@@ -138,6 +140,11 @@ func _build_effects() -> void:
 	_sun_rays = SunRays.new()
 	_sun_rays.camera = _orbit.camera
 	_orbit.camera.add_child(_sun_rays)
+	# Contact shadow (sinar vs buffer kedalaman) mendaftar lebih dulu supaya
+	# digabung sebelum sinar matahari menambah cahaya.
+	_contact = ContactShadows.new()
+	_contact.camera = _orbit.camera
+	_orbit.camera.add_child(_contact)
 	_audio = WorldAudio.new()
 	_audio.listener = _orbit.camera
 	add_child(_audio)
@@ -284,6 +291,7 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 	content.add_child(title)
 	_performance = PerformancePanel.new()
 	_performance.rays = _sun_rays
+	_performance.contact = _contact
 	_performance.sun = _sun
 	_performance.grass = _grass
 	_performance.character = _visual

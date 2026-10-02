@@ -26,9 +26,11 @@ static func make_environment() -> Environment:
 	environment.background_mode = Environment.BG_SKY
 	environment.sky = sky
 	# Senja yang terang: cahaya sekitar biru lavender, bukan biru malam pekat.
+	# Sedikit lebih dingin dan lebih redup dari siang hari supaya terbaca SENJA,
+	# tapi jangan turun jauh: janji test_dusk adalah "bukan malam pekat".
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color(0.62, 0.68, 0.86)
-	environment.ambient_light_energy = 0.58
+	environment.ambient_light_color = Color(0.55, 0.61, 0.82)
+	environment.ambient_light_energy = 0.52
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	# Kabut jarak (bukan volumetrik): bukit jauh memucat seperti cat air, langit
 	# tidak ikut berkabut supaya awan dan pendar matahari tetap tajam.
@@ -42,7 +44,8 @@ static func make_environment() -> Environment:
 	environment.fog_depth_end = 1400.0
 	environment.fog_density = 0.20
 	environment.fog_depth_curve = 1.30
-	environment.fog_light_color = Color(0.70, 0.70, 0.80)
+	# Kabut senja menghangat: sampah cahaya matahari yang rendah.
+	environment.fog_light_color = Color(0.76, 0.70, 0.80)
 	environment.fog_light_energy = 0.55
 	environment.fog_sky_affect = 0.0
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
@@ -50,13 +53,24 @@ static func make_environment() -> Environment:
 	environment.adjustment_enabled = true
 	environment.adjustment_saturation = 1.12
 	environment.adjustment_contrast = 1.06
+	# Glow (bloom) — satu-satunya efek "sinema" yang renderer Mobile dukung.
+	# Yang mekar hanya bagian terang: pendar matahari, kunang-kunang ungu, dan
+	# tepi bercahaya. Tanpa ini suasana senja terlihat datar seperti siang hari.
+	environment.glow_enabled = true
+	environment.glow_intensity = 0.32
+	environment.glow_bloom = 0.08
+	environment.glow_hdr_threshold = 1.0
+	environment.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
+	environment.glow_normalized = false
 	return environment
 
 
 static func make_sunlight() -> DirectionalLight3D:
 	var light := DirectionalLight3D.new()
 	light.name = "Sunlight"
-	light.light_color = Color(1.0, 0.88, 0.74)
-	light.light_energy = 0.98
+	# Matahari senja: lebih jingga dan lebih kuat dari siang hari, bayangan
+	# memanjang karena sudutnya rendah.
+	light.light_color = Color(1.0, 0.83, 0.64)
+	light.light_energy = 1.05
 	light.shadow_enabled = true
 	return light

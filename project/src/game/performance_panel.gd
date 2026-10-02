@@ -6,6 +6,8 @@ const Character = preload("res://src/game/mannequin.gd")
 
 var rays: MeshInstance3D
 var rays_enabled := true
+var contact: MeshInstance3D
+var contact_enabled := true
 var sun: DirectionalLight3D
 var grass: Node3D
 var character: Character
@@ -14,6 +16,7 @@ var grass_enabled := true
 var shadows_enabled := false
 var uncapped := false
 var _rays_button: Button
+var _contact_button: Button
 var _quality: Button
 var _grass_button: Button
 var _shadows: Button
@@ -31,6 +34,7 @@ func _ready() -> void:
 	_shadows = _button("", toggle_shadows)
 	_limit = _button("", toggle_limit)
 	_rays_button = _button("", toggle_rays)
+	_contact_button = _button("", toggle_contact)
 	_stats = Label.new()
 	_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_stats.add_theme_font_size_override("font_size", 16)
@@ -68,6 +72,7 @@ func _load_settings() -> void:
 	shadows_enabled = bool(config.get_value("graphics", "shadows", false))
 	uncapped = bool(config.get_value("graphics", "uncapped", false))
 	rays_enabled = bool(config.get_value("graphics", "sun_rays", true))
+	contact_enabled = bool(config.get_value("graphics", "contact_shadow", true))
 
 
 func _save_settings() -> void:
@@ -77,6 +82,7 @@ func _save_settings() -> void:
 	config.set_value("graphics", "shadows", shadows_enabled)
 	config.set_value("graphics", "uncapped", uncapped)
 	config.set_value("graphics", "sun_rays", rays_enabled)
+	config.set_value("graphics", "contact_shadow", contact_enabled)
 	config.save(SETTINGS)
 
 
@@ -100,6 +106,9 @@ func apply_settings() -> void:
 	if rays != null:
 		rays.set("enabled", rays_enabled)
 	_rays_button.text = "Sinar matahari: " + ("Nyala" if rays_enabled else "Mati (tes FPS)")
+	if contact != null:
+		contact.set("enabled", contact_enabled)
+	_contact_button.text = ("Contact shadow: " + ("Nyala" if contact_enabled else "Mati (tes FPS)"))
 	_frames.clear()
 	_elapsed = 0.0
 	_stats.text = "Mengukur frame…\n* Tetap mengikuti VSync / layar HP"
@@ -113,6 +122,12 @@ func toggle_quality() -> void:
 
 func toggle_grass() -> void:
 	grass_enabled = not grass_enabled
+	apply_settings()
+	_save_settings()
+
+
+func toggle_contact() -> void:
+	contact_enabled = not contact_enabled
 	apply_settings()
 	_save_settings()
 

@@ -1,6 +1,6 @@
 extends RefCounted
 ## Render resource asli: material tanah, rumput MultiMesh, avatar ber-skinning,
-## lapisan tubuh atas, tapak api, aura cepat, dan sinar matahari.
+## lapisan tubuh atas, tapak api, aura cepat, sinar matahari, dan contact shadow.
 
 const Field = preload("res://src/game/world/field.gd")
 const Character = preload("res://src/game/mannequin.gd")
@@ -10,6 +10,7 @@ const Burst = preload("res://src/game/fire_burst.gd")
 const FootFire = preload("res://src/game/foot_fire/foot_fire_trail.gd")
 const SpeedAura = preload("res://src/game/speed/speed_aura.gd")
 const SunRays = preload("res://src/game/god_rays/sun_rays.gd")
+const ContactShadows = preload("res://src/game/god_rays/contact_shadows.gd")
 const STAGES := 14
 
 
@@ -131,6 +132,12 @@ static func _rays(world: Node3D) -> void:
 	rays.visible = true
 	rays.material_override.set_shader_parameter("source_uv", Vector2(0.5, 0.5))
 	rays.material_override.set_shader_parameter("strength", 0.16)
+	# Contact shadow memakai shader baru (satu layar penuh, 14 sampel): panaskan
+	# di sini supaya tidak ada sekali jeda saat efek pertama kali tampil.
+	var contact := ContactShadows.new()
+	world.add_child(contact)
+	contact.set_process(false)
+	contact.visible = true
 
 
 static func _add_grass(world: Node3D, mesh: Mesh, source: ShaderMaterial,

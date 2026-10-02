@@ -86,6 +86,7 @@ jobs:
                 tools/test_skin_shell.gd tools/test_camera_zoom.gd \
                 tools/test_scenery.gd tools/test_island.gd \
                 tools/render_world.gd \
+                tools/test_contact_shadows.gd \
                 project/src/game/world/scenery.gd \
                 project/src/game/world/water.gdshader \
                 project/src/game/mannequin.gd \
@@ -467,6 +468,22 @@ jobs:
           fi
           grep -F '[sun-rays-test] HASIL: OK' sun-rays.log
 
+      - name: Render contact shadow dan arah bayangannya (Mobile Vulkan)
+        run: |
+          set +e
+          timeout 180 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --audio-driver Dummy --resolution 480x270 \
+            --script "$GITHUB_WORKSPACE/tools/test_contact_shadows.gd" 2>&1 | tee contact-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' contact-test.log; then
+            tail -60 contact-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[contact-test] HASIL: OK' contact-test.log
+
       - name: Render langit senja, awan, matahari dan keterbacaan tanah (Mobile Vulkan)
         run: |
           set +e
@@ -489,6 +506,13 @@ jobs:
         with:
           name: sun-rays-screenshots
           path: ~/.local/share/godot/app_userdata/**/sun-rays-test.png
+      - name: Simpan screenshot contact shadow
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: contact-shadow-screenshots
+          path: ~/.local/share/godot/app_userdata/**/contact-shadow-*.png
+          if-no-files-found: ignore
 
       - name: Simpan screenshot motion flair
         if: always()
@@ -963,7 +987,7 @@ jobs:
               alllogs/*.log 2>/dev/null | tail -40
             grep -hE '\[scenery-test\]|\[world-render-test\]|\[island-test\]' \
               alllogs/*.log 2>/dev/null | tail -30
-            grep -hE '\[dusk-test\]|\[sun-rays-test\]' \
+            grep -hE '\[dusk-test\]|\[sun-rays-test\]|\[contact-test\]' \
               alllogs/*.log 2>/dev/null | tail -10
             echo '```'
             if [ -s alllogs/gate_fetch-assets.log ]; then

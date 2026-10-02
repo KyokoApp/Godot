@@ -10,10 +10,13 @@ shader_type sky;
 
 uniform vec3 sun_direction = vec3(-0.94, 0.09, -0.32);
 uniform vec4 sun_color : source_color = vec4(1.0, 0.88, 0.74, 1.0);
-uniform vec4 zenith_color : source_color = vec4(0.341, 0.463, 0.761, 1.0);
-uniform vec4 middle_color : source_color = vec4(0.502, 0.600, 0.831, 1.0);
-uniform vec4 horizon_color : source_color = vec4(0.706, 0.702, 0.824, 1.0);
-uniform vec4 glow_color : source_color = vec4(0.972, 0.808, 0.757, 1.0);
+// Warna senja yang lebih dalam dari siang hari: zenith lavender tua, ufuk
+// menghangat ke persik. Angkanya sengaja tidak turun jauh — test_dusk menjamin
+// langit tetap TERANG (zenith biru > 0,30), bukan malam pekat.
+uniform vec4 zenith_color : source_color = vec4(0.300, 0.420, 0.710, 1.0);
+uniform vec4 middle_color : source_color = vec4(0.470, 0.560, 0.800, 1.0);
+uniform vec4 horizon_color : source_color = vec4(0.730, 0.690, 0.790, 1.0);
+uniform vec4 glow_color : source_color = vec4(0.980, 0.780, 0.700, 1.0);
 uniform bool glow_enabled = true;
 uniform bool clouds_enabled = true;
 uniform float cloud_coverage = 0.46;

@@ -36,7 +36,7 @@ func _process(_delta: float) -> void:
 	var size := camera.get_viewport().get_visible_rect().size
 	var uv := camera.unproject_position(source) / size
 	var edge := minf(minf(uv.x, 1.0 - uv.x), minf(uv.y, 1.0 - uv.y))
-	strength = smoothstep(0.0, 0.12, edge) * 0.16
+	strength = smoothstep(0.0, 0.12, edge) * 0.22
 	visible = strength > 0.0001
 	_material.set_shader_parameter("source_uv", uv)
 	_material.set_shader_parameter("aspect", size.x / maxf(size.y, 1.0))

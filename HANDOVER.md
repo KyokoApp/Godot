@@ -1,5 +1,36 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-02 (sesi ini, cicilan 8) — **SUASANA SENJA: GLOW, MATAHARI JINGGA,
+  CONTACT SHADOW ALA RAY TRACING** (lanjutan "suasana senja dengan sinar cahaya
+  dan kesan seperti ray tracing").
+  - `src/game/environment/dusk_environment.gd`: **glow/bloom dinyalakan**
+    (glow_intensity 0,32, hdr_threshold 1,0) — satu-satunya efek sinema yang
+    renderer Mobile dukung. Matahari lebih jingga/kuat (1,0/0,83/0,64, energi
+    1,05), ambient lebih dingin+redup (0,55/0,61/0,82, energi 0,52), kabut
+    menghangat (0,76/0,70/0,80). TIDAK dibuat gelap sekali: janji `test_dusk`
+    "bukan malam pekat" (zenith biru > 0,30, tanah hijau > 0,22).
+  - `src/game/environment/dusk_sky.gdshader`: zenith lavender lebih dalam
+    (0,30/0,42/0,71), ufuk lebih persik (0,73/0,69/0,79).
+  - `src/game/god_rays/sun_rays.gd(+shader)`: kekuatan sinar 0,16 → 0,22, warna
+    lebih hangat.
+  - `src/game/god_rays/contact_shadows.gd(+shader)` BARU: ray march dari setiap
+    piksel ke arah matahari vs buffer kedalaman → bayangan KONTAK di kaki objek
+    yang selalu hilang dari shadow map. Renderer Mobile tidak punya SSAO/SSR/
+    SSIL/volumetric fog (semuanya Forward+), jadi ini cara mendapat kesan
+    "ray tracing". 14 sampel / 21 m, hanya piksel < 55 m dari kamera, fade tepi
+    layar, strength 0,74. render_priority -101 (menggelapkan SEBELUM sinar
+    matahari menambah cahaya). Adaptasi forum Godot "Screen Space Shadows",
+    kredit di `project/licenses/LICENSES.txt`.
+  - `src/game/main.gd`: node dipasang di kamera orbit. `src/game/performance_panel.gd`:
+    tombol baru **Contact shadow: Nyala/Mati (tes FPS)**
+    (`graphics.contact_shadow`, default nyala). `loading/warmup_samples.gd`:
+    shader baru ikut dipanaskan.
+  - `tools/test_contact_shadows.gd` GERBANG BARU: render A/B (nyala vs mati)
+    memastikan bayangan jatuh di sisi berlawanan dari matahari (belakang balok
+    > 3x gelapnya sisi depan, sisi depan < 0,01) — menangkap bug flip NDC Y dan
+    salah baca reverse-Z. Terdaftar di job render-a + berkas wajib + ringkasan.
+  - Sisa antrian cicilan (JANGAN digabung): shader air.
+
 - 2026-10-02 (sesi ini, cicilan 7) — **PARTIKEL UNGU** (lanjutan "partikel
   ungu"). Cicilan ini hanya partikel.
   - `src/game/world/scenery.gd`: `MOTE_COLOR` ffe9b0 → **c9a6ff** (krem → ungu).
