@@ -119,7 +119,7 @@ func _run() -> void:
 	stick.set("direction", Vector2.RIGHT)
 	for frame in range(24):
 		await physics_frame
-	var running_speed: float = player.get("move_speed")
+	var speed_before_dash: float = player.get("move_speed")
 	var dash_button: Button = game.get("_dash")
 	var dash_point := dash_button.get_global_rect().get_center()
 	_touch(20, dash_point, true)
@@ -128,8 +128,8 @@ func _run() -> void:
 		"Dash tidak memakai klip Melee_Hook: %s" % visual.clip)
 	for frame in range(3):
 		await physics_frame
-	_check(player.move_speed > running_speed + 1.5,
-		"Dash tidak mempercepat badan: %.2f -> %.2f" % [running_speed, player.move_speed])
+	_check(player.move_speed > speed_before_dash + 1.5,
+		"Dash tidak mempercepat badan: %.2f -> %.2f" % [speed_before_dash, player.move_speed])
 	_check(float(player.get("dash_cooldown")) > 0.0, "Dash tidak memasang cooldown")
 	stick.set("direction", Vector2.ZERO)
 	for frame in range(30):

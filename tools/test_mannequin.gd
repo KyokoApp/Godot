@@ -112,9 +112,16 @@ func _test_metrics(character: Character) -> void:
 		var band: Vector2 = expected[clip]
 		_check(speed >= band.x and speed <= band.y,
 			"Kecepatan alami %s di luar dugaan: %.2f m/s" % [clip, speed])
-	# Offset tanah: klip rendah butuh koreksi naik, klip berdiri tidak.
+	# Offset tanah: klip rendah butuh koreksi naik. Pose berdiri jadi PATOKAN,
+	# jadi ia hanya boleh digeser setinggi margin sol kaki (SOLE) — klip lain
+	# justru harus digeser lebih jauh daripada pose berdiri.
 	var idle_offset := float(character.metrics["Idle_Loop"]["ground_offset"])
-	_check(idle_offset == 0.0, "Pose berdiri justru digeser: %.3f" % idle_offset)
+	_check(idle_offset <= Metrics.SOLE + 0.001,
+		"Pose berdiri digeser lebih jauh dari margin sol: %.3f" % idle_offset)
+	var walk_offset := float(character.metrics["Walk_Loop"]["ground_offset"])
+	_check(idle_offset <= walk_offset + 0.001,
+		"Pose berdiri digeser lebih jauh dari klip jalan: %.3f > %.3f"
+			% [idle_offset, walk_offset])
 	for clip in ["Roll", "Slide_Start", "Slide_Exit", "Death01"]:
 		var offset := float(character.metrics[clip]["ground_offset"])
 		_check(offset >= 0.0 and offset <= Metrics.MAX_OFFSET,
