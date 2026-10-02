@@ -27,6 +27,31 @@ func _capture(character: Character) -> Image:
 	return root.get_texture().get_image()
 
 
+## Posisi tulang seluruh badan (3 angka per tulang), dipakai untuk menilai
+## pemulihan pose dari ANGKANYA, bukan dari piksel: bahan kulit berdenyut
+## mengikuti TIME, jadi gambarnya berubah sendiri walau badannya diam.
+func _pose_snapshot(character: Character) -> PackedFloat32Array:
+	var skeleton := character.skeleton
+	var data := PackedFloat32Array()
+	data.resize(skeleton.get_bone_count() * 3)
+	for bone in range(skeleton.get_bone_count()):
+		var position := skeleton.get_bone_pose_position(bone)
+		data[bone * 3] = position.x
+		data[bone * 3 + 1] = position.y
+		data[bone * 3 + 2] = position.z
+	return data
+
+
+## Selisih tulang terburuk terhadap pose acuan (meter).
+func _pose_gap(rest: PackedFloat32Array, character: Character) -> float:
+	var skeleton := character.skeleton
+	var worst := 0.0
+	for bone in range(skeleton.get_bone_count()):
+		var wanted := Vector3(rest[bone * 3], rest[bone * 3 + 1], rest[bone * 3 + 2])
+		worst = maxf(worst, wanted.distance_to(skeleton.get_bone_pose_position(bone)))
+	return worst
+
+
 func _difference(first: Image, second: Image) -> int:
 	var changed := 0
 	for y in range(first.get_height()):
@@ -83,6 +108,7 @@ func _test_clip(character: Character) -> void:
 		character.animation.play(Catalog.play_name(motion), 0)
 		character.animation.advance(0.2)
 		var before: Image = await _capture(character)
+		var rest := _pose_snapshot(character)
 		character.start_cast()
 		character.cast_layer._physics_process(0.20)
 		var cast: Image = await _capture(character)
@@ -91,5 +117,8 @@ func _test_clip(character: Character) -> void:
 		cast.save_png("user://casting-" + motion + "-test.png")
 		character.cast_layer._physics_process(0.4)
 		var after: Image = await _capture(character)
-		_check(_difference(before, after) < 15, "Pose tidak pulih setelah casting: " + motion)
-		print("[cast-render-test] ", motion, " changed pixels=", changed)
+		var gap := _pose_gap(rest, character)
+		_check(gap < 0.001, "Pose tidak pulih setelah casting: %s (selisih %.4f m)"
+			% [motion, gap])
+		print("[cast-render-test] ", motion, " changed pixels=", changed,
+			" selisih pose pulih=%.5f m" % gap)
