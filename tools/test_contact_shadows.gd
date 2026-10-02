@@ -75,6 +75,10 @@ func _run() -> void:
 	var flat_mean := _mean_luma(flat)
 	_check(flat_mean < 0.9 * _mean_luma(off),
 		"Quad contact shadow tidak tampil sama sekali (diagnosa): %f" % flat_mean)
+	# WAJIB dimatikan lagi: kalau lupa, tangkapan "efek nyala" di bawah sebenarnya
+	# masih mode flat dan A/B mengukur 0,19 di SEMUA titik (persis gejala run
+	# 37027511070 yang gagal karena baris ini hilang).
+	material.set_shader_parameter("debug_flat", false)
 	# 3) Efek nyala: hitungan sinar sungguhan.
 	for frame in range(4):
 		await process_frame
