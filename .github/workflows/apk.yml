@@ -68,6 +68,9 @@ jobs:
           # "pohon berkas ter-revert" ketahuan dalam hitungan detik.
           for wajib in tools/fetch_assets.sh tools/render_mannequin.gd \
                 tools/test_skin_shell.gd tools/test_camera_zoom.gd \
+                tools/test_scenery.gd tools/render_world.gd \
+                project/src/game/world/scenery.gd \
+                project/src/game/world/water.gdshader \
                 project/src/game/mannequin.gd \
                 project/src/game/character/skin_shell.gd \
                 project/src/game/character/skin_shell.gdshader \
@@ -198,6 +201,21 @@ jobs:
             tail -60 skin-test.log | while IFS= read -r line; do echo "::error::$line"; done
             exit 1
           fi
+
+      # Pemandangan di luar pagar: bukit, laut, tebing, reruntuhan, kunang.
+      # Gerbang ini murni angka (tanpa render) supaya cepat dijalankan.
+      - name: Tes pemandangan dunia (headless)
+        run: |
+          set +e
+          timeout 180 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_scenery.gd" 2>&1 | tee scenery-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' scenery-test.log; then
+            tail -60 scenery-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[scenery-test]' scenery-test.log
           grep -F '[skin-test]' skin-test.log
 
       # Zoom kamera: cubit dua jari harus benar-benar menempel ke karakter.
@@ -486,6 +504,32 @@ jobs:
           fi
           grep -F '[avatar-render-test] HASIL: OK' avatar-render.log
 
+      # Empat sudut pandang dunia (pemandangan/jalan/tebing/laut) supaya bentuk
+      # bukit, jalur tanah, tebing, dan laut benar-benar terlihat di gambar.
+      - name: Render pemandangan dunia (Mobile Vulkan software)
+        if: always()
+        run: |
+          set +e
+          timeout 300 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --script "$GITHUB_WORKSPACE/tools/render_world.gd" 2>&1 | tee world-render.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' world-render.log; then
+            tail -60 world-render.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[world-render-test] HASIL: OK' world-render.log
+
+      - name: Simpan screenshot dunia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: world-screenshots
+          path: ~/.local/share/godot/app_userdata/**/world-*-test.png
+          if-no-files-found: ignore
+
       - name: Simpan screenshot avatar
         if: always()
         uses: actions/upload-artifact@v4
@@ -508,6 +552,8 @@ jobs:
             echo '```'
             grep -hE '\[skin-test\]|kulit:|biaya avatar|camera-zoom-test|gerak klip|tinggi avatar|katalog klip' \
               skin-test.log zoom-test.log performance-test.log avatar-render.log 2>/dev/null | tail -40
+            grep -hE '\[scenery-test\]|\[world-render-test\]' \
+              scenery-test.log world-render.log 2>/dev/null | tail -30
             echo '```'
             if [ -s fetch-assets.log ]; then
               echo

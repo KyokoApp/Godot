@@ -37,6 +37,9 @@ var _materials: Array[ShaderMaterial] = []
 var _covers := 0
 var _built := false
 var _pulse := 0.0
+## Frame terakhir kali pose disalin, supaya cadangan di `_process` tidak bekerja
+## dua kali saat sinyal `skeleton_updated` sudah berbunyi.
+var _mirrored_frame := -1
 
 
 ## Bangun kulit untuk satu kerangka. Aman dipanggil ulang (mis. sesudah isi ulang).
@@ -117,6 +120,17 @@ func cover_count() -> int:
 
 func is_ready() -> bool:
 	return _built
+
+
+## Cadangan: sinyal `skeleton_updated` hanya berbunyi saat kerangka benar-benar
+## dipakai menggambar (di headless tidak). Kalau belum ada salinan di frame ini,
+## salin di sini — kulit tidak boleh pernah tertinggal dari badannya.
+func _process(_delta: float) -> void:
+	if not _built or _source == null:
+		return
+	if _mirrored_frame == Engine.get_process_frames():
+		return
+	_mirror_poses(_source)
 
 
 ## Denyut kulit dari kecepatan badan: 0 diam, 1 lari penuh.
@@ -203,3 +217,4 @@ func _mirror_poses(source: Skeleton3D) -> void:
 	for index in range(_meshes.size()):
 		_meshes[index].global_transform = _sources[index].global_transform
 	pulses += 1
+	_mirrored_frame = Engine.get_process_frames()
