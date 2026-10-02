@@ -359,7 +359,7 @@ func _input(event: InputEvent) -> void:
 func _physics_process(delta: float) -> void:
 	if _orbit == null or _player == null:
 		return
-	_orbit.follow(_player.global_position + Vector3(0, 0.55, 0), delta)
+	_orbit.follow(_player.global_position + _orbit.focus_offset, delta)
 	_footsteps.update_motion(delta, _player.move_speed)
 	_speed_aura.update_motion(delta, _player.move_speed,
 		_player.boosted and _player.grounded)

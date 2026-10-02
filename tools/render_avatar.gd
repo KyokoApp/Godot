@@ -48,10 +48,15 @@ func _run() -> void:
 			effect.set_process(false)
 	# Sudut & jarak: depan untuk wajah, samping untuk kain, belakang untuk
 	# rambut belakang dan rok (di situlah tembus badan paling terlihat).
+	# "leher": kamera setinggi leher dan sedikit dari bawah, karena leher hanya
+	# terlihat jelas dari arah itu. "kain": jarak sedang dari samping, untuk
+	# menilai kain yang kaku/menembus baju lain.
 	var views := [
 		{"distance": 0.40, "name": "dekat", "yaw": PI, "pitch": 0.18},
+		{"distance": 0.50, "name": "leher", "yaw": PI, "pitch": -0.12, "focus": 1.34},
 		{"distance": 0.85, "name": "kepala", "yaw": PI, "pitch": 0.18},
 		{"distance": 2.20, "name": "badan", "yaw": PI, "pitch": 0.26},
+		{"distance": 1.25, "name": "kain", "yaw": PI * 0.5, "pitch": 0.02, "focus": 0.80},
 		{"distance": 2.20, "name": "samping", "yaw": PI * 0.5, "pitch": 0.20},
 		{"distance": 2.20, "name": "belakang", "yaw": 0.0, "pitch": 0.20},
 	]
@@ -59,6 +64,7 @@ func _run() -> void:
 		orbit.distance = float(view["distance"])
 		orbit.yaw = float(view["yaw"])
 		orbit.pitch = float(view["pitch"])
+		orbit.focus_offset = Vector3(0.0, float(view.get("focus", 0.55)), 0.0)
 		await _capture("avatar-%s" % view["name"])
 	# Pose bergerak HARUS lewat joystick: kalau klip dipanggil langsung, pemain
 	# menimpanya lagi tiap frame dan semua gambar jadi pose diam (kejadian di
@@ -66,6 +72,7 @@ func _run() -> void:
 	var player: CharacterBody3D = game.get("_player")
 	var stick: Control = game.get("_joystick")
 	var visual: Node = game.get("_visual")
+	orbit.focus_offset = Vector3(0.0, 0.55, 0.0)
 	orbit.yaw = PI * 0.5
 	stick.set("direction", Vector2.UP)
 	for frame in range(90):

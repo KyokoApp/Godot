@@ -19,6 +19,10 @@ var exclusions: Array[Control] = []
 var yaw := 0.0
 var pitch := 0.30
 var distance := DEFAULT_DISTANCE
+## Titik bidik kamera relatif ke pemain. Dulu angka 0,55 ini ditulis di main.gd;
+## sekarang jadi properti supaya tes render bisa membidik leher atau kain tanpa
+## mengubah perilaku permainan (nilainya tidak pernah diubah selain tes).
+var focus_offset := Vector3(0.0, 0.55, 0.0)
 var arm: SpringArm3D
 var camera: Camera3D
 var _touches: Dictionary[int, Vector2] = {}
