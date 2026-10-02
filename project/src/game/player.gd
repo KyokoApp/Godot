@@ -1,5 +1,5 @@
 extends CharacterBody3D
-## Pemain di padang 100 m. Gerak mengikuti animasi, bukan sebaliknya.
+## Pemain di pulau 1 km. Gerak mengikuti animasi, bukan sebaliknya.
 ##
 ## Satu keputusan gait per frame dipakai bersama oleh badan dan animasi:
 ##   kecepatan input → gait (dengan histeresis) → kecepatan alami klip × skala
@@ -46,7 +46,10 @@ const SCALE_MIN := 0.62
 const SCALE_MAX := 1.5
 const SCALE_MAX_BOOST := 2.05
 const HYSTERESIS := 0.35
-const BOUNDARY := 0.9
+## Jarak minimum pemain dari garis pantai (meter). Tanjakan pantai 6 m / 70 m,
+## jadi 14 m ke dalam berarti ± 1,2 m di atas permukaan air: pemain berhenti di
+## pasir kering, tidak berdiri tenggelam sampai mata kaki.
+const SHORE_MARGIN := 14.0
 const FALL_RESET := -12.0
 const IDLE := "Idle_Loop"
 const AIR_FALL := "Jump_Loop"
@@ -279,12 +282,16 @@ func _update_air_state(delta: float) -> void:
 
 
 func _keep_inside() -> void:
-	var limit := Field.HALF - BOUNDARY
-	if absf(global_position.x) > limit:
-		global_position.x = clampf(global_position.x, -limit, limit)
+	# Batas pulau adalah GARIS PANTAI, bukan kotak: pemain tidak boleh berenang
+	# keluar. Kalau ia keluar (tergelincur turun tanjakan), ia didorong kembali
+	# ke titik terdekat yang masih di darat lewat proyeksi radial.
+	if field != null and not Field.is_inside(global_position.x, global_position.z,
+			SHORE_MARGIN):
+		var fixed := Field.clamp_inside(
+			Vector2(global_position.x, global_position.z), SHORE_MARGIN)
+		global_position.x = fixed.x
+		global_position.z = fixed.y
 		velocity.x = 0.0
-	if absf(global_position.z) > limit:
-		global_position.z = clampf(global_position.z, -limit, limit)
 		velocity.z = 0.0
 	if global_position.y < FALL_RESET:
 		spawn(Vector2.ZERO)

@@ -3,13 +3,16 @@ extends SceneTree
 ##
 ## Yang diuji adalah JANJI ke pemain, bukan sekadar "tidak ada error":
 ##   1. ada bukit, tebing, laut, reruntuhan batu, dan titik cahaya melayang,
-##   2. susunannya seperti ilustrasi: laut di barat (-x) dan di bawah kaki,
-##      tebing di timur (+x) di luar pagar,
-##   3. TIDAK ADA satu pun yang menambah collision atau masuk ke dalam padang,
-##      jadi fisika/gerak pemain tidak berubah (gerbang lama tetap sah),
+##   2. susunannya mengelilingi PULAU 1 km: laut di segala arah pada permukaan
+##      y = 0, sedangkan bukit, tebing, dan pulau batu berdiri di LUAR garis
+##      pantai (di seberang air) supaya tidak menutupi medan pemain,
+##   3. TIDAK ADA satu pun yang menambah collision atau masuk ke dalam pulau,
+##      jadi fisika/gerak pemain tidak berubah,
 ##   4. jalan tanah benar-benar digambar oleh bahan tanah (parameter shader ada
-##      dan menyala), dan varying world_position benar-benar diisi — dulu tidak,
-##      sehingga seluruh pola tanah (termasuk jalan) membaca satu titik nol.
+##      dan menyala), varying world_position benar-benar diisi — dulu tidak,
+##      sehingga seluruh pola tanah (termasuk jalan) membaca satu titik nol,
+##      dan pita pasir pantai memakai ketinggian tanah supaya mengikuti garis
+##      air yang berliku.
 ##
 ## Angka bentuknya juga dicatat supaya bisa dibaca dari komentar commit.
 
@@ -80,31 +83,57 @@ func _test_parts(scenery: Scenery) -> void:
 		scenery.cliff_count, pillars, emitters])
 
 
-## Susunan seperti ilustrasi: laut barat + lebih rendah dari padang, tebing timur.
+## Susunan pulau 1 km: laut mengelilingi SEMUA arah pada permukaan y = 0, bukit
+## dan tebing di luar garis pantai, pulau batu jauh di barat laut.
 func _test_layout(scenery: Scenery) -> void:
 	var sea_position := scenery.sea.position
-	_check(sea_position.x < -Field.HALF, "Laut tidak di sisi barat: x=%.1f" % sea_position.x)
-	_check(sea_position.y < -3.0, "Laut tidak lebih rendah dari padang: y=%.1f"
-		% sea_position.y)
+	var sea_mesh := scenery.sea.mesh as PlaneMesh
+	_check(sea_mesh != null, "Laut bukan bidang")
+	if sea_mesh != null:
+		# Laut harus menutup SELURUH pulau 1 km, bukan hanya menyamping.
+		_check(sea_mesh.size.x >= Field.SIZE * 2.0,
+			"Laut terlalu kecil untuk mengelilingi pulau: %.0f m" % sea_mesh.size.x)
+	_check(sea_position.x == 0.0 and sea_position.z == 0.0,
+		"Laut tidak mengelilingi pulau: posisi (%.0f, %.0f)"
+		% [sea_position.x, sea_position.z])
+	_check(sea_position.y < Field.terrain_height(0.0, 0.0),
+		"Air tidak lebih rendah dari dataran pulau: y=%.1f" % sea_position.y)
+	for node in scenery.hills.find_children("*", "MeshInstance3D", true, false):
+		_outside_island(node as MeshInstance3D, "Bukit")
 	var cliffs := scenery.get_node_or_null("Cliffs") as MeshInstance3D
 	_check(cliffs != null, "Tebing tidak ditemukan")
 	if cliffs != null:
-		var bounds := cliffs.get_aabb()
-		_check(bounds.position.x > Field.HALF,
-			"Tebing masuk ke dalam padang: x=%.1f" % bounds.position.x)
-		if scenery.island != null:
-			# Pulau harus jauh di laut barat, dan puncaknya di atas permukaan air.
-			var island_bounds := scenery.island.get_aabb()
-			_check(island_bounds.position.x + island_bounds.size.x
-				< -Field.HALF * 4.0,
-				"Pulau terlalu dekat: x=%.1f" % (island_bounds.position.x
-					+ island_bounds.size.x))
-			_check(island_bounds.position.y + island_bounds.size.y
-				> scenery.sea.position.y,
-				"Puncak pulau tenggelam")
-		_notes.append("tata letak: laut y=%.1f x=%.1f, tebing x=%.1f..%.1f"
-			% [sea_position.y, sea_position.x, bounds.position.x,
-			bounds.position.x + bounds.size.x])
+		_outside_island(cliffs, "Tebing")
+	if scenery.island != null:
+		# Pulau batu berdiri di laut barat, jauh dari garis pantai.
+		_outside_island(scenery.island, "Pulau batu")
+		var island_bounds := scenery.island.get_aabb()
+		_check(island_bounds.position.y + island_bounds.size.y > sea_position.y,
+			"Puncak pulau batu tenggelam")
+		var west_coast := -Field.island_radius(PI)
+		_check(island_bounds.position.x + island_bounds.size.x < west_coast - 40.0,
+			"Pulau batu terlalu dekat pantai: x=%.1f (pantai barat %.1f)"
+			% [island_bounds.position.x + island_bounds.size.x, west_coast])
+	var sea_width := sea_mesh.size.x if sea_mesh != null else 0.0
+	_notes.append("tata letak: laut %.0f x %.0f m di y=%.2f mengelilingi pulau 1 km, "
+		+ "bukit & tebing di luar garis pantai"
+		% [sea_width, sea_width, sea_position.y])
+
+
+## Setiap titik pemandangan besar harus berada di LUAR garis pantai (di laut).
+## Bukit atau tebing yang tumbuh di pulau akan menutupi medan tempat pemain
+## berjalan, dan itu tidak kelihatan dari pemeriksaan lain.
+func _outside_island(mesh: MeshInstance3D, label: String) -> void:
+	if mesh == null or mesh.mesh == null:
+		return
+	var arrays := mesh.mesh.surface_get_arrays(0)
+	var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var inside := 0
+	for point in points:
+		if Field.is_inside(point.x, point.z, 0.0):
+			inside += 1
+	_check(inside == 0, "%s punya %d titik di dalam pulau (harus di laut)"
+		% [label, inside])
 
 
 ## Pemandangan tidak boleh menambah collision apa pun: pemain tetap bermain di
@@ -138,6 +167,7 @@ func _test_ground_path() -> void:
 	_check(shader.contains("world_position = (MODEL_MATRIX"),
 		"world_position tidak diisi di vertex(): pola tanah & jalan akan rata")
 	_check(shader.contains("path_enabled"), "Shader tanah tidak punya jalan")
+	_check(shader.contains("shore_low"), "Shader tanah tidak punya pita pasir pantai")
 	var width := _number(material, "path_width")
 	var curve := _number(material, "path_curve")
 	var frequency := _number(material, "path_frequency")

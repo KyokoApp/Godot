@@ -1,11 +1,10 @@
 extends Node3D
-## Padang rumput 100 m × 100 m + mannequin UAL berkulit beranimasi yang
-## digerakkan katalog animasi lengkap (85 klip UAL1 + UAL2) lewat retarget, plus
-## goyangan kain/rambut simulasi verlet.
+## Pulau 1 km × 1 km dengan garis pantai bergelombang + mannequin UAL berkulit
+## beranimasi yang digerakkan katalog animasi lengkap (85 klip UAL1 + UAL2) lewat
+## retarget, plus goyangan kain/rambut simulasi verlet.
 
 const Field = preload("res://src/game/world/field.gd")
 const Scenery = preload("res://src/game/world/scenery.gd")
-const Fence = preload("res://src/game/world/boundary_fence.gd")
 const Grass = preload("res://src/game/grass_field.gd")
 const Player = preload("res://src/game/player.gd")
 const Character = preload("res://src/game/mannequin.gd")
@@ -81,7 +80,7 @@ func _ready() -> void:
 	_build_grass()
 	_build_effects()
 	_build_hud()
-	print("[main] padang %.0f m + mannequin (%d klip) siap" % [
+	print("[main] pulau %.0f m + mannequin (%d klip) siap" % [
 		Field.SIZE, Catalog.clip_count()])
 	_confirm_boot.call_deferred()
 
@@ -99,17 +98,19 @@ func _build_environment() -> void:
 func _build_world() -> void:
 	_field = Field.new()
 	add_child(_field)
-	# Pemandangan di luar pagar: bukit, tebing, laut, reruntuhan batu, titik
-	# cahaya — disusun seperti ilustrasi layar muat. Tanpa collision, jadi
-	# gameplay di dalam padang tidak berubah.
+	# Pemandangan di luar pulau: bukit jauh, tebing batu, laut, reruntuhan batu,
+	# titik cahaya — disusun seperti ilustrasi layar muat. Tanpa collision, jadi
+	# gameplay di pulau tidak berubah.
 	_scenery = Scenery.new()
 	add_child(_scenery)
-	add_child(Fence.new())
 
 
 func _build_player() -> void:
 	_player = Player.new()
 	_player.field = _field
+	# Chunk tanah mengikuti pemain; tanpa ini pulau tidak pernah memuat chunk
+	# baru dan tanahnya berlubang di belakang pemain.
+	_field.player = _player
 	add_child(_player)
 	_visual = Character.new()
 	_visual.name = "Visual"

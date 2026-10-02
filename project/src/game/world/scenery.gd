@@ -1,34 +1,39 @@
 extends Node3D
-## Pemandangan di luar padang latihan, disusun supaya dunia terlihat seperti
-## ilustrasi layar muat (`launcher/art/loading.jpg`): bukit hijau bergelombang,
-## tebing batu di satu sisi, laut di sisi lain, jalan tanah berliku, reruntuhan
-## batu, dan titik cahaya melayang.
+## Pemandangan di sekitar pulau 1 km, disusun supaya dunia terlihat seperti
+## ilustrasi layar muat (`launcher/art/loading.jpg`): laut mengelilingi pulau,
+## deretan bukit jauh di seberang air, tebing batu di timur, jalan tanah
+## berliku, reruntuhan batu, dan titik cahaya melayang.
 ##
-## Semuanya di LUAR pagar 100 m (atau di dalam tapi tanpa collision) supaya
-## gameplay, fisika, dan gerbang yang sudah ada tidak berubah: pemain tetap
-## berjalan di padang yang sama. Bentuknya prosedural (tanpa aset baru), jadi
-## ringan untuk HP dan tidak menambah berkas biner.
+## Semuanya di LUAR garis pantai (atau di dalam pulau tapi tanpa collision)
+## supaya gameplay, fisika, dan gerbang yang sudah ada tidak berubah: pemain
+## tetap berjalan di pulau yang sama. Bentuknya prosedural (tanpa aset baru),
+## jadi ringan untuk HP dan tidak menambah berkas biner.
 ##
 ## Susunannya sengaja mengikuti ilustrasi:
-##   * laut  : sisi -x (barat), tempat matahari terbenam
-##   * tebing: sisi +x, memanjang mengikuti padang
-##   * bukit : cincin di belakang tebing dan di seberang laut
-##   * jalan : tanah di padang, dari tepi timur ke barat daya (lihat ground.gdshader)
-##   * reruntuhan: dua gapura + tiga tiang di dekat jalan, di dalam padang
+##   * laut  : mengelilingi SELURUH pulau (permukaan y = 0, garis pantai pulau)
+##   * tebing: sisi +x, di seberang air, memanjang seperti dinding batu jauh
+##   * bukit : dua cincin di luar garis pantai, terbaca sebagai daratan jauh
+##   * jalan : tanah di pulau, berliku (lihat ground.gdshader)
+##   * reruntuhan: dua gapura + tiga tiang di dekat jalan, di dalam pulau
 
 const Field = preload("res://src/game/world/field.gd")
 const WATER_SHADER = preload("res://src/game/world/water.gdshader")
 const Dusk = preload("res://src/game/environment/dusk_environment.gd")
 
-## Radius cincin bukit pertama dan kedua (di luar pagar 50 m).
-const HILL_RADIUS := 96.0
-const HILL_REACH := 240.0
-const FAR_RADIUS := 300.0
-const FAR_REACH := 620.0
-## Laut: bidang besar di sisi barat, turun 6 m di bawah padang.
-const SEA_LEVEL := -6.0
-const SEA_SIZE := 1600.0
-## Tinggi puncak bukit terdekat (di luar pagar) dan bukit jauh.
+## Radius cincin bukit. HARUS di luar radius pulau maksimum (ISLAND_MAX 380 +
+## dua lekukan pantai 30 = 410 m): kalau tidak, bukitnya tumbuh dari tengah
+## pulau dan menutupi medan tempat pemain berjalan.
+const HILL_RADIUS := 520.0
+const HILL_REACH := 780.0
+const FAR_RADIUS := 820.0
+const FAR_REACH := 1250.0
+## Laut: permukaan air sedikit di bawah nol (sedikit di bawah garis pantai pulau,
+## yang memang berada di tinggi 0) supaya bidang air tidak z-fighting dengan
+## tanah yang persis menyentuh y = 0. Bidangnya 4200 m — jauh melampaui bukit
+## terjauh (1250 m) supaya ujungnya tidak terlihat sebelum ditutup kabut.
+const SEA_LEVEL := -0.15
+const SEA_SIZE := 4200.0
+## Tinggi puncak bukit terdekat (di luar garis pantai) dan bukit jauh.
 const HILL_HEIGHT := 26.0
 const FAR_HEIGHT := 62.0
 ## Warnanya sama dengan ilustrasi: hijau pastel, batu biru keabuan, tanah hangat.
@@ -76,9 +81,9 @@ func _build_sea() -> void:
 	sea.mesh = plane
 	sea.material_override = material
 	sea.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# Bidang diletakkan di barat: pusatnya jauh di luar pagar supaya sisi
-	# terdekatnya (pantai) berada tepat di tepi barat padang.
-	sea.position = Vector3(-SEA_SIZE * 0.5 + 2.0, SEA_LEVEL, 0.0)
+	# Laut mengelilingi SELURUH pulau: satu bidang besar di y = 0 (garis pantai
+	# pulau) yang menutup sampai jauh di luar bukit puncak (± 2100 m).
+	sea.position = Vector3(0.0, SEA_LEVEL, 0.0)
 	add_child(sea)
 
 
@@ -91,10 +96,10 @@ func _build_island() -> void:
 	var indices := PackedInt32Array()
 	# Dua blok: yang utama panjang dan rendah, yang kedua lebih kecil di
 	# belakangnya supaya siluetnya tidak terlihat seperti satu balok.
-	_add_rock_block(vertices, colors, indices, Vector3(-430.0, SEA_LEVEL - 10.0, 46.0),
-		Vector3(74.0, 26.0, 34.0), 3)
-	_add_rock_block(vertices, colors, indices, Vector3(-512.0, SEA_LEVEL - 12.0, 84.0),
-		Vector3(48.0, 20.0, 26.0), 7)
+	_add_rock_block(vertices, colors, indices, Vector3(-760.0, SEA_LEVEL - 12.0, 60.0),
+		Vector3(90.0, 30.0, 44.0), 3)
+	_add_rock_block(vertices, colors, indices, Vector3(-905.0, SEA_LEVEL - 14.0, 130.0),
+		Vector3(60.0, 24.0, 32.0), 7)
 	_commit(vertices, colors, indices, "Island", self)
 	island = get_node("Island") as MeshInstance3D
 
@@ -105,8 +110,10 @@ func _build_hills() -> void:
 	hills = Node3D.new()
 	hills.name = "Hills"
 	add_child(hills)
-	# Cincin bukit terdekat: tinggi bergelombang mengelilingi padang, dengan
-	# celah di sisi barat supaya lautnya terlihat.
+	# Cincin bukit terdekat: bergelombang mengelilingi pulau. Sengaja BERJAUHAN
+	# dari garis pantai (radius 520 m, pulau maksimum ± 410 m) supaya tidak pernah
+	# tumbuh di tanah tempat pemain berjalan. Celah di sisi barat membuat
+	# siluetnya tidak seragam dari segala arah.
 	_add_ridge(HILL_RADIUS, HILL_REACH, HILL_HEIGHT, 0.0, 96, 1.0)
 	# Bukit jauh: lebih tinggi dan lebih pucat (kabut), menutup garis horizon.
 	_add_ridge(FAR_RADIUS, FAR_REACH, FAR_HEIGHT, 0.45, 72, 0.55)
@@ -158,16 +165,17 @@ func angle_difference(a: float, b: float) -> float:
 # ---------------------------------------------------------------- tebing -----
 
 func _build_cliffs() -> void:
-	# Dinding batu di sisi +x (timur), tepat di luar pagar, memanjang seperti di
-	# ilustrasi; dibelah beberapa blok supaya terlihat seperti formasi batu.
+	# Dinding batu di sisi +x (timur), di SEBERANG air (tepat di luar garis
+	# pantai), memanjang seperti di ilustrasi; dibelah beberapa blok supaya
+	# terlihat seperti formasi batu.
 	var vertices := PackedVector3Array()
 	var colors := PackedColorArray()
 	var indices := PackedInt32Array()
 	var blocks := 9
 	# Blok dibuat saling menimpa (lebar 15 m, jarak titik 12,5 m) supaya terbaca
 	# sebagai satu dinding batu, bukan deretan menara. Muka terdekat blok =
-	# base_x - depth/2; depth maksimum 17 m, jadi base_x = Field.HALF + 13 masih
-	# menyisakan 4,5 m dari pagar.
+	# base_x - depth/2; depth maksimum 17 m dan garis pantai terjauh 368 m, jadi
+	# base_x = Field.HALF + 13 menyisakan ± 130 m air di depannya.
 	var base_x := Field.HALF + 13.0
 	for block in range(blocks):
 		var center_z := -Field.HALF + 12.0 + float(block) * 12.5
@@ -272,11 +280,14 @@ func _build_motes() -> void:
 	motes = Node3D.new()
 	motes.name = "LightMotes"
 	add_child(motes)
-	# Tiga titik: dua di sepanjang jalan, satu di dekat reruntuhan.
+	# Tiga titik: dua di sepanjang jalan, satu di dekat reruntuhan. Tingginya
+	# DIHITUNG dari tanah pulau — dulu tanah rata ± 1 m sehingga y tetap masih
+	# aman, sekarang dataran ± 6 m sehingga y tetap akan menenggelamkan motes.
 	var spots: Array[Vector3] = [Vector3(-6.0, 1.4, -14.0), Vector3(-13.0, 1.6, -27.0),
 		Vector3(4.0, 1.3, -8.0)]
 	for spot in spots:
-		motes.add_child(_mote_emitter(spot))
+		var ground: float = Field.terrain_height(spot.x, spot.z)
+		motes.add_child(_mote_emitter(spot + Vector3(0.0, ground, 0.0)))
 
 
 func _mote_emitter(position: Vector3) -> GPUParticles3D:

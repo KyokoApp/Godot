@@ -98,7 +98,7 @@ func _sample(side: int) -> void:
 		return
 	if distance > clearance + margin or _contact[side] or _cooldowns[side] > 0:
 		return
-	if not field.is_inside(point.x, point.z, 0.4):
+	if not Field.is_inside(point.x, point.z, 0.4):
 		return
 	_contact[side] = true
 	_cooldowns[side] = 0.18

@@ -4,12 +4,19 @@ extends SceneTree
 ## reruntuhan, titik cahaya). Angka tidak bisa menilai "mirip", jadi gambar ini
 ## yang dikirim ke komentar commit CI.
 ##
-## Tiga sudut sengaja dipilih seperti komposisi ilustrasi:
-##   * "pemandangan" : dari bukit di dalam padang, menghadap barat ke laut
+## Lima sudut dipilih untuk menilai PULAU 1 km (permintaan: dunia 1 km, sisinya
+## bergelombang seperti pulau — jangan bulat, jangan kotak):
+##   * "pulau"       : seluruh pulau dari udara — ini yang menjawab "bulat/kotak?"
+##   * "pemandangan" : dari dataran menghadap garis pantai dan laut
+##   * "pantai"      : pita pasir dan garis air dari dekat
 ##   * "jalan"       : sejajar jalan tanah, seperti pemain berjalan pulang
-##   * "tebing"      : menghadap tebing batu di timur
+##   * "laut"        : menyusuri garis pantai: bukit, tebing, dan ufuk senja
+##
+## Arah hadap kamera orbit adalah (sin yaw, 0, cos yaw); kamera berdiri di
+## arah berlawanan dari titik bidik.
 
 const Orbit = preload("res://src/game/orbit_camera.gd")
+const Field = preload("res://src/game/world/field.gd")
 var _failures := 0
 
 
@@ -38,17 +45,23 @@ func _run() -> void:
 		if effect != null:
 			effect.set_process(false)
 	var player: CharacterBody3D = game.get("_player")
-	# Sudut pandang mengikuti komposisi ilustrasi: dari tempat tinggi menghadap
-	# laut di barat, lalu jalan, tebing di timur, dan laut dari tepi padang.
+	# Titik pantai diambil dari bentuk pulau sendiri (bukan ditebak), supaya
+	# gambar selalu berdiri di garis air meski garis pantainya berubah.
+	var shore_angle := 2.4
+	var shore := Vector3(cos(shore_angle), 0.0, sin(shore_angle)) \
+		* (Field.island_radius(shore_angle) - 6.0)
+	var outward := PI * 0.5 - shore_angle
 	var views := [
-		{"name": "pemandangan", "distance": 58.0, "yaw": PI * 0.5, "pitch": 0.34,
-			"offset": Vector3(0.0, 5.0, 0.0)},
-		{"name": "jalan", "distance": 16.0, "yaw": PI * 1.25, "pitch": 0.08,
+		{"name": "pulau", "distance": 620.0, "yaw": PI * 0.25, "pitch": 1.10,
+			"offset": Vector3(0.0, 40.0, 0.0)},
+		{"name": "pemandangan", "distance": 120.0, "yaw": outward, "pitch": 0.22,
+			"offset": shore * 0.55 + Vector3(0.0, 4.0, 0.0)},
+		{"name": "pantai", "distance": 26.0, "yaw": outward + 0.6, "pitch": 0.16,
+			"offset": shore + Vector3(0.0, 3.0, 0.0)},
+		{"name": "jalan", "distance": 16.0, "yaw": PI * 0.5, "pitch": 0.08,
 			"offset": Vector3(0.0, 3.0, 0.0)},
-		{"name": "tebing", "distance": 34.0, "yaw": -PI * 0.5, "pitch": 0.22,
-			"offset": Vector3(6.0, 6.0, 0.0)},
-		{"name": "laut", "distance": 70.0, "yaw": PI * 0.5, "pitch": 0.30,
-			"offset": Vector3(-24.0, 8.0, 0.0)},
+		{"name": "laut", "distance": 90.0, "yaw": outward + PI * 0.5,
+			"pitch": 0.30, "offset": shore + Vector3(0.0, 10.0, 0.0)},
 	]
 	for view: Dictionary in views:
 		orbit.focus_offset = view["offset"]

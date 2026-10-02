@@ -34,8 +34,12 @@ static func make_environment() -> Environment:
 	# tidak ikut berkabut supaya awan dan pendar matahari tetap tajam.
 	environment.fog_enabled = true
 	environment.fog_mode = Environment.FOG_MODE_DEPTH
-	environment.fog_depth_begin = 60.0
-	environment.fog_depth_end = 420.0
+	# Dunia sekarang pulau 1 km: bukit di kaki langit berdiri 520-1250 m dari
+	# pemain. Kabut dulu berakhir di 420 m (dunia 100 m), jadi sekarang bukit itu
+	# akan lenyap seluruhnya. 200-1400 m membuat pantai seberang (± 700 m) tetap
+	# terlihat sementara bukit terjauh memucat seperti cat air.
+	environment.fog_depth_begin = 200.0
+	environment.fog_depth_end = 1400.0
 	environment.fog_density = 0.20
 	environment.fog_depth_curve = 1.30
 	environment.fog_light_color = Color(0.70, 0.70, 0.80)

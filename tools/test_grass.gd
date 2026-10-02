@@ -1,5 +1,5 @@
 extends SceneTree
-## Rumput di padang 100 m: anggaran LOD, penempatan di tanah, LOD turun saat jauh.
+## Rumput di pulau 1 km: anggaran LOD, penempatan di tanah, LOD turun saat jauh.
 
 const Field = preload("res://src/game/world/field.gd")
 const FirePet = preload("res://src/game/fire_pet.gd")
@@ -54,18 +54,23 @@ func _run() -> void:
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-50, 20, 0)
 	world.add_child(sun)
-	# Rumput hanya di dalam padang, tidak menembus pagar.
-	_check(field.can_grow(0, 0), "Rumput tidak tumbuh di tengah padang")
-	_check(field.can_grow(-40, 30), "Rumput tidak tumbuh di sudut dalam")
-	_check(not field.can_grow(56, 0), "Rumput tumbuh di luar pagar")
-	_check(not field.can_grow(0, -52), "Rumput tumbuh di luar batas selatan")
-	_check(not field.can_grow(-49.6, -49.6), "Rumput tumbuh menembus pagar")
+	# Rumput hanya di daratan pulau: tidak di laut, tidak menembus garis pantai.
+	_check(field.can_grow(0, 0), "Rumput tidak tumbuh di tengah pulau")
+	_check(field.can_grow(-40, 30), "Rumput tidak tumbuh di dataran dalam")
+	for angle in [0.0, 1.1, 2.2, 3.3, 4.4, 5.5]:
+		var coast := Field.island_radius(angle) + 25.0
+		_check(not field.can_grow(cos(angle) * coast, sin(angle) * coast),
+			"Rumput tumbuh di laut pada sudut %.1f" % angle)
+	var shore_angle := 0.7
+	var shore_radius := Field.island_radius(shore_angle) - 2.0
+	_check(not field.can_grow(cos(shore_angle) * shore_radius,
+		sin(shore_angle) * shore_radius),
+		"Rumput tumbuh menempel garis pantai (pasir harus polos)")
 	for _sample in range(40):
-		var x := randf_range(-52, 52)
-		var z := randf_range(-52, 52)
+		var x := randf_range(-60, 60)
+		var z := randf_range(-60, 60)
 		if ground.can_grow(x, z):
-			_check(absf(x) < Field.HALF and absf(z) < Field.HALF,
-				"Penempatan lolos di luar padang")
+			_check(Field.is_inside(x, z, 0.0), "Penempatan rumput di luar pulau")
 	for frame in range(35):
 		await process_frame
 	_check(field.tiles.size() == Grass.MAX_TILES, "Jumlah tile tidak sesuai batas")

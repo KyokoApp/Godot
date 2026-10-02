@@ -6,7 +6,16 @@ const DEFAULT_DISTANCE := 4.0
 ## Titik pandang ada di setinggi kepala, jadi pada jarak ini yang tampak hanya
 ## sebagian wajah/rambut — bukan lagi seluruh badan seperti batas 2,4 m dulu.
 const MIN_DISTANCE := 0.35
-const MAX_DISTANCE := 8.0
+## Pulau sekarang 1 km × 1 km (garis pantai ± 285-370 m dari pusat). Batas 8 m
+## dulu membuat pemain TIDAK BISA melihat pulau yang baru mereka minta, jadi
+## zoom terjauh dinaikkan ke 620 m: dari ketinggian itu (pitch maksimum 1,15)
+## SELURUH pulau masuk ke layar sekaligus, dan tetap bisa dicubit kembali ke
+## jarak biasa.
+const MAX_DISTANCE := 620.0
+## Di atas jarak ini SpringArm berhenti menabrak tanah: kalau tetap menabrak,
+## kamera terjepit di bukit pertama dan pemain tidak pernah mendapat pemandangan
+## pulau — persis masalah yang membuat zoom jauh terasa rusak.
+const ARM_COLLISION_LIMIT := 30.0
 ## Zoom roda tetikus untuk main di desktop/editor (di HP tetap cubit dua jari).
 const WHEEL_STEP := 1.15
 const MIN_PITCH := 0.10
@@ -144,6 +153,9 @@ func _apply_orbit() -> void:
 	rotation.y = yaw
 	arm.rotation.x = -pitch
 	arm.spring_length = distance
+	# Zoom dekat: jangan tembus tanah/wajah. Zoom jauh: tabrakan dimatikan,
+	# kalau tidak kamera terjepit di bukit pertama dan pulau tak pernah terlihat.
+	arm.collide_with_bodies = distance < ARM_COLLISION_LIMIT
 	if camera != null:
 		# Bidang dekat mengikuti jarak: pada 0,1 m jarak tetap, kamera yang sudah
 		# menempel masih memotong wajah/rambut. Saat menjauh, angka kecil justru

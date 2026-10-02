@@ -9,7 +9,7 @@ uniform vec4 shallow_color : source_color = vec4(0.361, 0.780, 0.741, 1.0);
 uniform vec4 sun_color : source_color = vec4(1.0, 0.86, 0.70, 1.0);
 uniform vec3 sun_direction = vec3(-0.94, 0.10, -0.32);
 uniform float ripple = 0.35;
-uniform float horizon_fade = 380.0;
+uniform float horizon_fade = 1400.0;
 
 varying vec3 world_position;
 

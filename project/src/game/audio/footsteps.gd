@@ -4,7 +4,11 @@ extends Node
 const Field = preload("res://src/game/world/field.gd")
 const WorldAudio = preload("res://src/game/audio/world_audio.gd")
 const Character = preload("res://src/game/mannequin.gd")
-const EDGE_DIRT := 45.0
+## Pita pasir di pantai (meter di atas permukaan air). Samakan dengan
+## `shore_high` di ground.gdshader supaya suara dan warna bertemu di tempat yang
+## sama. Dulu batasnya jarak dari pusat (padang 100 m); pulau 1 km berbentuk
+## tidak beraturan, jadi yang dipakai adalah ketinggian tanah.
+const SHORE_HEIGHT := 2.6
 
 var audio: WorldAudio
 var field: Field
@@ -19,11 +23,11 @@ var _left := false
 
 
 func surface_at(point: Vector3, normal: Vector3) -> String:
-	# Padang ini seluruhnya rumput; hanya cincin tanah di tepi pagar yang beda,
-	# sama seperti warna tepi di ground.gdshader.
+	# Pulau ini seluruhnya rumput; hanya pita pasir di garis air yang beda,
+	# sama seperti pita pasir di ground.gdshader.
 	if normal.y < 0.55:
 		return "stone"
-	if field != null and maxf(absf(point.x), absf(point.z)) > EDGE_DIRT:
+	if field != null and field.surface_height(point.x, point.z) < SHORE_HEIGHT:
 		return "dirt"
 	return "grass"
 

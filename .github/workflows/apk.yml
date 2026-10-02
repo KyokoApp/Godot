@@ -84,7 +84,8 @@ jobs:
           # "pohon berkas ter-revert" ketahuan dalam hitungan detik.
           for wajib in tools/fetch_assets.sh tools/render_mannequin.gd \
                 tools/test_skin_shell.gd tools/test_camera_zoom.gd \
-                tools/test_scenery.gd tools/render_world.gd \
+                tools/test_scenery.gd tools/test_island.gd \
+                tools/render_world.gd \
                 project/src/game/world/scenery.gd \
                 project/src/game/world/water.gdshader \
                 project/src/game/mannequin.gd \
@@ -188,7 +189,7 @@ jobs:
             exit 1
           fi
 
-      # Pemandangan di luar pagar: bukit, laut, tebing, reruntuhan, kunang.
+      # Pemandangan di luar pulau: bukit, laut, tebing, reruntuhan, kunang.
       # Gerbang ini murni angka (tanpa render) supaya cepat dijalankan.
       - name: Tes pemandangan dunia (headless)
         run: |
@@ -203,6 +204,21 @@ jobs:
           fi
           grep -F '[scenery-test]' scenery-test.log
           grep -F '[skin-test]' skin-test.log
+
+      # Bentuk pulau 1 km: tidak bulat, tidak kotak, air di luar, tanah di dalam.
+      # Ini gerbang permintaan "world 1km bergelombang kayak pulau".
+      - name: Tes bentuk pulau 1 km (headless)
+        run: |
+          set +e
+          timeout 180 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_island.gd" 2>&1 | tee island-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' island-test.log; then
+            tail -60 island-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[island-test]' island-test.log
 
       # Zoom kamera: cubit dua jari harus benar-benar menempel ke karakter.
       - name: Tes zoom kamera (headless)
@@ -655,8 +671,9 @@ jobs:
           fi
           grep -F '[avatar-render-test] HASIL: OK' avatar-render.log
 
-      # Empat sudut pandang dunia (pemandangan/jalan/tebing/laut) supaya bentuk
-      # bukit, jalur tanah, tebing, dan laut benar-benar terlihat di gambar.
+      # Lima sudut pandang dunia (pulau/pemandangan/pantai/jalan/laut) supaya
+      # bentuk pulau, garis pantai, jalur tanah, dan laut benar-benar terlihat
+      # di gambar.
       - name: Render pemandangan dunia (Mobile Vulkan software)
         run: |
           set +e
@@ -944,7 +961,7 @@ jobs:
             echo '```'
             grep -hE '\[skin-test\]|kulit:|biaya avatar|camera-zoom-test|gerak klip|tinggi avatar|katalog klip' \
               alllogs/*.log 2>/dev/null | tail -40
-            grep -hE '\[scenery-test\]|\[world-render-test\]' \
+            grep -hE '\[scenery-test\]|\[world-render-test\]|\[island-test\]' \
               alllogs/*.log 2>/dev/null | tail -30
             grep -hE '\[dusk-test\]|\[sun-rays-test\]' \
               alllogs/*.log 2>/dev/null | tail -10

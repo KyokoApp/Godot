@@ -1,7 +1,8 @@
 extends Node3D
-## Rumput berlapis di padang 100 m: 9 tile dekat rapat, sisanya lebih ringan.
-## Jarak tile mengikuti pemain seperti sebelumnya, tetapi batas padang sekarang
-## 100 m (bukan pulau 1 km), jadi kepadatan tetap dan biaya gambar sama.
+## Rumput berlapis di pulau 1 km: 9 tile dekat rapat, sisanya lebih ringan.
+## Jarak tile tetap mengikuti pemain (radius 2 tile = 24 m), jadi kepadatan dan
+## biaya gambar TIDAK berubah walau dunianya kini 1 km — yang menentukan adalah
+## `Field.can_grow()`, bukan ukuran dunia.
 
 const DistantGrass = preload("res://src/game/world/distant_grass.gd")
 const Field = preload("res://src/game/world/field.gd")

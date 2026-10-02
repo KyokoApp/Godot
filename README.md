@@ -775,3 +775,54 @@ yang mengalir dan percikan kecil DIHAPUS, jadi tubuh benar-benar hitam polos.
   tapi tidak lagi mengubah tampilan — mode Ringan kini hanya memengaruhi
   resolusi/bayangan/rumput seperti sebelumnya.
 - Outline putih tipis (5 mm) tidak berubah. Belum diuji di HP.
+
+### 2026-10-02 — dunia jadi PULAU 1 km × 1 km, garis pantai bergelombang
+
+Permintaan pengguna: "world nya 1km, pinggirannya jangan bulat atau kotak tapi
+kayak pulau gitu bergelombang". Cicilan ini HANYA ukuran dunia + bentuk garis
+pantai (palet gelap, rumput rapat, partikel ungu, sinar senja, dan shader air
+adalah cicilan berikutnya — belum dikerjakan).
+
+- `src/game/world/field.gd` ditulis ulang: dunia 1000 × 1000 m (dulu 100 m).
+  Bentuk pulau dari **satu fungsi tinggi** (`terrain_height`) yang dipakai mesh,
+  collider, karakter, rumput, tapak api, dan langkah kaki — itu sebabnya fungsi
+  itu `static` dan murni (tidak boleh bergantung node/frame/urutan build).
+- Garis pantai TIDAK bulat dan TIDAK kotak: radius pulau per sudut dihitung dari
+  noise rendah di sepanjang lingkaran plus dua lekukan sinus. Hasil terukur
+  radius **285-368 m** (berubah **22%** antar arah), luas daratan ± 0,35 km².
+- Medan: dataran ± 6 m di pedalaman, tanjakan pantai 6 m / 70 m (± 8,5% — bisa
+  dilalui), dasar laut turun sampai -9 m supaya pantai tidak terlihat seperti
+  potongan. Perbukitan halus ± 4 m yang melemah mendekati garis air.
+- **Chunk streaming** (bukan satu mesh 1 km): chunk 128 m × 128 m (32 × 32 sel
+  4 m) dibangun SATU per frame mengelilingi pemain, maksimal 7 × 7 = 49 chunk
+  (± 448 m). Grid chunk dipusatkan di (0,0) supaya jangkauannya simetris; chunk
+  yang seluruhnya di laut tidak pernah dibangun (hemat draw call). Terukur
+  ± 36 chunk hidup, selisih tinggi grid vs fungsi analitik 0,014 m.
+- `ground.gdshader`: cincin "tepi padang" (yang butuh jarak ke pusat) dibuang,
+  diganti **pita pasir berbasis ketinggian** (`shore_low` 0,35 → `shore_high`
+  2,6 m). Karena memakai tinggi, pasir mengikuti garis air yang berliku tanpa
+  perlu tahu bentuk pulau. Jalan tanah dilebarkan (lebar 3 m, lekuk 55 m) dan
+  fasanya diganti supaya melintas tepat di titik spawn pemain (0, 7).
+- `world/scenery.gd`: laut jadi SATU bidang 4200 × 4200 m di y = -0,15 yang
+  mengelilingi seluruh pulau (dulu di sisi barat saja). Bukit dipindah ke
+  520-780 m dan 820-1250 m, tebing ke x = 513 m, pulau batu ke x = -760/-905 —
+  semuanya di LUAR garis pantai supaya tidak tumbuh di tanah pemain.
+- `orbit_camera.gd`: zoom terjauh 8 m → **620 m** (pemain harus bisa melihat
+  pulau yang mereka minta). `ARM_COLLISION_LIMIT` 30 m: di atas itu SpringArm
+  berhenti menabrak tanah, kalau tidak kamera terjepit di bukit pertama.
+- `environment/dusk_environment.gd`: kabut 60-420 m → **200-1400 m**. Bukit di
+  kaki langit kini berdiri 520-1250 m dari pemain; dengan kabut lama bukit itu
+  lenyap seluruhnya. Garis horizon air (`horizon_fade`) ikut jadi 1400 m.
+- **Pagar kayu (`world/boundary_fence.gd`) DIHAPUS** — batas dunia sekarang
+  garis pantai. `player.gd`: `_keep_inside()` memakai `Field.clamp_inside()`
+  dengan `SHORE_MARGIN` 14 m (proyeksi radial balik ke darat), bukan lagi
+  klamping kotak. `audio/footsteps.gd`: suara "tanah" bukan lagi cincin di tepi
+  pagar melainkan pita pasir (tinggi tanah < 2,6 m), sama dengan shader.
+- Gerbang baru `tools/test_island.gd` (7 janji): ukuran 1 km, garis pantai
+  bergelombang (bukan bulat/kotak), darat di dalam & air di luar, tinggi mesh =
+  tinggi collider = tinggi pemain, `clamp_inside` selalu balik ke darat, chunk
+  streaming hidup & chunk laut tidak dibuang, rumput tidak menempel pantai.
+  Gerbang lama diperbarui (test_scenery/test_grass/test_audio/render_world) dan
+  satu langkah CI baru menambahkan tes pulau ke `gate`.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.

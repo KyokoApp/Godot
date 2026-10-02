@@ -1,5 +1,63 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-02 (sesi ini, cicilan 4) — **DUNIA JADI PULAU 1 KM × 1 KM, GARIS
+  PANTAI BERGELOMBANG** (permintaan: "world nya 1km, pinggirannya jangan bulat
+  atau kotak tapi kayak pulau gitu bergelombang"). Cicilan ini HANYA ukuran dunia
+  + bentuk garis pantai. Yang DITUNDA (urutan yang disepakati pengguna, jangan
+  digabung): palet gelap, rumput rapat satu warna dengan tanah, partikel ungu,
+  suasana senja/sinar cahaya, shader air.
+  - `src/game/world/field.gd` DITULIS ULANG: dunia 1000 × 1000 m (dulu 100 m).
+    Satu fungsi tinggi `terrain_height()` (static, murni) dipakai mesh, collider,
+    karakter, rumput, tapak api, dan langkah kaki — itulah syarat "pemain tidak
+    mengambang/menembus".
+  - Bentuk pulau: radius per sudut = noise rendah di sepanjang lingkaran +
+    dua lekukan sinus (`COAST_WAVE` 20 m, `COAST_WAVE_B` 10 m). Terukur radius
+    **285-368 m**, berubah **22%** antar arah (lingkaran sempurna = 0%), luas
+    ± 0,35 km². Sengaja radial (bukan bentuk bebas) supaya `clamp_inside()` bisa
+    memakai proyeksi radial dan selalu mengembalikan titik yang benar di darat.
+  - Medan: dataran ± 6 m, tanjakan pantai 6 m / 70 m (± 8,5%), dasar laut -9 m,
+    perbukitan ± 4 m yang melemah di dekat garis air.
+  - Chunk streaming: chunk 128 m (32 × 32 sel 4 m), SATU per frame, radius 3 →
+    49 kandidat, terukur ± 36 hidup. Grid chunk dipusatkan di (0,0)
+    (`_chunk_key(x,z) = floori(x/CHUNK + 0.5)`) supaya jangkauan ± 448 m
+    simetris — tanpa itu sisi barat hanya 384 m dan garis pantai bisa jatuh di
+    luar chunk yang dimuat. Chunk yang seluruhnya di laut dilewati.
+  - `ground.gdshader`: `edge_color`/`half_size`/`edge_begin` DIHAPUS, diganti
+    pita pasir berbasis KETINGGIAN (`shore_low` 0,35 → `shore_high` 2,6 m):
+    pasir mengikuti garis air yang berliku tanpa perlu tahu bentuk pulau. Jalan
+    tanah: lebar 3 m, lekuk 55 m, fasa 0,37 supaya melintas di titik spawn.
+  - `world/scenery.gd`: laut = satu bidang 4200 × 4200 m di y = -0,15
+    mengelilingi SELURUH pulau. Bukit 520-780 m & 820-1250 m, tebing x = 513 m,
+    pulau batu x = -760/-905 (semuanya di luar garis pantai). Motes sekarang
+    di-offset `Field.terrain_height()` — dataran ± 6 m akan menenggelamkannya
+    kalau y-nya tetap.
+  - `orbit_camera.gd`: `MAX_DISTANCE` 8 → **620 m** (pemain harus bisa melihat
+    pulau). `ARM_COLLISION_LIMIT` 30 m: `arm.collide_with_bodies` dimatikan di
+    atas jarak itu, kalau tidak kamera terjepit di bukit pertama dan zoom jauh
+    terasa rusak.
+  - `environment/dusk_environment.gd`: kabut 60-420 → **200-1400 m**, dan
+    `horizon_fade` air 380 → 1400 m. Bukit kaki langit kini 520-1250 m dari
+    pemain; dengan kabut lama bukit itu lenyap seluruhnya.
+  - **`world/boundary_fence.gd` DIHAPUS.** Batas dunia = garis pantai.
+    `player.gd`: `BOUNDARY` 0,9 → `SHORE_MARGIN` 14 m, `_keep_inside()` memakai
+    `Field.clamp_inside()` (proyeksi radial balik ke darat).
+    `audio/footsteps.gd`: `EDGE_DIRT` 45 → `SHORE_HEIGHT` 2,6 m (tinggi tanah),
+    sama dengan `shore_high` shader.
+  - `main.gd`: preload `Fence` dan `add_child(Fence.new())` dibuang;
+    `_field.player = _player` ditambah (tanpa ini chunk tidak pernah mengikuti
+    pemain dan tanahnya berlubang di belakangnya).
+  - Gerbang BARU `tools/test_island.gd` (7 janji) + satu langkah CI baru di
+    `gate`. Gerbang lama diperbarui: `test_scenery.gd` (laut mengelilingi pulau,
+    bukit/tebing/pulau batu diperiksa per-VERTEX dengan `Field.is_inside()`),
+    `test_grass.gd` (titik ± 56/± 49,6 yang dulu "di luar pagar" sekarang di
+    dalam pulau), `test_audio.gd` (titik pesisir dicari dari bentuk pulau),
+    `render_world.gd` (lima sudut: pulau dari udara, pantai, jalan, laut).
+  - Verifikasi: `gdparse` + `gdlint project tools` bersih, `check_scripts.py`
+    bersih (72 berkas), dan seluruh angka gerbang disimulasikan ulang di Python
+    (radius 285-368 m, luas 0,35 km², garis pantai tepat 0,000 m, 36 chunk hidup,
+    selisih grid vs analitik 0,014 m). Godot TIDAK bisa dijalankan di sandbox.
+  - BELUM diuji di HP (sandbox tidak bisa render Godot).
+
 - 2026-10-02 (sesi ini, cicilan 2) — **KULIT MANNEQUIN: HITAM POLOS** (garis
   energi & percikan dibuang; lanjutan "hitam gelap + outline putih tipis").
   - `src/game/character/skin_shell.gdshader`: perhitungan `band`/`vein`/
