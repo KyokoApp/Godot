@@ -15,9 +15,9 @@ shader_type spatial;
 
 render_mode cull_back, depth_draw_opaque, diffuse_burley, specular_schlick_ggx;
 
-uniform vec4 skin_dark : source_color = vec4(0.085, 0.105, 0.185, 1.0);
-uniform vec4 skin_light : source_color = vec4(0.235, 0.310, 0.465, 1.0);
-uniform vec4 vein_color : source_color = vec4(0.36, 0.86, 0.92, 1.0);
+uniform vec4 skin_dark : source_color = vec4(0.150, 0.195, 0.300, 1.0);
+uniform vec4 skin_light : source_color = vec4(0.330, 0.420, 0.575, 1.0);
+uniform vec4 vein_color : source_color = vec4(0.55, 0.95, 1.0, 1.0);
 uniform vec4 rim_color : source_color = vec4(0.62, 0.78, 1.0, 1.0);
 uniform float vein_scale = 16.5;
 uniform float vein_speed = 0.20;
@@ -44,18 +44,19 @@ void fragment() {
 	// kaki, jadi siluetnya terbaca walau jarak kamera jauh.
 	float height_mix = clamp(0.5 + 0.5 * normalize(VERTEX + vec3(0.0, 0.9, 0.0)).y, 0.0, 1.0);
 	vec3 base = mix(skin_dark.rgb, skin_light.rgb, height_mix);
-
-	// Pola energi diagonal yang mengalir naik: dua lapis supaya tidak terlihat
-	// seperti garis-garis pabrik.
+	// Bercak halus: badan tidak boleh terlihat seperti plastik rata, tapi juga
+	// tidak boleh bergaris seperti perban.
 	vec2 flow_uv = vec2(VERTEX.x + VERTEX.z * 0.6, VERTEX.y * body_scale);
+	base *= 0.93 + 0.15 * shell_hash(floor(flow_uv * 9.0));
 	float band = sin((flow_uv.x + flow_uv.y) * vein_scale - TIME * vein_speed * 6.283185);
 	float band_b = sin((flow_uv.x * 0.6 - flow_uv.y * 1.3) * vein_scale * 0.7
 		+ TIME * vein_speed * 4.1);
-	// Garis tipis yang menyala di puncak gelombang, bukan pita lebar: |sin|
-	// dipangkatkan tinggi supaya hanya bagian dekat puncaknya yang terang.
-	// `vein_width` mengatur ketebalannya (makin besar makin tipis).
-	float sharp = mix(6.0, 16.0, clamp(vein_width * 5.0, 0.0, 1.0));
-	float vein = pow(abs(band), sharp) + pow(abs(band_b), sharp) * 0.6;
+	// Garis energi TIPIS di puncak gelombang, bukan pita lebar: ambangnya dekat
+	// 1,0 sehingga hanya bagian sempit di sekitar puncak |sin| yang menyala.
+	// `vein_width` mengatur ketebalannya (makin besar makin lebar).
+	float threshold = clamp(1.0 - vein_width * 0.35, 0.0, 0.999);
+	float vein = smoothstep(threshold, 1.0, abs(band))
+		+ smoothstep(threshold, 1.0, abs(band_b)) * 0.55;
 	vein = clamp(vein, 0.0, 1.0);
 
 	// Denyut: menguat saat pemain bergerak (pulse) dan saat menyerang/mantra
@@ -63,8 +64,8 @@ void fragment() {
 	float wave = 0.5 + 0.5 * sin(VERTEX.y * 6.0 - TIME * (2.0 + 4.0 * pulse));
 	float beat = mix(0.35, 1.0, wave) * (0.35 + 0.65 * pulse + 0.5 * charge);
 
-	vec3 albedo = mix(base, vein_color.rgb, vein * 0.55 * (0.5 + 0.5 * beat));
-	albedo += vein_color.rgb * vein * beat * 0.22;
+	vec3 albedo = mix(base, vein_color.rgb, vein * 0.70);
+	albedo += vein_color.rgb * vein * beat * 0.25;
 
 	// Percikan kecil tetap di permukaan supaya kulit tidak terlihat datar.
 	float sparkle = shell_hash(floor(flow_uv * 26.0)) * smoothstep(0.985, 1.0,
