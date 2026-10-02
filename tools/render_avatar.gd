@@ -48,15 +48,25 @@ func _run() -> void:
 			effect.set_process(false)
 	# Sudut & jarak: depan untuk wajah, samping untuk kain, belakang untuk
 	# rambut belakang dan rok (di situlah tembus badan paling terlihat).
-	# "leher": kamera setinggi leher dan sedikit dari bawah, karena leher hanya
-	# terlihat jelas dari arah itu. "kain": jarak sedang dari samping, untuk
-	# menilai kain yang kaku/menembus baju lain.
+	# "leher": kamera sedikit dari bawah, karena leher hanya terlihat jelas dari
+	# arah itu. "kain"/"kain_belakang": jarak sedang, untuk menilai kain yang
+	# kaku atau menembus baju lain. Titik bidik diambil dari TULANG (bukan angka
+	# meter yang ditebak): skala impor FBX sempat membuat bidikan leher mengarah
+	# ke langit.
+	var player: CharacterBody3D = game.get("_player")
+	var stick: Control = game.get("_joystick")
+	var visual: Node = game.get("_visual")
+	var avatar: Skeleton3D = visual.get("avatar") if visual != null else null
 	var views := [
 		{"distance": 0.40, "name": "dekat", "yaw": PI, "pitch": 0.18},
-		{"distance": 0.50, "name": "leher", "yaw": PI, "pitch": -0.12, "focus": 1.34},
+		{"distance": 0.45, "name": "leher", "yaw": PI, "pitch": -0.10, "bone": "Bip001 Neck",
+			"lift": 0.02},
 		{"distance": 0.85, "name": "kepala", "yaw": PI, "pitch": 0.18},
 		{"distance": 2.20, "name": "badan", "yaw": PI, "pitch": 0.26},
-		{"distance": 1.25, "name": "kain", "yaw": PI * 0.5, "pitch": 0.02, "focus": 0.80},
+		{"distance": 1.40, "name": "kain", "yaw": PI * 0.5, "pitch": 0.04,
+			"bone": "Bip001 Pelvis", "lift": 0.05},
+		{"distance": 1.30, "name": "kain_belakang", "yaw": PI * 0.25, "pitch": 0.06,
+			"bone": "Bip001 Spine1", "lift": 0.05},
 		{"distance": 2.20, "name": "samping", "yaw": PI * 0.5, "pitch": 0.20},
 		{"distance": 2.20, "name": "belakang", "yaw": 0.0, "pitch": 0.20},
 	]
@@ -64,14 +74,12 @@ func _run() -> void:
 		orbit.distance = float(view["distance"])
 		orbit.yaw = float(view["yaw"])
 		orbit.pitch = float(view["pitch"])
-		orbit.focus_offset = Vector3(0.0, float(view.get("focus", 0.55)), 0.0)
+		orbit.focus_offset = Vector3(0.0, _focus_height(view, player, avatar), 0.0)
 		await _capture("avatar-%s" % view["name"])
+	_report_heights(player, avatar)
 	# Pose bergerak HARUS lewat joystick: kalau klip dipanggil langsung, pemain
 	# menimpanya lagi tiap frame dan semua gambar jadi pose diam (kejadian di
 	# versi pertama tes ini — HUD-nya masih tertulis Idle_Loop).
-	var player: CharacterBody3D = game.get("_player")
-	var stick: Control = game.get("_joystick")
-	var visual: Node = game.get("_visual")
 	orbit.focus_offset = Vector3(0.0, 0.55, 0.0)
 	orbit.yaw = PI * 0.5
 	stick.set("direction", Vector2.UP)
@@ -103,6 +111,34 @@ func _run() -> void:
 	for frame in range(4):
 		await process_frame
 	quit(0 if _failures == 0 else 1)
+
+
+## Tinggi bidik kamera (relatif ke pemain): 0,55 m seperti di permainan, atau
+## tinggi tulang yang disebut view. Dipakai supaya bidikan tidak bergantung pada
+## skala impor FBX.
+func _focus_height(view: Dictionary, player: Node3D, avatar: Skeleton3D) -> float:
+	if avatar == null or player == null or not view.has("bone"):
+		return 0.55
+	var bone := avatar.find_bone(str(view["bone"]))
+	if bone < 0:
+		return 0.55
+	var world := (avatar.global_transform * avatar.get_bone_global_pose(bone)).origin.y
+	return world - player.global_position.y + float(view.get("lift", 0.0))
+
+
+## Tinggi tulang penting dalam dunia — dipakai untuk memastikan skala avatar
+## (skala impor FBX pernah membuat perhitungan bidikan salah).
+func _report_heights(player: Node3D, avatar: Skeleton3D) -> void:
+	if avatar == null or player == null:
+		return
+	var neck := avatar.find_bone("Bip001 Neck")
+	var head := avatar.find_bone("Bip001 Head")
+	if neck < 0 or head < 0:
+		return
+	var neck_y := (avatar.global_transform * avatar.get_bone_global_pose(neck)).origin.y
+	var head_y := (avatar.global_transform * avatar.get_bone_global_pose(head)).origin.y
+	print("::notice::tinggi avatar: pemain=%.3f leher=%.3f kepala=%.3f" % [
+		player.global_position.y, neck_y, head_y])
 
 
 func _capture(name: String) -> void:
