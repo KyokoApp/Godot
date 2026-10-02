@@ -120,7 +120,7 @@ func _test_pinch_in(orbit: Orbit) -> void:
 ## bawah tanah, dan bidang dekatnya ikut mengecil.
 func _test_camera_geometry(orbit: Orbit, character: Character) -> void:
 	var camera := orbit.camera
-	var head := character.avatar.find_bone("Bip001 Head")
+	var head := character.avatar.find_bone("Head")
 	_check(head >= 0, "Tulang kepala avatar tidak ditemukan")
 	if head < 0:
 		return
@@ -161,7 +161,7 @@ func _test_pinch_out(orbit: Orbit, character: Character) -> void:
 	# Bidang dekat kembali normal saat jauh, dan kamera tidak menempel lagi.
 	_check(orbit.camera.near > 0.09, "Bidang dekat tidak kembali saat jauh: %.3f"
 		% orbit.camera.near)
-	var head := character.avatar.find_bone("Bip001 Head")
+	var head := character.avatar.find_bone("Head")
 	var head_point: Vector3 = (character.avatar.global_transform \
 		* character.avatar.get_bone_global_pose(head)).origin
 	var gap := orbit.camera.global_position.distance_to(head_point)

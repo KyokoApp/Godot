@@ -60,16 +60,16 @@ func _run() -> void:
 	var avatar: Skeleton3D = visual.get("avatar") if visual != null else null
 	var views := [
 		{"distance": 0.40, "name": "dekat", "yaw": PI, "pitch": 0.18},
-		{"distance": 0.45, "name": "leher", "yaw": PI, "pitch": -0.10, "bone": "Bip001 Neck",
+		{"distance": 0.45, "name": "leher", "yaw": PI, "pitch": -0.10, "bone": "neck_01",
 			"lift": 0.02},
 		{"distance": 0.85, "name": "kepala", "yaw": PI, "pitch": 0.18},
 		{"distance": 2.20, "name": "badan", "yaw": PI, "pitch": 0.26},
 		{"distance": 1.40, "name": "kain", "yaw": PI * 0.5, "pitch": 0.04,
-			"bone": "Bip001 Pelvis", "lift": 0.05},
+			"bone": "pelvis", "lift": 0.05},
 		{"distance": 1.30, "name": "kain_belakang", "yaw": PI * 0.25, "pitch": 0.06,
-			"bone": "Bip001 Spine1", "lift": 0.05},
+			"bone": "spine_01", "lift": 0.05},
 		{"distance": 1.05, "name": "bokong", "yaw": 0.0, "pitch": 0.02,
-			"bone": "Bip001 Pelvis", "lift": 0.0},
+			"bone": "pelvis", "lift": 0.0},
 		{"distance": 2.20, "name": "samping", "yaw": PI * 0.5, "pitch": 0.20},
 		{"distance": 2.20, "name": "belakang", "yaw": 0.0, "pitch": 0.20},
 	]
@@ -85,7 +85,7 @@ func _run() -> void:
 	# versi pertama tes ini — HUD-nya masih tertulis Idle_Loop).
 	# Pose bergerak dibidik PINGGUL dan jaraknya dekat: kalau kamera jauh di
 	# setinggi kepala, kain cuma jadi beberapa piksel dan tidak bisa dinilai.
-	var hips := {"bone": "Bip001 Pelvis", "lift": 0.05}
+	var hips := {"bone": "pelvis", "lift": 0.05}
 	orbit.focus_offset = Vector3(0.0, _focus_height(hips, player, avatar), 0.0)
 	orbit.yaw = PI * 0.5
 	orbit.pitch = 0.06
@@ -147,8 +147,9 @@ func _focus_height(view: Dictionary, player: Node3D, avatar: Skeleton3D) -> floa
 func _report_heights(player: Node3D, avatar: Skeleton3D) -> void:
 	if avatar == null or player == null:
 		return
-	var neck := avatar.find_bone("Bip001 Neck")
-	var head := avatar.find_bone("Bip001 Head")
+	# Nama tulang rig UAL (bukan Biped): head/neck_01.
+	var neck := avatar.find_bone("neck_01")
+	var head := avatar.find_bone("Head")
 	if neck < 0 or head < 0:
 		return
 	var neck_y := (avatar.global_transform * avatar.get_bone_global_pose(neck)).origin.y

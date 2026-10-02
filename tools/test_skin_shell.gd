@@ -149,7 +149,9 @@ func _test_frames_differ(character: Character) -> void:
 	var changed := 0
 	var limit := mini(first.size(), second.size())
 	for index in range(limit):
-		if first[index].distance_to(second[index]) > 0.01:
+		var a := first[index]
+		var b := second[index]
+		if absf(a.r - b.r) + absf(a.g - b.g) + absf(a.b - b.b) > 0.02:
 			changed += 1
 	var ratio := float(changed) / maxf(1.0, float(limit))
 	_check(ratio > 0.005, "Gambar kulit tidak berubah antar frame (%.3f%%)" % (ratio * 100.0))
@@ -168,7 +170,8 @@ func _test_clip_motion(character: Character) -> void:
 			_check(false, "Klip tidak ditemukan: %s" % playing)
 			continue
 		var bones := PackedInt32Array()
-		for name in ["Bip001 Head", "Bip001 L Hand", "Bip001 R Hand"]:
+		# Nama tulang rig UAL: Head/hand_l/hand_r.
+		for name in ["Head", "hand_l", "hand_r"]:
 			var bone := character.skeleton.find_bone(name)
 			if bone >= 0:
 				bones.append(bone)
@@ -190,11 +193,11 @@ func _test_clip_motion(character: Character) -> void:
 		_check(peak > 0.001, "Klip %s tidak bergerak sama sekali" % playing)
 
 
-func _capture(viewport: Window) -> PackedVector3Array:
+func _capture(viewport: Window) -> PackedColorArray:
 	var image := viewport.get_texture().get_image()
 	if image == null:
-		return PackedVector3Array()
-	var points := PackedVector3Array()
+		return PackedColorArray()
+	var points := PackedColorArray()
 	# Sampel bertitik: cukup untuk mendeteksi bahan yang berdenyut tanpa
 	# membandingkan sejuta piksel di headless.
 	for y in range(0, image.get_height(), 7):
