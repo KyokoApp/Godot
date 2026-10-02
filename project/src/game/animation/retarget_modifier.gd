@@ -156,7 +156,7 @@ func _measure() -> void:
 		var source_rest := _source.get_bone_global_rest(source_bone)
 		var target_rest := _target.get_bone_global_rest(target_bone)
 		var parent_pair := _parent_pair_of(target_bone)
-		_parent_pair[index] = parent_pair
+		_parent_pair.append(parent_pair)
 		# Sumbu tulang = arah ke anak yang juga dipetakan (anak langsung di kedua
 		# sisi). Tulang tanpa anak seperti itu (Nub) dianggap daun.
 		var axis_source := Vector3.ZERO
