@@ -64,6 +64,14 @@ func _run() -> void:
 	var centre := full.get_pixel(full.get_width() / 2, full.get_height() / 2)
 	_check(centre.r > centre.b and centre.r > 0.55,
 		"Pendar matahari di ufuk tidak hangat/terang: %s" % centre)
+	# Diagnosa: berapa pendar ufuk kalau glow ENGINE dimatikan (glow langit tetap
+	# menyala). Kalau nilainya hangat, yang menyaturasi adalah bloom engine.
+	var engine_glow: bool = environment.environment.glow_enabled
+	environment.environment.glow_enabled = false
+	var no_engine: Image = await _capture()
+	print("[dusk-test] ufuk tanpa glow engine=",
+		no_engine.get_pixel(no_engine.get_width() / 2, no_engine.get_height() / 2))
+	environment.environment.glow_enabled = engine_glow
 	material.set_shader_parameter("glow_enabled", false)
 	var no_glow: Image = await _capture()
 	var glow_area := _difference(full, no_glow)

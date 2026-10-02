@@ -57,16 +57,20 @@ static func make_environment() -> Environment:
 	# Yang mekar hanya bagian terang: pendar matahari, kunang-kunang ungu, dan
 	# tepi bercahaya. Tanpa ini suasana senja terlihat datar seperti siang hari.
 	#
-	# AMBANG 1,15 (bukan 1,0) dan INTENSITAS 0,12: dengan 1,0/0,32 pendar di ufuk
-	# menyaturasi jadi putih (1,1,1) dan gerbang test_dusk "ufuk harus hangat
-	# (merah > biru)" gagal. Sekarang yang mekar hanya inti matahari (1,28 HDR),
-	# sementara pita persik di ufuk tetap berwarna.
+	# TIGA penyetel yang menentukan apakah pendar ufuk tetap BERWARNA atau jadi
+	# putih (1,1,1):
+	#   - glow_normalized = TRUE. Dengan false, SETIAP level bloom menambah penuh
+	#     (7 level default) sehingga glow bisa ~7x terlalu terang. Ini penyebab
+	#     utama gerbang test_dusk "ufuk harus hangat (merah > biru)" gagal.
+	#   - glow_hdr_threshold = 1,15: yang mekar hanya inti matahari (~1,3 HDR),
+	#     sementara pita persik di ufuk (~1,0) tidak ikut mekar.
+	#   - glow_intensity 0,25: cukup terlihat, tidak menyaturasi.
 	environment.glow_enabled = true
-	environment.glow_intensity = 0.12
+	environment.glow_intensity = 0.25
 	environment.glow_bloom = 0.08
 	environment.glow_hdr_threshold = 1.15
 	environment.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
-	environment.glow_normalized = false
+	environment.glow_normalized = true
 	return environment
 
 
