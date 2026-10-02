@@ -26,3 +26,4 @@ project/assets/combat/
 # pratinjau lokal dari CI (tools/fetch_previews.sh)
 preview/
 preview-*/
+worldpass/
