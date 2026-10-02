@@ -358,6 +358,10 @@ func _clip_travel(character: Character, motion: String) -> Vector2:
 func _test_hold_release(character: Character) -> void:
 	character.play_showcase("Idle_Loop")
 	character.animation.advance(0.4)
+	# Urutan yang sama seperti di permainan: mode HELD dipasang lalu animasinya
+	# dijeda. (`freeze_at_last_frame()` sendiri hanya menandai mode; yang menjeda
+	# adalah `_physics_process` saat timer aksinya habis.)
+	character.animation.pause()
 	character.freeze_at_last_frame()
 	var frozen := character.animation.current_animation
 	_check(not character.animation.is_playing(), "Pose tahan seharusnya berhenti")
