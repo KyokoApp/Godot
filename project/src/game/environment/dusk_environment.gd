@@ -9,7 +9,9 @@ extends RefCounted
 const SKY_SHADER = preload("res://src/game/environment/dusk_sky.gdshader")
 ## Matahari rendah di barat (sisi laut), sedikit di atas ufuk — sama dengan pendar
 ## di ilustrasi. Arah ini juga dipakai sinar matahari (god rays) dan kilau air.
-const SUN_DIRECTION := Vector3(-0.94, 0.09, -0.32)
+## Vektornya sudah panjang 1 (diuji `test_dusk`): kalau tidak, hasil dot dengan
+## basis lampu selalu < 1 dan gerbang arah cahaya gagal tanpa sebab nyata.
+const SUN_DIRECTION := Vector3(-0.942785, 0.090267, -0.320948)
 
 
 static func make_environment() -> Environment:
