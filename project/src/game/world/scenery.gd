@@ -157,7 +157,9 @@ func _build_cliffs() -> void:
 func _add_rock_block(vertices: PackedVector3Array, colors: PackedColorArray,
 		indices: PackedInt32Array, base: Vector3, size: Vector3, seed: int) -> void:
 	var wobble := sin(float(seed) * 3.1) * 0.35
-	var corners := [
+	# Array bertipe: tanpa tipe, Godot tidak bisa menyimpulkan tipe variabel yang
+	# diambil darinya (error "Cannot infer the type of inner_next").
+	var corners: Array[Vector3] = [
 		Vector3(-0.5, 0.0, -0.5), Vector3(0.5, 0.0, -0.5),
 		Vector3(0.5, 0.0, 0.5), Vector3(-0.5, 0.0, 0.5)]
 	var start := vertices.size()
@@ -242,8 +244,9 @@ func _build_motes() -> void:
 	motes.name = "LightMotes"
 	add_child(motes)
 	# Tiga titik: dua di sepanjang jalan, satu di dekat reruntuhan.
-	for spot in [Vector3(-6.0, 1.4, -14.0), Vector3(-13.0, 1.6, -27.0),
-			Vector3(4.0, 1.3, -8.0)]:
+	var spots: Array[Vector3] = [Vector3(-6.0, 1.4, -14.0), Vector3(-13.0, 1.6, -27.0),
+		Vector3(4.0, 1.3, -8.0)]
+	for spot in spots:
 		motes.add_child(_mote_emitter(spot))
 
 
