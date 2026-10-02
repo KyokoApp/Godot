@@ -3,7 +3,7 @@ extends SceneTree
 
 const Field = preload("res://src/game/world/field.gd")
 const FirePet = preload("res://src/game/fire_pet.gd")
-const Character = preload("res://src/game/mannequin.gd")
+const Character = preload("res://src/game/character/aurelia_visual.gd")
 const Grass = preload("res://src/game/grass_field.gd")
 var _failures := 0
 

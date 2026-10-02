@@ -1,12 +1,12 @@
 extends Control
-## Katalog animasi: SEMUA klip (UAL1 + UAL2) bisa dipilih dan diputar di mannequin.
+## Katalog animasi: SEMUA klip (UAL1 + UAL2) bisa dipilih dan diputar di avatar Aurelia.
 ## Ada mode "putar semua" yang menelusuri seluruh klip satu per satu seperti reel.
 
 signal closed
 signal clip_selected(clip: String)
 
 const Catalog = preload("res://src/game/animation/catalog.gd")
-const Mannequin = preload("res://src/game/mannequin.gd")
+const Character = preload("res://src/game/character/aurelia_visual.gd")
 const PANEL_COLOR := Color(0.035, 0.04, 0.06, 0.94)
 const ROW_COLOR := Color(0.15, 0.14, 0.24)
 const ROW_ACTIVE := Color(0.36, 0.28, 0.56)
@@ -17,7 +17,7 @@ const REEL_HOLD := 1.6
 const WINDOW_MAX := Vector2(620, 520)
 const WINDOW_RATIO := Vector2(0.90, 0.78)
 
-var character: Mannequin
+var character: Character
 var _backdrop: ColorRect
 var _window: PanelContainer
 var _rows: Dictionary[String, Button] = {}
@@ -342,14 +342,14 @@ func _process(delta: float) -> void:
 	_report()
 	if not _reel:
 		return
-	if character.mode == Mannequin.Mode.ACTION:
-		return # Tunggu klip sekali jalan selesai; mannequin kembali sendiri.
-	if character.mode == Mannequin.Mode.HELD:
+	if character.mode == Character.Mode.ACTION:
+		return # Tunggu klip sekali jalan selesai; avatar kembali sendiri.
+	if character.mode == Character.Mode.HELD:
 		_reel_timer = maxf(_reel_timer, REEL_HOLD)
 	_reel_timer -= delta
 	if _reel_timer > 0.0:
 		return
-	if character.mode == Mannequin.Mode.SHOWCASE and Catalog.is_loop(character.clip):
+	if character.mode == Character.Mode.SHOWCASE and Catalog.is_loop(character.clip):
 		# Klip loop panjang (mis. 5,2 s) tetap dihormati selama satu siklus.
 		_reel_timer = character.length_of(character.clip)
 		if _reel_timer > 0.0:

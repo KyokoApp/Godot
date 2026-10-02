@@ -1,5 +1,169 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-02 (malam, sesi ini) — **MANNEQUIN DIGANTI AVATAR AURELIA** (FBX
+  `Avatar_Boy_Pole_Lohen` dari folder `aurelia-debug/`, 209 tulang Biped) dan
+  **kain + rambut diberi simulasi goyangan** seperti permintaan pengguna.
+  - `src/game/character/aurelia_visual.gd` = pengganti `mannequin.gd` (berkas itu
+    DIHAPUS). API-nya sama persis (set_locomotion, play_action, foot_pose,
+    metrics, cast_layer, ...), jadi pemain, HUD, tapak api, bayangan kecepatan,
+    dan panel animasi tidak perlu diubah.
+  - Animasi tetap dimainkan di **rig UAL yang disembunyikan** (85 klip utuh),
+    lalu pose-nya disalin ke tulang avatar oleh
+    `src/game/animation/retarget_modifier.gd` (SkeletonModifier3D, anak ke-2 rig
+    sumber supaya gerakan casting ikut tersalin).
+  - **Penting: retarget ini BUKAN rumus "selisih rest" bawaan Godot.** Mannequin
+    UAL berdiri T-pose, avatar Aurelia A-pose (lengan ±50° ke bawah). Kalau
+    selisih-rest yang dipakai, lengan avatar selalu 50° lebih rendah dan tangan
+    masuk ke badan. Rumus yang dipakai = arah tulang avatar disamakan dengan
+    arah tulang animasi (swing terpendek) + puntiran global diurai swing/twist
+    (`_twist_angle`). Diverifikasi gerbang `tools/test_aurelia.gd`
+    (`dot(arah avatar, arah animasi) > 0,97` untuk lengan, betis, tangan).
+  - Peta tulang UAL ↔ Biped ada di `src/game/animation/humanoid_map.gd`
+    (54 pasangan, termasuk jari). Nama dibandingkan setelah dinormalisasi, jadi
+    spasi/tanda `+` dari importer tidak merusak peta.
+  - Goyangan kain/rambut: `animation/cloth_springs.gd` (inti verlet, bisa diuji
+    headless) + `animation/cloth_dynamics.gd` (pembungkus SkeletonModifier3D
+    pada kerangka avatar). Angka terukur dari gerbang CI: **44 rantai, 71 tulang,
+    16 kapsul** (rambut 20 rantai, syal/rok 15, kerah 3, leher/kalung/anting/
+    pinggul/ikat 7). Rantai dibentuk dari tulang asli avatar
+    (Bone_Hair*, Bone_Shawl*, Bone_Collar*, Bone_Hip*, Bone_Pendant*,
+    Bone_Earrings*, Bone_Neck*, +Flycloak).
+    - Kain disimulasikan **di ruang dunia**, jadi punya kelembaman: saat badan
+      berbalik/berlari, kain tertinggal di belakang lalu menyusul. Kain yang
+      hanya mengikuti tulang (tanpa simulasi) akan terlihat kaku seperti karton.
+    - Ada kekakuan (kembali ke bentuk rest di ruang tulang penggantung), angin
+      berkecepatan relatif (mengembang saat berlari), tabrakan kapsul badan
+      (kepala, dada, pinggul, lengan, kaki) dan gesekan tanah.
+    - Catatan teknis: `_keep_shape` menarik POSISI ke rest (`rest_basis *
+      rest_local`) dan `_write_chain` selalu memakai rumus yang sama untuk kedua
+      tulang rantai — kalau hanya tulang kedua yang dipaksa ke arah rest, akan
+      muncul patahan di sambungan.
+  - Material: FBX ini memakai shader Unity dan hanya menyimpan SATU material
+    untuk semua poligon (tekstur tertukar semua). Material dipilih dari NAMA
+    MESH di `character/aurelia_materials.gd` (Body/Bang/Face/Brow/Pupil/
+    EyeStar), plus tekstur lightmap dipakai sebagai pancaran lembut supaya
+    jubah navy tidak jadi hitam legap di malam hari. Mesh `EffectMesh`
+    disembunyikan.
+  - **Importer FBX memecah avatar menjadi BEBERAPA Skeleton3D** (badan, rambut,
+    mata) karena himpunan tulangnya tidak bersambung. `aurelia_visual.gd`
+    mendata SEMUA Skeleton3D di bawah akar avatar, mengurutkannya berdasarkan
+    jumlah tulang (terbanyak = kerangka utama, dipakai pemain/HUD/tapak api),
+    lalu memberi satu retarget + satu pembungkus kain per kerangka
+    (`retargets[]`, `cloths[]`). Kalau nanti jumlah kerangkanya berubah, dua
+    array itu sudah menanganinya — jangan kembali ke satu `avatar` saja.
+  - **Path tekstur peka huruf besar-kecil di Linux**: folder dari unggahan
+    bernama `Textures` (huruf T besar). `aurelia_materials.gd` sempat memakai
+    `textures/` sehingga seluruh material tampil tanpa tekstur di CI walau
+    jalan di Windows.
+  - Aset biner (±24 MB) TIDAK lagi di git: `tools/fetch_assets.sh` mengunduhnya
+    dari lampiran rilis `assets-v1` (workflow `publish-assets`, sumbernya riwayat
+    commit `0d56df0`), dengan cadangan `--from-git` kalau rilis belum ada. CI
+    menjalankan langkah ini sebelum `--import`; **tanpa langkah itu import pasti
+    gagal** karena FBX & GLB tidak ada.
+  - Gerbang baru: `tools/test_aurelia.gd` (peta tulang lengkap 52 pasangan yang
+    ada, arah tulang avatar = arah animasi, tidak T-pose, telapak tidak menembus
+    tanah, kain tertinggal-saat-badan-bergerak lalu menyusul, rambut tidak
+    menembus kepala/badan). Waktu tunggu langkah tes yang memuat seluruh game
+    dinaikkan 90/120 → 180 detik karena avatar menambah beban boot.
+  - **Pelajaran rumus retarget** (semuanya pernah salah dan ketangkap gerbang):
+    (1) `_measure()` TIDAK BOLEH memakai `resize()` lalu `append()` — array jadi
+    dua kali panjang dan tiap tulang membaca nilai tulang lain; (2) rumus letak
+    harus memakai rest/pose **LOKAL** (relatif induk), persis seperti
+    `RetargetModifier3D::_retarget_pose` bawaan engine — versi global membuat
+    seluruh kerangka melar; (3) sumbu tulang = anak yang DIPETAKAN (bukan anak
+    pertama, yang bisa tulang puntir seperti `Bone_ForearmTwistA01_L`); (4) tes
+    dan retarget harus memilih anak dengan urutan yang sama, kalau tidak tes
+    mengukur jari manis sementara retarget mengarahkan jari telunjuk.
+  - **Pelajaran kain**: `_keep_shape` harus memakai transformasi LENGKAP tulang
+    penggantung (rotasi + letak), bukan hanya rotasinya — kalau tidak, kain
+    selalu tertarik ke titik nol dunia dan tidak pernah menyusul badan yang
+    berpindah. Rantai satu tulang (rambut tipis, anting, liontin) dulu berujung
+    tepat di pangkal sehingga panjangnya nol dan dibuang: ujungnya sekarang
+    mengikuti arah tulang induk.
+  - **Kaki 4 % lebih pendek daripada mannequin**: retarget memindahkan bentuk
+    pose, jadi telapak berhenti ~3 cm di atas tanah dan efek tapak api tidak
+    pernah melihat kontak. `aurelia_visual._update_plant()` menurunkan avatar
+    (maks 6 cm) selama badan menapak; `foot_clearance()`/`foot_stride_lift()`
+    dihitung di ruang dunia dan `foot_fire_trail.gd` memakai tebal telapak
+    karakter sebagai ambang (bukan angka 0.035/0.04 yang disetel untuk UAL).
+  - **Log CI**: langkah "Ringkasan kegagalan" sekarang mengirim SELURUH log
+    sebagai komentar commit (anotasi hanya memuat 25-60 baris terakhir, dan log
+    GitHub tidak bisa diunduh dari luar CI). Diagnostik yang perlu dibaca saat
+    gagal dicetak di AKHIR log tes.
+
+
+- 2026-10-02 (lanjutan) — **material avatar diperbaiki dari sumber aslinya**.
+  Keluhan pengguna: "model karakter masih banyak bug" (rambut tampak seperti
+  helm navy, wajah/mata bercak warna, kain menembus badan). Akarnya ketemu di
+  paket aslinya, folder `aurelia-debug/`:
+  - Ada **berkas material Unity** (`Materials/*.json`) yang selama ini terlewat:
+    masing-masing menunjuk tekstur resminya (`_MainTex`, `_BumpMap`). Peta:
+    Mat_Hair→Hair_Diffuse, Mat_Body→Body_Diffuse, Mat_Dress→Body_Diffuse,
+    Mat_Face/Mat_Brow→Face_Diffuse, Mat_Pupil→**Hair_Diffuse** (pulau iris kecil
+    di atlas rambut), Avatar_Default_Mat→mesh efek (disembunyikan).
+  - `LayerElementMaterial` di FBX memang menunjuk material per poligon (bukan
+    [0,...] seperti dugaan lama): mesh **Body punya 3 surface** —
+    Mat_Hair 20.798 poligon, Mat_Body 12.871, Mat_Dress 1.123 (urutan koneksi
+    material ke mesh: Hair, Body, Dress). Versi lama menimpa ketiganya dengan
+    satu material, jadi rambut depan memakai atlas jubah navy.
+  - Importer FBX Godot menamai tiap **surface** dengan nama material FBX
+    (`mat_name` di `modules/fbx/fbx_document.cpp`), jadi material sekarang
+    dipilih dari nama surface dan dipasang dengan `set_surface_override_material`
+    (satu mesh boleh beda material per surface; `material_override` hanya bisa
+    satu dan itulah sumber bug).
+  - `_CullMode` dari material Unity: Body/Hair/Face/Brow/Pupil = 2 (single
+    sided), hanya **Dress = 0 (double sided)**. Versi lama memaksa semua
+    `CULL_DISABLED`, sehingga sisi dalam rambut tergambar menembus wajah.
+  - Tekstur `*_Lightmap` dan `Avatar_Tex_Face01_Shadow` adalah peta BAYANGAN
+    toon (lavender), bukan warna kulit. Versi lama memakainya sebagai pancaran
+    -> wajah tampak kebiruan. Sekarang tidak dipakai.
+  - Gerbang `tools/test_aurelia.gd` memeriksa per surface: tekstur ada, garis
+    luar ada, cull mode sesuai material aslinya, dan **mesh Body wajib punya
+    surface rambut + badan** (penjaga regresi untuk bug helm navy).
+  - **Kain menembus badan**: filter kapsul `MAX_COLLIDER_MARGIN` 0,22 → 0,55,
+    supaya panel rok/rambut juga bertabrakan dengan kapsul kaki yang baru
+    mengayun. Ditambah `penetration_report()` (rantai tanpa kapsul + kedalaman
+    tembus terburuk) yang diperiksa gerbang saat diam dan saat lari.
+  - **Angka akhir sesudah perbaikan** (komentar commit "angka penting" di CI,
+    selalu dikirim): peta material terbaca tepat — Mat_Hair→Hair_Diffuse (2
+    surface), Mat_Body→Body_Diffuse, Mat_Dress→Body_Diffuse, Mat_Brow/Mat_Face→
+    Face_Diffuse (3 surface), Mat_Pupil→Hair_Diffuse; arah tulang avatar
+    dot=1,0000 untuk lengan bawah, betis, dan tangan di keempat klip uji;
+    tembus kain diam 0,0011 m dan lari 0,0035 m (sebelumnya 0,034 m gagal);
+    biaya kain+retarget 2,50 ms/frame; gerbang lain semua lulus sampai rilis APK.
+  - **Pelajaran**: `material_override` hanya satu untuk seluruh mesh — untuk
+    mesh dengan beberapa material (di sini Body: rambut + badan + dress) WAJIB
+    `set_surface_override_material(index, ...)`, dan nama materialnya bisa dibaca
+    dari `mesh.surface_get_name(index)` karena importer FBX Godot menamai surface
+    dengan nama material FBX.
+  - **Pratinjau render di CI**: artefak/log GitHub tidak bisa diunduh dari
+    lingkungan agen, jadi langkah baru merender avatar dari kamera pemain
+    (`tools/render_avatar.gd`: 0,4 m / 0,85 m / 2,2 m + pose jalan & lari),
+    mengecilkannya jadi JPEG (`tools/make_preview.gd`) dan menempelkannya
+    sebagai base64 di komentar commit. Ini cara memeriksa bug yang hanya
+    terlihat mata.
+- 2026-10-02 (lanjutan) — **zoom kamera bisa menempel ke karakter**. Batas
+  terdekat dulu 2,4 m (seluruh badan saja). Sekarang `MIN_DISTANCE = 0,35 m`:
+  karena titik pandang kamera ada di setinggi kepala (1,45 m), pada jarak itu
+  yang tampak hanya wajah/rambut. Tambahan:
+  - `camera.near` mengikuti jarak (`jarak * 0,15`, dibatasi 0,03-0,1 m). Dengan
+    nilai tetap 0,1 m, kamera yang sudah menempel masih memotong wajah dan
+    rambut; kalau dikecilkan permanen, kejauhan jadi z-fighting.
+  - `zoom_by(factor)` = satu tempat untuk semua masukan (cubit dua jari, roda
+    tetikus untuk main di desktop/editor, dan tes), jadi batasnya konsisten.
+  - Gerbang baru `tools/test_camera_zoom.gd`: mencubit dua jari di separuh kanan
+    layar sampai mentok, lalu memeriksa di RUANG DUNIA — jarak kamera ke tulang
+    kepala < 0,9 m, kepala di tengah pandangan (dot > 0,85), kamera tidak di
+    bawah tanah (y > 0,2), bidang dekat ikut mengecil, roda tetikus sepadan, dan
+    setelah dicubit menjauh kamera benar-benar berhenti di 8 m.
+  - Kalau nanti ingin lebih menempel lagi, ubah `MIN_DISTANCE` di
+    `orbit_camera.gd`; tesnya otomatis ikut (tidak ada angka 2,4 yang tertanam
+    di tempat lain).
+- 2026-10-02 (lanjutan) — **CI HIJAU PENUH dengan avatar Aurelia** (run
+  36968488634, commit `02f1d13`): 25 langkah lulus, termasuk Tes avatar Aurelia
+  (retarget + kain), tapak api, semua render Vulkan, ekspor PCK + APK, audit isi
+  APK, boot launcher, dan rilis `A-Sekai build-21a54e1`. Sisa langkah yang belum
+  diverifikasi di HP pengguna: tes main di perangkat.
 - Terbaru (2026-10-01): dunia dirombak jadi **padang rumput 100 m × 100 m**
   (`world/field.gd` + `grass_field.gd` + `world/boundary_fence.gd`). Pulau 1 km,
   laut, sungai, arena, jalan batu dan aset nature model DIHAPUS dari repo.
@@ -617,3 +781,51 @@ Kontrak sekarang di `player.gd` + `mannequin.gd`:
 Bukti per-frame: `tools/test_jump_trace.gd` (step CI "Rekam alur animasi lompat").
 Alurnya sengaja melepas analog tepat saat menekan LOMPAT, lalu memeriksa laju
 minimum di udara, jarak terbang, klip saat mendarat, dan klip saat melambat.
+
+## Leher & kain Aurelia: akurasi kerangka + kain tidak menembus baju (2026-10-02)
+Keluhan pengguna: "leher nya kurus banget kayaknya modelnya kurang akurat dan
+juga kain baju masih banyak yang kliatan kaku dan nembus di baju lain."
+Semua akarnya ada di `animation/cloth_springs.gd`:
+- **Leher ternyata disimulasikan sebagai kain.** Geometri leher digerakkan
+  `Bone_NeckA01_M` (476 titik; anak `Bip001 Neck` yang hanya 9 titik), dan grup
+  `Bone_Neck` ikut verlet — tiap frame kulit leher ditarik gravitasi sehingga
+  leher tampak kurus dan memanjang. Grup itu DIHAPUS; leher sekarang mengikuti
+  animasi badan seperti tulang lain. Bukti lama: laporan tembus menunjuk
+  partikel `Bone_NeckA01_M` vs kapsul `Bip001 Neck`.
+- **Urutan mask tabrakan salah.** `allowed` ditulis per kapsul lalu per
+  partikel, tapi dibaca per partikel (`index * jumlah_kapsul + slot`) — jadi
+  simulasi mendorong partikel yang salah (mask hanya kebetulan benar kalau
+  jumlah partikel = jumlah kapsul). Sekarang penulisan dan pembacaan sama-sama
+  kolom-kapsul; ini juga salah satu sebab kain masih menembus badan.
+- **Kain vs kain (aturan baru).** Tiap rantai dihitung lapisannya (rata-rata
+  jarak titik rest ke kapsul badan). Rantai yang lebih luar tidak boleh masuk ke
+  kapsul rantai yang lebih dalam: `WEAVE_RADIUS` 2 cm, kapsul dibuat dari segmen
+  terdekat di rest pose (maksimum 6 per rantai). Ini yang menghentikan panel
+  menembus baju lain, dan sekarang ada angkanya (`weave_report()`, digerbang di
+  `tools/test_aurelia.gd`).
+- **Kain yang dipasang di lengan tidak digoyang.** `Bone_ShawlJ01_L`/`K01_L`
+  menggantung di `Bone_ShawlArmTwistA01_L` (anak `Bip001 L UpperArm`); goyangan
+  gravitasi membuatnya menyayat jubah badan setiap lengan diangkat. Ketiganya
+  masuk `SKIP_BONES` dan kaku mengikuti lengan seperti aslinya.
+- **Kain tidak kaku lagi**: kekakuan grup Shawl 15 → 9,5 /detik, redaman
+  1,7 → 1,45.
+- Angka CI terakhir (commit `de3ed0a`, run 36975703931; kerangka/kain tidak
+  berubah setelahnya): rantai 40, kain 67 tulang, **tembus kain** diam 0,0044 m
+  dan lari 0,0038 m (gerbang 0,02/0,03), **tembus kain vs kain** diam 0,0000 m
+  dan lari 0,0031 m (gerbang 0,012/0,02), biaya kain+retarget 2,99 ms/frame dari
+  anggaran 6,0 ms, zoom kamera OK.
+- **Pratinjau baru** supaya mata bisa memeriksa bagian ini: `leher` (bidik
+  `Bip001 Neck` dari sedikit bawah), `kain` (samping, bidik `Bip001 Pelvis`),
+  `kain_belakang` (tiga-perempat belakang, bidik `Bip001 Spine1`), dan pose
+  jalan/lari/jongkok kini dibidik pinggul pada 1,6-1,8 m. Titik bidik diambil
+  dari POSISI TULANG, bukan angka meter: percobaan pertama memakai tinggi
+  tebakan dan bidikan leher mengarah ke langit. `orbit_camera.gd` sekarang
+  menyimpan `focus_offset` (dulu angka 0,55 ditulis di `main.gd`).
+- **Alat baru**: `tools/fbx_inspect.py` (baca FBX tanpa Godot: `bones`,
+  `extras`, `mats`, `bonesize` — tulang mana menggerakkan berapa titik dan
+  sebesar apa geometrinya) dan `tools/fetch_previews.sh` (menyusun ulang JPEG
+  pratinjau dari komentar commit CI; unduhan artefak sering gagal EOF).
+- Catatan model: leher asli memang 9 cm (`Bone_NeckA01_M` x ±0,045) sementara
+  kepalanya 23 cm — setelah simulasi dilepas, leher tampil seperti aslinya. Bila
+  pengguna tetap ingin lebih tebal, itu koreksi bentuk (skala tulang leher),
+  bukan bug simulasi.
