@@ -3,8 +3,9 @@ extends VBoxContainer
 
 const SETTINGS := "user://graphics.cfg"
 const Character = preload("res://src/game/mannequin.gd")
+const LightShafts = preload("res://src/game/god_rays/light_shafts.gd")
 
-var rays: MeshInstance3D
+var rays: LightShafts
 var rays_enabled := true
 var contact: MeshInstance3D
 var contact_enabled := true

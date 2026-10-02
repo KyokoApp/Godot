@@ -12,7 +12,7 @@ const Character = preload("res://src/game/mannequin.gd")
 const Orbit = preload("res://src/game/orbit_camera.gd")
 const Joystick = preload("res://src/game/virtual_joystick.gd")
 const Dusk = preload("res://src/game/environment/dusk_environment.gd")
-const SunRays = preload("res://src/game/god_rays/sun_rays.gd")
+const LightShafts = preload("res://src/game/god_rays/light_shafts.gd")
 const ContactShadows = preload("res://src/game/god_rays/contact_shadows.gd")
 const WorldAudio = preload("res://src/game/audio/world_audio.gd")
 const Footsteps = preload("res://src/game/audio/footsteps.gd")
@@ -53,7 +53,7 @@ var _player: Player
 var _visual: Character
 var _orbit: Orbit
 var _sun: DirectionalLight3D
-var _sun_rays: SunRays
+var _shafts: LightShafts
 var _contact: ContactShadows
 var _audio: WorldAudio
 var _footsteps: Footsteps
@@ -144,9 +144,6 @@ func _build_grass() -> void:
 
 
 func _build_effects() -> void:
-	_sun_rays = SunRays.new()
-	_sun_rays.camera = _orbit.camera
-	_orbit.camera.add_child(_sun_rays)
 	# Contact shadow (sinar vs buffer kedalaman) mendaftar lebih dulu supaya
 	# digabung sebelum sinar matahari menambah cahaya.
 	_contact = ContactShadows.new()
@@ -184,6 +181,12 @@ func _build_effects() -> void:
 func _build_hud() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
+	# Sinar matahari gaya pend00: ColorRect layar penuh, digambar paling bawah
+	# supaya tombol dan panel tetap di atas sinar.
+	_shafts = LightShafts.new()
+	_shafts.name = "LightShafts"
+	_shafts.camera = _orbit.camera
+	layer.add_child(_shafts)
 	_joystick = Joystick.new()
 	layer.add_child(_joystick)
 	_joystick.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -297,7 +300,7 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 	title.add_theme_color_override("font_color", Color.WHITE)
 	content.add_child(title)
 	_performance = PerformancePanel.new()
-	_performance.rays = _sun_rays
+	_performance.rays = _shafts
 	_performance.contact = _contact
 	_performance.sun = _sun
 	_performance.grass = _grass

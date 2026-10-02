@@ -1,5 +1,39 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-03 (cicilan 10, umpan balik HP) — **SINAR MATAHARI DIGANTI TOTAL DENGAN
+  GOD RAYS GAYA PEND00** (keluhan: "jelek ah itu ray nya hapus total trus ganti
+  pake ini" + tautan shader Godot 4.5 pend00).
+  - `src/game/god_rays/sun_rays.gd` + `.gdshader` **DIHAPUS** (git rm). Dua versi
+    depth-march sebelumnya sudah ditolak dua kali; yang lama TIDAK disimpan.
+  - `src/game/god_rays/light_shafts.gd` + `.gdshader` BARU: shader `canvas_item`
+    pend00 (CC0) di ColorRect layar penuh. Value noise dua lapisan (ray1_density 8 /
+    ray2_density 30 / ray2_intensity 0,3) + animasi shimmer + pencampuran "screen"
+    dengan SCREEN_TEXTURE. Tanpa tekstur noise, tanpa render scene kedua, tanpa ray
+    marching -> murah di HP.
+  - Perubahan dari aslinya: `position` (skalar) -> **`ray_origin` (vec2)** supaya
+    sinar memantul TEPAT dari posisi matahari di layar (aslinya selalu dari tengah
+    layar), dan `ray_angle` dihitung tiap frame dari arah matahari -> pusat layar.
+  - Dipasang sebagai **anak pertama CanvasLayer HUD** (`main.gd::_build_hud()`),
+    bukan di kamera 3D: digambar paling bawah (tombol/panel tetap di atas), tidak
+    ikut ter-zoom kamera. Memudar saat matahari keluar layar, hilang saat matahari
+    di belakang kamera.
+  - `performance_panel.gd`: tipe `rays` -> `LightShafts`, tombol **Sinar matahari:
+    Nyala/Mati (tes FPS)** tetap jalan (kunci config `sun_rays` dipertahankan biar
+    setelan lama pengguna tidak hilang).
+  - `loading/warmup_samples.gd::_rays()` memanaskan shader baru (satu ColorRect
+    64x64, proses dimatikan).
+  - `tools/test_light_shafts.gd` GERBANG BARU menggantikan `test_sun_rays.gd`:
+    A/B (sinar menambah cahaya), hilang saat dimatikan, hilang saat matahari di
+    belakang kamera, tombol grafis + simpan setelan. Pemeriksaan "sinar menembus
+    geometri" DIHAPUS - efek ini memang overlay layar penuh, bukan depth-march.
+  - `render_world.gd` / `render_mannequin.gd`: daftar efek yang disembunyikan
+    `_sun_rays` -> `_shafts` (pakai `set("visible", false)` karena ColorRect bukan
+    Node3D).
+  - `apk.yml`: langkah render, berkas wajib, artefak, dan grep ringkasan pindah ke
+    `test_light_shafts.gd` / `light-shafts.log` / `[light-shafts-test]`.
+  - Kredit pend00 + CC0 di `project/licenses/LICENSES.txt` (bagian "Sinar matahari
+    gaya pend00"), bagian "Screen-space moon rays" yang sudah usang diganti.
+
 - 2026-10-03 (cicilan 9, umpan balik HP) — **BAYANGAN KARAKTER DIPERBAIKI, SINAR
   MATAHARI JADI SHAFT PANJANG, POHON RAKSASA DI TENGAH WORLD**.
   - `src/game/god_rays/contact_shadows.gdshader`: **`min_distance = 8.0`** baru.

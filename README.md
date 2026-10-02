@@ -967,3 +967,37 @@ dan minta pohon raksasa realistis di tengah world.
   di darat, > 20 m, < 20 ribu segitiga, dan tajuknya harus terbaca HIJAU serta
   tidak hitam pekat (winding segitiga terbalik = cahaya datang dari dalam = pohon
   hitam, dan itu gampang terjadi saat menulis bola tangan pertama).
+
+### 2026-10-03 — sinar matahari diganti total dengan god rays gaya pend00
+
+Umpan balik: "jelek ah itu ray nya hapus total trus ganti pake ini" +
+tautan [God Rays shader — inspired by pend00 (Godot 4.5)](https://godotshaders.com/shader/god-rays-shader-inspired-by-pend00-godot-4-5/).
+
+- `god_rays/sun_rays.gd` + `sun_rays.gdshader` **DIHAPUS TOTAL** (bukan disimpan di
+  samping) — dua versi depth-march sebelumnya sudah ditolak dua kali.
+- `god_rays/light_shafts.gd` + `light_shafts.gdshader` (BARU) — shader
+  `canvas_item` pend00 (CC0) yang bekerja di ColorRect layar penuh: value noise
+  dua lapisan membentuk sinar, lalu dicampur dengan layar pakai mode "screen".
+  Tidak ada tekstur noise, tidak ada render scene kedua, tidak ada ray marching —
+  jadi murah di HP.
+- Dipasang sebagai **anak pertama CanvasLayer HUD**, jadi digambar paling bawah:
+  tombol dan panel tetap di atas sinar, dan sinar tidak ikut ter-zoom kamera.
+- Setiap frame `light_shafts.gd` menghitung posisi matahari di layar
+  (`camera.unproject_position`) lalu mengisi dua parameter shader:
+  - `ray_origin` (vec2) — pusat pantulan sinar. Aslinya hanya `position` (satu
+    skalar = geser vertikal), jadi sinar selalu memantul dari tengah layar;
+    diubah menjadi vec2 supaya sinar bisa memantul TEPAT dari matahari.
+  - `ray_angle` — arah sinar, dihitung dari arah matahari ke pusat layar.
+- Efek memudar saat matahari keluar layar dan hilang total saat matahari ada di
+  belakang kamera, jadi tidak ada "sinar nyangkut" saat menoleh.
+- Tombol panel grafis tetap ada: **Sinar matahari: Nyala/Mati (tes FPS)**.
+- `tools/test_light_shafts.gd` (gerbang baru, menggantikan `test_sun_rays.gd`) —
+  render A/B: sinar harus menambah cahaya, harus hilang saat dimatikan, harus
+  hilang saat matahari di belakang kamera, dan tombol grafis harus mengubah efek.
+  Pemeriksaan "sinar menembus geometri" DIHAPUS karena efek ini memang overlay
+  layar penuh di atas scene, bukan depth-march lagi.
+- `warmup_samples.gd` memanaskan shader baru; `render_world.gd` /
+  `render_mannequin.gd` menyembunyikannya biar gambar world tidak kena sinar.
+- Kredit pend00 + CC0 tercatat di `project/licenses/LICENSES.txt`.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.

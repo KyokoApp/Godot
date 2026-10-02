@@ -3,7 +3,7 @@ extends SceneTree
 ## jadi bayangan HARUS jatuh di sisi berlawanan dari matahari. Kalau arahnya
 ## terbalik — NDC Y yang salah flip, atau reverse-Z yang terbaca terbalik —
 ## bayangan justru muncul di DEPAN balok. Itu yang ditangkap tes ini lewat
-## perbandingan A/B (efek nyala vs mati), seperti test_sun_rays.gd.
+## perbandingan A/B (efek nyala vs mati), seperti test_light_shafts.gd.
 const ContactShadows = preload("res://src/game/god_rays/contact_shadows.gd")
 const Dusk = preload("res://src/game/environment/dusk_environment.gd")
 var _failures := 0

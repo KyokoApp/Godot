@@ -297,13 +297,23 @@ Status: arena, aurora dan fog lokal DIHAPUS pada milestone padang rumput;
 yang tersisa hanya styling HUD orisinal dan pagar batas padang.
 
 
-#### Screen-space moon rays
-- Method reference: Qtan1, Screen Space God Rays (Godot 4.3),
-- User supplied page: https://godotshaders.com/shader/screen-space-god-rays-godot-4-3/
-- Page declares code CC0. No preview images/assets copied. Our implementation uses
-  an original reverse-Z depth-mask shader with 16 radial samples instead of the
-  article's second scene-render SubViewport. Credit identifies method inspiration,
-  not a verbatim copy or performance guarantee.
+#### Sinar matahari gaya pend00 (god rays)
+- Sumber shader: **pend00**, "God rays", Godot Shaders — CC0 1.0.
+- Halaman asli: https://godotshaders.com/shader/god-rays/
+  Versi Godot 4.5 yang diminta pengguna:
+  https://godotshaders.com/shader/god-rays-shader-inspired-by-pend00-godot-4-5/
+- Halaman menyatakan kode shader berlisensi **CC0 1.0**:
+  https://creativecommons.org/publicdomain/zero/1.0/ . Gambar/video pada halaman
+  tidak termasuk lisensi tersebut dan tidak disalin ke proyek ini.
+- Implementasi: `project/src/game/god_rays/light_shafts.gdshader` memakai value
+  noise dua lapisan (tanpa tekstur noise sama sekali) dan pencampuran "screen"
+  dengan SCREEN_TEXTURE, dipasang sebagai ColorRect layar penuh di bawah HUD.
+  Perubahan proyek: pusat pantulan sinar diubah dari skalar `position` menjadi
+  vec2 `ray_origin` supaya sinar bisa dipusatkan tepat di posisi matahari di
+  layar, warna serta kekuatan diatur dari skrip tiap frame, dan efek memudar
+  lalu hilang saat matahari ada di belakang kamera atau keluar layar.
+- Riwayat: dua implementasi sinar matahari sebelumnya (shader depth-march
+  layar-penuh) sudah DIHAPUS atas permintaan pengguna dan tidak lagi dipakai.
 
 
 #### Screen-space contact shadows

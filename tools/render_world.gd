@@ -39,11 +39,10 @@ func _run() -> void:
 		return
 	orbit.exclusions = []
 	# Efek yang menutupi pandangan disembunyikan; yang dinilai di sini dunianya.
-	for node_name in ["_pet", "_speed_aura", "_foot_fire", "_sun_rays", "_banner"]:
+	for node_name in ["_pet", "_speed_aura", "_foot_fire", "_shafts", "_banner"]:
 		var effect: Node = game.get(node_name)
-		if effect is Node3D:
-			(effect as Node3D).visible = false
 		if effect != null:
+			effect.set("visible", false)
 			effect.set_process(false)
 	var player: CharacterBody3D = game.get("_player")
 	# Titik pantai diambil dari bentuk pulau sendiri (bukan ditebak), supaya

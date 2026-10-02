@@ -1,5 +1,5 @@
 extends SceneTree
-const Rays = preload("res://src/game/god_rays/sun_rays.gd")
+const Shafts = preload("res://src/game/god_rays/light_shafts.gd")
 var _failures := 0
 
 
@@ -25,17 +25,21 @@ func _run() -> void:
 	var camera := Camera3D.new()
 	world.add_child(camera)
 	camera.current = true
-	camera.look_at(Rays.Dusk.SUN_DIRECTION)
-	var rays := Rays.new()
-	rays.camera = camera
-	camera.add_child(rays)
+	# Melihat sedikit di kiri-bawah matahari, jadi sinar datang dari sudut layar,
+	# bukan tepat di tengah -- sekaligus menguji penghitungan arah sinar.
+	camera.look_at(Shafts.Dusk.SUN_DIRECTION * 10.0 + Vector3(-3.0, -2.0, 0.0))
+	var layer := CanvasLayer.new()
+	root.add_child(layer)
+	var shafts := Shafts.new()
+	shafts.camera = camera
+	layer.add_child(shafts)
 	for frame in range(4):
 		await process_frame
 	await RenderingServer.frame_post_draw
-	_check(rays.visible and rays.strength > 0, "Sinar matahari tidak muncul saat menghadap matahari")
+	_check(shafts.visible, "Sinar matahari tidak muncul saat menghadap matahari")
 	var on := root.get_texture().get_image()
-	on.save_png("user://sun-rays-test.png")
-	rays.enabled = false
+	on.save_png("user://light-shafts-test.png")
+	shafts.enabled = false
 	for frame in range(4):
 		await process_frame
 	await RenderingServer.frame_post_draw
@@ -46,42 +50,23 @@ func _run() -> void:
 			if on.get_pixel(x, y).r > off.get_pixel(x, y).r + 0.003:
 				changed += 1
 	_check(changed > 10, "Shader sinar tidak menghasilkan cahaya")
-	_check(not rays.visible, "Sinar yang dimatikan masih terlihat")
-	rays.enabled = true
-	camera.look_at(-Rays.Dusk.SUN_DIRECTION)
+	_check(not shafts.visible, "Sinar yang dimatikan masih terlihat")
+	shafts.enabled = true
+	camera.look_at(-Shafts.Dusk.SUN_DIRECTION)
 	await process_frame
 	await process_frame
-	_check(not rays.visible, "Sinar terlihat saat matahari di belakang kamera")
-	camera.look_at(Rays.Dusk.SUN_DIRECTION)
-	# Fully blocking geometry must suppress the radial light source.
-	var wall := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = Vector3(20, 20, 0.1)
-	wall.mesh = box
-	camera.add_child(wall)
-	wall.position.z = -2
-	for frame in range(4):
-		await process_frame
-	await RenderingServer.frame_post_draw
-	var blocked := root.get_texture().get_image()
-	rays.enabled = false
-	for frame in range(4):
-		await process_frame
-	await RenderingServer.frame_post_draw
-	var blocked_off := root.get_texture().get_image()
-	_check(blocked.get_pixel(240, 135).is_equal_approx(blocked_off.get_pixel(240, 135)),
-		"Sinar menembus geometri buram")
-	# The graphics switch must affect the live effect and survive settings reload.
+	_check(not shafts.visible, "Sinar terlihat saat matahari di belakang kamera")
+	# Tombol grafik harus mengubah efek langsung dan bertahan setelah setelan dimuat.
 	var panel_script = load("res://src/game/performance_panel.gd") as GDScript
 	var settings_path: String = panel_script.SETTINGS
 	var had_settings := FileAccess.file_exists(settings_path)
 	var saved := FileAccess.get_file_as_bytes(settings_path) if had_settings else PackedByteArray()
 	var panel: VBoxContainer = panel_script.new()
-	panel.set("rays", rays)
+	panel.set("rays", shafts)
 	root.add_child(panel)
 	var initial: bool = panel.get("rays_enabled")
 	panel.call("toggle_rays")
-	_check(rays.enabled != initial, "Tombol grafis tidak mengubah sinar")
+	_check(shafts.enabled != initial, "Tombol grafis tidak mengubah sinar")
 	var restored: VBoxContainer = panel_script.new()
 	root.add_child(restored)
 	_check(restored.get("rays_enabled") == not initial, "Setelan sinar tidak tersimpan")
@@ -95,5 +80,5 @@ func _run() -> void:
 		DirAccess.remove_absolute(settings_path)
 	world.queue_free()
 	await process_frame
-	print("[sun-rays-test] HASIL: ", "OK" if _failures == 0 else "GAGAL")
+	print("[light-shafts-test] HASIL: ", "OK" if _failures == 0 else "GAGAL")
 	quit(0 if _failures == 0 else 1)
