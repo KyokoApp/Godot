@@ -1507,5 +1507,7 @@ headless/render dilakukan oleh workflow CI.
 
 Validasi statis lokal lulus: `gdlint project tools`, parse seluruh GDScript,
 `tools/check_scripts.py`, katalog animasi, tes chunk, bundle lisensi, parse YAML
-workflow, dan `git diff --check`. Godot runtime tidak tersedia di sandbox; CI
-render/build belum dijalankan, jadi tampilan dan runtime belum dinyatakan lolos.
+workflow, dan `git diff --check`. CI menemukan dua kendala runtime dan perbaikannya
+sudah dikirim: GLB pedang meshopt dibuat kompatibel dengan Godot, lalu collider
+bidang memakai `WorldBoundaryShape3D` (bukan `PlaneShape3D`). Run CI baru masih
+menunggu; render/build belum dinyatakan lolos.

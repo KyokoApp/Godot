@@ -54,7 +54,9 @@ func _build_infinite_collider() -> void:
 	body.collision_mask = 0
 	var shape := CollisionShape3D.new()
 	shape.name = "InfinitePlane"
-	shape.shape = PlaneShape3D.new()
+	var plane := WorldBoundaryShape3D.new()
+	plane.plane = Plane(Vector3.UP, 0.0)
+	shape.shape = plane
 	body.add_child(shape)
 	add_child(body)
 
