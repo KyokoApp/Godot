@@ -48,7 +48,15 @@ func _run() -> void:
 		quit(1)
 		return
 	var weapon := visual.get("weapon_instance") as Node3D
-	_check(weapon != null and weapon.visible, "Pedang pemain tidak terlihat")
+	_check(not bool(player.get("sword_mode")), "Mode Survival masih mengaktifkan pedang")
+	_check(weapon == null or not weapon.visible, "Pedang masih terlihat di Survival")
+	var attack_button: Control = game.get("_attack")
+	var fire_button: Control = game.get("_fire_button")
+	_check(attack_button != null and not attack_button.visible,
+		"HUD Survival masih menampilkan serangan melee")
+	_check(fire_button != null and fire_button.visible
+		and str(fire_button.get("caption")) == "TEMBAK",
+		"HUD Survival tidak menampilkan tombol sihir TEMBAK")
 	var orbit: Node3D = game.get("_orbit")
 	orbit.set("yaw", 0.0)
 	orbit.set("pitch", 0.28)
@@ -71,7 +79,8 @@ func _run() -> void:
 		await physics_frame
 	await _capture("survival-world")
 	print("[survival-render-test] zombies=", zombies.size(),
-		" pedang=", "terpasang" if weapon != null else "hilang")
+		" sihir=", fire_button.get("caption"),
+		" pedang=", "terlihat" if weapon != null and weapon.visible else "hilang")
 	print("[survival-render-test] HASIL: ", "OK" if _failures == 0 else "GAGAL")
 	game.queue_free()
 	for _frame in range(4):
