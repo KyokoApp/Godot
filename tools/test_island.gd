@@ -1,10 +1,10 @@
 extends SceneTree
-## Gerbang bentuk pulau 500 m × 500 m (permintaan: "ukuran map ubah jadi
-## 500m x 500m ajh"; pinggirannya
+## Gerbang bentuk pulau 100 m × 100 m (permintaan: "map ubah ukuran jadi
+## 100m x 100m"; pinggirannya
 ## jangan bulat atau kotak tapi kayak pulau gitu bergelombang").
 ##
 ## Yang diuji adalah JANJI ke pemain, bukan sekadar "tidak ada error":
-##   1. dunia benar-benar 500 m × 500 m,
+##   1. dunia benar-benar 100 m × 100 m,
 ##   2. garis pantainya BERUBAH — radius pulau berubah jauh antar arah, jadi
 ##      tidak bulat dan tidak kotak,
 ##   3. ada daratan di tengah dan air di luar: tanah di atas nol di pusat, di
@@ -54,7 +54,7 @@ func _run() -> void:
 
 
 func _test_size() -> void:
-	_check(is_equal_approx(Field.SIZE, 500.0), "Dunia bukan 500 m: %.0f m" % Field.SIZE)
+	_check(is_equal_approx(Field.SIZE, 100.0), "Dunia bukan 100 m: %.0f m" % Field.SIZE)
 	_notes.append("dunia: %.0f x %.0f m, dataran pulau %.2f km²"
 		% [Field.SIZE, Field.SIZE, _land_area()])
 
@@ -99,7 +99,7 @@ func _test_coast_is_wavy() -> void:
 			"Pulau menyentuh tepi dunia (kotak?): radius %.0f m" % value)
 		_check(value < diagonal * 0.95,
 			"Radius melewati setengah diagonal (kotak?): %.0f m" % value)
-		_check(value > 100.0, "Pulau terlalu kecil di salah satu arah: %.0f m" % value)
+		_check(value > 20.0, "Pulau terlalu kecil di salah satu arah: %.0f m" % value)
 	_notes.append("pulau: radius %.0f..%.0f m (berubah %.0f%% antar arah)"
 		% [min_radius, max_radius, spread * 100.0])
 
@@ -118,7 +118,7 @@ func _test_land_and_sea() -> void:
 			"Di luar pantai masih ada darat pada sudut %.1f" % angle)
 		_check(not Field.is_inside(x, z, 0.0),
 			"Titik di laut dihitung di dalam pulau pada sudut %.1f" % angle)
-	# Tepi dunia (500 m) pasti air: pemain tidak pernah bisa jalan keluar pulau.
+	# Tepi dunia (100 m) pasti air: pemain tidak pernah bisa jalan keluar pulau.
 	_check(Field.terrain_height(Field.HALF - 1.0, 0.0) < 0.0,
 		"Tepi dunia timur masih darat")
 	_check(Field.terrain_height(-Field.HALF + 1.0, 0.0) < 0.0,

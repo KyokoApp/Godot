@@ -1,5 +1,35 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-03 (cicilan 17) — **DASH = ANIMASI LARI DIPERLAMBAT + BLOOM + DUNIA
+  100 m + DEDAUNAN QUATERNIUS KEMBALI**
+  - **FBX dash Mixamo DIHAPUS** (`assets/combat/dash.fbx`). Isinya pose statis
+    (327 kurva semuanya konstan), dan digantikan mekanik yang lebih murah.
+  - `player.gd`: dash tidak lagi memanggil `play_action`. Yang berubah cuma
+    `DASH_TIME` 0,22 → 0,40 dan `DASH_PLAYBACK` 0,8 baru: selama dash kecepatan
+    main animasi diturunkan ke 0,8× — pas SATU langkah siklus Sprint_Loop
+    (0,335 / 0,8 ≈ 0,42 s). Klip tetap gait lari → TIDAK ada perpindahan animasi.
+  - `dusk_environment.gd`: glow_intensity 0,30 → 0,50, glow_bloom 0,08 → 0,18.
+    Ambang 1,15 dan SOFTLIGHT TIDAK diubah (bulan harus tetap berwarna).
+  - `field.gd` dunia 100 m: SIZE 100, ISLAND_MIN/MAX 29/38, COAST_WAVE 2/1,
+    BEACH_RUN 7, PLATEAU 1,8, SEA_FLOOR -3, CHUNK 32 (CHUNK_CELLS 8),
+    CHUNK_RADIUS 2, PATH_CURVE 4,8 + frekuensi 0,105/0,165 (fasa 1,33 dipertahankan
+    supaya `path_centre(0)` = 1,40 > margin 1,0), PATH_WIDTH 1,2,
+    GRASS_PATH_MARGIN 1,0, amplitudo bukit 3,4 → 0,7.
+  - Ikut mengecil: `scenery.gd` (SEA_SIZE 420, HILL 52-125 m, HILL_HEIGHT 8 /
+    FAR_HEIGHT 18, pulau batu), `dusk_environment.gd` (fog 20-140),
+    `water.gdshader` (horizon_fade 140), `orbit_camera.gd` (MAX_DISTANCE 62),
+    `player.gd` (SHORE_MARGIN 1,4), `render_world.gd`, `test_island.gd`
+    (ambang "radius > 100" → "> 20").
+  - **ASET QUATERNIUS**: ada di repo lama pengguna `KyokoApp/Unity`
+    (`Assets/WorldSrc/`, commit bca3e575). 11 glTF + tekstur →
+    `project/assets/nature/models/` (3,3 MB) + `world/forest.gd` baru:
+    MultiMeshInstance3D per model, 16 pohon/26 semak/18 batu/44 pakis-bunga,
+    tanpa collision, benih RNG tetap 20261003. `main.gd` memanggilnya di
+    `_build_world()`. LICENSES.txt: bagian nature dari "arsip, sudah dihapus"
+    → "AKTIF, dikirim di APK/PCK".
+  - Katalog kembali ke 85 klip; `test_clips`/`test_mannequin`/`test_hud`/panel
+    animasi dikembalikan ke 85 dan dash diperiksa lewat gait (Sprint_Loop).
+
 - 2026-10-03 (cicilan 16) — **DASH DARI MIXAMO (dash.fbx) + OCCLUSION CULLING**
   (permintaan: "kata ai pake ini game jadi ringan" — frustum/visibility range/auto
   LOD/occlusion culling/2D notifier/MultiMesh — plus "pose animasi dash udah ku

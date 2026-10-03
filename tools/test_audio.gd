@@ -133,7 +133,7 @@ func _test_steps() -> void:
 	for frame in range(20):
 		await physics_frame
 	_check(footsteps.get("emitted") == stopped, "Langkah tidak berhenti")
-	# Pulau 1 km: tengah = rumput, pesisir rendah = pasir/tanah, lereng curam = batu.
+	# Pulau 100 m: tengah = rumput, pesisir rendah = pasir/tanah, lereng curam = batu.
 	_check(footsteps.surface_at(Vector3(0, 5, 0), Vector3.UP) == "grass",
 		"Tengah pulau bukan rumput")
 	_check(footsteps.surface_at(Vector3(4, 5, 0), Vector3.UP) == "grass",

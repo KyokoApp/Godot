@@ -1,10 +1,11 @@
 extends Node3D
-## Pulau 500 m × 500 m dengan garis pantai bergelombang + mannequin UAL berkulit
+## Pulau 100 m × 100 m dengan garis pantai bergelombang + mannequin UAL berkulit
 ## beranimasi yang digerakkan katalog animasi lengkap (85 klip UAL1 + UAL2) lewat
 ## retarget, plus goyangan kain/rambut simulasi verlet.
 
 const Field = preload("res://src/game/world/field.gd")
 const Scenery = preload("res://src/game/world/scenery.gd")
+const Forest = preload("res://src/game/world/forest.gd")
 const Grass = preload("res://src/game/grass_field.gd")
 const Player = preload("res://src/game/player.gd")
 const Character = preload("res://src/game/mannequin.gd")
@@ -50,6 +51,7 @@ var warmup_report: Dictionary = {}
 var _previous_occlusion := false
 var _field: Field
 var _scenery: Scenery
+var _forest: Forest
 var _grass: Grass
 var _player: Player
 var _visual: Character
@@ -108,6 +110,10 @@ func _build_world() -> void:
 	# gameplay di pulau tidak berubah.
 	_scenery = Scenery.new()
 	add_child(_scenery)
+	# Dedaunan Quaternius (pohon, semak, batu, pakis, bunga) di dalam pulau.
+	# MultiMesh: satu panggilan gambar per model, tidak ada collision.
+	_forest = Forest.new()
+	add_child(_forest)
 
 
 func _build_player() -> void:
@@ -237,7 +243,7 @@ func _build_hud() -> void:
 	layer.add_child(_speed_button)
 	_place(_speed_button, Control.PRESET_BOTTOM_RIGHT, -460, -300)
 	_speed_button.pressed.connect(_toggle_speed)
-	# Dash: dorongan lurus sebentar, animasi dash dari Mixamo (dash.fbx).
+	# Dash: dorongan lurus 12 m/s dengan animasi lari diperlambat satu langkah.
 	# Ditaruh di atas tombol serang, mudah dijangkau.
 	_dash = _rune("DASH", DASH_DIAMETER, DASH_ICON)
 	_dash.name = "DashRune"

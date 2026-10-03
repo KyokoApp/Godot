@@ -188,18 +188,22 @@ cool moonlight, dark blue fog and glow. No downloaded sky image, no noise
 texture, no shader-site code, and no third-party celestial artwork; every star,
 crater and cloud is generated in code.
 
-#### Archived nature and stone footpath — riwayat, sudah dihapus
-Eleven actual glTF models from the user's `KyokoApp/Unity` archive
-`bca3e575fc26311ef5a43c0263e772a6d9fced20`,
-`project/packs/build_mode/objects/nature/`: trees, bushes, fern, flowers,
-rocks, pebble and RockPath_Round_Wide. The archive credits identify these as
+#### Nature props — AKTIF, dikirim di APK/PCK
+Eleven glTF models taken from the user's own archive `KyokoApp/Unity`
+(`Assets/WorldSrc/`, commit `bca3e575fc26311ef5a43c0263e772a6d9fced20`):
+CommonTree_1, CommonTree_3, Pine_1, Bush_Common, Bush_Common_Flowers,
+Fern_1, Flower_3_Group, Rock_Medium_1, Rock_Medium_2, Pebble_Round_1 and
+RockPath_Round_Wide, plus their textures. The archive credits identify these as
 **Quaternius Stylized Nature MegaKit, CC0**:
 https://quaternius.com/packs/stylizednaturemegakit.html .
-Full list/provenance: the Quaternius Nature notice below.
-Status: the eleven glTF/bin models, their model textures and
-`tools/fetch_nature_assets.py` were REMOVED from the repository in the
-100 m x 100 m grass-field milestone; they are no longer shipped in APK/PCK.
-The two files that remain in `project/assets/nature/` — `grass_cards.png`
+They are stored in `project/assets/nature/models/` and scattered over the
+island by `project/src/game/world/forest.gd` (MultiMesh, no collision).
+Riwayat: model ini dulu ada di project ini, lalu DIHAPUS pada milestone padang
+rumput 100 m (bersama `tools/fetch_nature_assets.py`). Pada 2026-10-03 pengguna
+memintanya kembali ("carikan aku asset ini ... ada di project ku tapi aku
+lupa"); asetnya ternyata masih ada di repo `KyokoApp/Unity` dan sekarang
+dikirim lagi bersama permainan.
+The two other files in `project/assets/nature/` — `grass_cards.png`
 and `meadow_cover.png` — are original deterministic textures created for
 this project; regenerate with `tools/make_meadow_textures.py` (Pillow).
 

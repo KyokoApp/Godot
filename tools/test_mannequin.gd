@@ -65,7 +65,7 @@ func _test_catalog(character: Character, animation: AnimationPlayer,
 		skeleton: Skeleton3D) -> void:
 	var entries := Catalog.entries()
 	_check(entries.size() == Catalog.clip_count(), "Katalog tidak konsisten")
-	_check(entries.size() == 86, "Jumlah klip katalog bukan 86: %d" % entries.size())
+	_check(entries.size() == 85, "Jumlah klip katalog bukan 85: %d" % entries.size())
 	var missing: Array[String] = []
 	for entry in entries:
 		var name: String = entry["name"]
@@ -129,33 +129,6 @@ func _test_metrics(character: Character) -> void:
 	_check(character.metrics["Death01"]["length"] > 2.0, "Durasi Death01 salah")
 	_check(character.metrics["Sword_Heavy_Combo"]["length"] > 4.0,
 		"Durasi Sword_Heavy_Combo salah")
-	# Klip dash dari Mixamo harus sudah DITERJEMAHKAN ke tulang UAL: kalau tidak,
-	# pose dash-nya tidak akan pernah kelihatan di badan mannequin.
-	_test_dash_retarget(character)
-
-
-func _test_dash_retarget(character: Character) -> void:
-	var dash := Catalog.play_name("Dash")
-	_check(character.animation.has_animation(dash),
-		"Klip dash tidak tergabung ke AnimationPlayer: " + dash)
-	if not character.animation.has_animation(dash):
-		return
-	var anim: Animation = character.animation.get_animation(dash)
-	var mapped := 0
-	var foreign := 0
-	for track in range(anim.get_track_count()):
-		var path := str(anim.track_get_path(track))
-		var colon := path.find(":")
-		var bone := path.substr(colon + 1) if colon >= 0 else path
-		if character.skeleton.find_bone(bone) >= 0:
-			mapped += 1
-		else:
-			foreign += 1
-	_check(mapped > 20, "Klip dash hanya %d trek yang kena tulang UAL" % mapped)
-	_check(foreign == 0,
-		"Klip dash masih punya %d trek bertulang asing (terjemahan gagal)" % foreign)
-	_check(anim.length >= 0.2,
-		"Klip dash terlalu pendek: %.3f s" % anim.length)
 
 
 func _test_state_machine(character: Character) -> void:

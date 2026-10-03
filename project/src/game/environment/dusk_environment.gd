@@ -39,12 +39,12 @@ static func make_environment() -> Environment:
 	# tidak ikut berkabut supaya awan dan pendar matahari tetap tajam.
 	environment.fog_enabled = true
 	environment.fog_mode = Environment.FOG_MODE_DEPTH
-	# Dunia sekarang pulau 500 m: bukit di kaki langit berdiri 260-625 m dari
+	# Dunia sekarang pulau 100 m: bukit di kaki langit berdiri 15-90 m dari
 	# pemain. Kabut dulu berakhir di 420 m (dunia 100 m), jadi sekarang bukit itu
-	# akan lenyap seluruhnya. 100-700 m membuat pantai seberang (± 250 m) tetap
+	# akan lenyap seluruhnya. 20-140 m membuat pantai seberang (± 60 m) tetap
 	# terlihat sementara bukit terjauh memucat seperti cat air.
-	environment.fog_depth_begin = 100.0
-	environment.fog_depth_end = 700.0
+	environment.fog_depth_begin = 20.0
+	environment.fog_depth_end = 140.0
 	environment.fog_density = 0.20
 	environment.fog_depth_curve = 1.30
 	# Kabut malam: biru tua, jadi bukit jauh memudar menjadi siluet gelap alih-alih
@@ -71,9 +71,14 @@ static func make_environment() -> Environment:
 	#     default) menambah penuh sehingga glow bisa ~7x terlalu terang.
 	#   - glow_hdr_threshold = 1,15: yang mekar hanya bulan (2,4 HDR) dan bintang
 	#     terang (1,7 HDR); langit malam (± 0,05 HDR) tidak ikut mekar.
+	# Nilai kekuatan DIPERBESAR atas permintaan ("tambahin bloom efek"):
+	# 0,30 -> 0,50 dan bloom 0,08 -> 0,18. Ambang (1,15) dan blend mode
+	# (SOFTLIGHT) sengaja TIDAK diubah supaya bulan tetap berwarna — bukan gepeng
+	# putih — dan langit malam tidak ikut mekar. Dua hal itu yang dulu rusak saat
+	# glow dipermainkan.
 	environment.glow_enabled = true
-	environment.glow_intensity = 0.30
-	environment.glow_bloom = 0.08
+	environment.glow_intensity = 0.50
+	environment.glow_bloom = 0.18
 	environment.glow_hdr_threshold = 1.15
 	environment.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 	environment.glow_normalized = true

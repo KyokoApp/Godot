@@ -1,5 +1,5 @@
 extends CharacterBody3D
-## Pemain di pulau 500 m. Gerak mengikuti animasi, bukan sebaliknya.
+## Pemain di pulau 100 m. Gerak mengikuti animasi, bukan sebaliknya.
 ##
 ## Satu keputusan gait per frame dipakai bersama oleh badan dan animasi:
 ##   kecepatan input → gait (band dari kecepatan alami terukur) → skala main
@@ -46,12 +46,15 @@ const BOOST_MULTIPLIER := 1.35
 ## badan DIPOTONG ikut kecepatan alami klip (natural x skala maks 1,5), jadi
 ## kalau klip jalannya lambat badannya juga lambat dan analog terasa lemas.
 const MAX_SPEED := 6.0
-## Dash: satu dorongan lurus sebentar, pakai klip dash dari Mixamo
-## (assets/combat/dash.fbx, tulangnya diterjemahkan ke UAL saat dimuat).
-## Dipisah dari combo serang supaya tidak membingungkan.
-const DASH_CLIP := "Dash"
+## Dash: badan didorong lurus 12 m/s, tapi animasi LARI diperlambat jadi SATU
+## langkah besar — kaki melangkah pelan sambil badan melesat, napak lagi tepat
+## saat dorongan habis, lalu kecepatan main kembali normal. Klipnya TIDAK diganti
+## (tetap gait lari), jadi tidak ada jeda/perpindahan animasi sama sekali.
+## Angka dasarnya: siklus Sprint_Loop 0,67 s = satu langkah 0,335 s; dibagi
+## DASH_PLAYBACK 0,8 jadi 0,42 s ≈ DASH_TIME 0,40 s.
 const DASH_SPEED := 12.0
-const DASH_TIME := 0.22
+const DASH_TIME := 0.40
+const DASH_PLAYBACK := 0.8
 const DASH_COOLDOWN := 0.85
 ## Jalan mundur pakai klip berbeda (Walk_Formal_Loop) supaya arah gerak terbaca.
 ## UAL tidak punya klip strafe kiri/kanan — lihat catatan di _apply_animation.
@@ -62,10 +65,10 @@ const SCALE_MIN := 0.62
 const SCALE_MAX := 1.5
 const SCALE_MAX_BOOST := 2.05
 const HYSTERESIS := 0.35
-## Jarak minimum pemain dari garis pantai (meter). Tanjakan pantai 6 m / 35 m,
-## jadi 7 m ke dalam berarti ± 1,2 m di atas permukaan air: pemain berhenti di
+## Jarak minimum pemain dari garis pantai (meter). Tanjakan pantai 1,8 m / 7 m,
+## jadi 1,4 m ke dalam berarti ± 0,36 m di atas permukaan air: pemain berhenti di
 ## pasir kering, tidak berdiri tenggelam sampai mata kaki.
-const SHORE_MARGIN := 7.0
+const SHORE_MARGIN := 1.4
 const FALL_RESET := -12.0
 const IDLE := "Idle_Loop"
 const AIR_FALL := "Jump_Loop"
@@ -169,10 +172,6 @@ func request_dash() -> bool:
 	dash_cooldown = DASH_COOLDOWN
 	velocity.x = direction.x * DASH_SPEED
 	velocity.z = direction.z * DASH_SPEED
-	# Batasi durasi aksi sesuai dorongan dash. Kalau klipnya diputar lebih lama
-	# dari dorongannya, kakinya berdiam di sisa pose sebelum kembali lari — itu
-	# jeda yang terlihat.
-	visual.play_action(DASH_CLIP, DASH_TIME)
 	return true
 
 
@@ -289,13 +288,19 @@ func _apply_animation(desired: float) -> void:
 	#
 	# set_locomotion TIDAK menimpa klip aksi sekali jalan (mannequin menyimpan
 	# gait-nya saja lalu memutarnya saat aksinya habis), jadi ini aman dipanggil
-	# juga saat sedang menyerang atau dash. Dulu ada `return` lebih awal ketika
-	# is_busy(): akibatnya gait tertinggal di nilai SEBELUM dash, dan begitu dash
-	# selesai badan memakai gait lama (mis. jalan pelan) selama satu frame selagi
-	# masih 12 m/s — kakinya meluncur sesaat, terbaca sebagai patah.
+	# juga saat sedang menyerang. Dulu ada `return` lebih awal ketika is_busy():
+	# akibatnya gait tertinggal di nilai SEBELUM aksi, dan begitu aksinya selesai
+	# badan memakai gait lama (mis. jalan pelan) selama satu frame selagi masih
+	# cepat — kakinya meluncur sesaat, terbaca sebagai patah.
 	var reference := maxf(desired, move_speed)
 	var scale := 1.0
-	if reference > 0.05:
+	if _dash_left > 0.0:
+		# Selama dash animasi justru DIPERLAMBAT: satu langkah besar yang selesai
+		# menapak tepat ketika dorongan habis. Dibanding kecepatan main normal
+		# pada 12 m/s (1,5-2x), ini jauh lebih pelan — itu yang membuat dash
+		# terbaca sebagai hentakan, bukan lari cepat biasa.
+		scale = DASH_PLAYBACK
+	elif reference > 0.05:
 		var natural: float = visual.natural_speed(gait)
 		scale = clampf(reference / natural, SCALE_MIN,
 			SCALE_MAX_BOOST if boosted else SCALE_MAX)

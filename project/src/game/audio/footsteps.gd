@@ -6,7 +6,7 @@ const WorldAudio = preload("res://src/game/audio/world_audio.gd")
 const Character = preload("res://src/game/mannequin.gd")
 ## Pita pasir di pantai (meter di atas permukaan air). Samakan dengan
 ## `shore_high` di ground.gdshader supaya suara dan warna bertemu di tempat yang
-## sama. Dulu batasnya jarak dari pusat (padang 100 m); pulau 500 m berbentuk
+## sama. Dulu batasnya jarak dari pusat (padang 100 m); pulau 100 m berbentuk
 ## tidak beraturan, jadi yang dipakai adalah ketinggian tanah.
 const SHORE_HEIGHT := 2.6
 

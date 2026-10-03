@@ -1273,3 +1273,40 @@ repo).
   jauh). Yang **tidak berlaku** di project ini: `VisibleOnScreenNotifier2D`
   (itu 2D, game ini 3D) dan Auto Mesh LOD (medan/rumput dibuat prosedural, bukan
   model impor).
+
+### 2026-10-03 — dash pakai animasi lari (satu langkah diperlambat), bloom, dunia 100 m, dedaunan Quaternius kembali
+
+Empat permintaan sekaligus: hapus FBX dash Mixamo, tambah bloom, map jadi
+100 m × 100 m, dan carikan aset Quaternius Stylized Nature MegaKit.
+
+- **FBX dash Mixamo DIHAPUS.** Alasannya dua: isinya pose statis (semua 327 kurva
+  animasinya bernilai konstan — sudah diperiksa), dan sekarang ada cara yang jauh
+  lebih murah.
+- **Dash = animasi LARI, satu langkah diperlambat.** Badan tetap didorong
+  12 m/s, tapi kecepatan main animasi turun ke 0,8× selama 0,40 s — pas satu
+  langkah siklus Sprint_Loop (0,335 s / 0,8 ≈ 0,42 s). Jadi kaki melakukan satu
+  langkah besar yang pelan sambil badan melesat, menapak lagi tepat saat
+  dorongan habis, lalu kecepatan main kembali normal. **Klipnya tidak diganti
+  sama sekali** (tetap gait lari), jadi tidak ada jeda/perpindahan animasi —
+  sekalian memperbaiki keluhan "patah-patah" dari ronde sebelumnya.
+- **Bloom diperbesar**: `glow_intensity` 0,30 → 0,50 dan `glow_bloom` 0,08 →
+  0,18. Ambang (1,15) dan blend mode (SOFTLIGHT) sengaja TIDAK diubah: bulan
+  harus tetap berwarna, bukan gepeng putih, dan langit malam tidak ikut mekar.
+- **Dunia 100 m × 100 m.** Semua panjang ditulis sepersepuluh: radius pulau
+  146-190 → 29-38 m, lekukan pantai 10/5 → 2/1 m, tanjakan pantai 35 → 7 m,
+  kabut 100-700 → 20-140 m, laut 2100 → 420 m, cincin bukit 260-625 → 52-125 m,
+  bukit batu di laut ikut mendekat, batas pantai pemain 7 → 1,4 m, zoom kamera
+  terjauh 310 → 62 m, chunk tanah 128 → 32 m. Dua angka TIDAK ikut mengecil
+  karena harus menjaga kemiringan: dataran 6 → 1,8 m dan tanjakan pantai
+  35 → 7 m (1,8/7 = 0,26, masih di bawah batas rumput 0,30 — kalau lebih curam,
+  pantainya botak), serta amplitudo bukit 3,4 → 0,7 m.
+- **Aset Quaternius DITEMUKAN dan DIPASANG.** Yang kamu lupa itu ada di repo
+  lamamu: **`KyokoApp/Unity` → `Assets/WorldSrc/`** (11 model glTF: pohon, pinus,
+  semak, pakis, bunga, batu + teksturnya, CC0). Dulu sempat ada di project ini
+  lalu dihapus; sekarang kembali di `project/assets/nature/models/` dan
+  disebarkan oleh `world/forest.gd` — 16 pohon, 26 semak, 18 batu, 44
+  pakis/bunga, semuanya `MultiMeshInstance3D` (satu panggilan gambar per model),
+  tanpa collision. Skala pohon diturunkan (model aslinya 7-9 m; di pulau 100 m
+  itu terbaca seperti menara).
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.

@@ -4,7 +4,7 @@ extends SceneTree
 ## reruntuhan, titik cahaya). Angka tidak bisa menilai "mirip", jadi gambar ini
 ## yang dikirim ke komentar commit CI.
 ##
-## Lima sudut dipilih untuk menilai PULAU 1 km (permintaan: dunia 1 km, sisinya
+## Lima sudut dipilih untuk menilai PULAU 100 m (permintaan: dunia 100 m, sisinya
 ## bergelombang seperti pulau — jangan bulat, jangan kotak):
 ##   * "pulau"       : seluruh pulau dari udara — ini yang menjawab "bulat/kotak?"
 ##   * "pemandangan" : dari dataran menghadap garis pantai dan laut
@@ -54,10 +54,10 @@ func _run() -> void:
 	var views := [
 		# Seluruh pulau dari udara: kamera tinggi di timur laut, melihat ke
 		# barat daya. Inilah gambar yang menjawab "bulat atau kotak?".
-		{"name": "pulau", "distance": 310.0, "yaw": PI * 0.25, "pitch": 1.10,
+		{"name": "pulau", "distance": 62.0, "yaw": PI * 0.25, "pitch": 1.10,
 			"offset": Vector3(0.0, 40.0, 0.0)},
 		# Dari dataran menghadap garis pantai dan laut.
-		{"name": "pemandangan", "distance": 120.0, "yaw": outward, "pitch": 0.22,
+		{"name": "pemandangan", "distance": 55.0, "yaw": outward, "pitch": 0.22,
 			"offset": shore * 0.55 + Vector3(0.0, 4.0, 0.0)},
 		# Pita pasir dan garis air dari dekat.
 		{"name": "pantai", "distance": 26.0, "yaw": outward + 0.35, "pitch": 0.16,
