@@ -86,9 +86,13 @@ func _test_coast_is_wavy() -> void:
 	_check(spread > 0.15, "Garis pantai hampir bulat: radius %.0f..%.0f m"
 		% [min_radius, max_radius])
 	# Tidak bulat: hampir semua arah harus punya radius yang berbeda.
+	# Toleransi "beda" ikut mengecil bersama pulau. Dulu dunia 1 km dengan radius
+	# 146-190 m, jadi 1 m = 2% dari rentang. Pulau 100 m rentangnya cuma ± 11 m,
+	# jadi toleransinya 2,5% dari rentang itu (0,28 m) — sama ketatnya.
+	var tolerance := (max_radius - min_radius) * 0.025
 	var distinct := 0
 	for value in radii:
-		if absf(value - radii[0]) > 1.0:
+		if absf(value - radii[0]) > tolerance:
 			distinct += 1
 	_check(distinct > STEPS * 0.9, "Radius pulau sama di hampir semua arah (bulat)")
 	# Tidak kotak: pulau tidak boleh menyentuh tepi dunia, dan radius di setiap

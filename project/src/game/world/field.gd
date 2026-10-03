@@ -33,8 +33,8 @@ const WALK_MARGIN := 0.7
 const ISLAND_MIN := 29.0
 const ISLAND_MAX := 38.0
 ## Lekukan halus garis pantai (meter) supaya tidak terlihat seperti lingkaran.
-const COAST_WAVE := 2.0
-const COAST_WAVE_B := 1.0
+const COAST_WAVE := 3.0
+const COAST_WAVE_B := 1.5
 ## Dasar laut dan tinggi dataran pulau (meter di atas permukaan air). Dataran
 ## sengaja RENDAH (1,8 m) supaya tanjakan pantai tidak melewati MAX_SLOPE:
 ## 1,8 m / 7 m = 0,26 < 0,30. Kalau lebih curam, rumput tidak tumbuh di pantai.

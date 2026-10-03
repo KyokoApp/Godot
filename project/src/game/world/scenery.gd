@@ -110,9 +110,9 @@ func _build_island() -> void:
 	var indices := PackedInt32Array()
 	# Dua blok: yang utama panjang dan rendah, yang kedua lebih kecil di
 	# belakangnya supaya siluetnya tidak terlihat seperti satu balok.
-	_add_rock_block(vertices, colors, indices, Vector3(-48.0, SEA_LEVEL - 12.0, 0.0),
+	_add_rock_block(vertices, colors, indices, Vector3(-49.0, SEA_LEVEL - 12.0, 0.0),
 		Vector3(9.0, 16.0, 4.5), 3)
-	_add_rock_block(vertices, colors, indices, Vector3(-52.0, SEA_LEVEL - 14.0, 2.0),
+	_add_rock_block(vertices, colors, indices, Vector3(-53.0, SEA_LEVEL - 14.0, 2.0),
 		Vector3(6.0, 15.0, 3.5), 7)
 	_commit(vertices, colors, indices, "Island", self)
 	island = get_node("Island") as MeshInstance3D
