@@ -359,7 +359,7 @@ func can_grow(x: float, z: float) -> bool:
 	# supaya berlumpur. Garis airnya bulat bersih (ramp kolam linear + bukit mati
 	# di dalam kolam), jadi radius cukup — dulu tinggi tanah, tapi tinggi tanah
 	# ikut naik-turun oleh perbukitan dan bikin garis rumputnya berlekuk.
-	if point.length() < POND_RADIUS + GRASS_BASIN_MARGIN:
+	if Vector2(x, z).length() < POND_RADIUS + GRASS_BASIN_MARGIN:
 		return false
 	if surface_height(x, z) < GRASS_MIN_HEIGHT:
 		return false
