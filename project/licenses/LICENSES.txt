@@ -52,6 +52,19 @@ been cleared for public redistribution, commercial use, or app-store release.
   `Mediavel/`). Belum dipakai di project ini — akan masuk saat milestone
   "Build mode grid".
 
+#### Pedang Survival — Medieval Weapons
+- **Pembuat aset asli:** Quaternius — https://quaternius.com/packs/medievalweapons.html
+- **Lisensi:** CC0 1.0 Universal; berkas lisensi ikut paket asli.
+  https://creativecommons.org/publicdomain/zero/1.0/
+- **Model yang dibundel:** `project/assets/weapons/Sword.glb`, mesh GLB
+  16.936 byte, grip di pangkal dan bilah sepanjang sumbu +Y.
+- **Provenance:** konversi GLB CC0 yang dibagikan di
+  `Vizboom/tome-of-heroes`, `models/weapons/Sword.glb`, commit
+  `afd3af369b648d520e2a7d0a5e1bc05f9eaddf3b` (asal: paket Medieval Weapons
+  Quaternius). Konversi mempertahankan model sumber dan menata unit/grip untuk
+  pemakaian game. File ini dipakai sebagai model 3D yang dipegang pemain;
+  animasi ayunan berasal dari UAL2 Quaternius (lihat bagian mannequin).
+
 ### Kode
 
 Kode orisinal mengikuti bagian “Pemberitahuan hak karya orisinal A-Sekai” di awal file ini (all rights reserved).

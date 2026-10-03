@@ -1486,3 +1486,26 @@ area kanan. Panel/menu kiri yang sebelumnya disetujui dipertahankan.
 `gdlint project tools`, `python3 tools/check_scripts.py .`, dan
 `git diff --check` lulus. Sandbox ini tidak menyediakan Godot runtime; uji
 headless/render dilakukan oleh workflow CI.
+
+## Ronde 23 — Gameplay, Survival tanpa batas, pedang, dan tata letak HUD
+
+- Opsi pertama dialog Mira sekarang **Gameplay**. Selector mode beranimasi
+  menempatkan **Survival** sebagai pilihan pertama yang dapat dimainkan; mode
+  berikutnya tetap diberi label **COMING SOON**.
+- Dunia Survival berupa bidang datar tanpa batas pulau. Zombie muncul berkala
+  (maksimal lima zombie hidup bersamaan) dan memakai klip idle, jalan, serang,
+  reaksi kena pukul, serta mati dari animasi UAL yang tersedia.
+- Serangan memakai `Sword.glb` Quaternius CC0 yang ditemukan di sumber GitHub,
+  terpasang pada tangan kanan. Tebasan A/B/C bervariasi per input dan tidak
+  otomatis menjadi kombo; lapisan animasi upper-body membiarkan langkah kaki
+  tetap mengikuti gerak pemain.
+- Editor HUD dapat mengubah ukuran dan posisi tombol Serang, Tembak, Lompat,
+  Jongkok, Lari, serta Dash. Pengaturan disimpan di perangkat; saat editor aktif,
+  tombol gameplay tetap terlihat sebagai pratinjau tetapi tidak bisa dipicu.
+- Ditambah tes Survival, selector mode, editor HUD, dan render Mobile Vulkan yang
+  menyimpan screenshot selector serta gameplay untuk pemeriksaan CI.
+
+Validasi statis lokal lulus: `gdlint project tools`, parse seluruh GDScript,
+`tools/check_scripts.py`, katalog animasi, tes chunk, bundle lisensi, parse YAML
+workflow, dan `git diff --check`. Godot runtime tidak tersedia di sandbox; CI
+render/build belum dijalankan, jadi tampilan dan runtime belum dinyatakan lolos.

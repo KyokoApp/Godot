@@ -24,6 +24,8 @@ const SKIN_SHADER = preload("res://src/game/character/skin_shell.gdshader")
 const COMBAT_MODEL = preload("res://assets/combat/UAL2_Standard.glb")
 const OUTLINE = preload("res://src/game/character_outline.gdshader")
 const CastLayer = preload("res://src/game/animation/cast_layer.gd")
+const SwordLayer = preload("res://src/game/animation/sword_layer.gd")
+const SwordModel = preload("res://assets/weapons/Sword.glb")
 const Catalog = preload("res://src/game/animation/catalog.gd")
 const Metrics = preload("res://src/game/animation/anim_metrics.gd")
 const IDLE := "Idle_Loop"
@@ -47,6 +49,11 @@ var avatar: Skeleton3D
 var skin: SkinShell
 var cast_layer: CastLayer
 var metrics: Dictionary = {}
+var measure_metrics := true
+var sword_layer_enabled := false
+var sword_layer: SwordLayer
+var weapon_attachment: BoneAttachment3D
+var weapon_instance: Node3D
 var mode := Mode.LOCOMOTION
 var clip := IDLE
 var gait := IDLE
@@ -83,10 +90,13 @@ func _ready() -> void:
 	_apply_material()
 	_setup_skin()
 	_configure_clips()
-	metrics = Metrics.measure_catalog(animation, skeleton, Catalog)
 	animation.play(Catalog.play_name(IDLE), 0.0)
 	animation.advance(0.0)
 	_setup_cast_layer()
+	if sword_layer_enabled:
+		_setup_sword_layer()
+	if measure_metrics:
+		metrics = Metrics.measure_catalog(animation, skeleton, Catalog)
 	print("[mannequin] %d klip dimuat, %d metrik terukur" % [
 		animation.get_animation_list().size(), metrics.size()])
 
@@ -191,6 +201,67 @@ func _setup_cast_layer() -> void:
 		push_error("Mannequin: filter tulang casting kosong")
 
 
+func _setup_sword_layer() -> void:
+	sword_layer = SwordLayer.new()
+	sword_layer.name = "UpperBodySword"
+	skeleton.add_child(sword_layer)
+	sword_layer.configure(animation, skeleton)
+
+
+func _start_sword_attack(names: Array[String]) -> float:
+	if sword_layer == null:
+		return 0.0
+	if cast_layer != null:
+		cast_layer.playing = false
+		cast_layer.active = false
+		cast_layer.influence = 0.0
+	return sword_layer.play_sequence(names)
+
+
+func _stop_sword_attack() -> void:
+	if sword_layer != null:
+		sword_layer.cancel()
+
+
+func _is_sword_attacking() -> bool:
+	return sword_layer != null and sword_layer.playing
+
+
+func _set_weapon_visible(enabled: bool) -> void:
+	if not enabled:
+		if weapon_instance != null:
+			weapon_instance.hide()
+		return
+	if weapon_instance == null:
+		if skeleton == null:
+			return
+		var hand := skeleton.find_bone("hand_r")
+		if hand < 0:
+			push_error("Mannequin: tulang hand_r untuk pedang tidak ditemukan")
+			return
+		weapon_attachment = BoneAttachment3D.new()
+		weapon_attachment.name = "RightHandSword"
+		weapon_attachment.bone_name = skeleton.get_bone_name(hand)
+		skeleton.add_child(weapon_attachment)
+		var instance: Node3D = SwordModel.instantiate() as Node3D
+		if instance == null:
+			push_error("Mannequin: model pedang tidak bisa dimuat")
+			weapon_attachment.queue_free()
+			weapon_attachment = null
+			return
+		instance.name = "Sword"
+		weapon_attachment.add_child(instance)
+		weapon_instance = instance
+		# Model CC0 dibuat dengan grip di origin dan bilah di +Y. Arah tangan
+		# siaga UAL menentukan rotasi lokal; bilah diarahkan ke depan karakter.
+		var hand_basis := skeleton.get_bone_global_pose(hand).basis
+		var forward_in_skeleton := Vector3.BACK
+		var blade_direction := (hand_basis.inverse() * forward_in_skeleton).normalized()
+		weapon_instance.rotation = Quaternion(Vector3.UP, blade_direction).get_euler()
+		weapon_instance.scale = Vector3.ONE * 0.62
+	weapon_instance.show()
+
+
 # ------------------------------------------------------------- lokomosi ----
 
 func natural_speed(name: String) -> float:
@@ -220,6 +291,7 @@ func set_locomotion(name: String, playback_speed := 1.0) -> void:
 
 func set_air_clip(name: String, playback_speed := 1.0) -> void:
 	# Klip udara dipilih pemain (lompat), bukan dari band kecepatan.
+	_stop_sword_attack()
 	mode = Mode.LOCOMOTION
 	gait = name
 	if name != clip:
@@ -231,8 +303,14 @@ func set_air_clip(name: String, playback_speed := 1.0) -> void:
 func play_action(name: String, max_time := 0.0) -> float:
 	var measured: Dictionary = metrics.get(name, {})
 	var length := float(measured.get("length", 0.0))
-	if length <= 0.0 or not animation.has_animation(Catalog.play_name(name)):
+	var play_name: String = Catalog.play_name(name)
+	if not animation.has_animation(play_name):
 		return 0.0
+	if length <= 0.0:
+		length = animation.get_animation(play_name).length
+	if length <= 0.0:
+		return 0.0
+	_stop_sword_attack()
 	_hold_after = Catalog.holds_last_frame(name)
 	mode = Mode.ACTION
 	# Klip boleh lebih panjang daripada aksinya. Tanpa batas ini kaki berdiam di
@@ -322,7 +400,7 @@ func progress() -> float:
 
 
 func is_busy() -> bool:
-	return mode == Mode.ACTION or mode == Mode.SHOWCASE
+	return mode == Mode.ACTION or mode == Mode.SHOWCASE or _is_sword_attacking()
 
 
 func start_cast() -> void:

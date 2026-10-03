@@ -26,6 +26,15 @@ func _ready() -> void:
 	_mesh = _make_mesh()
 
 
+func clear_tiles() -> void:
+	for tile: MultiMeshInstance3D in tiles.values():
+		if is_instance_valid(tile):
+			tile.queue_free()
+	tiles.clear()
+	_pending.clear()
+	_center = Vector2i(9999, 9999)
+
+
 func update_center(point: Vector3) -> void:
 	_material.set_shader_parameter("player_position", point)
 	var center := Vector2i(floori(point.x / TILE), floori(point.z / TILE))
@@ -58,9 +67,9 @@ func placements_for(key: Vector2i) -> Array[Transform3D]:
 			var local := Vector2((x + random.randf_range(0.2, 0.8)) * TILE / GRID,
 				(z + random.randf_range(0.2, 0.8)) * TILE / GRID)
 			var point := Vector2(key.x * TILE, key.y * TILE) + local
-			if not field.can_grow(point.x, point.y):
+			if not bool(field.call("can_grow", point.x, point.y)):
 				continue
-			var height: float = field.ground.surface_height(point.x, point.y)
+			var height := float(field.call("_surface_height", point.x, point.y))
 			var pose := Basis(Vector3.UP, random.randf_range(0, TAU))
 			result.append(Transform3D(pose, Vector3(local.x, height - 0.02, local.y)))
 	return result

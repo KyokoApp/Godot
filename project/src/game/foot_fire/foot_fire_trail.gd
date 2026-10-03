@@ -2,7 +2,6 @@ extends Node3D
 ## Actual ankle/toe poses + floor ray contacts, not a generic ribbon behind the player.
 
 const Character = preload("res://src/game/mannequin.gd")
-const Field = preload("res://src/game/world/field.gd")
 const MeshFactory = preload("res://src/game/foot_fire/foot_fire_mesh.gd")
 const SHADER = preload("res://src/game/foot_fire/foot_fire.gdshader")
 const MAX_STAMPS := 16
@@ -12,7 +11,7 @@ const PALETTE := [Color("6228cc"), Color("ad74ff"), Color("b4efff")]
 
 var character: Character
 var body: CharacterBody3D
-var field: Field
+var field: Node3D
 var emitted := 0
 var stamps: Array[MeshInstance3D] = []
 var ages: Array[float] = []
@@ -98,7 +97,8 @@ func _sample(side: int) -> void:
 		return
 	if distance > clearance + margin or _contact[side] or _cooldowns[side] > 0:
 		return
-	if not Field.is_inside(point.x, point.z, 0.4):
+	if field.has_method("allows_foot_effect") \
+			and not bool(field.call("allows_foot_effect", point, 0.4)):
 		return
 	_contact[side] = true
 	_cooldowns[side] = 0.18

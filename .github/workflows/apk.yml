@@ -84,9 +84,16 @@ jobs:
           # "pohon berkas ter-revert" ketahuan dalam hitungan detik.
           for wajib in tools/fetch_assets.sh tools/render_mannequin.gd \
                 tools/test_skin_shell.gd tools/test_camera_zoom.gd \
-                tools/test_scenery.gd tools/test_island.gd \
-                tools/render_world.gd \
+                tools/test_scenery.gd tools/test_island.gd tools/test_survival.gd \
+                tools/render_world.gd tools/render_survival.gd \
                 project/src/game/world/scenery.gd \
+                project/src/game/world/survival_world.gd \
+                project/src/game/world/survival_field.gd \
+                project/src/game/world/survival_ground.gdshader \
+                project/src/game/world/zombie.gd \
+                project/src/game/ui/game_mode_selector.gd \
+                project/src/game/animation/sword_layer.gd \
+                project/assets/weapons/Sword.glb \
                 project/src/game/world/water.gdshader \
                 project/src/game/mannequin.gd \
                 project/src/game/character/skin_shell.gd \
@@ -231,6 +238,19 @@ jobs:
             exit 1
           fi
           grep -F '[npc-test] HASIL: OK' npc-test.log
+
+      - name: Tes mode Survival, pedang, dan zombie (headless)
+        run: |
+          set +e
+          timeout 300 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_survival.gd" 2>&1 | tee survival-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' survival-test.log; then
+            tail -80 survival-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[survival-test] HASIL: OK' survival-test.log
 
       # Zoom kamera: cubit dua jari harus benar-benar menempel ke karakter.
       - name: Tes zoom kamera (headless)
@@ -678,12 +698,29 @@ jobs:
           fi
           grep -F '[world-render-test] HASIL: OK' world-render.log
 
+      - name: Render selector mode dan dunia Survival (Mobile Vulkan software)
+        run: |
+          set +e
+          timeout 360 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --script "$GITHUB_WORKSPACE/tools/render_survival.gd" 2>&1 | tee survival-render.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' survival-render.log; then
+            tail -80 survival-render.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[survival-render-test] HASIL: OK' survival-render.log
+
       - name: Simpan screenshot dunia
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: world-screenshots
-          path: ~/.local/share/godot/app_userdata/**/world-*-test.png
+          path: |
+            ~/.local/share/godot/app_userdata/**/world-*-test.png
+            ~/.local/share/godot/app_userdata/**/survival-*-test.png
           if-no-files-found: ignore
 
       - name: Simpan screenshot avatar
@@ -699,7 +736,8 @@ jobs:
         run: |
           shopt -s globstar nullglob
           SHOTS=(~/.local/share/godot/app_userdata/**/avatar-*-test.png \
-            ~/.local/share/godot/app_userdata/**/world-*-test.png)
+            ~/.local/share/godot/app_userdata/**/world-*-test.png \
+            ~/.local/share/godot/app_userdata/**/survival-*-test.png)
           if [ ${#SHOTS[@]} -eq 0 ]; then
             echo "tidak ada screenshot untuk pratinjau"
             exit 0
@@ -950,10 +988,10 @@ jobs:
             echo '```'
             grep -hE '\[skin-test\]|kulit:|biaya avatar|camera-zoom-test|gerak klip|tinggi avatar|katalog klip' \
               alllogs/*.log 2>/dev/null | tail -40
-            grep -hE '\[scenery-test\]|\[world-render-test\]|\[island-test\]' \
-              alllogs/*.log 2>/dev/null | tail -30
-            grep -hE '\[dusk-test\]|\[island-test\]|\[scenery-test\]|\[world-render-test\]' \
-              alllogs/*.log 2>/dev/null | tail -10
+            grep -hE '\[scenery-test\]|\[world-render-test\]|\[survival-render-test\]|\[survival-test\]|\[island-test\]' \
+              alllogs/*.log 2>/dev/null | tail -40
+            grep -hE '\[dusk-test\]|\[island-test\]|\[scenery-test\]|\[world-render-test\]|\[survival-render-test\]' \
+              alllogs/*.log 2>/dev/null | tail -15
             echo '```'
             if [ -s alllogs/gate_fetch-assets.log ]; then
               echo
@@ -1052,4 +1090,3 @@ jobs:
             exit 1
           fi
           echo "semua gerbang lolos (gate, render-a, render-b, render-c, package)"
-

@@ -1,5 +1,24 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-03 (cicilan 23) — **GAMEPLAY SELECTOR, SURVIVAL, PEDANG, DAN EDITOR HUD**
+  - Opsi pertama dialog Mira kini `GAMEPLAY`; setelah transisi dialog/kamera,
+    selector mode beranimasi menawarkan Survival dan placeholder `COMING SOON`.
+  - Survival memakai bidang datar tanpa batas yang mengikuti pemain, batas pulau
+    dimatikan, dan zombie UAL2 datang berkala (maksimal lima hidup sekaligus).
+    Zombie memakai idle/jalan/serang/kena-hit/mati dari pustaka animasi tersedia.
+  - Serangan Survival memakai model `Sword.glb` Quaternius CC0 yang ditemukan di
+    sumber GitHub, diikat ke tangan kanan. Ayunan A/B/C berganti hanya saat
+    menerima input baru; klip upper-body berlapis menjaga gait/kaki tetap berjalan.
+  - Editor HUD menyediakan ukuran serta posisi untuk tombol Serang, Tembak,
+    Lompat, Jongkok, Lari, dan Dash; tata letak disimpan lokal dan tombol tampil
+    sebagai pratinjau nonaktif selama pengeditan.
+  - Ditambahkan tes Survival, tes selector/dialog, tes tata letak HUD, dan render
+    Mobile Vulkan untuk screenshot selector + dunia Survival. Validasi statis
+    terbaru lulus (`gdlint`, `gdparse`, pemeriksaan tipe, katalog animasi, chunk,
+    lisensi, YAML workflow, dan `git diff --check`).
+  - Godot runtime belum tersedia lokal dan CI belum dijalankan; render/build belum
+    terverifikasi. Jangan menyatakan hasil visual/runtime lolos sebelum CI hijau.
+
 - 2026-10-03 (cicilan 22) — **MENU LAYAR PENUH, DUNIA TERLIHAT, KAMERA FOKUS KE MIRA**
   - Koreksi pengguna: pertahankan panel kiri yang sudah disukai; hilangkan
     margin layar dan bidang putih di kanan supaya dunia tetap terlihat; zoom

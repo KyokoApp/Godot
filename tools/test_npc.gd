@@ -103,6 +103,9 @@ func _run() -> void:
 		if dialogue != null:
 			var options: Array = dialogue.get("_options")
 			_check(options.size() == 4, "Pilihan gameplay tidak lengkap: %d" % options.size())
+			var option_labels: Array = dialogue.get("_option_labels")
+			_check(option_labels[0].text.contains("GAMEPLAY"),
+				"Opsi pertama dialog NPC bukan Gameplay")
 			var page: Control = dialogue.get("_page")
 			var backdrop: ColorRect = dialogue.get("_backdrop")
 			_check(
@@ -157,6 +160,27 @@ func _run() -> void:
 			restored_focus.distance_to(original_focus) < 0.03,
 			"Titik pandang kamera tidak pulih setelah dialog"
 		)
+		# Gameplay membuka selector animasi setelah dialog dan kamera selesai menutup.
+		player.spawn(Vector2(npc.global_position.x, npc.global_position.z + 1.5))
+		interaction.call("_begin_interaction")
+		await create_timer(0.65).timeout
+		dialogue.call("activate_selected")
+		await create_timer(0.85).timeout
+		var mode_selector: Control = game.get("_mode_selector")
+		_check(mode_selector != null and mode_selector.visible,
+			"Gameplay tidak membuka selector mode beranimasi")
+		if mode_selector != null:
+			var cards: Array = mode_selector.get("_cards")
+			_check(cards.size() == 3, "Selector tidak menampilkan Survival dan placeholder")
+			var mode_status: Label = mode_selector.get("_status")
+			mode_selector.call("_select_mode", 1)
+			_check(mode_status.text.contains("COMING SOON"),
+				"Mode yang belum tersedia tidak menampilkan Coming Soon")
+			mode_selector.call("close")
+			await create_timer(0.35).timeout
+			_check(not mode_selector.visible, "Selector mode tidak menutup")
+			_check(bool(joystick.get("input_enabled")) and bool(orbit.get("input_enabled")),
+				"Input tidak pulih setelah selector mode")
 
 	game.queue_free()
 	await process_frame

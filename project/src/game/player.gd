@@ -9,6 +9,9 @@ extends CharacterBody3D
 ## badan ikut lambat dan analog terasa lemas — itulah "jalan geraknya lambat
 ## banget". Sekarang badan yang menentukan, animasi yang menyesuaikan diri.
 
+signal attack_started(clip: String)
+signal health_changed(value: int)
+
 const Character = preload("res://src/game/mannequin.gd")
 const Field = preload("res://src/game/world/field.gd")
 const Joystick = preload("res://src/game/virtual_joystick.gd")
@@ -36,9 +39,15 @@ const IDLE_EXIT := 0.20
 ## seperti jongkok-menyerap, dan itulah yang terlihat seperti "jeda patung" di
 ## tengah lari. Klip mendarat hanya dipakai untuk pendaratan pelan/diam.
 const LANDING_SKIP_SPEED := 1.2
-## Combo serangan: tiap tekan tombol lanjut ke klip berikutnya lalu berulang.
-const ATTACK_COMBO := ["Punch_Jab", "Punch_Cross"]
-const COMBO_RESET := 1.1
+## Tiap tap memulai satu gerakan mandiri. Input baru ditolak sampai gerakan aktif selesai.
+const PUNCH_ATTACKS := ["Punch_Jab", "Punch_Cross"]
+const SWORD_ATTACKS: Array[Dictionary] = [
+	{"clip": "Sword_Regular_A", "recovery": "Sword_Regular_A_Rec", "damage": 32},
+	{"clip": "Sword_Regular_B", "recovery": "Sword_Regular_B_Rec", "damage": 32},
+	{"clip": "Sword_Regular_C", "recovery": "", "damage": 40},
+]
+const MAX_HEALTH := 100
+const DAMAGE_COOLDOWN := 0.50
 const ACCEL := 16.0
 const TURN_SPEED := 13.0
 const BOOST_MULTIPLIER := 1.35
@@ -83,22 +92,26 @@ const GAIT_CLIPS := ["Walk_Loop", "Jog_Fwd_Loop", "Sprint_Loop"]
 
 var joystick: Joystick
 var orbit: Orbit
-var field: Field
+var field: Node3D
 var visual: Character
 var crouching := false
 var boosted := false
+var sword_mode := false
+var world_bounds_enabled := true
+var health := MAX_HEALTH
 var move_speed := 0.0
 var speed_scale := 1.0
 var gait := IDLE
 var grounded := true
-var combo_index := 0
+var punch_attack_index := 0
+var sword_attack_index := 0
 var dash_cooldown := 0.0
 ## True selama dorongan dash sedang berjalan. Dipakai main.gd untuk menyalakan
 ## pita jejak + bloom karakter (efek "blur/glow" ronde 18).
 var dashing := false
 var _airborne := false
 var _air_time := 0.0
-var _combo_timer := 0.0
+var _damage_cooldown := 0.0
 var _dash_left := 0.0
 var _dash_cooldown := 0.0
 var _bands: Array = []
@@ -120,35 +133,78 @@ func _ready() -> void:
 
 
 func spawn(point: Vector2) -> void:
-	var ground := field.surface_height(point.x, point.y)
+	var ground := 0.0
+	if field != null and field.has_method("surface_height"):
+		ground = float(field.call("surface_height", point.x, point.y))
 	global_position = Vector3(point.x, ground + HEIGHT * 0.5 + 0.05, point.y)
 	velocity = Vector3.ZERO
 	gait = IDLE
 	if visual != null:
-		visual.set_locomotion(IDLE, 1.0)
+		visual.set_locomotion("Sword_Idle" if sword_mode else IDLE, 1.0)
 
 
 func request_jump() -> void:
-	# Langsung melompat: dorongan dipasang saat itu juga, pose tolakan hanya
-	# menempel di badan yang sudah naik. Tidak ada jeda menahan pemain.
-	if _airborne or not is_on_floor():
+	# Lompat boleh memotong ayunan atas tubuh; klip tolakan mengambil alih penuh.
+	if _airborne or not is_on_floor() or health <= 0:
 		return
 	velocity.y = JUMP_VELOCITY
 	_airborne = true
 	_air_time = 0.0
 	if visual != null:
+		visual._stop_sword_attack()
 		visual.play_action(JUMP_START)
 
 
 func attack() -> String:
-	# Combo: tiap tekan ganti klip serangan, sama seperti game aksi lain.
-	if visual == null:
+	if visual == null or health <= 0 or _airborne or not grounded or visual.is_busy():
 		return ""
-	var clip: String = ATTACK_COMBO[combo_index]
-	combo_index = (combo_index + 1) % ATTACK_COMBO.size()
-	_combo_timer = COMBO_RESET
-	visual.play_action(clip)
-	return clip
+	if sword_mode:
+		var attack: Dictionary = SWORD_ATTACKS[sword_attack_index]
+		var clip := str(attack["clip"])
+		var sequence: Array[String] = [clip]
+		var recovery := str(attack.get("recovery", ""))
+		if not recovery.is_empty():
+			sequence.append(recovery)
+		if visual._start_sword_attack(sequence) <= 0.0:
+			return ""
+		sword_attack_index = (sword_attack_index + 1) % SWORD_ATTACKS.size()
+		attack_started.emit(clip)
+		return clip
+	var punch: String = PUNCH_ATTACKS[punch_attack_index]
+	if visual.play_action(punch) <= 0.0:
+		return ""
+	punch_attack_index = (punch_attack_index + 1) % PUNCH_ATTACKS.size()
+	attack_started.emit(punch)
+	return punch
+
+
+func set_sword_mode(enabled: bool) -> void:
+	sword_mode = enabled
+	punch_attack_index = 0
+	sword_attack_index = 0
+	if visual == null:
+		return
+	visual._stop_sword_attack()
+	visual.set_locomotion("Sword_Idle" if enabled else IDLE, 1.0)
+	visual._set_weapon_visible(enabled)
+
+
+func reset_health() -> void:
+	health = MAX_HEALTH
+	_damage_cooldown = 0.0
+	health_changed.emit(health)
+
+
+func take_damage(amount: int) -> void:
+	if amount <= 0 or health <= 0 or _damage_cooldown > 0.0:
+		return
+	health = maxi(0, health - amount)
+	_damage_cooldown = DAMAGE_COOLDOWN
+	health_changed.emit(health)
+	if health <= 0:
+		velocity = Vector3.ZERO
+		if visual != null:
+			visual.play_action("Death01")
 
 
 func request_dash() -> bool:
@@ -188,6 +244,17 @@ func toggle_boost() -> void:
 func _physics_process(delta: float) -> void:
 	if field == null or visual == null:
 		return
+	_damage_cooldown = maxf(0.0, _damage_cooldown - delta)
+	if health <= 0:
+		velocity.x = 0.0
+		velocity.z = 0.0
+		if not is_on_floor():
+			velocity.y -= GRAVITY * delta
+		else:
+			velocity.y = 0.0
+		move_and_slide()
+		move_speed = 0.0
+		return
 	if _dash_cooldown > 0.0:
 		_dash_cooldown = maxf(0.0, _dash_cooldown - delta)
 		dash_cooldown = _dash_cooldown
@@ -197,10 +264,6 @@ func _physics_process(delta: float) -> void:
 	var stick := Vector2.ZERO
 	if joystick != null and joystick.input_enabled:
 		stick = joystick.direction
-	if _combo_timer > 0.0:
-		_combo_timer = maxf(0.0, _combo_timer - delta)
-		if _combo_timer <= 0.0:
-			combo_index = 0
 	var desired := 0.0 if _dash_left > 0.0 else _desired_speed(stick)
 	# Gait ikut laju badan yang sebenarnya, bukan cuma input: begitu analog
 	# dilepas, badan yang masih meluncur tidak boleh langsung berpose Idle —
@@ -308,7 +371,8 @@ func _apply_animation(desired: float) -> void:
 		scale = clampf(reference / natural, SCALE_MIN,
 			SCALE_MAX_BOOST if boosted else SCALE_MAX)
 	speed_scale = scale
-	visual.set_locomotion(gait, scale)
+	var animation_gait := "Sword_Idle" if sword_mode and gait == IDLE else gait
+	visual.set_locomotion(animation_gait, scale)
 
 
 ## Band kecepatan tiap klip, dihitung dari kecepatan alami yang diukur dari
@@ -415,11 +479,9 @@ func _update_air_state(delta: float) -> void:
 
 
 func _keep_inside() -> void:
-	# Batas pulau adalah GARIS PANTAI, bukan kotak: pemain tidak boleh berenang
-	# keluar. Kalau ia keluar (tergelincur turun tanjakan), ia didorong kembali
-	# ke titik terdekat yang masih di darat lewat proyeksi radial.
-	if field != null and not Field.is_inside(global_position.x, global_position.z,
-			SHORE_MARGIN):
+	# Batas pantai hanya berlaku di mode pulau; Survival memakai tanah tanpa batas.
+	if world_bounds_enabled and field != null and not Field.is_inside(
+			global_position.x, global_position.z, SHORE_MARGIN):
 		var fixed := Field.clamp_inside(
 			Vector2(global_position.x, global_position.z), SHORE_MARGIN)
 		global_position.x = fixed.x

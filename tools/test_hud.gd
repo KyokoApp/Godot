@@ -61,6 +61,7 @@ func _drag(index: int, point: Vector2) -> void:
 
 
 func _run() -> void:
+	DirAccess.remove_absolute("user://hud_layout.cfg")
 	var game := load("res://src/game/main.tscn").instantiate() as Node3D
 	root.add_child(game)
 	var player: CharacterBody3D = game.get("_player")
@@ -104,15 +105,21 @@ func _run() -> void:
 	_touch(10, crouch.get_global_rect().get_center(), false)
 	_check(not player.crouching and crouch.get("caption") == "JONGKOK",
 		"Jongkok tidak dibatalkan")
-	# Serangan combo: tiap tekan ganti klip, lalu berputar dari awal lagi.
-	# Combo sekarang dua pukulan; Melee_Hook dipindah jadi animasi DASH.
+	# Tiap tap memulai satu serangan terpisah; tap saat ayunan aktif tidak
+	# menyisipkan pukulan kedua atau memulai kombo otomatis.
 	var attack_point := attack.get_global_rect().get_center()
 	for expected in ["Punch_Jab", "Punch_Cross", "Punch_Jab", "Punch_Cross"]:
 		_touch(2, attack_point, true)
 		_touch(2, attack_point, false)
 		_check(visual.clip == expected,
-			"Combo tidak berurutan: harusnya %s, dapat %s" % [expected, visual.clip])
-	_check(int(player.get("combo_index")) == 0, "Indeks combo tidak berputar")
+			"Variasi serangan tidak berurutan: harusnya %s, dapat %s" % [expected, visual.clip])
+		_check(str(player.call("attack")).is_empty(),
+			"Tap kedua saat serangan aktif otomatis menyambung kombo")
+		for frame in range(60):
+			await physics_frame
+			if not visual.is_busy():
+				break
+	_check(int(player.get("punch_attack_index")) == 0, "Indeks variasi serangan tidak berputar")
 	_check(orbit.get("_touches").is_empty(), "Tombol serang ikut memutar kamera")
 	# Dash: dorongan jauh lebih cepat dari lari biasa, dengan cooldown supaya
 	# tidak bisa dipakai berulang tanpa jeda. Animasi TIDAK berganti klip: yang
@@ -289,6 +296,45 @@ func _run() -> void:
 		_touch(15, point, false)
 		_check(not panel.visible, "Panel tidak bisa ditutup")
 	_check(stick.input_enabled and orbit.input_enabled, "Input tidak pulih setelah panel")
+	# Editor HUD mengubah ukuran serta posisi tombol, menyimpan pilihan, dan bisa reset.
+	var layout_button: Button = game.get("_layout_button")
+	_touch(16, layout_button.get_global_rect().get_center(), true)
+	_touch(16, layout_button.get_global_rect().get_center(), false)
+	var layout_editor: Control = game.get("_layout_editor")
+	_check(layout_editor.visible, "Tombol HUD tidak membuka editor tata letak")
+	_check(attack.visible and attack.disabled,
+		"Tombol gameplay tidak terlihat sebagai pratinjau aman saat edit")
+	var target: OptionButton = game.get("_layout_target")
+	var size_slider: HSlider = game.get("_layout_size")
+	var x_slider: HSlider = game.get("_layout_x")
+	target.select(0)
+	game.call("_on_layout_target_changed", 0)
+	var default_x := attack.offset_left
+	size_slider.value = 148.0
+	x_slider.value = minf(x_slider.value + 0.05, x_slider.max_value)
+	await process_frame
+	_check(is_equal_approx(attack.custom_minimum_size.x, 148.0),
+		"Ukuran tombol tidak berubah lewat editor HUD")
+	_check(attack.offset_left < default_x - 1.0, "Posisi tombol tidak berubah lewat editor HUD")
+	_check(FileAccess.file_exists("user://hud_layout.cfg"), "Tata letak HUD tidak tersimpan")
+	if "--render" in OS.get_cmdline_user_args():
+		await RenderingServer.frame_post_draw
+		var layout_image := root.get_texture().get_image()
+		layout_image.save_png("user://hud-layout-test.png")
+	game.call("_reset_selected_hud_layout")
+	await process_frame
+	_check(is_equal_approx(attack.custom_minimum_size.x, 136.0), "Reset ukuran HUD gagal")
+	var done_button: Button
+	for node in layout_editor.find_children("*", "Button", true, false):
+		var candidate := node as Button
+		if candidate.text == "SELESAI":
+			done_button = candidate
+	if done_button != null:
+		_touch(17, done_button.get_global_rect().get_center(), true)
+		_touch(17, done_button.get_global_rect().get_center(), false)
+	_check(not layout_editor.visible, "Tombol Selesai tidak menutup editor HUD")
+	_check(stick.input_enabled and orbit.input_enabled, "Input tidak pulih setelah editor HUD")
+	DirAccess.remove_absolute("user://hud_layout.cfg")
 	game.queue_free()
 	for frame in range(4):
 		await process_frame

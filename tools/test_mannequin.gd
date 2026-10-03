@@ -22,6 +22,7 @@ func _check(condition: bool, message: String) -> void:
 
 func _run() -> void:
 	var character := Character.new()
+	character.sword_layer_enabled = true
 	root.add_child(character)
 	await process_frame
 	var animation := character.animation
@@ -54,6 +55,7 @@ func _run() -> void:
 	_test_metrics(character)
 	_test_state_machine(character)
 	_test_cast(character, skeleton)
+	_test_sword(character, skeleton)
 	_test_feet(character)
 	_test_avatar_motion(character)
 	print("[mannequin-test] klip=%d metrik=%d gagal=%d" % [
@@ -207,6 +209,50 @@ func _test_cast(character: Character, skeleton: Skeleton3D) -> void:
 	_check(layer.playing, "Casting tidak jalan saat aksi sihir")
 	character._physics_process(1.0)
 	_check(not character.is_busy(), "Aksi sihir tidak selesai")
+
+
+func _test_sword(character: Character, skeleton: Skeleton3D) -> void:
+	character.set_locomotion("Sword_Idle", 1.0)
+	character._set_weapon_visible(true)
+	_check(character.weapon_attachment != null, "Pedang tidak dipasang ke kerangka tangan")
+	_check(character.weapon_instance != null and character.weapon_instance.visible,
+		"Model pedang CC0 tidak terlihat")
+	if character.weapon_attachment != null:
+		_check(character.weapon_attachment.bone_name == "hand_r",
+			"Pedang tidak mengikuti tulang tangan kanan")
+	var layer := character.sword_layer
+	_check(layer != null, "Layer upper-body pedang tidak dibuat")
+	if layer == null:
+		return
+	var sequence: Array[String] = ["Sword_Regular_A", "Sword_Regular_A_Rec"]
+	var total := character._start_sword_attack(sequence)
+	_check(total > 0.9 and character._is_sword_attacking(),
+		"Urutan satu tebasan + recovery tidak dimulai")
+	_check(layer.tracks.size() > 20, "Animasi pedang tidak punya track upper-body")
+	for bone: int in layer.tracks.values():
+		var name := skeleton.get_bone_name(bone)
+		_check(not name.contains("thigh") and not name.contains("calf")
+			and not name.contains("foot") and name != "root" and name != "pelvis",
+			"Ayunan pedang mengambil alih kaki: " + name)
+	var before: Dictionary[int, Quaternion] = {}
+	for bone: int in layer.tracks.values():
+		before[bone] = skeleton.get_bone_pose_rotation(bone)
+	layer._physics_process(0.16)
+	layer._process_modification_with_delta(0.0)
+	var changed := 0
+	for bone: int in layer.tracks.values():
+		if not before[bone].is_equal_approx(skeleton.get_bone_pose_rotation(bone)):
+			changed += 1
+	_check(changed > 10, "Ayunan tidak mengubah pose tubuh atas")
+	layer._physics_process(attack_clip.length + 0.02)
+	_check(layer.current_name == "Sword_Regular_A_Rec",
+		"Tebasan tidak menyerahkan ke recovery")
+	var recovery := character.animation.get_animation(
+		Catalog.play_name("Sword_Regular_A_Rec"))
+	layer._physics_process(recovery.length + 0.02)
+	_check(not character._is_sword_attacking(), "Recovery menyambung menjadi kombo otomatis")
+	character._set_weapon_visible(false)
+	_check(not character.weapon_instance.visible, "Pedang tidak bisa disembunyikan")
 
 
 func _test_avatar_motion(character: Character) -> void:

@@ -6,7 +6,6 @@ extends Node3D
 ## `Field.can_grow()`, bukan ukuran dunia.
 
 const DistantGrass = preload("res://src/game/world/distant_grass.gd")
-const Field = preload("res://src/game/world/field.gd")
 const SHADER = preload("res://src/game/grass.gdshader")
 const TILE_SIZE := 12.0
 const GRID := 44
@@ -27,7 +26,7 @@ const BLADE_WIDTH := 0.055
 const BLADE_HEIGHT := 0.34
 
 var distant: DistantGrass
-var ground: Field
+var ground: Node3D
 var player: Node3D
 var tiles: Dictionary[Vector2i, MultiMeshInstance3D] = {}
 var _pending: Array[Vector2i] = []
@@ -47,6 +46,18 @@ func _ready() -> void:
 	distant = DistantGrass.new()
 	distant.field = self
 	add_child(distant)
+
+
+func set_ground(new_ground: Node3D) -> void:
+	ground = new_ground
+	for tile: MultiMeshInstance3D in tiles.values():
+		if is_instance_valid(tile):
+			tile.queue_free()
+	tiles.clear()
+	_tile_grids.clear()
+	_center = Vector2i(99999, 99999)
+	if distant != null:
+		distant.clear_tiles()
 
 
 func _process(_delta: float) -> void:
@@ -87,7 +98,14 @@ func _tile_priority(key: Vector2i) -> float:
 
 
 func can_grow(x: float, z: float) -> bool:
-	return ground != null and ground.can_grow(x, z)
+	return ground != null and ground.has_method("can_grow") \
+		and bool(ground.call("can_grow", x, z))
+
+
+func _surface_height(x: float, z: float) -> float:
+	if ground == null or not ground.has_method("surface_height"):
+		return 0.0
+	return float(ground.call("surface_height", x, z))
 
 
 func grid_for(key: Vector2i) -> int:
@@ -114,14 +132,14 @@ func placements_for(key: Vector2i) -> Array[Transform3D]:
 			var world_z := origin.z + local_z
 			if not can_grow(world_x, world_z):
 				continue
-			var height := ground.surface_height(world_x, world_z) - 0.03
+			var height := _surface_height(world_x, world_z) - 0.03
 			var basis := Basis(Vector3.UP, angle)
 			basis = basis.scaled(Vector3.ONE * scale_factor)
 			# Lapisan bawah mengikuti kemiringan, bukan melayang di atas lereng.
-			var dx := (ground.surface_height(world_x + 0.5, world_z)
-				- ground.surface_height(world_x - 0.5, world_z))
-			var dz := (ground.surface_height(world_x, world_z + 0.5)
-				- ground.surface_height(world_x, world_z - 0.5))
+			var dx := (_surface_height(world_x + 0.5, world_z)
+				- _surface_height(world_x - 0.5, world_z))
+			var dz := (_surface_height(world_x, world_z + 0.5)
+				- _surface_height(world_x, world_z - 0.5))
 			basis.x.y = dx * basis.x.x + dz * basis.x.z
 			basis.z.y = dx * basis.z.x + dz * basis.z.z
 			placements.append(Transform3D(basis, Vector3(local_x, height, local_z)))
@@ -221,5 +239,6 @@ func _make_mesh(with_cover: bool) -> ArrayMesh:
 
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_VISIBILITY_CHANGED and is_instance_valid(ground):
-		ground.set_grass_cover(is_visible_in_tree())
+	if what == NOTIFICATION_VISIBILITY_CHANGED and is_instance_valid(ground) \
+			and ground.has_method("set_grass_cover"):
+		ground.call("set_grass_cover", is_visible_in_tree())

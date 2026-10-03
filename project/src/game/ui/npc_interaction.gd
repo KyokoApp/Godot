@@ -2,6 +2,8 @@ extends Node
 ## Jembatan input NPC: tombol dekat karakter, kunci gerak, lalu pulihkan HUD
 ## setelah layar pilihan ditutup.
 
+signal gameplay_requested
+
 const Dialogue = preload("res://src/game/ui/npc_dialogue.gd")
 
 const INTERACT_DISTANCE := 2.8
@@ -26,6 +28,7 @@ var _saved_orbit_focus := Vector3.ZERO
 var _camera_tween: Tween
 var _dialogue_close_done := false
 var _camera_restore_done := true
+var _pending_gameplay := false
 
 
 func _ready() -> void:
@@ -91,6 +94,7 @@ func _build_dialogue() -> void:
 	_dialogue.name = "NPCDialogue"
 	_dialogue.closing.connect(_on_dialogue_closing)
 	_dialogue.closed.connect(_on_dialogue_closed)
+	_dialogue.gameplay_requested.connect(_on_gameplay_requested)
 	canvas_layer.add_child(_dialogue)
 
 
@@ -121,6 +125,7 @@ func _begin_interaction() -> void:
 	if _modal_open or player == null or npc == null or _distance_to_npc() > INTERACT_DISTANCE:
 		return
 	_modal_open = true
+	_pending_gameplay = false
 	_prompt.hide()
 	_saved_visibility.clear()
 	for control in controls_to_hide:
@@ -236,6 +241,13 @@ func _finish_close_if_ready() -> void:
 		orbit.set("input_enabled", _saved_orbit_input)
 		orbit.call("reset_touches")
 	_prompt.hide()
+	if _pending_gameplay:
+		_pending_gameplay = false
+		gameplay_requested.emit()
+
+
+func _on_gameplay_requested() -> void:
+	_pending_gameplay = true
 
 
 func _new_camera_tween(ease: int) -> Tween:

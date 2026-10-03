@@ -323,6 +323,10 @@ func can_grow(x: float, z: float) -> bool:
 	return true
 
 
+func allows_foot_effect(point: Vector3, margin := 0.0) -> bool:
+	return is_inside(point.x, point.z, margin)
+
+
 func set_grass_cover(enabled: bool) -> void:
 	# Dipakai rumput untuk menghilangkan pola tanah saat rumput disembunyikan.
 	_grass_cover = enabled

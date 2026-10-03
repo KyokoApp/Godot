@@ -7,6 +7,8 @@ const Scenery = preload("res://src/game/world/scenery.gd")
 const Forest = preload("res://src/game/world/forest.gd")
 const NPC = preload("res://src/game/world/npc.gd")
 const NPCInteraction = preload("res://src/game/ui/npc_interaction.gd")
+const ModeSelector = preload("res://src/game/ui/game_mode_selector.gd")
+const SurvivalWorld = preload("res://src/game/world/survival_world.gd")
 const Grass = preload("res://src/game/grass_field.gd")
 const Player = preload("res://src/game/player.gd")
 const Character = preload("res://src/game/mannequin.gd")
@@ -59,6 +61,9 @@ var _grass: Grass
 var _player: Player
 var _npc: NPC
 var _npc_interaction: NPCInteraction
+var _mode_selector: ModeSelector
+var _survival_world: SurvivalWorld
+var _active_mode := "hub"
 var _visual: Character
 var _bloom_level := 0.0
 var _orbit: Orbit
@@ -72,6 +77,7 @@ var _joystick: Joystick
 var _attack: RuneButton
 var _fire_button: RuneButton
 var _settings: RuneButton
+var _layout_button: RuneButton
 var _speed_button: SpeedButton
 var _jump: Button
 var _crouch: Button
@@ -81,6 +87,21 @@ var _banner: ClipBanner
 var _panel: AnimationPanel
 var _performance: PerformancePanel
 var _graphics_drawer: PanelContainer
+var _survival_panel: PanelContainer
+var _survival_status: Label
+var _health_bar: ProgressBar
+var _health_text: Label
+var _hud_layer: CanvasLayer
+var _layout_editor: PanelContainer
+var _layout_target: OptionButton
+var _layout_size: HSlider
+var _layout_x: HSlider
+var _layout_y: HSlider
+var _layout_readout: Label
+var _hud_controls: Dictionary = {}
+var _hud_layout: Dictionary = {}
+var _hud_layout_defaults: Dictionary = {}
+var _layout_suppress := false
 
 
 func _ready() -> void:
@@ -131,11 +152,13 @@ func _build_player() -> void:
 	_field.player = _player
 	add_child(_player)
 	_visual = Character.new()
+	_visual.sword_layer_enabled = true
 	_visual.name = "Visual"
 	_visual.position.y = -Player.HEIGHT * 0.5
 	_player.add_child(_visual)
 	_player.visual = _visual
 	_player.spawn(SPAWN)
+	_player.health_changed.connect(_on_health_changed)
 
 
 func _build_npc() -> void:
@@ -189,10 +212,68 @@ func _build_effects() -> void:
 	_audio.follow_fire(_pet)
 
 
+func _build_survival_hud(layer: CanvasLayer) -> void:
+	_survival_panel = PanelContainer.new()
+	_survival_panel.name = "SurvivalStatus"
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.025, 0.035, 0.03, 0.86)
+	style.border_color = Color("8db66c")
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(8)
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	_survival_panel.add_theme_stylebox_override("panel", style)
+	layer.add_child(_survival_panel)
+	_survival_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	_survival_panel.offset_left = 20
+	_survival_panel.offset_top = 76
+	_survival_panel.offset_right = 258
+	_survival_panel.offset_bottom = 146
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 5)
+	_survival_panel.add_child(content)
+	_survival_status = Label.new()
+	_survival_status.text = "SURVIVAL   00:00   ·   ZOMBI 0"
+	_survival_status.add_theme_font_size_override("font_size", 13)
+	_survival_status.add_theme_color_override("font_color", Color("f2f0e8"))
+	content.add_child(_survival_status)
+	var health_row := HBoxContainer.new()
+	health_row.add_theme_constant_override("separation", 8)
+	content.add_child(health_row)
+	_health_text = Label.new()
+	_health_text.text = "HP"
+	_health_text.add_theme_font_size_override("font_size", 11)
+	_health_text.add_theme_color_override("font_color", Color("bdd1b0"))
+	health_row.add_child(_health_text)
+	_health_bar = ProgressBar.new()
+	_health_bar.name = "HealthBar"
+	_health_bar.min_value = 0
+	_health_bar.max_value = Player.MAX_HEALTH
+	_health_bar.value = Player.MAX_HEALTH
+	_health_bar.show_percentage = false
+	_health_bar.custom_minimum_size = Vector2(178, 14)
+	_health_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_health_bar.add_theme_stylebox_override("background", _progress_style(Color(0.11, 0.14, 0.11, 1)))
+	_health_bar.add_theme_stylebox_override("fill", _progress_style(Color("8cc46a")))
+	health_row.add_child(_health_bar)
+	_survival_panel.hide()
+
+
+func _progress_style(color: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = color
+	style.set_corner_radius_all(5)
+	return style
+
+
 # ------------------------------------------------------------------ HUD ----
 
 func _build_hud() -> void:
 	var layer := CanvasLayer.new()
+	layer.name = "GameplayHUD"
+	_hud_layer = layer
 	add_child(layer)
 	_joystick = Joystick.new()
 	layer.add_child(_joystick)
@@ -204,6 +285,7 @@ func _build_hud() -> void:
 	_banner.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	_banner.offset_left = 20
 	_banner.offset_top = 20
+	_build_survival_hud(layer)
 	# --- sudut kanan atas: dua tombol kecil bulat ---------------------------
 	_settings = _rune("GRAFIK", RUNE_DIAMETER, SETTINGS_ICON)
 	_settings.name = "GraphicsRune"
@@ -212,6 +294,13 @@ func _build_hud() -> void:
 	layer.add_child(_settings)
 	_place(_settings, Control.PRESET_TOP_RIGHT, -88, 100)
 	_settings.pressed.connect(_toggle_graphics)
+	_layout_button = _rune("HUD", RUNE_DIAMETER, SETTINGS_ICON)
+	_layout_button.name = "LayoutRune"
+	_layout_button.compact = true
+	_layout_button.tooltip_text = "Atur ukuran dan posisi tombol"
+	layer.add_child(_layout_button)
+	_place(_layout_button, Control.PRESET_TOP_RIGHT, -166, 100)
+	_layout_button.pressed.connect(_toggle_layout_editor)
 	_catalog_button = _rune("ANIM", RUNE_DIAMETER)
 	_catalog_button.name = "CatalogRune"
 	_catalog_button.tooltip_text = "Pilih animasi (%d klip)" % Catalog.clip_count()
@@ -221,7 +310,7 @@ func _build_hud() -> void:
 	# --- kanan bawah: serang besar + tombol aksi di sekelilingnya -----------
 	_attack = _rune("SERANG", ATTACK_DIAMETER, SWORD_ICON)
 	_attack.name = "AttackRune"
-	_attack.tooltip_text = "Serangan combo: tekan berulang untuk lanjut"
+	_attack.tooltip_text = "Ayunan pedang; tap lagi setelah serangan selesai"
 	layer.add_child(_attack)
 	# Serang sengaja TIDAK di pojok: dulu pas di sudut layar dan susah ditekan
 	# dengan ibu jari. Sekarang tombolnya berhenti ±130-200 px dari tepi
@@ -232,22 +321,26 @@ func _build_hud() -> void:
 	# vertikal dibatasi ±300 px supaya TENGAH setiap tombol tetap masuk layar di
 	# kedua ukuran (tes menyentuh tombol pada titik tengahnya).
 	_place(_attack, Control.PRESET_BOTTOM_RIGHT, -200, -200)
+	_register_hud_control("Serang", _attack, ATTACK_DIAMETER, -200, -200)
 	_attack.pressed.connect(_attack_action)
 	_fire_button = _rune("TEMBAK", FIRE_DIAMETER, FIRE_ICON)
 	_fire_button.name = "FireRune"
 	_fire_button.tooltip_text = "Tembakan api pet"
 	layer.add_child(_fire_button)
 	_place(_fire_button, Control.PRESET_BOTTOM_RIGHT, -360, -180)
+	_register_hud_control("Tembak", _fire_button, FIRE_DIAMETER, -360, -180)
 	_fire_button.pressed.connect(_fire_action)
 	_jump = _rune("LOMPAT", ACTION_DIAMETER, JUMP_ICON)
 	_jump.name = "JumpRune"
 	layer.add_child(_jump)
 	_place(_jump, Control.PRESET_BOTTOM_RIGHT, -196, -300)
+	_register_hud_control("Lompat", _jump, ACTION_DIAMETER, -196, -300)
 	_jump.pressed.connect(_player.request_jump)
 	_crouch = _rune("JONGKOK", ACTION_DIAMETER, CROUCH_ICON)
 	_crouch.name = "CrouchRune"
 	layer.add_child(_crouch)
 	_place(_crouch, Control.PRESET_BOTTOM_RIGHT, -470, -180)
+	_register_hud_control("Jongkok", _crouch, ACTION_DIAMETER, -470, -180)
 	_crouch.pressed.connect(_toggle_crouch)
 	_speed_button = SpeedButton.new()
 	_speed_button.name = "SpeedBoost"
@@ -258,6 +351,7 @@ func _build_hud() -> void:
 	_speed_button.custom_minimum_size = Vector2(SPEED_DIAMETER, SPEED_DIAMETER)
 	layer.add_child(_speed_button)
 	_place(_speed_button, Control.PRESET_BOTTOM_RIGHT, -460, -300)
+	_register_hud_control("Lari", _speed_button, SPEED_DIAMETER, -460, -300)
 	_speed_button.pressed.connect(_toggle_speed)
 	# Dash: dorongan lurus 12 m/s dengan animasi lari diperlambat satu langkah.
 	# Ditaruh di atas tombol serang, mudah dijangkau.
@@ -266,17 +360,22 @@ func _build_hud() -> void:
 	_dash.tooltip_text = "Dash: menerjang lurus sebentar"
 	layer.add_child(_dash)
 	_place(_dash, Control.PRESET_BOTTOM_RIGHT, -330, -300)
+	_register_hud_control("Dash", _dash, DASH_DIAMETER, -330, -300)
 	_dash.pressed.connect(_dash_action)
 	_build_graphics_drawer(layer)
+	_build_layout_editor(layer)
+	_load_hud_layout()
 	_panel = AnimationPanel.new()
 	_panel.character = _visual
 	layer.add_child(_panel)
 	_panel.closed.connect(_close_panel)
 	# Analog tidak boleh ikut aktif saat tombol HUD ditekan.
-	_joystick.input_exclusions = [_panel, _graphics_drawer, _settings, _catalog_button,
-		_attack, _fire_button, _jump, _crouch, _speed_button, _dash]
-	_orbit.exclusions = [_panel, _graphics_drawer, _settings, _catalog_button,
-		_attack, _fire_button, _jump, _crouch, _speed_button, _dash]
+	_joystick.input_exclusions = [_survival_panel, _panel, _graphics_drawer, _layout_editor, _settings,
+		_layout_button, _catalog_button, _attack, _fire_button, _jump, _crouch,
+		_speed_button, _dash]
+	_orbit.exclusions = [_survival_panel, _panel, _graphics_drawer, _layout_editor, _settings,
+		_layout_button, _catalog_button, _attack, _fire_button, _jump, _crouch,
+		_speed_button, _dash]
 	_npc_interaction = NPCInteraction.new()
 	_npc_interaction.player = _player
 	_npc_interaction.npc = _npc
@@ -284,10 +383,16 @@ func _build_hud() -> void:
 	_npc_interaction.orbit = _orbit
 	_npc_interaction.canvas_layer = layer
 	_npc_interaction.controls_to_hide = [
-		_joystick, _banner, _settings, _catalog_button, _attack, _fire_button,
-		_jump, _crouch, _speed_button, _dash, _panel, _graphics_drawer,
+		_joystick, _banner, _settings, _layout_button, _catalog_button, _attack,
+		_fire_button, _jump, _crouch, _speed_button, _dash, _panel,
+		_graphics_drawer, _layout_editor,
 	]
 	add_child(_npc_interaction)
+	_npc_interaction.gameplay_requested.connect(_show_mode_selector)
+	_mode_selector = ModeSelector.new()
+	layer.add_child(_mode_selector)
+	_mode_selector.mode_selected.connect(_on_mode_selected)
+	_mode_selector.closed.connect(_on_mode_selector_closed)
 
 
 func _rune(caption: String, diameter: float, glyph: Texture2D = null) -> RuneButton:
@@ -343,6 +448,331 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 	_graphics_drawer.hide()
 
 
+func _build_layout_editor(layer: CanvasLayer) -> void:
+	_layout_editor = PanelContainer.new()
+	_layout_editor.name = "HUDLayoutEditor"
+	_layout_editor.mouse_filter = Control.MOUSE_FILTER_STOP
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.035, 0.032, 0.045, 0.96)
+	style.border_color = Color("b9a66a", 0.78)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(8)
+	style.content_margin_left = 14
+	style.content_margin_right = 14
+	style.content_margin_top = 12
+	style.content_margin_bottom = 12
+	_layout_editor.add_theme_stylebox_override("panel", style)
+	layer.add_child(_layout_editor)
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 5)
+	_layout_editor.add_child(content)
+	var title := Label.new()
+	title.text = "TATA LETAK HUD"
+	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_color_override("font_color", Color("f4f0e7"))
+	content.add_child(title)
+	_layout_readout = Label.new()
+	_layout_readout.add_theme_font_size_override("font_size", 11)
+	_layout_readout.add_theme_color_override("font_color", Color("cfc6d4"))
+	content.add_child(_layout_readout)
+	_layout_target = OptionButton.new()
+	_layout_target.name = "HUDButtonTarget"
+	_layout_target.custom_minimum_size = Vector2(0, 36)
+	_layout_target.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_layout_target.focus_mode = Control.FOCUS_NONE
+	for button_name: String in ["Serang", "Tembak", "Lompat", "Jongkok", "Lari", "Dash"]:
+		_layout_target.add_item(button_name)
+	content.add_child(_layout_target)
+	_layout_size = _make_layout_slider(content, "Ukuran tombol", 58.0, 200.0, 2.0)
+	_layout_x = _make_layout_slider(content, "Geser dari kanan", 0.0, 0.75, 0.01)
+	_layout_y = _make_layout_slider(content, "Geser dari bawah", 0.0, 0.75, 0.01)
+	var hint := Label.new()
+	hint.text = "Perubahan disimpan otomatis di perangkat ini."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 10)
+	hint.add_theme_color_override("font_color", Color("aaa2b0"))
+	content.add_child(hint)
+	var actions := HBoxContainer.new()
+	actions.add_theme_constant_override("separation", 8)
+	content.add_child(actions)
+	var reset := _layout_action_button("RESET", _reset_selected_hud_layout)
+	var done := _layout_action_button("SELESAI", _toggle_layout_editor)
+	actions.add_child(reset)
+	actions.add_child(done)
+	_layout_target.item_selected.connect(_on_layout_target_changed)
+	_layout_size.value_changed.connect(_on_layout_value_changed)
+	_layout_x.value_changed.connect(_on_layout_value_changed)
+	_layout_y.value_changed.connect(_on_layout_value_changed)
+	get_viewport().size_changed.connect(_layout_layout_editor)
+	_layout_editor.hide()
+	_layout_layout_editor()
+
+
+func _make_layout_slider(parent: VBoxContainer, caption: String,
+		minimum: float, maximum: float, step: float) -> HSlider:
+	var row := VBoxContainer.new()
+	row.add_theme_constant_override("separation", 0)
+	parent.add_child(row)
+	var label := Label.new()
+	label.text = caption
+	label.add_theme_font_size_override("font_size", 11)
+	label.add_theme_color_override("font_color", Color("e1dbe5"))
+	row.add_child(label)
+	var slider := HSlider.new()
+	slider.min_value = minimum
+	slider.max_value = maximum
+	slider.step = step
+	slider.custom_minimum_size = Vector2(0, 26)
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.focus_mode = Control.FOCUS_NONE
+	row.add_child(slider)
+	return slider
+
+
+func _layout_action_button(caption: String, action: Callable) -> Button:
+	var button := Button.new()
+	button.text = caption
+	button.custom_minimum_size = Vector2(100, 38)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_font_size_override("font_size", 11)
+	button.add_theme_color_override("font_color", Color("f4f0e7"))
+	button.add_theme_stylebox_override("normal", _progress_style(Color(0.16, 0.13, 0.20, 1)))
+	button.add_theme_stylebox_override("hover", _progress_style(Color(0.27, 0.22, 0.32, 1)))
+	button.pressed.connect(action)
+	return button
+
+
+func _register_hud_control(button_name: String, control: Control, size: float,
+		left: float, top: float) -> void:
+	var viewport_size := get_viewport().get_visible_rect().size
+	var entry := {
+		"size": size,
+		"x": absf(left) / maxf(viewport_size.x, 1.0),
+		"y": absf(top) / maxf(viewport_size.y, 1.0),
+	}
+	_hud_controls[button_name] = control
+	_hud_layout_defaults[button_name] = entry.duplicate(true)
+	_hud_layout[button_name] = entry.duplicate(true)
+
+
+func _load_hud_layout() -> void:
+	var config := ConfigFile.new()
+	if config.load("user://hud_layout.cfg") == OK:
+		for button_name: String in _hud_layout:
+			var entry: Dictionary = _hud_layout[button_name]
+			entry["size"] = float(config.get_value("buttons", button_name + "_size", entry["size"]))
+			entry["x"] = float(config.get_value("buttons", button_name + "_x", entry["x"]))
+			entry["y"] = float(config.get_value("buttons", button_name + "_y", entry["y"]))
+	for button_name: String in _hud_controls:
+		_apply_hud_control(button_name)
+	_update_layout_sliders(0)
+	get_viewport().size_changed.connect(_apply_all_hud_layout)
+
+
+func _save_hud_layout() -> void:
+	var config := ConfigFile.new()
+	for button_name: String in _hud_layout:
+		var entry: Dictionary = _hud_layout[button_name]
+		config.set_value("buttons", button_name + "_size", entry["size"])
+		config.set_value("buttons", button_name + "_x", entry["x"])
+		config.set_value("buttons", button_name + "_y", entry["y"])
+	config.save("user://hud_layout.cfg")
+
+
+func _apply_all_hud_layout() -> void:
+	for button_name: String in _hud_controls:
+		_apply_hud_control(button_name)
+	if _layout_target != null:
+		_update_layout_sliders(_layout_target.selected)
+
+
+func _apply_hud_control(button_name: String) -> void:
+	if not _hud_controls.has(button_name) or not _hud_layout.has(button_name):
+		return
+	var control := _hud_controls[button_name] as Control
+	if control == null:
+		return
+	var entry: Dictionary = _hud_layout[button_name]
+	var view := get_viewport().get_visible_rect().size
+	var size := clampf(float(entry["size"]), 58.0, 200.0)
+	var max_x := maxf((view.x - size) / maxf(view.x, 1.0), 0.0)
+	var max_y := maxf((view.y - size) / maxf(view.y, 1.0), 0.0)
+	var x_fraction := clampf(float(entry["x"]), 0.0, max_x)
+	var y_fraction := clampf(float(entry["y"]), 0.0, max_y)
+	entry["size"] = size
+	entry["x"] = x_fraction
+	entry["y"] = y_fraction
+	control.custom_minimum_size = Vector2(size, size)
+	control.offset_left = -view.x * x_fraction
+	control.offset_top = -view.y * y_fraction
+	control.offset_right = control.offset_left + size
+	control.offset_bottom = control.offset_top + size
+
+
+func _update_layout_sliders(index: int) -> void:
+	if _layout_target == null or _layout_size == null or _layout_x == null or _layout_y == null:
+		return
+	if index < 0 or index >= _layout_target.item_count:
+		return
+	var button_name := _layout_target.get_item_text(index)
+	if not _hud_layout.has(button_name):
+		return
+	var entry: Dictionary = _hud_layout[button_name]
+	var view := get_viewport().get_visible_rect().size
+	var size := float(entry["size"])
+	_layout_suppress = true
+	_layout_size.value = size
+	_layout_x.max_value = maxf((view.x - size) / maxf(view.x, 1.0), 0.0)
+	_layout_y.max_value = maxf((view.y - size) / maxf(view.y, 1.0), 0.0)
+	_layout_x.value = float(entry["x"])
+	_layout_y.value = float(entry["y"])
+	_layout_readout.text = "%s  ·  %d px" % [button_name, roundi(size)]
+	_layout_suppress = false
+
+
+func _on_layout_target_changed(index: int) -> void:
+	_update_layout_sliders(index)
+
+
+func _on_layout_value_changed(_value: float) -> void:
+	if _layout_suppress or _layout_target == null:
+		return
+	var button_name := _layout_target.get_item_text(_layout_target.selected)
+	if not _hud_layout.has(button_name):
+		return
+	_hud_layout[button_name] = {
+		"size": _layout_size.value,
+		"x": _layout_x.value,
+		"y": _layout_y.value,
+	}
+	_apply_hud_control(button_name)
+	_update_layout_sliders(_layout_target.selected)
+	_save_hud_layout()
+
+
+func _reset_selected_hud_layout() -> void:
+	if _layout_target == null:
+		return
+	var button_name := _layout_target.get_item_text(_layout_target.selected)
+	if not _hud_layout_defaults.has(button_name):
+		return
+	_hud_layout[button_name] = _hud_layout_defaults[button_name].duplicate(true)
+	_apply_hud_control(button_name)
+	_update_layout_sliders(_layout_target.selected)
+	_save_hud_layout()
+
+
+func _layout_layout_editor() -> void:
+	if _layout_editor == null:
+		return
+	var view := get_viewport().get_visible_rect().size
+	var width := minf(344.0, view.x - 20.0)
+	var height := minf(364.0, view.y - 20.0)
+	_layout_editor.position = Vector2(view.x - width - 10.0, 10.0)
+	_layout_editor.size = Vector2(maxf(width, 280.0), maxf(height, 300.0))
+
+
+func _toggle_layout_editor() -> void:
+	_layout_editor.visible = not _layout_editor.visible
+	if _layout_editor.visible:
+		_graphics_drawer.hide()
+		_update_layout_sliders(_layout_target.selected)
+	_apply_input_state()
+
+
+# --------------------------------------------------------------- mode game --
+
+func _show_mode_selector() -> void:
+	if _active_mode != "hub" or _mode_selector == null:
+		return
+	_player.velocity = Vector3.ZERO
+	_player.move_speed = 0.0
+	if _npc_interaction != null:
+		_npc_interaction.set_process(false)
+		var prompt := _npc_interaction.get("_prompt") as Control
+		if prompt != null:
+			prompt.hide()
+	_mode_selector.open()
+	_apply_input_state()
+
+
+func _on_mode_selected(mode: String) -> void:
+	if mode == "survival":
+		_enter_survival()
+
+
+func _on_mode_selector_closed() -> void:
+	if _active_mode == "hub" and _npc_interaction != null:
+		_npc_interaction.set_process(true)
+	_apply_input_state()
+
+
+func _enter_survival() -> void:
+	if _active_mode != "hub":
+		return
+	_active_mode = "survival"
+	if _npc_interaction != null:
+		_npc_interaction.npc = null
+		_npc_interaction.set_process(false)
+		_npc_interaction.set_physics_process(false)
+	if is_instance_valid(_npc):
+		_npc.queue_free()
+	if is_instance_valid(_forest):
+		_forest.queue_free()
+	if is_instance_valid(_scenery):
+		_scenery.queue_free()
+	if is_instance_valid(_field):
+		_field.queue_free()
+	_npc = null
+	_forest = null
+	_scenery = null
+	_field = null
+	_player.global_position = Vector3.ZERO
+	_survival_world = SurvivalWorld.new()
+	_survival_world.player = _player
+	add_child(_survival_world)
+	_player.field = _survival_world.ground
+	_player.world_bounds_enabled = false
+	_player.boosted = false
+	_player.crouching = false
+	_player.dashing = false
+	_player.spawn(Vector2.ZERO)
+	_player.reset_health()
+	_player.set_sword_mode(true)
+	_player.attack_started.connect(_on_player_attack_started)
+	_survival_world.status_changed.connect(_update_survival_status)
+	_footsteps.field = _survival_world.ground
+	_foot_fire.field = _survival_world.ground
+	_grass.set_ground(_survival_world.ground)
+	_survival_panel.show()
+	_update_survival_status(0.0, _survival_world.zombies.size(), 0)
+	_on_health_changed(_player.health)
+	print("[main] mode Survival siap; tanah tak berbatas + zombie UAL aktif")
+
+
+func _on_player_attack_started(clip: String) -> void:
+	if _survival_world != null and is_instance_valid(_survival_world):
+		_survival_world.resolve_player_attack(clip)
+
+
+func _update_survival_status(elapsed: float, living: int, defeated: int) -> void:
+	if _survival_status == null:
+		return
+	var total_seconds := int(elapsed)
+	_survival_status.text = "%02d:%02d · ZOMBI %02d · KALAH %d" % [
+		int(total_seconds / 60), total_seconds % 60, living, defeated]
+
+
+func _on_health_changed(value: int) -> void:
+	if _health_bar == null:
+		return
+	_health_bar.value = value
+	_health_text.text = "HP %d" % value
+	var fill_color := Color("cf705c") if value <= 30 else Color("8cc46a")
+	_health_bar.add_theme_stylebox_override("fill", _progress_style(fill_color))
+
+
 # --------------------------------------------------------------- aksi HUD --
 
 func _attack_action() -> void:
@@ -382,28 +812,34 @@ func _close_panel() -> void:
 
 
 func _toggle_graphics() -> void:
-	_graphics_drawer.visible = not _graphics_drawer.visible
+	if _graphics_drawer.visible:
+		_graphics_drawer.hide()
+	else:
+		_layout_editor.hide()
+		_graphics_drawer.show()
 	_apply_input_state()
 
 
 func _apply_input_state() -> void:
-	var overlay := _panel.visible or _graphics_drawer.visible
+	var selector_open := _mode_selector != null and _mode_selector.visible
+	var layout_open := _layout_editor != null and _layout_editor.visible
+	var hide_actions := _panel.visible or _graphics_drawer.visible or selector_open
+	var overlay := hide_actions or layout_open
 	_joystick.reset()
 	_joystick.input_enabled = not overlay
 	_orbit.reset_touches()
 	_orbit.input_enabled = not overlay
-	_attack.visible = not overlay
-	_fire_button.visible = not overlay
-	_jump.visible = not overlay
-	_crouch.visible = not overlay
-	_speed_button.visible = not overlay
-	_dash.visible = not overlay
-	_catalog_button.visible = not _graphics_drawer.visible
+	_settings.visible = not selector_open
+	_layout_button.visible = not selector_open
+	for control: Control in [_attack, _fire_button, _jump, _crouch, _speed_button, _dash]:
+		control.visible = not hide_actions
+		control.set("disabled", layout_open)
+	_catalog_button.visible = not _graphics_drawer.visible and not layout_open and not selector_open
 	_banner.visible = not overlay
 
 
 func _input(event: InputEvent) -> void:
-	if not _graphics_drawer.visible:
+	if not _graphics_drawer.visible and not _layout_editor.visible:
 		return
 	var point := Vector2.ZERO
 	if event is InputEventScreenTouch and event.pressed and not event.canceled:
@@ -414,9 +850,12 @@ func _input(event: InputEvent) -> void:
 		point = event.position
 	else:
 		return
-	if not _graphics_drawer.get_global_rect().has_point(point) \
+	if _graphics_drawer.visible and not _graphics_drawer.get_global_rect().has_point(point) \
 			and not _settings.contains_point(point):
 		_toggle_graphics()
+	elif _layout_editor.visible and not _layout_editor.get_global_rect().has_point(point) \
+			and not _layout_button.contains_point(point):
+		_toggle_layout_editor()
 
 
 # ----------------------------------------------------------------- loop ----

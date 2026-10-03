@@ -1,14 +1,13 @@
 extends Node
 ## Dua kontak per siklus animasi; gerak nyata + lantai mencegah langkah palsu.
 
-const Field = preload("res://src/game/world/field.gd")
 const WorldAudio = preload("res://src/game/audio/world_audio.gd")
 const Character = preload("res://src/game/mannequin.gd")
 ## Pita pasir di pantai (meter di atas permukaan laut), sama dengan shader tanah.
 const SHORE_HEIGHT := 2.6
 
 var audio: WorldAudio
-var field: Field
+var field: Node3D
 var body: CharacterBody3D
 var visual: Character
 var emitted := 0
@@ -24,7 +23,8 @@ func surface_at(point: Vector3, normal: Vector3) -> String:
 	# sedangkan pita pasir pantai mengikuti warna shader tanah.
 	if normal.y < 0.55:
 		return "stone"
-	if field != null and field.surface_height(point.x, point.z) < SHORE_HEIGHT:
+	if field != null and field.has_method("surface_height") \
+			and float(field.call("surface_height", point.x, point.z)) < SHORE_HEIGHT:
 		return "dirt"
 	return "grass"
 
