@@ -110,10 +110,11 @@ func _candidates(count: int, margin: float, spacing: float) -> Array:
 	var limit := maxi(count * 120, 600)
 	while result.size() < count and guard < limit:
 		guard += 1
-		var angle := _rng.randf() * TAU
-		var radius := sqrtf(_rng.randf()) * maxf(Field.island_radius(angle) - margin, 0.0)
-		var x := cos(angle) * radius
-		var z := sin(angle) * radius
+		# Sebaran merata lewat kotak + penolakan: titik acak di kotak ± 45 m,
+		# yang jatuh di laut dibuang oleh is_inside() di bawah. Lebih rata
+		# daripada sampling lingkaran, dan tidak butuh akar kuadrat.
+		var x := _rng.randf_range(-45.0, 45.0)
+		var z := _rng.randf_range(-45.0, 45.0)
 		if not Field.is_inside(x, z, margin):
 			continue
 		if absf(z - Field.path_centre(x)) < 1.6:
