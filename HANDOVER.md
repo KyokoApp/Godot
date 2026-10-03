@@ -1,5 +1,29 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-04 (cicilan 25) — **SURVIVAL: TOP-DOWN, AUTO-FIRE, STAGE 60 DETIK, BALIK KE HOME**
+  - Kamera Survival dikunci pada pitch 1,40 radian (rentang 1,28–1,50) dan
+    jarak 17 m. `OrbitCamera` menyimpan state sebelum masuk, lalu memulihkan
+    yaw, pitch, batas pitch, jarak, dan titik fokus home saat kembali. Mode hub
+    tidak mendapat perubahan kamera.
+  - Menahan tombol `TEMBAK` kini mengulang input tiap 0,18 detik. FirePet
+    memakai cooldown 0,14 detik dan batas proyektil lebih tinggi hanya di
+    Survival; home tetap memakai tap satu kali, cooldown 0,85 detik, dan batas
+    normal tiga proyektil.
+  - Stage berdurasi 60 detik dan HUD menampilkan nomor stage + hitung mundur.
+    Wave meminta zombie sebanyak nomor stage; batas zombie hidup naik dari lima
+    sebesar dua tiap stage, dengan plafon 18.
+  - Saat HP habis, kontrol serang berhenti dan pemain kembali ke home setelah
+    0,9 detik. Dunia hub, Mira, HP, state kamera, dan konfigurasi serangan
+    normal dibangun/dipulihkan kembali.
+  - `tools/test_survival.gd` menguji kamera serta pembatasnya, auto-fire dan
+    damage beruntun, timer/wave stage, kematian/respawn, serta pemulihan state
+    hub. `tools/render_survival.gd` memeriksa sudut top-down.
+  - Validasi statis lokal lulus (`gdparse`, `gdlint project tools`, pemeriksaan
+    tipe, katalog animasi, tes chunk, bundle lisensi, `git diff --check`). CI
+    Godot 4.5.2 run [`37163130779`](https://github.com/KyokoApp/Godot/actions/runs/37163130779)
+    hijau penuh: compile, tes headless, tiga render Mobile Vulkan, ekspor PCK/APK,
+    audit APK, dan boot launcher. Rilis: [`build-4c132ec`](https://github.com/KyokoApp/Godot/releases/tag/build-4c132ec).
+
 - 2026-10-04 (cicilan 24) — **SURVIVAL: SIHIR AUTO-LOCK, TANPA MELEE**
   - Koreksi pengguna: ganti serangan pedang Survival dengan tembakan sihir yang
     sudah ada. Tombol `SERANG` dan pedang disembunyikan di Survival; tombol

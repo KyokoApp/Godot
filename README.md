@@ -1515,6 +1515,30 @@ audit isi APK, serta tes boot launcher. Hasil visual, runtime, dan build kini
 terverifikasi di CI. APK dan content pack tersedia di [rilis
 `build-5060147`](https://github.com/KyokoApp/Godot/releases/tag/build-5060147).
 
+## Ronde 25 — Survival top-down, sihir otomatis, stage satu menit, dan balik ke home
+
+- Kamera top-down hanya diterapkan saat masuk Survival: pitch awal 1,40 radian,
+  rentang 1,28–1,50, jarak 17 m. State kamera home disimpan dan dipulihkan;
+  kamera mode hub tidak diubah.
+- Tombol `TEMBAK` menembak berulang ketika ditahan (interval 0,18 detik), dengan
+  cooldown sihir cepat 0,14 detik. Auto-repeat dan batas proyektil cepat hanya
+  aktif di Survival; tap/cooldown normal tetap dipakai di home.
+- Stage berlangsung 60 detik. HUD menampilkan stage, timer, zombie hidup, dan
+  jumlah kalah. Wave bertambah sebesar nomor stage; batas zombie hidup naik
+  dua per stage dari lima, hingga maksimum 18.
+- Saat HP habis, input serang dihentikan lalu hub dibangun kembali setelah
+  0,9 detik. Pemain, HP, NPC, kontrol, serta state kamera home dipulihkan.
+- Tes Survival kini memeriksa sudut kamera, tembakan beruntun beserta damage,
+  kenaikan stage/wave, respawn ke home, dan pemulihan konfigurasi mode normal.
+  Tes render Mobile Vulkan juga mengunci sudut Survival top-down.
+
+Validasi lokal lulus: parse/lint seluruh GDScript, `tools/check_scripts.py`,
+bundle lisensi, tes chunk, katalog animasi, dan `git diff --check`. Godot 4.5.2
+CI run **[`37163130779`](https://github.com/KyokoApp/Godot/actions/runs/37163130779)**
+lulus penuh: compile, seluruh tes headless, render Mobile Vulkan, ekspor PCK/APK,
+audit APK, dan boot launcher. Build tersedia di [rilis
+`build-4c132ec`](https://github.com/KyokoApp/Godot/releases/tag/build-4c132ec).
+
 ## Ronde 24 — Survival memakai sihir auto-lock, bukan melee
 
 Koreksi pengguna: jangan gunakan serangan pedang di Survival; pakai tembakan
