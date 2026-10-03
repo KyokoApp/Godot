@@ -36,9 +36,8 @@ func _run() -> void:
 	stick.set("direction", Vector2.ZERO)
 	for frame in range(20):
 		await physics_frame
-	# Sama dengan SPAWN di main.gd: pinggir barat daya kolam tengah (dulu (0, 7),
-	# sekarang tepat di tengah kolam).
-	player.spawn(Vector2(-26.0, 16.0))
+	# Kembali ke titik muncul utama di padang 100 m.
+	player.spawn(Vector2(0.0, 7.0))
 	for frame in range(10):
 		await physics_frame
 	game._toggle_speed()

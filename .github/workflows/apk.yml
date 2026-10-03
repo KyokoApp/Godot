@@ -205,10 +205,8 @@ jobs:
           grep -F '[scenery-test]' scenery-test.log
           grep -F '[skin-test]' skin-test.log
 
-      # Bentuk pulau 300 m: tidak bulat, tidak kotak, air di luar, tanah di dalam,
-      # plus kolam cetek berpintu di tengah (dicek test_scenery.gd).
-      # Ini gerbang permintaan "world 1km bergelombang kayak pulau".
-      - name: Tes bentuk pulau 300 m + kolam (headless)
+      # Bentuk pulau 100 m: pantai organik, relief bukit, air di luar, tanah di dalam.
+      - name: Tes pulau 100 m dan medan bergelombang (headless)
         run: |
           set +e
           timeout 180 ./godot --headless --path project \
@@ -220,6 +218,19 @@ jobs:
             exit 1
           fi
           grep -F '[island-test]' island-test.log
+
+      - name: Tes NPC dan layar interaksi (headless)
+        run: |
+          set +e
+          timeout 240 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_npc.gd" 2>&1 | tee npc-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' npc-test.log; then
+            tail -60 npc-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[npc-test] HASIL: OK' npc-test.log
 
       # Zoom kamera: cubit dua jari harus benar-benar menempel ke karakter.
       - name: Tes zoom kamera (headless)

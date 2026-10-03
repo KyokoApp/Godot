@@ -1,6 +1,6 @@
 shader_type spatial;
 render_mode diffuse_burley, specular_schlick_ggx, cull_back;
-// Air berbentuk gelombang, dipakai untuk laut sekaligus kolam tengah.
+// Air bergelombang untuk laut yang mengelilingi pulau.
 // Dasar ide dari shader "Simple Water" (dairycultist, godotshaders.com, CC0):
 //   * gelombang digerakkan di vertex + normal dihitung dari tetangganya,
 //   * transparansi jatuh menurut KEDALAMAN: yang cetek tembus pandang, yang
@@ -25,7 +25,7 @@ uniform vec4 sun_color : source_color = vec4(0.62, 0.74, 0.98, 1.0);
 // Arah bulan (15 derajat, barat daya); dikirim dari main.gd supaya angka di
 // layar dan di gambar tes sama.
 uniform vec3 sun_direction = vec3(-0.91, 0.26, -0.31);
-// Tinggi gelombang (meter). Laut boleh lebih besar dari kolam.
+// Tinggi gelombang (meter); air ini hanya dipakai untuk laut.
 uniform float wave_height = 0.10;
 // Panjang gelombang (meter). Semakin besar semakin landai riaknya.
 uniform float wave_length = 7.0;
@@ -38,10 +38,8 @@ uniform float depth_full = 6.0;
 // Kekuatan pantulan langit (0..1).
 uniform float reflectivity = 0.85;
 uniform float horizon_fade = 420.0;
-// Godot 4.5: DEPTH_TEXTURE tidak lagi jadi bawaan. Tanpa baris ini shader
-// GAGAL kompilasi ("DEPTH_TEXTURE has been removed in favor of using
-// hint_depth_texture") — dan karena pond.gd mem-preload shader yang sama,
-// kegagalan itu ikut mematikan Pond.new() di main.gd.
+// Godot 4.5: DEPTH_TEXTURE harus diminta dengan hint_depth_texture; shader
+// laut memakai kedalaman layar untuk memudarkan warna di garis pantai.
 uniform sampler2D DEPTH_TEXTURE : hint_depth_texture, filter_linear_mipmap;
 
 varying vec3 world_position;
@@ -100,18 +98,15 @@ void fragment() {
 	float shallow = 1.0 - smoothstep(depth_fade, depth_full, bottom - surface);
 
 	vec3 water = mix(shallow_color.rgb, deep_color.rgb, thickness);
-	// Warna dasar ikut terlihat saat air cetek — itu yang membuat kolam terbaca
-	// cetek, bukan seperti cat biru.
+	// Dasar laut masih sedikit terlihat di air dangkal dekat pantai.
 	water = mix(shallow_color.rgb * 1.35, water, shallow * 0.75 + 0.25);
 
 	ALBEDO = water;
 	METALLIC = reflectivity;
 	ROUGHNESS = 0.06;
 	SPECULAR = 1.0;
-	// Air cetek jauh lebih tembus pandang: dasarnya masih terlihat. Pembagi
-	// memakai depth_full (bukan depth_fade) supaya kolam 0,9 m tidak langsung
-	// jadi buram penuh — kalau memakai depth_fade, kolam cetek terbaca seperti
-	// cat biru dan dasarnya tidak kelihatan.
+	// Air dangkal lebih tembus pandang sehingga tepian pulau tetap terlihat
+	// alami dan tidak berubah menjadi bidang biru pekat.
 	ALPHA = mix(0.30, 1.0, clamp((bottom - surface) / depth_full, 0.0, 1.0));
 
 	// RiaK: normal dari turunan analitik gelombang yang sama (per piksel, jadi

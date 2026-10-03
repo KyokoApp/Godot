@@ -1422,3 +1422,32 @@ bener pendek"*, *"pintunya harus ada di tengah dan di ATAS air danau"*, dan
   render-a/b/c, package).
 
 Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+## Ronde 20 — padang 100 m bergulir, Mira, dan layar interaksi pop-art
+
+Permintaan terbaru membatalkan lake/door dan efek berjalan di atas air dari ronde 18–19.
+
+- **Dunia kembali 100 × 100 m.** `Field.SIZE` kembali ke 100 m dengan pulau
+  bertepi berlekuk. Bukit di pedalaman memakai beberapa frekuensi gelombang
+  (relief sampel sekitar 1,9 m di area tengah), melandai ke pantai, dan berbagi
+  satu fungsi tinggi untuk mesh, collider, rumput, serta pemain. Grid collider
+  dirapatkan ke sel 2 m agar bukit tetap halus.
+- **Danau, pintu danau, serta umpan balik khusus air dihapus.** Sistem
+  `pond.gd`, riak langkah (`water_ripple.gd` dan shader-nya), cekungan, dan
+  pijakan air sudah tidak dipakai. Laut luar tetap ada; langkah kini hanya
+  memakai permukaan rumput, pasir, atau batu.
+- **NPC Mira ditambahkan.** Pose diam utamanya berbeda dari pemain
+  (`Idle_FoldArms_Loop`), lalu ia kadang berjalan beberapa meter dengan
+  `Walk_Formal_Loop`. Area sekitar titik muncul dan rumah Mira dibiarkan kosong
+  dari dedaunan.
+- **Interaksi dan menu bergaya Persona 4.** Tombol bicara muncul saat dekat;
+  transisi modal menggeser layar pilihan, menampilkan potret 3D Mira di kiri,
+  dan menu aktivitas di kanan. Aktivitas yang belum tersedia menampilkan
+  **COMING SOON**; `E`/`Esc` dan tombol kembali menutup layar, lalu kontrol
+  permainan dipulihkan.
+- Regresi diperbarui untuk ukuran dan relief pulau, surface langkah, serta
+  interaksi/wander NPC (`tools/test_npc.gd` dan gerbang CI baru).
+
+Validasi statis lokal: `gdlint project tools`, `tools/check_scripts.py`, dan
+`git diff --check` lulus. Runtime Godot belum tersedia di sandbox; verifikasi CI
+masih diperlukan.

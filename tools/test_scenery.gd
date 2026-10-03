@@ -4,7 +4,7 @@ extends SceneTree
 ## Yang diuji adalah JANJI ke pemain, bukan sekadar "tidak ada error":
 ##   1. ada pulau terbang, tebing, laut, reruntuhan batu, dan titik cahaya
 ##      melayang (bukit tajam tiga segitiga sudah DIHAPUS atas permintaan),
-##   2. susunannya mengelilingi PULAU 300 m: laut di segala arah pada permukaan
+##   2. susunannya mengelilingi PULAU 100 m: laut di segala arah pada permukaan
 ##      y = 0, sedangkan pulau terbang, tebing, dan pulau batu berdiri di LUAR
 ##      garis pantai (di seberang air) supaya tidak menutupi medan pemain,
 ##   3. TIDAK ADA satu pun yang menambah collision atau masuk ke dalam pulau,
@@ -19,8 +19,6 @@ extends SceneTree
 
 const Field = preload("res://src/game/world/field.gd")
 const Scenery = preload("res://src/game/world/scenery.gd")
-const Pond = preload("res://src/game/world/pond.gd")
-const WaterRipple = preload("res://src/game/world/water_ripple.gd")
 var _failures := 0
 var _notes := PackedStringArray()
 var _reported := {}
@@ -49,8 +47,6 @@ func _run() -> void:
 	_test_layout(scenery)
 	_test_no_collision(scenery)
 	_test_ground_path()
-	_test_pond()
-	_test_ripple()
 	print("[scenery-test] bagian=%d gagal=%d" % [scenery.get_child_count(), _failures])
 	print("--- diagnostik ---")
 	for note in _notes:
@@ -103,14 +99,14 @@ func _test_parts(scenery: Scenery) -> void:
 			scenery.cliff_count, pillars, emitters, mote_color])
 
 
-## Susunan pulau 300 m: laut mengelilingi SEMUA arah pada permukaan y = 0,
+## Susunan pulau 100 m: laut mengelilingi SEMUA arah pada permukaan y = 0,
 ## pulau terbang dan tebing di luar garis pantai, pulau batu jauh di barat.
 func _test_layout(scenery: Scenery) -> void:
 	var sea_position := scenery.sea.position
 	var sea_mesh := scenery.sea.mesh as PlaneMesh
 	_check(sea_mesh != null, "Laut bukan bidang")
 	if sea_mesh != null:
-		# Laut harus menutup SELURUH pulau 300 m, bukan hanya menyamping.
+		# Laut harus menutup SELURUH pulau 100 m, bukan hanya menyamping.
 		_check(sea_mesh.size.x >= Field.SIZE * 2.0,
 			"Laut terlalu kecil untuk mengelilingi pulau: %.0f m" % sea_mesh.size.x)
 	_check(sea_position.x == 0.0 and sea_position.z == 0.0,
@@ -134,7 +130,7 @@ func _test_layout(scenery: Scenery) -> void:
 			"Puncak pulau batu tenggelam")
 		var west_coast := -Field.island_radius(PI)
 		# Jarak minimum pulau batu dari garis pantai: 5% dari ukuran dunia. Pulau
-		# batunya sengaja ditaruh jauh (pulau kini 300 m, batunya di x ± 150 m) —
+		# batunya sengaja ditaruh jauh (pulau kini 100 m, batunya di x ± 150 m) —
 		# cukup terbaca sebagai pulau terpisah di laut tanpa menutupi garis pantai.
 		var clearance := Field.SIZE * 0.05
 		_check(island_bounds.position.x + island_bounds.size.x < west_coast - clearance,
@@ -144,134 +140,9 @@ func _test_layout(scenery: Scenery) -> void:
 	# Tanda kurung WAJIB: tanpa itu % hanya menempel pada potongan terakhir yang
 	# tidak punya placeholder, dan GDScript melaporkan "not all arguments
 	# converted" sementara catatannya keluar tanpa angka.
-	_notes.append(("tata letak: laut %.0f x %.0f m di y=%.2f mengelilingi pulau 300 m, "
+	_notes.append(("tata letak: laut %.0f x %.0f m di y=%.2f mengelilingi pulau 100 m, "
 		+ "pulau terbang & tebing di luar garis pantai")
 		% [sea_width, sea_width, sea_position.y])
-
-
-## Danau tengah (ronde 18, diperbaiki ronde 19): lingkaran besar berisi air CETek
-## dengan sebuah pintu berdiri di TENGAH. Yang dijanjikan ke pemain:
-##   1. airnya bener-bener cetek (danau, bukan kolam) — dasarnya terlihat,
-##   2. bidang air BUNDAR dan tidak pernah menjorok ke daratan kering,
-##   3. pintunya berdiri DI ATAS permukaan air (di puncak pulau batu), kakinya
-##      tidak tenggelam,
-##   4. permukaan air BISA DIAKI — ada pijakan tak terlihat setinggi garis air,
-##      jadi pemain berjalan di atas air dan meninggalkan riak.
-func _test_pond() -> void:
-	var pond := Pond.new()
-	root.add_child(pond)
-	await process_frame
-	var water := pond.water as MeshInstance3D
-	_check(water != null, "Kolam tidak punya bidang air")
-	if water == null:
-		return
-	var floor_height := Field.terrain_height(0.0, 0.0)
-	var depth := Field.POND_LEVEL - floor_height
-	_check(depth > 0.15, "Kolam terlalu dangkal sampai tidak ada air: %.2f m" % depth)
-	_check(depth < 0.7, "Danau harus BENER-BENER CETek, dalamnya %.2f m" % depth)
-	_check(water.position.y == Field.POND_LEVEL,
-		"Permukaan kolam tidak di ketinggian air: %.2f" % water.position.y)
-	# Lingkaran: mesh air harus punya banyak segmen di tepi (bukan kotak 4 sudut).
-	var arrays := water.mesh.surface_get_arrays(0)
-	var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-	var edge := 0
-	for point in points:
-		if absf(point.length() - pond.WATER_RADIUS) < 0.01:
-			edge += 1
-	_check(edge >= 32, "Bidang air tidak bundar: hanya %d titik tepi" % edge)
-	# Tepi air harus berada DI DALAM kolam: tanah tepat di garis air masih di
-	# bawah permukaan air. Kalau tidak, kepingan air akan mengambang di atas
-	# daratan kering dan terlihat seperti genangan di tengah rumput.
-	var dry := 0
-	for step in range(24):
-		var angle := TAU * float(step) / 24.0
-		var x := cos(angle) * pond.WATER_RADIUS
-		var z := sin(angle) * pond.WATER_RADIUS
-		if Field.terrain_height(x, z) > Field.POND_LEVEL:
-			dry += 1
-	_check(dry == 0, "Ada daratan kering di dalam bidang air di %d dari 24 arah" % dry)
-	# Pintu + pantulan.
-	var door := pond.door as Node3D
-	_check(door != null and door.get_child_count() >= 6,
-		"Pintu kurang lengkap: %d bagian" % (door.get_child_count() if door else 0))
-	# Pintunya harus berdiri DI ATAS air danau, bukan tenggelam di dasarnya.
-	_check(door != null and door.position.y > Field.POND_LEVEL,
-		"Pintu tidak berdiri di atas air: dasar y=%.2f (air %.2f)" % [
-			door.position.y if door else 0.0, Field.POND_LEVEL])
-	# Pijakan air: tanpa ini pemain menyelam ke dasar kolam, bukan berjalan di
-	# atas air, dan riak tiap langkah lahir di tempat yang salah. Pijakannya
-	# adalah collider terrain (sel di dalam danau dinaikkan ke garis air), jadi
-	# yang dijaga adalah SELURUH bidang air harus berada di dalam kolam.
-	var outside := 0
-	for step in range(24):
-		var angle2 := TAU * float(step) / 24.0
-		if not Field.is_water(cos(angle2) * pond.WATER_RADIUS, sin(angle2) * pond.WATER_RADIUS):
-			outside += 1
-	_check(outside == 0,
-		"Bidang air keluar dari kolam di %d dari 24 arah" % outside)
-	_check(pond.platform != null and pond.platform.position.y < Field.POND_LEVEL,
-		"Pulau batu tengah tidak lahir dari bawah garis air")
-	var roles := {}
-	if door != null:
-		for child in door.get_children():
-			roles[child.name] = true
-	for role in ["frame", "step", "leaf", "glow"]:
-		_check(roles.has(role), "Bagian pintu hilang: " + role)
-	var mirror := pond.reflection as Node3D
-	_check(mirror != null and mirror.get_child_count() >= 4,
-		"Pantulan pintu kurang: %d bagian" % (mirror.get_child_count() if mirror else 0))
-	if mirror != null:
-		var top := -INF
-		for child in mirror.get_children():
-			var block := child as MeshInstance3D
-			if block == null:
-				continue
-			var box := block.mesh as BoxMesh
-			if box == null:
-				continue
-			top = maxf(top, block.position.y + box.size.y * 0.5)
-		_check(top <= Field.POND_LEVEL + 0.01,
-			"Pantulan keluar dari air: puncak %.2f m (air %.2f m)" % [top, Field.POND_LEVEL])
-	_notes.append("danau: r=%.0f m di y=%.2f, dalam %.2f m, pintu %d bagian di y=%.2f, "
-		+ "pantulan %d bagian" % [
-		pond.WATER_RADIUS, Field.POND_LEVEL, depth,
-		door.get_child_count() if door else 0,
-		door.position.y if door else 0.0,
-		mirror.get_child_count() if mirror else 0])
-	pond.queue_free()
-	await process_frame
-
-
-## Riak air (ronde 19): tiap kali kaki pemain menapak permukaan danau, satu
-## cincin riak lahir di titik tapak kaki, setinggi garis air, dan hidup
-## beberapa saat sebelum tidur lagi. Tanpa ini "jalan di atas air" terasa
-## seperti berjalan di lantai tak terlihat.
-func _test_ripple() -> void:
-	var ripple := WaterRipple.new()
-	root.add_child(ripple)
-	await process_frame
-	_check(ripple.active_count() == 0,
-		"Riak hidup sebelum ada yang berjalan di air: %d" % ripple.active_count())
-	# Titik di dalam danau, setinggi permukaan air (seperti titik kontak kaki).
-	var step := Vector3(4.0, Field.POND_LEVEL, -3.0)
-	ripple.spawn(step, 0.5)
-	_check(ripple.active_count() == 1,
-		"Riak tidak lahir saat kaki menapak air: %d aktif" % ripple.active_count())
-	var ring := ripple.get_child(0) as MeshInstance3D
-	_check(ring != null and ring.visible, "Cincin riak tidak terlihat")
-	if ring != null:
-		_check(absf(ring.position.y - (Field.POND_LEVEL + 0.05)) < 0.001,
-			"Riak tidak mengikuti garis air: y=%.2f (air %.2f)" % [
-				ring.position.y, Field.POND_LEVEL])
-		_check(ring.material_override != null
-			and ring.material_override.get_shader_parameter("radius") > 1.0,
-			"Cincin riak tidak punya radius yang masuk akal")
-	# Dua riak sekaligus (dua kaki) harus bisa hidup bersamaan.
-	ripple.spawn(Vector3(-2.0, Field.POND_LEVEL, 5.0), 1.0)
-	_check(ripple.active_count() == 2,
-		"Riak tidak bisa hidup berbarengan: %d aktif" % ripple.active_count())
-	ripple.queue_free()
-	await process_frame
 
 
 ## Setiap titik pemandangan besar harus berada di LUAR garis pantai (di laut).

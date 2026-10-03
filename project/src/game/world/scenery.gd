@@ -1,5 +1,5 @@
 extends Node3D
-## Pemandangan di sekitar pulau 300 m. Bukit tajam tiga segitiga sudah DIHAPUS
+## Pemandangan di sekitar pulau 100 m. Bukit tajam tiga segitiga sudah DIHAPUS
 ## (permintaan: "hapus itu pemandangan di depan ... kayak bantuk gunung tajam
 ## sama gelombang") dan diganti PULAU TERBANG: bongkahan batu rendah-poli yang
 ## melayang di seberang air, terbaca sebagai bentuk pipih bergaya ilustrasi tapi
@@ -28,10 +28,8 @@ const Dusk = preload("res://src/game/environment/dusk_environment.gd")
 const SEA_LEVEL := -0.15
 const SEA_SIZE := 900.0
 ## Pulau terbang: setiap entri [jarak dari pusat, sudut, tinggi melayang, skala].
-## Jaraknya di luar pulau terjauh (ISLAND_MAX 114 + tiga lekukan pantai 9 =
-## 123 m) dan di luar pulau batu (± 159 m) supaya tidak pernah menutupi jalan
-## pemain, tapi cukup dekat (150-290 m) supaya kabut (habis 420 m) masih
-## menyisakan bentuknya yang terlihat utuh.
+## Jaraknya jauh di luar garis pantai 100 m dan pulau batu supaya tetap menjadi
+## latar, bukan menutupi jalan pemain. Kabut menjaga siluetnya tetap lembut.
 const FLOATERS := [
 	Vector4(150.0, -0.62, 22.0, 1.00),
 	Vector4(186.0, 2.31, 30.0, 1.35),
@@ -234,9 +232,8 @@ func _build_cliffs() -> void:
 	var indices := PackedInt32Array()
 	var blocks := 9
 	# Blok dibuat saling menimpa (lebar 15 m, jarak titik 12,5 m) supaya terbaca
-	# sebagai satu dinding batu, bukan deretan menara. Muka terdekat blok =
-	# base_x - depth/2; depth maksimum 17 m dan garis pantai terjauh 368 m, jadi
-	# base_x = Field.HALF + 13 menyisakan ± 130 m air di depannya.
+	# sebagai satu dinding batu. Muka terdekat blok sekitar x=54 m, di luar garis
+	# pantai pulau 100 m, sehingga tetap menjadi latar tanpa collision.
 	var base_x := Field.HALF + 13.0
 	for block in range(blocks):
 		var center_z := -Field.HALF + 12.0 + float(block) * 12.5
@@ -341,28 +338,22 @@ func _build_motes() -> void:
 	motes = Node3D.new()
 	motes.name = "LightMotes"
 	add_child(motes)
-	# Titik cahaya menyebar DI SEPANJANG JALAN, bukan hanya tiga titik dekat
-	# spawn: dulu partikelnya hampir tidak pernah terlihat saat pemain berjalan.
-	# Tingginya DIHITUNG dari tanah pulau — dulu tanah rata ± 1 m sehingga y
-	# tetap masih aman, sekarang dataran ± 6 m sehingga y harus dari terrain.
-	# Titik dekat spawn sengaja dijauhkan: kolam tengah menempati radius 21 m,
-	# jadi titik lama (-6, -14) dan (4, -8) sekarang berada DI DALAM AIR.
-	var spots: Array[Vector3] = [Vector3(-30.0, 1.4, -14.0), Vector3(-38.0, 1.6, -27.0),
-		Vector3(34.0, 1.3, -8.0)]
+	# Titik cahaya menyebar di sepanjang jalan skala pulau 100 m. Tingginya
+	# tetap dihitung dari terrain supaya partikel mengikuti bukit.
+	var spots: Array[Vector3] = [Vector3(-18.0, 1.4, -8.0), Vector3(-23.0, 1.6, -16.0),
+		Vector3(19.0, 1.3, -5.0)]
 	for step in range(-4, 5):
-		var along := step * 15.0
-		# Geser 6 m ke samping jalan supaya partikel melayang di atas rumput,
-		# bukan tepat di atas jalan tanah.
-		spots.append(Vector3(along, 1.4, _path_centre(along) + 6.0))
+		var along := step * 6.0
+		# Geser 3 m ke samping jalan supaya partikel melayang di atas rumput.
+		spots.append(Vector3(along, 1.4, _path_centre(along) + 3.0))
 	for spot in spots:
 		var ground: float = Field.terrain_height(spot.x, spot.z)
 		motes.add_child(_mote_emitter(spot + Vector3(0.0, ground, 0.0)))
 
 
-## Lik jalan seperti di ground.gdshader: z = curve*sin(x*freq) + curve*0.3*sin(x*0.019+0.59).
+## Garis tengah yang sama dengan shader tanah dan aturan pertumbuhan rumput.
 func _path_centre(x: float) -> float:
-	return (Field.PATH_CURVE * sin(x * Field.PATH_FREQUENCY)
-		+ Field.PATH_CURVE * 0.3 * sin(x * 0.019 + 0.59))
+	return Field.path_centre(x)
 
 
 func _mote_emitter(position: Vector3, amount: int = 22) -> GPUParticles3D:

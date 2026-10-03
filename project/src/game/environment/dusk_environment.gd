@@ -39,10 +39,9 @@ static func make_environment() -> Environment:
 	# tidak ikut berkabut supaya awan dan pendar matahari tetap tajam.
 	environment.fog_enabled = true
 	environment.fog_mode = Environment.FOG_MODE_DEPTH
-	# Dunia sekarang pulau 300 m dan pemandangannya pulau terbang 150-290 m dari
-	# pemain. Kabut harus berakhir jauh di belakangnya (420 m) supaya pulau
-	# terbang itu TERLIHAT utuh — bukan lenyap di dinding kabut — sambil tetap
-	# memudar seperti cat air. Mulai kabut 45 m supaya pulau sendiri tetap tajam.
+	# Pulau utama 100 m, dengan pulau terbang tetap jauh di horizon. Kabut
+	# berakhir di 420 m supaya siluet latar memudar lembut, bukan terpotong; mulai
+	# setelah 45 m agar bukit pemain sendiri tetap tajam.
 	environment.fog_depth_begin = 45.0
 	environment.fog_depth_end = 420.0
 	environment.fog_density = 0.20

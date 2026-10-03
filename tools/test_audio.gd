@@ -133,25 +133,11 @@ func _test_steps() -> void:
 	for frame in range(20):
 		await physics_frame
 	_check(footsteps.get("emitted") == stopped, "Langkah tidak berhenti")
-	# Pulau 300 m: pedalaman = rumput, pesisir rendah = pasir/tanah, lereng
-	# curam = batu. Titik rumput dipilih JAUH dari jalan tanah (jalan berbunyi
-	# tanah) dan DI LUAR danau tengah (POND_RADIUS + margin rumput), jadi
-	# z = 40 m sudah pasti di daratan kering.
-	_check(footsteps.surface_at(Vector3(0, 5, 40), Vector3.UP) == "grass",
+	# Pulau 100 m: rumput di pedalaman, pasir di pesisir rendah, batu di lereng.
+	_check(footsteps.surface_at(Vector3(0, 5, 8), Vector3.UP) == "grass",
 		"Pedalaman pulau bukan rumput")
-	_check(footsteps.surface_at(Vector3(8, 5, 40), Vector3.UP) == "grass",
-		"Dekat pedalaman sudah berubah jadi tanah")
-	# Danau tengah (ronde 19): titik di atas permukaan air berbunyi "water" —
-	# pemain berjalan DI ATAS air di sana, jadi kakinya basah, bukan rumput.
-	# Titik kontak kaki selalu setinggi tanah + 0,08 m, jadi y memakai angka
-	# yang sama seperti di lapangan.
-	var water := Vector3(0.0, Field.POND_LEVEL + 0.08, 0.0)
-	_check(footsteps.surface_at(water, Vector3.UP) == "water",
-		"Tengah danau tidak terbaca sebagai air")
-	# Puncak pulau batu tempat pintunya berdiri: bunyi batu, bukan air.
-	var stone_top := Vector3(0.0, Field.POND_LEVEL + 0.58, 0.0)
-	_check(footsteps.surface_at(stone_top, Vector3.UP) == "stone",
-		"Puncak pulau batu di tengah danau tidak berbunyi batu")
+	_check(footsteps.surface_at(Vector3(8, 5, 10), Vector3.UP) == "grass",
+		"Pedalaman berbukit sudah berubah jadi tanah")
 	# Titik pesisir dicari dari bentuk pulau: tanah di bawah 2,6 m di atas air
 	# (batas yang sama dengan pita pasir di ground.gdshader) harus berbunyi tanah.
 	var shore := Vector3.ZERO
@@ -169,9 +155,8 @@ func _test_steps() -> void:
 	if found:
 		_check(footsteps.surface_at(shore, Vector3.UP) == "dirt",
 			"Pesisir rendah bukan tanah (pasir)")
-	# Lereng curam = batu. Titiknya DI LUAR danau (di dalam danau semua lereng
-	# sudah diganti air), normalnya dimiringkan supaya terbaca sebagai batu.
-	_check(footsteps.surface_at(Vector3(8, 5, 40), Vector3(0, 0.3, 1)) == "stone",
+	# Lereng curam = batu; normal sengaja dimiringkan supaya jadi sampel tegas.
+	_check(footsteps.surface_at(Vector3(8, 5, 10), Vector3(0, 0.3, 1)) == "stone",
 		"Lereng curam bukan batu")
 	game.queue_free()
 	await process_frame

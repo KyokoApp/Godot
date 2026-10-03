@@ -1,5 +1,5 @@
 extends SceneTree
-## Rumput di pulau 1 km: anggaran LOD, penempatan di tanah, LOD turun saat jauh.
+## Rumput di pulau 100 m: anggaran LOD, penempatan di tanah, LOD turun saat jauh.
 
 const Field = preload("res://src/game/world/field.gd")
 const FirePet = preload("res://src/game/fire_pet.gd")
@@ -25,10 +25,8 @@ func _run() -> void:
 	var ground := Field.new()
 	world.add_child(ground)
 	var player := Node3D.new()
-	# Titik ini harus bisa DITANAMI rumput (can_grow). Dulu (12, -6) — itu kini
-	# tepat di dalam kolam tengah (radius air 21 m), jadi tile rumputnya kosong
-	# dan tes gagal dengan "Tile dekat kosong".
-	player.position = Vector3(30, ground.surface_height(30, -30) + 0.9, -30)
+	# Titik muncul pemain (0, 7): tile awal harus berisi rumput.
+	player.position = Vector3(0, ground.surface_height(0, 7) + 0.9, 7)
 	world.add_child(player)
 	var character := Character.new()
 	character.position = player.position - Vector3(0, 0.9, 0)
@@ -61,14 +59,10 @@ func _run() -> void:
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-50, 20, 0)
 	world.add_child(sun)
-	# Rumput hanya di daratan pulau: tidak di laut, tidak menembus garis pantai,
-	# dan tidak di kolam tengah (ronde 18: kolam itu sengaja dibiarkan polos).
-	# Titik uji pindah dari (0,0)/(-14,10) — keduanya kini berada di dalam kolam
-	# radius 22 m — ke dataran dalam di luar lekukan kolam.
-	_check(field.can_grow(-14, 40), "Rumput tidak tumbuh di dataran dalam")
-	_check(field.can_grow(30, 30), "Rumput tidak tumbuh di dataran timur")
-	_check(not field.can_grow(0, 0), "Rumput tumbuh di kolam tengah")
-	_check(not field.can_grow(0, 20), "Rumput tumbuh di bibir kolam")
+	# Rumput mengikuti bukit; hanya pantai, lereng curam, dan jalan yang kosong.
+	_check(field.can_grow(0, 0), "Rumput tidak tumbuh di bukit tengah")
+	_check(field.can_grow(8, 10), "Rumput tidak tumbuh di pedalaman timur")
+	_check(not field.can_grow(0, Field.path_centre(0)), "Rumput menutupi jalan tanah")
 	for angle in [0.0, 1.1, 2.2, 3.3, 4.4, 5.5]:
 		var coast := Field.island_radius(angle) + 25.0
 		_check(not field.can_grow(cos(angle) * coast, sin(angle) * coast),
@@ -103,7 +97,7 @@ func _run() -> void:
 			_check(field.can_grow(point.x, point.z), "Penempatan di area terlarang")
 			_check(absf(point.y + 0.03 - ground.surface_height(point.x, point.z)) < 0.01,
 				"Akar rumput mengambang")
-	_test_lod_subset(field, Vector2i(2, -3))
+	_test_lod_subset(field, Vector2i(0, 0))
 	_check(total > 100, "Tidak ada padang rumput yang cukup untuk dirender")
 	_check(total <= Grass.MAX_CLUMPS, "Budget rumput terlampaui")
 	if "--render" in OS.get_cmdline_user_args():
@@ -133,8 +127,7 @@ func _run() -> void:
 
 
 func _test_lod_subset(field: Grass, tile: Vector2i) -> void:
-	# Tile yang dipakai harus tile PEMAIN (yang berisi rumput). Dulu (0, 0) —
-	# itu sekarang tepat di tengah kolam, jadi tile-nya kosong.
+	# Tile yang dipakai adalah tile PEMAIN (0, 0), yang harus berisi rumput.
 	var near := field.placements_for(tile)
 	_check(not near.is_empty(), "Tile dekat kosong")
 	# Grid jauh adalah subset grid dekat supaya akar tidak melompat saat LOD turun.

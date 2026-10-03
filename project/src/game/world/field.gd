@@ -1,28 +1,28 @@
 extends Node3D
-## Pulau 300 m × 300 m: dataran bergelombang dengan garis pantai tidak beraturan
-## (bukan bulat, bukan kotak), dikelilingi laut di permukaan y = 0. Di TENGAH ada
-## cekungan bundar berisi air cetek dan sebuah pintu (lihat BASIN_*). Semua panjang
-## ditulis TIGA kali lipat dari versi 100 m.
+## Pulau 100 m × 100 m: dataran bergelombang dengan garis pantai tidak beraturan
+## (bukan bulat, bukan kotak), dikelilingi laut di permukaan y = 0. Semua panjang
+## (radius pulau, lekukan pantai, tanjakan pantai, jalan) ditulis sepersepuluh
+## dari versi 1 km supaya dunia menjadi arena kecil yang tetap terasa alami.
 ##
 ## Satu fungsi tinggi (`terrain_height`) dipakai oleh SEMUA: mesh, collider,
 ## karakter, rumput, tapak api, dan langkah kaki. Itu sebabnya fungsi ini statis
 ## dan murni — tidak boleh bergantung pada node, frame, atau urutan build.
 ##
-## Kenapa chunk streaming (bukan satu mesh 100 m): medan 100 m pada sel 4 m =
+## Kenapa chunk streaming (bukan satu mesh 100 m): medan 100 m pada sel 2 m =
 ## 2,5 ribu sel — bisa dibuat sekali jalan, tapi streaming tetap dipakai supaya
 ## bentuk dunia tidak berubah kalau nanti dibesarkan lagi. Chunk 32 m × 32 m
-## (8 × 8 sel) dibangun SATU per frame mengelilingi pemain; jangkauan 2 berarti
+## (16 × 16 sel) dibangun SATU per frame mengelilingi pemain; jangkauan 2 berarti
 ## 5 × 5 = 25 chunk (± 64 m), cukup menutup seluruh pulau dari mana pun pemain
 ## berdiri. Chunk yang seluruhnya di laut tidak pernah dibangun.
 
 const SHADER = preload("res://src/game/ground.gdshader")
 const MEADOW = preload("res://assets/nature/meadow_cover.png")
-const SIZE := 300.0
+const SIZE := 100.0
 const HALF := SIZE * 0.5
 
-## Chunk 32 m, sel 4 m (8 × 8 sel, 9 × 9 titik).
-const CHUNK := 96.0
-const CHUNK_CELLS := 24
+## Chunk 32 m, sel 2 m (16 × 16 sel, 17 × 17 titik) agar bukit halus.
+const CHUNK := 32.0
+const CHUNK_CELLS := 16
 const SIDE := CHUNK_CELLS + 1
 const CELL := CHUNK / float(CHUNK_CELLS)
 ## Radius chunk yang dipegang: 2 -> 5 × 5 = 25 chunk = 160 m × 160 m.
@@ -30,26 +30,26 @@ const CHUNK_RADIUS := 2
 const WALK_MARGIN := 0.7
 
 ## Bentuk pulau.
-const ISLAND_MIN := 87.0
-const ISLAND_MAX := 114.0
+const ISLAND_MIN := 29.0
+const ISLAND_MAX := 38.0
 ## Lekukan halus garis pantai (meter) supaya tidak terlihat seperti lingkaran.
-const COAST_WAVE := 9.0
-const COAST_WAVE_B := 4.5
+const COAST_WAVE := 3.0
+const COAST_WAVE_B := 1.5
 ## Dasar laut dan tinggi dataran pulau (meter di atas permukaan air). Dataran
 ## harus DI ATAS pita pasir shader (2,6 m), kalau tidak seluruh pulau berbunyi
 ## tanah dan bukan rumput. 3 m / 12 m = 0,25 < 0,30 (MAX_SLOPE), jadi rumput
 ## tetap tumbuh di tanjakan pantai.
-const SEA_FLOOR := -8.0
-const PLATEAU := 5.0
+const SEA_FLOOR := -3.0
+const PLATEAU := 3.0
 ## Tanjakan dari garis air ke dataran (meter). 3 m / 12 m ≈ 25% — masih bisa
 ## dilalui dan terbaca sebagai pantai curam, bukan ramp panjang.
-const BEACH_RUN := 30.0
+const BEACH_RUN := 12.0
 ## Kemiringan maksimum supaya rumput/akar tidak melayang di lereng.
 const MAX_SLOPE := 0.30
 ## Rumput butuh tanah kering: minimal setinggi ini di atas air.
 const GRASS_MIN_HEIGHT := 0.55
 ## Jarak minimum rumput dari garis pantai (meter) supaya pasir tetap polos.
-const GRASS_SHORE_MARGIN := 6.0
+const GRASS_SHORE_MARGIN := 2.5
 
 ## Palet senja: hijau tua yang MASIH terbaca (bukan hitam). Permintaan pengguna:
 ## "tanah dan rumput jadi gelap tapi tetap kelihatan, dan rumput satu warna dengan
@@ -60,51 +60,22 @@ const GRASS_DARK := Color("2d4f27")
 ## Pasir juga meredup: senja bukan siang. ± 25% dari c9a873.
 const SAND_COLOR := Color("9a8260")
 # Jalan tanah berliku (digambar shader, tanpa mesh/collision tambahan).
-const PATH_WIDTH := 2.5
+const PATH_WIDTH := 1.2
 ## Lekuk 4,8 m dengan panjang gelombang ± 60 m: jalan berliku ± 2 kali sepanjang
 ## pulau 100 m dan kemiringannya tetap di bawah 37°. Aturannya: hasil kali
 ## lekuk × frekuensi harus di bawah 0,75, kalau tidak jalannya terbelok tajam
 ## (terbaca garis diagonal, bukan jalan) — itu yang terjadi dulu.
-const PATH_CURVE := 14.4
-const PATH_FREQUENCY := 0.035
+const PATH_CURVE := 4.8
+const PATH_FREQUENCY := 0.105
 ## Lekukan kedua: lebih pendek dan amplitudo lebih kecil supaya jalannya tidak
 ## terlihat seperti satu sinus raksasa.
-const PATH_FREQUENCY_B := 0.055
+const PATH_FREQUENCY_B := 0.165
 const PATH_PHASE_B := 1.33
-## Cekungan tengah: lingkaran besar berisi air CETek dan sebuah pintu berdiri di
-## air. Pinggir cekungan dibuat landai (smoothstep) supaya jalannya terus-menerus
-## — tidak ada tepi tegak yang membuat pemain tersangkut.
-##
-## Bentuknya mangkuk ber-dasar datar: dari pusat sampai BASIN_INNER tanah benar
-## benar rata (dasar kolam), lalu naik LURUS sampai BASIN_OUTER tempat dataran
-## normal (plus perbukitan) mengambil alih.
-##
-## Ramp-nya sengaja LINEAR, bukan smoothstep: lekukan smoothstep membuat tanah
-## berlekuk terlalu kuat untuk grid chunk 4 m, dan selisih grid vs fungsi
-## analitik jadi 0,17 m (gerbang test_island minta < 0,05 m). Dengan ramp linear
-## selisihnya turun ke 0,03 m.
-const BASIN_INNER := 16.0
-const BASIN_OUTER := 36.0
-## Radius permukaan air kolam (meter). Dengan ramp linear di atas dan cekungan
-## yang lebih cetek, tanah melintasi POND_LEVEL tepat di
-## r = 16 + (4,3 - 3,85) / 1,15 x 20 = 23,8 m — jadi bidang air 23,5 m pas
-## menutupi kolam tanpa menjorok ke daratan kering.
-## Dipakai pond.gd untuk lebar bidang airnya dan can_grow() untuk menahan rumput.
-const POND_RADIUS := 23.5
-## Kedalaman cekungan di bawah dataran (meter). Dasar kolam = 5 - 1,15 = 3,85 m.
-const BASIN_DEPTH := 1.15
-## Permukaan air kolam (meter). Antara dasar (3,85 m) dan dataran (5 m), jadi
-## kolamnya BENER-BENER CETek seperti danau: dalamnya cuma 0,45 m dan dasarnya
-## jelas terlihat melalui air. Pemain BERJALAN DI ATAS permukaan ini.
-const POND_LEVEL := 4.3
-## Jarak minimum rumput dari garis air kolam (meter): bibir kolam berlumpur,
-## tidak berumput tepat sampai garis air.
-const GRASS_BASIN_MARGIN := 1.5
 ## Jarak minimum rumput dari garis tengah jalan tanah. Shader tanah menggambar
 ## jalan selebar ± 1,25x PATH_WIDTH (plus noise tepi ± 0,55 m), jadi 1 m sudah
 ## lebih dari cukup. Tanpa batas ini rumput tumbuh tepat di atas jalan dan pas
 ## pemain mendekat, jalan terlihat "hilang" ditelan rumput.
-const GRASS_PATH_MARGIN := 3.0
+const GRASS_PATH_MARGIN := 1.0
 
 ## Tabel radius pulau per sudut (dihitung sekali): tanpa ini setiap pemeriksaan
 ## "di dalam pulau?" harus menghitung noise, dan rumput memanggilnya 11 ribu
@@ -218,33 +189,21 @@ static func terrain_height(x: float, z: float) -> float:
 	else:
 		# Dasar laut terus turun supaya pantai tidak terlihat seperti potongan.
 		profile = maxf(SEA_FLOOR, inland * 0.085)
-	# Cekungan tengah: mangkuk ber-dasar datar dengan dinding LURUS. Dasar kolam
-	# (BASIN_INNER) turun BASIN_DEPTH di bawah dataran, lalu naik rata sampai
-	# BASIN_OUTER tempat dataran normal mengambil alih.
-	var ramp := clampf((radial - BASIN_INNER) / (BASIN_OUTER - BASIN_INNER), 0.0, 1.0)
-	profile -= BASIN_DEPTH * (1.0 - ramp)
-	# Perbukitan halus: makin lemah di dekat pantai supaya garis air tetap
-	# berada di radius pulau (bukan naik-turun karena bukit), dan MATI TOTAL di
-	# dalam kolam. Kalau bukit masih hidup di dalam kolam, tanahnya naik-turun
-	# sampai DI ATAS permukaan air (4,3 m) dan garis airnya jadi berlekuk-lekuk —
-	# lingkaran yang diminta pemain tidak lagi bulat. Karena itu bukit baru
-	# mulai hidup SESUDAH cekungan selesai (BASIN_OUTER), bukan di dalamnya.
-	var hills := _rolling(x, z) * 3.0 * clampf(inland / 12.0, 0.0, 1.0) \
-		* smoothstep(BASIN_OUTER, BASIN_OUTER * 1.8, radial)
+	# Bukit jelas di pedalaman lalu melembut ke pantai supaya garis air tetap
+	# bersih. Fade halus menghindari perubahan kemiringan yang mendadak.
+	var fade := clampf(inland / 12.0, 0.0, 1.0)
+	fade = fade * fade * (3.0 - 2.0 * fade)
+	var hills := _rolling(x, z) * 2.2 * fade
 	return profile + hills
 
 
-## Perbukitan: beberapa gelombang panjang berpola tidak berulang.
+## Bukit lebar, punggung diagonal, dan gelombang pendek bercampur agar medan
+## terbaca berundulasi, bukan bidang datar dengan satu sinus berulang.
 static func _rolling(x: float, z: float) -> float:
-	# Panjang gelombang diperpendek 1,5x supaya jumlah bukit tetap sama di pulau
-	# yang kini setengahnya, dan amplitudo diturunkan 4,2 -> 3,4 m supaya
-	# kemiringan bukit TIDAK melewati MAX_SLOPE (0,30). Kalau melewati, rumput
-	# tidak tumbuh di puncak bukit dan pulau jadi botak bergaris — terukur:
-	# amplitudo 4,2 dengan gelombang pendek memberi 3,8% daratan terlalu curam.
-	var v := sin(x * 0.011 + 1.3) * cos(z * 0.009 - 0.4)
-	v += 0.62 * sin((x + z) * 0.019 + 2.1)
-	v += 0.34 * sin(x * 0.028 - 1.1) * cos(z * 0.031 + 0.7)
-	return clampf(v * 0.62, -1.0, 1.0)
+	var v := 0.85 * sin(x * 0.055 + 1.3) * cos(z * 0.046 - 0.4)
+	v += 0.58 * sin((x + z) * 0.095 + 2.1)
+	v += 0.30 * sin(x * 0.16 - 1.1) * cos(z * 0.13 + 0.7)
+	return clampf(v * 0.8, -1.0, 1.0)
 
 
 static func _hash(x: int, y: int) -> float:
@@ -325,13 +284,6 @@ static func is_inside(x: float, z: float, margin := 0.0) -> bool:
 	return (island_radius(point.angle()) - point.length()) >= margin
 
 
-## Apakah titik ini berada DI ATAS air kolam tengah? Kolam tengah sekarang
-## danau dangkal: pemain berjalan di permukaan airnya (bukan menyelam ke
-## dasar), langkah kaki meninggalkan riak, dan rumput tidak tumbuh di sini.
-static func is_water(x: float, z: float) -> bool:
-	return Vector2(x, z).length() <= POND_RADIUS
-
-
 static func clamp_inside(point: Vector2, margin: float) -> Vector2:
 	var angle := point.angle()
 	var dry := island_radius(angle) - maxf(margin, 0.0)
@@ -339,18 +291,11 @@ static func clamp_inside(point: Vector2, margin: float) -> Vector2:
 	return Vector2(cos(angle), sin(angle)) * clampf(wanted, 0.0, HALF)
 
 
-## Versi STATIS dari can_grow(): untuk pemakai yang tidak punya instance Field
-## (misalnya forest.gd, yang hanya memakai fungsi statis). Bedanya cuma sumber
-## tinggi tanah — instance memakai grid chunk, versi ini memakai fungsi
-## analitik. Selisihnya beberapa milimeter (grid memang dibangun dari fungsi
-## yang sama), jadi aturan kolam dan jalan tetap identik.
+## Versi statis untuk penyebaran dedaunan yang tidak punya instance Field.
 static func can_grow_static(x: float, z: float) -> bool:
 	if not is_inside(x, z, GRASS_SHORE_MARGIN):
 		return false
-	var height := terrain_height(x, z)
-	if Vector2(x, z).length() < POND_RADIUS + GRASS_BASIN_MARGIN:
-		return false
-	if height < GRASS_MIN_HEIGHT:
+	if terrain_height(x, z) < GRASS_MIN_HEIGHT:
 		return false
 	var gradient := Vector2(
 		terrain_height(x + 0.5, z) - terrain_height(x - 0.5, z),
@@ -364,12 +309,6 @@ static func can_grow_static(x: float, z: float) -> bool:
 
 func can_grow(x: float, z: float) -> bool:
 	if not is_inside(x, z, GRASS_SHORE_MARGIN):
-		return false
-	# Kolam tengah polos: tidak ada rumput di air, dan bibirnya diberi jeda
-	# supaya berlumpur. Garis airnya bulat bersih (ramp kolam linear + bukit mati
-	# di dalam kolam), jadi radius cukup — dulu tinggi tanah, tapi tinggi tanah
-	# ikut naik-turun oleh perbukitan dan bikin garis rumputnya berlekuk.
-	if Vector2(x, z).length() < POND_RADIUS + GRASS_BASIN_MARGIN:
 		return false
 	if surface_height(x, z) < GRASS_MIN_HEIGHT:
 		return false
@@ -442,42 +381,6 @@ func _build_chunk(key: Vector2i) -> void:
 		return
 	var grid := _chunk_grid(key)
 	var origin := _chunk_origin(key)
-	var visual := MeshInstance3D.new()
-	visual.name = "Ground_%d_%d" % [key.x, key.y]
-	visual.mesh = _visual_mesh(grid, origin)
-	visual.material_override = _material
-	visual.extra_cull_margin = 2.0
-	add_child(visual)
-	# Collider. Air danau TIDAK diberi collider sendiri: bidang datar
-	# nol-ketebalan bisa menyangkut badan (is_on_floor() true tapi velocity.y > 0,
-	# animasi terkunci di klip lompat dan pemain berhenti di tempat). Pijakannya
-	# adalah collider terrain ini, dengan sel di dalam danau dinaikkan ke garis
-	# air supaya pemain berjalan DI ATAS air. Sel yang menyeberangi tepi jadi
-	# tanjakan halus, jadi masuk/keluar danau tidak ada langkah tegas.
-	var shape_mesh: Mesh = visual.mesh
-	if _chunk_touches_water(origin):
-		var raised := grid.duplicate()
-		var wet := false
-		for iz in range(SIDE):
-			for ix in range(SIDE):
-				if is_water(origin.x + float(ix) * CELL, origin.y + float(iz) * CELL):
-					raised[iz * SIDE + ix] = POND_LEVEL
-					wet = true
-		if wet:
-			shape_mesh = _collision_mesh(raised, origin)
-	var body := StaticBody3D.new()
-	body.name = "GroundBody_%d_%d" % [key.x, key.y]
-	body.collision_layer = 1
-	var shape := CollisionShape3D.new()
-	shape.shape = shape_mesh.create_trimesh_shape()
-	body.add_child(shape)
-	add_child(body)
-	_chunks[key] = [visual, body]
-
-
-## Mesh visual chunk: tinggi, normal, dan warna. Chunk yang tidak menyentuh
-## danau memakainya langsung sebagai collider.
-func _visual_mesh(grid: PackedFloat32Array, origin: Vector2) -> ArrayMesh:
 	var vertices := PackedVector3Array()
 	var normals := PackedVector3Array()
 	var colors := PackedColorArray()
@@ -510,39 +413,20 @@ func _visual_mesh(grid: PackedFloat32Array, origin: Vector2) -> ArrayMesh:
 	arrays[Mesh.ARRAY_INDEX] = indices
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	return mesh
-
-
-## True kalau kotak chunk ini bisa menyentuh danau; chunk jauh tidak perlu
-## diperiksa sel per sel.
-func _chunk_touches_water(origin: Vector2) -> bool:
-	return absf(origin.x) <= POND_RADIUS + CHUNK and absf(origin.y) <= POND_RADIUS + CHUNK
-
-
-## Mesh polos (vertex + index saja) untuk collider pengganti di danau.
-func _collision_mesh(grid: PackedFloat32Array, origin: Vector2) -> ArrayMesh:
-	var vertices := PackedVector3Array()
-	for cz in range(SIDE):
-		for cx in range(SIDE):
-			vertices.append(Vector3(
-				origin.x + float(cx) * CELL,
-				grid[cz * SIDE + cx],
-				origin.y + float(cz) * CELL))
-	var indices := PackedInt32Array()
-	for cz in range(CHUNK_CELLS):
-		for cx in range(CHUNK_CELLS):
-			var a := cz * SIDE + cx
-			var b := a + 1
-			var c := a + SIDE
-			var d := c + 1
-			indices.append_array(PackedInt32Array([a, b, c, b, d, c]))
-	var arrays: Array = []
-	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = vertices
-	arrays[Mesh.ARRAY_INDEX] = indices
-	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	return mesh
+	var visual := MeshInstance3D.new()
+	visual.name = "Ground_%d_%d" % [key.x, key.y]
+	visual.mesh = mesh
+	visual.material_override = _material
+	visual.extra_cull_margin = 2.0
+	add_child(visual)
+	var body := StaticBody3D.new()
+	body.name = "GroundBody_%d_%d" % [key.x, key.y]
+	body.collision_layer = 1
+	var shape := CollisionShape3D.new()
+	shape.shape = mesh.create_trimesh_shape()
+	body.add_child(shape)
+	add_child(body)
+	_chunks[key] = [visual, body]
 
 
 ## Grid tinggi chunk; dihitung sekali lalu disimpan (dipakai mesh, collider,

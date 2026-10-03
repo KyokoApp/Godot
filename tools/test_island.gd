@@ -1,12 +1,10 @@
 extends SceneTree
-## Gerbang bentuk pulau 300 m × 300 m (permintaan: "map ubah ukuran jadi
-## 300m x 300m"; pinggirannya
-## jangan bulat atau kotak tapi kayak pulau gitu bergelombang").
+## Gerbang bentuk pulau 100 m × 100 m dengan medan pedalaman bergelombang.
 ##
 ## Yang diuji adalah JANJI ke pemain, bukan sekadar "tidak ada error":
-##   1. dunia benar-benar 300 m × 300 m,
-##   2. garis pantainya BERUBAH — radius pulau berubah jauh antar arah, jadi
-##      tidak bulat dan tidak kotak,
+##   1. dunia benar-benar 100 m × 100 m,
+##   2. garis pantainya BERUBAH dan tanah di pedalaman memiliki relief nyata,
+##      jadi pulau tidak bulat/datar seperti bidang,
 ##   3. ada daratan di tengah dan air di luar: tanah di atas nol di pusat, di
 ##      bawah nol di luar garis pantai,
 ##   4. SATU fungsi tinggi dipakai mesh, collider, dan pemain: selisih grid chunk
@@ -41,6 +39,7 @@ func _run() -> void:
 	_test_size()
 	_test_coast_is_wavy()
 	_test_land_and_sea()
+	_test_rolling_terrain()
 	await _test_height_agreement()
 	_test_clamp_inside()
 	await _test_chunks()
@@ -54,9 +53,10 @@ func _run() -> void:
 
 
 func _test_size() -> void:
-	_check(is_equal_approx(Field.SIZE, 300.0), "Dunia bukan 300 m: %.0f m" % Field.SIZE)
-	_notes.append("dunia: %.0f x %.0f m, dataran pulau %.2f km²"
-		% [Field.SIZE, Field.SIZE, _land_area()])
+	_check(is_equal_approx(Field.SIZE, 100.0), "Dunia bukan 100 m: %.0f m" % Field.SIZE)
+	_notes.append(
+		"dunia: %.0f x %.0f m, daratan pulau %.0f m²" % [Field.SIZE, Field.SIZE, _land_area()]
+	)
 
 
 ## Luas daratan dari radius rata-rata (diagnostik saja: pemain harus punya pulau
@@ -67,7 +67,7 @@ func _land_area() -> float:
 	for step in range(STEPS):
 		var radius := Field.island_radius(TAU * float(step) / float(STEPS))
 		total += radius * radius
-	return PI * total / float(STEPS) / 1.0e6
+	return PI * total / float(STEPS)
 
 
 func _test_coast_is_wavy() -> void:
@@ -83,12 +83,11 @@ func _test_coast_is_wavy() -> void:
 	var spread := (max_radius - min_radius) / max_radius
 	# Bergelombang: radius harus berubah jauh antar arah. Lingkaran sempurna
 	# memberi 0%, pulau sungguhan memberi di atas 15%.
-	_check(spread > 0.15, "Garis pantai hampir bulat: radius %.0f..%.0f m"
-		% [min_radius, max_radius])
+	_check(
+		spread > 0.15, "Garis pantai hampir bulat: radius %.0f..%.0f m" % [min_radius, max_radius]
+	)
 	# Tidak bulat: hampir semua arah harus punya radius yang berbeda.
-	# Toleransi "beda" ikut mengecil bersama pulau. Dulu dunia 1 km dengan radius
-	# 146-190 m, jadi 1 m = 2% dari rentang. Pulau 300 m rentangnya ± 13 m,
-	# jadi toleransinya 2,5% dari rentang itu (0,28 m) — sama ketatnya.
+	# Toleransi mengikuti rentang radius agar hampir semua sudut tetap unik.
 	var tolerance := (max_radius - min_radius) * 0.025
 	var distinct := 0
 	for value in radii:
@@ -99,13 +98,19 @@ func _test_coast_is_wavy() -> void:
 	# arah harus jauh dari setengah diagonal (ciri bentuk persegi).
 	var diagonal := Field.HALF * 1.4142
 	for value in radii:
-		_check(value < Field.HALF * 0.95,
-			"Pulau menyentuh tepi dunia (kotak?): radius %.0f m" % value)
-		_check(value < diagonal * 0.95,
-			"Radius melewati setengah diagonal (kotak?): %.0f m" % value)
+		_check(
+			value < Field.HALF * 0.95, "Pulau menyentuh tepi dunia (kotak?): radius %.0f m" % value
+		)
+		_check(
+			value < diagonal * 0.95, "Radius melewati setengah diagonal (kotak?): %.0f m" % value
+		)
 		_check(value > 20.0, "Pulau terlalu kecil di salah satu arah: %.0f m" % value)
-	_notes.append("pulau: radius %.0f..%.0f m (berubah %.0f%% antar arah)"
-		% [min_radius, max_radius, spread * 100.0])
+	_notes.append(
+		(
+			"pulau: radius %.0f..%.0f m (berubah %.0f%% antar arah)"
+			% [min_radius, max_radius, spread * 100.0]
+		)
+	)
 
 
 func _test_land_and_sea() -> void:
@@ -118,27 +123,60 @@ func _test_land_and_sea() -> void:
 		var radius := Field.island_radius(angle) + 60.0
 		var x := cos(angle) * radius
 		var z := sin(angle) * radius
-		_check(Field.terrain_height(x, z) < 0.0,
-			"Di luar pantai masih ada darat pada sudut %.1f" % angle)
-		_check(not Field.is_inside(x, z, 0.0),
-			"Titik di laut dihitung di dalam pulau pada sudut %.1f" % angle)
-	# Tepi dunia (300 m) pasti air: pemain tidak pernah bisa jalan keluar pulau.
-	_check(Field.terrain_height(Field.HALF - 1.0, 0.0) < 0.0,
-		"Tepi dunia timur masih darat")
-	_check(Field.terrain_height(-Field.HALF + 1.0, 0.0) < 0.0,
-		"Tepi dunia barat masih darat")
+		_check(
+			Field.terrain_height(x, z) < 0.0,
+			"Di luar pantai masih ada darat pada sudut %.1f" % angle
+		)
+		_check(
+			not Field.is_inside(x, z, 0.0),
+			"Titik di laut dihitung di dalam pulau pada sudut %.1f" % angle
+		)
+	# Tepi dunia (100 m) pasti air: pemain tidak pernah keluar pulau.
+	_check(Field.terrain_height(Field.HALF - 1.0, 0.0) < 0.0, "Tepi dunia timur masih darat")
+	_check(Field.terrain_height(-Field.HALF + 1.0, 0.0) < 0.0, "Tepi dunia barat masih darat")
 	# Garis pantai harus tepat di nol: di situlah air dan pasir bertemu.
 	var coast_angle := 1.3
 	var coast_radius := Field.island_radius(coast_angle)
-	var coast_height := Field.terrain_height(cos(coast_angle) * coast_radius,
-		sin(coast_angle) * coast_radius)
-	_check(absf(coast_height) < 0.05,
-		"Tinggi tanah tidak nol di garis pantai: %.2f m" % coast_height)
+	var coast_height := Field.terrain_height(
+		cos(coast_angle) * coast_radius, sin(coast_angle) * coast_radius
+	)
+	_check(
+		absf(coast_height) < 0.05, "Tinggi tanah tidak nol di garis pantai: %.2f m" % coast_height
+	)
+
+
+## Bukit pedalaman harus terlihat dari angka reliefnya, tapi kemiringan tetap
+## cukup ramah untuk pemain dan sebaran rumput.
+func _test_rolling_terrain() -> void:
+	var low := INF
+	var high := -INF
+	var walkable := 0
+	var samples := 0
+	for z in range(-12, 13, 2):
+		for x in range(-12, 13, 2):
+			var height := Field.terrain_height(float(x), float(z))
+			low = minf(low, height)
+			high = maxf(high, height)
+			samples += 1
+			if Field.can_grow_static(float(x), float(z)):
+				walkable += 1
+	var relief := high - low
+	_check(relief > 1.0, "Medan terlalu datar: relief tengah %.2f m" % relief)
+	_check(
+		walkable > 50,
+		"Bukit terlalu curam untuk dijelajahi/ditumbuhi rumput: %d/%d titik" % [walkable, samples]
+	)
+	_notes.append(
+		(
+			"medan: relief pedalaman %.2f m, %d/%d titik landai untuk rumput"
+			% [relief, walkable, samples]
+		)
+	)
 
 
 ## Mesh, collider, dan pemain membaca tinggi yang sama. Grid chunk dihitung dari
-## fungsi analitik lalu diinterpolasi; bedanya harus kecil (beberapa milimeter),
-## kalau tidak pemain mengambang di atas tanah atau menembusnya.
+## fungsi analitik lalu diinterpolasi; bedanya harus kecil, kalau tidak pemain
+## mengambang di atas tanah atau menembusnya.
 func _test_height_agreement() -> void:
 	var field := Field.new()
 	root.add_child(field)
@@ -167,16 +205,22 @@ func _test_clamp_inside() -> void:
 		var radius := Field.island_radius(angle) + 120.0
 		var outside := Vector2(cos(angle), sin(angle)) * radius
 		var fixed := Field.clamp_inside(outside, 14.0)
-		_check(Field.is_inside(fixed.x, fixed.y, 13.0),
-			"clamp_inside mengembalikan titik di luar pulau pada sudut %.1f" % angle)
-		_check(fixed.length() <= outside.length() + 0.001,
-			"clamp_inside mendorong pemain menjauh pada sudut %.1f" % angle)
+		_check(
+			Field.is_inside(fixed.x, fixed.y, 13.0),
+			"clamp_inside mengembalikan titik di luar pulau pada sudut %.1f" % angle
+		)
+		_check(
+			fixed.length() <= outside.length() + 0.001,
+			"clamp_inside mendorong pemain menjauh pada sudut %.1f" % angle
+		)
 		# Titik yang sudah di dalam tidak boleh ikut digeser. Toleransi 1 cm:
 		# sudut dihitung ulang lewat atan2 (bedanya ~4e-6 rad) dan itu dikalikan
 		# radius ~150 m, jadi is_equal_approx (1e-5 m) terlalu ketat.
 		var inside := Vector2(cos(angle), sin(angle)) * (Field.island_radius(angle) * 0.5)
-		_check(Field.clamp_inside(inside, 14.0).distance_to(inside) < 0.01,
-			"Titik di dalam pulau ikut digeser pada sudut %.1f" % angle)
+		_check(
+			Field.clamp_inside(inside, 14.0).distance_to(inside) < 0.01,
+			"Titik di dalam pulau ikut digeser pada sudut %.1f" % angle
+		)
 	_notes.append("clamp_inside: titik di laut dikembalikan ke darat (margin 14 m)")
 
 
@@ -195,9 +239,16 @@ func _test_chunks() -> void:
 		if not Field.is_inside(center.x, center.y, -Field.CHUNK):
 			sea_chunks += 1
 	_check(sea_chunks == 0, "%d chunk di laut dibangun sia-sia" % sea_chunks)
-	_notes.append("chunk: %d chunk hidup dari %d kandidat (jangkauan %.0f m)"
-		% [chunks.size(), (Field.CHUNK_RADIUS * 2 + 1) ** 2,
-		Field.CHUNK * (float(Field.CHUNK_RADIUS) + 0.5)])
+	_notes.append(
+		(
+			"chunk: %d chunk hidup dari %d kandidat (jangkauan %.0f m)"
+			% [
+				chunks.size(),
+				(Field.CHUNK_RADIUS * 2 + 1) ** 2,
+				Field.CHUNK * (float(Field.CHUNK_RADIUS) + 0.5)
+			]
+		)
+	)
 	field.queue_free()
 	await process_frame
 
@@ -206,19 +257,20 @@ func _test_grass() -> void:
 	var field := Field.new()
 	root.add_child(field)
 	await process_frame
-	# Kolam tengah (radius POND_RADIUS) sengaja tidak ditanami rumput, jadi
-	# titik uji pindah ke dataran dalam di luar lekukannya.
-	_check(field.can_grow(-14.0, 40.0), "Rumput tidak tumbuh di dataran dalam")
-	_check(not field.can_grow(0.0, 0.0), "Rumput tumbuh di kolam tengah")
-	_check(not field.can_grow(0.0, Field.POND_RADIUS - 2.0),
-		"Rumput tumbuh di bibir kolam")
+	# Bukit tengah tetap dapat ditanami; jalan tanah tetap bebas rumput.
+	_check(field.can_grow(0.0, 0.0), "Rumput tidak tumbuh di bukit tengah")
+	_check(not field.can_grow(0.0, Field.path_centre(0.0)), "Rumput tumbuh di jalan tanah")
 	for step in range(12):
 		var angle := TAU * float(step) / 12.0
 		var coast := Field.island_radius(angle) - 2.0
-		_check(not field.can_grow(cos(angle) * coast, sin(angle) * coast),
-			"Rumput tumbuh menempel garis pantai pada sudut %.1f" % angle)
+		_check(
+			not field.can_grow(cos(angle) * coast, sin(angle) * coast),
+			"Rumput tumbuh menempel garis pantai pada sudut %.1f" % angle
+		)
 		var sea := Field.island_radius(angle) + 25.0
-		_check(not field.can_grow(cos(angle) * sea, sin(angle) * sea),
-			"Rumput tumbuh di laut pada sudut %.1f" % angle)
+		_check(
+			not field.can_grow(cos(angle) * sea, sin(angle) * sea),
+			"Rumput tumbuh di laut pada sudut %.1f" % angle
+		)
 	field.queue_free()
 	await process_frame

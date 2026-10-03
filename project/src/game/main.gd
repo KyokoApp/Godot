@@ -1,13 +1,12 @@
 extends Node3D
-## Pulau 100 m × 100 m dengan garis pantai bergelombang + mannequin UAL berkulit
-## beranimasi yang digerakkan katalog animasi lengkap (85 klip UAL1 + UAL2) lewat
-## retarget, plus goyangan kain/rambut simulasi verlet.
+## Pulau 100 m × 100 m dengan bukit bergulir, garis pantai berlekuk, pemain
+## beranimasi, dan seorang NPC. Karakter memakai katalog 85 klip UAL1 + UAL2.
 
 const Field = preload("res://src/game/world/field.gd")
 const Scenery = preload("res://src/game/world/scenery.gd")
 const Forest = preload("res://src/game/world/forest.gd")
-const Pond = preload("res://src/game/world/pond.gd")
-const WaterRipple = preload("res://src/game/world/water_ripple.gd")
+const NPC = preload("res://src/game/world/npc.gd")
+const NPCInteraction = preload("res://src/game/ui/npc_interaction.gd")
 const Grass = preload("res://src/game/grass_field.gd")
 const Player = preload("res://src/game/player.gd")
 const Character = preload("res://src/game/mannequin.gd")
@@ -38,11 +37,9 @@ const SWORD_ICON = preload("res://src/game/ui/sword.svg")
 const JUMP_ICON = preload("res://src/game/ui/jump.svg")
 const CROUCH_ICON = preload("res://src/game/ui/crouch.svg")
 const DASH_ICON = preload("res://src/game/ui/dash.svg")
-## Titik muncul pemain: di pinggir barat daya kolam tengah, di darat kering dan
-## rata. Dulu (0, 7) — itu sekarang tepat di tengah kolam (radius 22 m), jadi
-## pemain akan muncul berdiri di dalam air. JARAK ini harus sama dengan SPAWN di
-## forest.gd supaya dedaunan tidak menutupi titik muncul.
-const SPAWN := Vector2(-26.0, 16.0)
+## Titik muncul pemain di padang 100 m; dijaga kosong dari dedaunan.
+const SPAWN := Vector2(0.0, 7.0)
+const NPC_HOME := Vector2(0.0, 0.0)
 ## HUD gaya game aksi: satu tombol serang besar, tombol aksi bulat di sekitarnya.
 const ATTACK_DIAMETER := 136.0
 const FIRE_DIAMETER := 100.0
@@ -58,10 +55,10 @@ var _previous_occlusion := false
 var _field: Field
 var _scenery: Scenery
 var _forest: Forest
-var _pond: Pond
-var _ripple: WaterRipple
 var _grass: Grass
 var _player: Player
+var _npc: NPC
+var _npc_interaction: NPCInteraction
 var _visual: Character
 var _bloom_level := 0.0
 var _orbit: Orbit
@@ -92,11 +89,12 @@ func _ready() -> void:
 	_build_environment()
 	_build_world()
 	_build_player()
+	_build_npc()
 	_build_camera()
 	_build_grass()
 	_build_effects()
 	_build_hud()
-	print("[main] pulau %.0f m + mannequin (%d klip) siap" % [
+	print("[main] pulau %.0f m + pemain + NPC (%d klip) siap" % [
 		Field.SIZE, Catalog.clip_count()])
 	_confirm_boot.call_deferred()
 
@@ -123,15 +121,6 @@ func _build_world() -> void:
 	# MultiMesh: satu panggilan gambar per model, tidak ada collision.
 	_forest = Forest.new()
 	add_child(_forest)
-	# Danau tengah pulau: air CETek menggenang di sekitar pintu gerbang ala
-	# Suzume no Tojimari (pintunya berdiri di atas air), plus pantulan tiruan
-	# karena renderer Mobile tidak punya SSR.
-	_pond = Pond.new()
-	add_child(_pond)
-	# Riak air: cincin yang lahir setiap kali kaki pemain menapak permukaan
-	# danau, supaya "jalan di atas air" terasa seperti air.
-	_ripple = WaterRipple.new()
-	add_child(_ripple)
 
 
 func _build_player() -> void:
@@ -147,6 +136,15 @@ func _build_player() -> void:
 	_player.add_child(_visual)
 	_player.visual = _visual
 	_player.spawn(SPAWN)
+
+
+func _build_npc() -> void:
+	_npc = NPC.new()
+	_npc.name = "Mira"
+	_npc.field = _field
+	_npc.player = _player
+	_npc.home = NPC_HOME
+	add_child(_npc)
 
 
 func _build_camera() -> void:
@@ -172,7 +170,6 @@ func _build_effects() -> void:
 	_footsteps.body = _player
 	_footsteps.field = _field
 	_footsteps.visual = _visual
-	_footsteps.ripples = _ripple
 	add_child(_footsteps)
 	_foot_fire = FootFire.new()
 	_foot_fire.character = _visual
@@ -280,6 +277,17 @@ func _build_hud() -> void:
 		_attack, _fire_button, _jump, _crouch, _speed_button, _dash]
 	_orbit.exclusions = [_panel, _graphics_drawer, _settings, _catalog_button,
 		_attack, _fire_button, _jump, _crouch, _speed_button, _dash]
+	_npc_interaction = NPCInteraction.new()
+	_npc_interaction.player = _player
+	_npc_interaction.npc = _npc
+	_npc_interaction.joystick = _joystick
+	_npc_interaction.orbit = _orbit
+	_npc_interaction.canvas_layer = layer
+	_npc_interaction.controls_to_hide = [
+		_joystick, _banner, _settings, _catalog_button, _attack, _fire_button,
+		_jump, _crouch, _speed_button, _dash, _panel, _graphics_drawer,
+	]
+	add_child(_npc_interaction)
 
 
 func _rune(caption: String, diameter: float, glyph: Texture2D = null) -> RuneButton:

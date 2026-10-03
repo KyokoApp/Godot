@@ -65,11 +65,8 @@ const SCALE_MIN := 0.62
 const SCALE_MAX := 1.5
 const SCALE_MAX_BOOST := 2.05
 const HYSTERESIS := 0.35
-## Jarak minimum pemain dari garis pantai (meter). Tanjakan pantai pulau 300 m
-## adalah 5 m / 30 m, jadi 3 m ke dalam berarti ± 0,5 m di atas permukaan air:
-## pemain berhenti di pasir kering, tidak berdiri tenggelam sampai mata kaki.
-## (Dulu 1,4 m saat pulau 100 m — tanjakannya 1,8 m / 7 m.)
-const SHORE_MARGIN := 3.0
+## Jarak aman dari bibir pulau 100 m; pemain berhenti di darat, bukan di laut.
+const SHORE_MARGIN := 1.4
 const FALL_RESET := -12.0
 const IDLE := "Idle_Loop"
 const AIR_FALL := "Jump_Loop"
@@ -124,10 +121,6 @@ func _ready() -> void:
 
 func spawn(point: Vector2) -> void:
 	var ground := field.surface_height(point.x, point.y)
-	# Di danau tengah pijakannya adalah PERMUKAAN AIR, bukan dasar kolam:
-	# pemain muncul berdiri di atas air, bukan berdiri di dasarnya.
-	if field != null and Field.is_water(point.x, point.y):
-		ground = maxf(ground, Field.POND_LEVEL)
 	global_position = Vector3(point.x, ground + HEIGHT * 0.5 + 0.05, point.y)
 	velocity = Vector3.ZERO
 	gait = IDLE

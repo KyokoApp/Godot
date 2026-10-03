@@ -54,19 +54,17 @@ func _run() -> void:
 	var views := [
 		# Seluruh pulau dari udara: kamera tinggi di timur laut, melihat ke
 		# barat daya. Inilah gambar yang menjawab "bulat atau kotak?".
-		{"name": "pulau", "distance": 190.0, "yaw": PI * 0.25, "pitch": 1.10,
-			"offset": Vector3(0.0, 110.0, 0.0)},
+		{"name": "pulau", "distance": 62.0, "yaw": PI * 0.25, "pitch": 1.10,
+			"offset": Vector3(0.0, 22.0, 0.0)},
 		# Dari dataran menghadap garis pantai dan laut.
 		{"name": "pemandangan", "distance": 60.0, "yaw": outward, "pitch": 0.22,
 			"offset": shore * 0.55 + Vector3(0.0, 4.0, 0.0)},
 		# Pita pasir dan garis air dari dekat.
 		{"name": "pantai", "distance": 26.0, "yaw": outward + 0.35, "pitch": 0.16,
 			"offset": shore + Vector3(0.0, 3.0, 0.0)},
-		# Sejajar jalan tanah: kamera diambil SEPANJANG jalan di x = 40 m
-		# (dulu x = 0, tapi itu sekarang kolam tengah). Yaw 0,96 supaya jalannya
-		# lurus di tengah layar.
+		# Sejajar jalan tanah di x = 14 m; kamera menghadap sepanjang jalur.
 		{"name": "jalan", "distance": 16.0, "yaw": 0.96, "pitch": 0.08,
-			"offset": Vector3(40.0, 3.0, Field.path_centre(40.0))},
+			"offset": Vector3(14.0, 3.0, Field.path_centre(14.0))},
 		# Menyusuri garis pantai: pulau terbang, tebing, dan ufuk senja.
 		{"name": "laut", "distance": 120.0, "yaw": outward + PI * 0.5,
 			"pitch": 0.30, "offset": shore + Vector3(0.0, 10.0, 0.0)},

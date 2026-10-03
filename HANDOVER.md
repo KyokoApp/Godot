@@ -1,5 +1,28 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-03 (cicilan 20) — **PULAU 100 M BERGULIR + NPC MIRA + UI INTERAKSI**
+  - Permintaan terbaru membatalkan danau/pintu serta jalan/riak air ronde 18–19.
+    `pond.gd`, `water_ripple.gd`, dan shader riaknya sudah dihapus; `Field` tidak
+    lagi membentuk cekungan, pemain/footsteps tidak punya jalur air, dan laut
+    keliling tetap menjadi scenery luar.
+  - `field.gd` kembali 100 × 100 m, dengan relief beberapa frekuensi (sekitar
+    1,9 m pada sampel area tengah), fade ke pantai, dan grid terrain 2 m agar
+    collider mengikuti bukit. `can_grow_static()` tetap tersedia untuk forest.
+  - `main.gd` membuat satu NPC, Mira, dekat pusat. Idle lipat tangan berbeda
+    dari idle pemain; wander memilih idle/jalan berselang dan geraknya dibatasi
+    di sekitar rumah. Forest meninggalkan ruang di spawn dan rumah NPC.
+  - Interaksi terpisah di `ui/npc_interaction.gd`: prompt dekat, pause input
+    joystick/kamera, dan pulihkan visibilitas/keadaan setelah modal ditutup.
+    `ui/npc_dialogue.gd` memberi transisi tween, potret mannequin 3D di kiri,
+    pilihan di kanan, palet pop-art terinspirasi Persona 4, dan status COMING SOON.
+  - `test_island.gd`, `test_audio.gd`, `test_grass.gd`, `test_scenery.gd`, dan
+    `test_speed.gd` diselaraskan; `tools/test_npc.gd` serta step workflow baru
+    menguji idle/wander, prompt, menu, dan pemulihan kontrol. Kamera/scene render
+    disesuaikan untuk skala baru.
+  - Validasi lokal lulus: `gdlint project tools`, `python3 tools/check_scripts.py .`,
+    dan `git diff --check`. Sandbox tidak menyediakan Godot runtime; CI belum
+    dijalankan pada checkpoint ini. Perlu jalankan test/CI setelah commit-push.
+
 - 2026-10-03 (cicilan 19, koreksi gate) — **COLLIDER AIR HANYA DI DALAM DANAU**
   - Run `37113303786` gagal di `tools/test_movement.gd:99`: kaki pemain berada
     tepat di `POND_LEVEL` (4,3 m) padahal berjalan di daratan sekitar
