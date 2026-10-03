@@ -22,6 +22,13 @@ const MODEL = preload("res://assets/mannequin/UAL1_Standard.glb")
 const SkinShell = preload("res://src/game/character/skin_shell.gd")
 const SKIN_SHADER = preload("res://src/game/character/skin_shell.gdshader")
 const COMBAT_MODEL = preload("res://assets/combat/UAL2_Standard.glb")
+const OUTLINE = preload("res://src/game/character_outline.gdshader")
+const CastLayer = preload("res://src/game/animation/cast_layer.gd")
+const Catalog = preload("res://src/game/animation/catalog.gd")
+const Metrics = preload("res://src/game/animation/anim_metrics.gd")
+const IDLE := "Idle_Loop"
+const AIR_CLIP := "Jump_Loop"
+const COMBAT_LIBRARY := "ual2"
 const FADE := 0.10
 ## Serah-terima aksi → lokomosi. Sekecil mungkin: dulu 0,24 s, dan selama
 ## cross-fade itu badan masih memakai pose akhir klip aksi — itulah "jeda"
