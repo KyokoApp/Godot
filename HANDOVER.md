@@ -15,8 +15,10 @@
     belum tersedia tetap menampilkan COMING SOON.
   - `test_npc.gd` kini menguji klip jalan depan, sudut arah badan, panel miring,
     animasi geser potret, pilihan, dan transisi penutupan.
-  - Validasi statis lokal akan diperbarui setelah pemeriksaan ronde ini; tes
-    runtime Godot/CI belum dijalankan.
+  - Validasi lokal lulus: `gdlint project tools`, `python3 tools/check_scripts.py .`,
+    dan `git diff --check`. Godot 4.5.2 CI run `37128597905` hijau **7/7**,
+    termasuk compile dan tes NPC/menu. Sandbox tidak menyediakan runtime Godot;
+    validasi runtime dilakukan melalui CI.
 
 - 2026-10-03 (cicilan 20) — **PULAU 100 M BERGULIR + NPC MIRA + UI INTERAKSI**
   - Permintaan terbaru membatalkan danau/pintu serta jalan/riak air ronde 18–19.

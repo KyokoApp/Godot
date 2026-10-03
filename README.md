@@ -1460,4 +1460,5 @@ compile, seluruh tes headless (termasuk NPC), tiga render regresi, dan packaging
 - Tes NPC kini memeriksa klip jalan depan, keselarasan arah badan dengan sasaran, dan animasi geser potret.
 
 Validasi statis lokal: `gdlint project tools`, `python3 tools/check_scripts.py .`, dan
-`git diff --check` lulus. Tes runtime Godot/CI untuk perubahan ronde ini menunggu push.
+`git diff --check` lulus. Godot 4.5.2 CI run **37128597905** hijau **7/7**,
+termasuk tes compile, wander/arah NPC, UI interaksi, render regresi, dan packaging.
