@@ -1,5 +1,35 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-03 (cicilan 19, perbaikan) — **PIJAKAN AIR PINDAH KE COLLIDER TERRAIN**
+  - Run `37111265298` (`789ea44`) bukan 7/7: gate, render-a, render-c hijau, tapi
+    render-b (tes HUD 640×360) merah di TIGA assertion `tools/test_hud.gd`
+    (baris 198/199/216): setelah lari → lompat → mendarat klip tetap `Jump_Start`,
+    animasi terkunci, dan pemain berhenti saat attack ditahan. Assertion
+    sebelahnya lolos (`landed = true`, `landing_clip != "Jump_Land"`, kecepatan
+    lari > 1,5), jadi pemain MEMANG mendarat — hanya animasinya yang membeku.
+  - **Penyebab**: mendaratnya jatuh di dalam danau, tepat di cakram `WaterBody`
+    yang baru — trimesh DATAR nol-ketebalan setinggi `POND_LEVEL`. Bidik sebesar
+    itu bisa menyangkut kapsul pemain: `is_on_floor()` true tapi `velocity.y > 0`,
+    dan `player.gd _update_air_state()` hanya membersihkan `_airborne` saat
+    `velocity.y <= 0.0` → `_apply_animation()` pulang lebih awal → klip terkunci
+    di `Jump_Start`, badan jalan pakai akselerasi UDARA (`AIR_ACCEL` 4,0 bukan
+    `ACCEL` 16,0) → terbaca berhenti. (Di ronde 18 tes ini lolos karena pemain
+    menyelam ke dasar kolam dan berjalan di collider tanah seperti biasa.)
+  - **Perbaikan**: `WaterBody` dan `_build_walkable()` DIHAPUS dari `pond.gd`.
+    Pijakan air sekarang collider terrain itu sendiri — `field.gd _build_chunk()`
+    menaikkan setiap sel yang jatuh di dalam danau (`Field.is_water`) ke
+    `POND_LEVEL` dan memakainya sebagai collider chunk itu (mesh baru lewat
+    `_collision_mesh()`; mesh visual TIDAK berubah, jadi garis air dan riak tetap
+    di tempatnya). Sel di tepi setengah naik → tanjakan halus, masuk air tidak
+    ada langkah tegas (terukur: langkah +0,010 m di r = 23,5 → 24,0 m).
+    `_build_chunk()` dipecah jadi `_visual_mesh()` + `_collision_mesh()` supaya
+    collider bisa memakai tinggi berbeda dari visual.
+  - Angka tetap sama: dalam 0,45 m, garis air r = 23,83 m, pintu 0,5 m di atas
+    air, riak di `POND_LEVEL + 0,05`.
+  - Tes: `test_scenery.gd _test_pond()` sekarang menuntut SELURUH bidang air
+    berada di dalam kolam (24 arah), bukan lagi `water_body != null`.
+  - Belum diverifikasi di HP; render-b harus hijau di run berikutnya.
+
 - 2026-10-03 (cicilan 19) — **DANAU BENER-BENER CETEK: PINTU DI ATAS AIR +
   JALAN DI ATAS AIR + RIAK TIAP LANGKAH**
   - Pemain mengoreksi lingkaran tengah ronde 18: *"airnya itu gk dalem bener

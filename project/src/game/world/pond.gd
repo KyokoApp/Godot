@@ -41,7 +41,6 @@ const PLATFORM_OUTER := 5.2
 
 var water: MeshInstance3D
 var platform: MeshInstance3D
-var water_body: StaticBody3D
 var door: Node3D
 var reflection: Node3D
 
@@ -50,7 +49,6 @@ func _ready() -> void:
 	name = "Pond"
 	_build_water()
 	_build_platform()
-	_build_walkable()
 	_build_door()
 
 
@@ -117,22 +115,6 @@ func _build_platform() -> void:
 	body.add_child(shape)
 	body.position = platform.position
 	add_child(body)
-
-
-## Permukaan air yang BISA DIAKI: cakram datar tak terlihat setinggi permukaan
-## air. Inilah yang membuat pemain benar-benar BERJALAN DI ATAS air danau
-## (bukan menyelam ke dasar kolam): kakinya menapak tepat di garis air, jadi
-## riak tiap langkah lahir di tempat yang benar.
-func _build_walkable() -> void:
-	var mesh := _make_disc(WATER_RADIUS, 10, 48)
-	water_body = StaticBody3D.new()
-	water_body.name = "WaterBody"
-	water_body.collision_layer = 1
-	var shape := CollisionShape3D.new()
-	shape.shape = mesh.create_trimesh_shape()
-	water_body.add_child(shape)
-	water_body.position = Vector3(0.0, Field.POND_LEVEL, 0.0)
-	add_child(water_body)
 
 
 ## Cakram berjajaran kutub (cincin x juring). Dipakai supaya bidang airnya
@@ -289,7 +271,7 @@ func summary() -> String:
 	var parts := door.get_child_count() if door != null else 0
 	var mirror := reflection.get_child_count() if reflection != null else 0
 	return ("danau r=%.0f m di y=%.2f (dalam %.2f m), batu tengah %.1f m di "
-		+ "atas air, pintu %d bagian, pantulan %d bagian, pijakan air %s") % [
+		+ "atas air, pintu %d bagian, pantulan %d bagian, pijakan air collider terrain") % [
 		WATER_RADIUS, Field.POND_LEVEL,
 		Field.POND_LEVEL - Field.terrain_height(0.0, 0.0), PLATFORM_TOP,
-		parts, mirror, "ada" if water_body != null else "tidak ada"]
+		parts, mirror]

@@ -442,6 +442,42 @@ func _build_chunk(key: Vector2i) -> void:
 		return
 	var grid := _chunk_grid(key)
 	var origin := _chunk_origin(key)
+	var visual := MeshInstance3D.new()
+	visual.name = "Ground_%d_%d" % [key.x, key.y]
+	visual.mesh = _visual_mesh(grid, origin)
+	visual.material_override = _material
+	visual.extra_cull_margin = 2.0
+	add_child(visual)
+	# Collider. Air danau TIDAK diberi collider sendiri: bidang datar
+	# nol-ketebalan bisa menyangkut badan (is_on_floor() true tapi velocity.y > 0,
+	# animasi terkunci di klip lompat dan pemain berhenti di tempat). Pijakannya
+	# adalah collider terrain ini, dengan sel di dalam danau dinaikkan ke garis
+	# air supaya pemain berjalan DI ATAS air. Sel yang menyeberangi tepi jadi
+	# tanjakan halus, jadi masuk/keluar danau tidak ada langkah tegas.
+	var shape_mesh: Mesh = visual.mesh
+	if _chunk_touches_water(origin):
+		var raised := grid.duplicate()
+		var wet := false
+		for iz in range(SIDE):
+			for ix in range(SIDE):
+				if is_inside(origin.x + float(ix) * CELL, origin.y + float(iz) * CELL):
+					raised[iz * SIDE + ix] = POND_LEVEL
+					wet = true
+		if wet:
+			shape_mesh = _collision_mesh(raised, origin)
+	var body := StaticBody3D.new()
+	body.name = "GroundBody_%d_%d" % [key.x, key.y]
+	body.collision_layer = 1
+	var shape := CollisionShape3D.new()
+	shape.shape = shape_mesh.create_trimesh_shape()
+	body.add_child(shape)
+	add_child(body)
+	_chunks[key] = [visual, body]
+
+
+## Mesh visual chunk: tinggi, normal, dan warna. Chunk yang tidak menyentuh
+## danau memakainya langsung sebagai collider.
+func _visual_mesh(grid: PackedFloat32Array, origin: Vector2) -> ArrayMesh:
 	var vertices := PackedVector3Array()
 	var normals := PackedVector3Array()
 	var colors := PackedColorArray()
@@ -474,20 +510,39 @@ func _build_chunk(key: Vector2i) -> void:
 	arrays[Mesh.ARRAY_INDEX] = indices
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	var visual := MeshInstance3D.new()
-	visual.name = "Ground_%d_%d" % [key.x, key.y]
-	visual.mesh = mesh
-	visual.material_override = _material
-	visual.extra_cull_margin = 2.0
-	add_child(visual)
-	var body := StaticBody3D.new()
-	body.name = "GroundBody_%d_%d" % [key.x, key.y]
-	body.collision_layer = 1
-	var shape := CollisionShape3D.new()
-	shape.shape = mesh.create_trimesh_shape()
-	body.add_child(shape)
-	add_child(body)
-	_chunks[key] = [visual, body]
+	return mesh
+
+
+## True kalau kotak chunk ini bisa menyentuh danau; chunk jauh tidak perlu
+## diperiksa sel per sel.
+func _chunk_touches_water(origin: Vector2) -> bool:
+	return absf(origin.x) <= POND_RADIUS + CHUNK and absf(origin.y) <= POND_RADIUS + CHUNK
+
+
+## Mesh polos (vertex + index saja) untuk collider pengganti di danau.
+func _collision_mesh(grid: PackedFloat32Array, origin: Vector2) -> ArrayMesh:
+	var vertices := PackedVector3Array()
+	for cz in range(SIDE):
+		for cx in range(SIDE):
+			vertices.append(Vector3(
+				origin.x + float(cx) * CELL,
+				grid[cz * SIDE + cx],
+				origin.y + float(cz) * CELL))
+	var indices := PackedInt32Array()
+	for cz in range(CHUNK_CELLS):
+		for cx in range(CHUNK_CELLS):
+			var a := cz * SIDE + cx
+			var b := a + 1
+			var c := a + SIDE
+			var d := c + 1
+			indices.append_array(PackedInt32Array([a, b, c, b, d, c]))
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return mesh
 
 
 ## Grid tinggi chunk; dihitung sekali lalu disimpan (dipakai mesh, collider,

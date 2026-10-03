@@ -199,9 +199,16 @@ func _test_pond() -> void:
 		"Pintu tidak berdiri di atas air: dasar y=%.2f (air %.2f)" % [
 			door.position.y if door else 0.0, Field.POND_LEVEL])
 	# Pijakan air: tanpa ini pemain menyelam ke dasar kolam, bukan berjalan di
-	# atas air, dan riak tiap langkah lahir di tempat yang salah.
-	_check(pond.water_body != null,
-		"Danau tidak punya pijakan di permukaan air: pemain akan menyelam")
+	# atas air, dan riak tiap langkah lahir di tempat yang salah. Pijakannya
+	# adalah collider terrain (sel di dalam danau dinaikkan ke garis air), jadi
+	# yang dijaga adalah SELURUH bidang air harus berada di dalam kolam.
+	var outside := 0
+	for step in range(24):
+		var angle2 := TAU * float(step) / 24.0
+		if not Field.is_water(cos(angle2) * pond.WATER_RADIUS, sin(angle2) * pond.WATER_RADIUS):
+			outside += 1
+	_check(outside == 0,
+		"Bidang air keluar dari kolam di %d dari 24 arah" % outside)
 	_check(pond.platform != null and pond.platform.position.y < Field.POND_LEVEL,
 		"Pulau batu tengah tidak lahir dari bawah garis air")
 	var roles := {}

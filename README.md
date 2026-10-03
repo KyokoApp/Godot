@@ -1382,10 +1382,19 @@ bener pendek"*, *"pintunya harus ada di tengah dan di ATAS air danau"*, dan
   4,8 m, lereng turun sampai menyentuh garis air di r = 5,2 m — lereng 23%,
   bisa didaki). Pintunya pindah dari dasar kolam ke puncak batu itu, jadi
   kakinya 0,5 m di atas permukaan air dan tidak tenggelam lagi.
-- **Permukaan air BISA DIAKI.** `pond.gd` menambah `WaterBody`: cakram tabrakan
-  tak terlihat setinggi permukaan air (`Field.POND_LEVEL`). Pemain benar-benar
-  berjalan DI ATAS air (bukan menyelam ke dasar kolam) — kakinya menapak tepat
-  di garis air, loncat dan mendarat jalan seperti biasa.
+- **Permukaan air BISA DIAKI.** Pijakannya collider terrain itu sendiri:
+  `field.gd _build_chunk()` menaikkan setiap sel yang jatuh di dalam danau
+  (`Field.is_water`) ke `Field.POND_LEVEL` lalu memakai mesh itu sebagai collider
+  chunk tersebut. Pemain benar-benar berjalan DI ATAS air (bukan menyelam ke
+  dasar kolam) — kakinya menapak tepat di garis air, loncat dan mendarat jalan
+  seperti biasa. Sel yang menyeberangi tepi jadi tanjakan halus, jadi masuk/keluar
+  danau tidak ada langkah tegas.
+- **Catatan perbaikan**: rancangan awal memakai cakram trimesh DATAR terpisah
+  setinggi air (`WaterBody` di `pond.gd`). Itu DIBUANG setelah render-b gagal:
+  bidang nol-ketebalan menyangkut badan pemain — `is_on_floor()` true tapi
+  `velocity.y > 0`, animasi terkunci di klip lompat dan pemain berhenti di
+  tempat. Pijakan yang sama dengan daratan (collider terrain) tidak punya masalah
+  itu.
 - **Riak setiap langkah terasa.** `world/water_ripple.gd` + `water_ripple.gdshader`
   (baru): pool 8 cincin aditif (satu quad masing-masing, tanpa tekstur, tanpa
   bayangan) yang lahir di titik kontak kaki, melebar 1,2–2,4 m dan meredam
@@ -1403,7 +1412,7 @@ bener pendek"*, *"pintunya harus ada di tengah dan di ATAS air danau"*, dan
   (squash 0,098) supaya pantulannya tetap muat di antara dasar kolam dan
   permukaan air.
 - Gerbang: `test_scenery.gd` (`_test_pond()` menuntut dalam < 0,7 m, pintu di
-  atas air, pijakan air ada; `_test_ripple()` baru), `test_audio.gd` (titik
-  tengah danau = "water", puncak batu = "stone").
+  atas air, seluruh bidang air ada di dalam kolam; `_test_ripple()` baru),
+  `test_audio.gd` (titik tengah danau = "water", puncak batu = "stone").
 
 Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
