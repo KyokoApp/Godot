@@ -25,7 +25,7 @@ func _run() -> void:
 	var ground := Field.new()
 	world.add_child(ground)
 	var player := Node3D.new()
-	player.position = Vector3(12, ground.surface_height(12, 4) + 0.9, 4)
+	player.position = Vector3(12, ground.surface_height(12, -6) + 0.9, -6)
 	world.add_child(player)
 	var character := Character.new()
 	character.position = player.position - Vector3(0, 0.9, 0)
@@ -60,7 +60,7 @@ func _run() -> void:
 	world.add_child(sun)
 	# Rumput hanya di daratan pulau: tidak di laut, tidak menembus garis pantai.
 	_check(field.can_grow(0, 0), "Rumput tidak tumbuh di tengah pulau")
-	_check(field.can_grow(-40, 30), "Rumput tidak tumbuh di dataran dalam")
+	_check(field.can_grow(-14, 10), "Rumput tidak tumbuh di dataran dalam")
 	for angle in [0.0, 1.1, 2.2, 3.3, 4.4, 5.5]:
 		var coast := Field.island_radius(angle) + 25.0
 		_check(not field.can_grow(cos(angle) * coast, sin(angle) * coast),
@@ -105,7 +105,7 @@ func _run() -> void:
 		image.save_png("user://grass-render-test.png")
 		await _test_two_sided_lighting()
 	# Tile jauh dilepas saat pemain berpindah ke sisi lain padang.
-	player.position = Vector3(-38, ground.surface_height(-38, 38) + 0.9, 38)
+	player.position = Vector3(-12, ground.surface_height(-12, -14) + 0.9, -14)
 	for frame in range(35):
 		await process_frame
 	_check(field.tiles.size() <= Grass.MAX_TILES, "Tile lama bocor setelah berpindah")

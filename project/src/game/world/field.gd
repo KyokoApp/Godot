@@ -112,6 +112,23 @@ func _ready() -> void:
 	var center := _chunk_key(0.0, 0.0)
 	_build_chunk(center)
 	_recenter(center)
+	# Pulau cuma 100 m: SELURUH chunk tanah dibangun sekali di awal. Dengan
+	# streaming satu-per-frame, rumput (dan jejak kaki, dan tapak api) bisa
+	# dibangun SEBELUM chunk-nya ada lalu memakai fungsi analitik; beberapa
+	# sentimeter kemudian chunk-nya muncul dan tingginya bergeser — itu yang
+	# membuat akar rumput terbaca "mengambang". Sekarang grid selalu siap.
+	_build_everything()
+
+
+## Bangun semua chunk yang mengandung daratan. Jumlahnya terbatas (pulau 100 m
+## ≈ 25 chunk), jadi ini murah dan hanya terjadi sekali.
+func _build_everything() -> void:
+	var reach := CHUNK_RADIUS + 2
+	for cz in range(-reach, reach + 1):
+		for cx in range(-reach, reach + 1):
+			var key := Vector2i(cx, cz)
+			if not _chunks.has(key) and _chunk_has_land(key):
+				_build_chunk(key)
 
 
 func _process(_delta: float) -> void:
