@@ -153,7 +153,9 @@ func _build_door() -> void:
 		# Bagian yang sudah tenggelam tidak dipantulkan.
 		if part_pos.y + part_size.y * 0.5 <= above:
 			continue
-		var mirror := part.duplicate()
+		# Tipe harus eksplisit: `part` bertipe Dictionary, tapi `duplicate()`
+		# mengembalikan Variant — `:=` tidak bisa menyimpulkannya (Parse Error).
+		var mirror: Dictionary = part.duplicate()
 		mirror["pos"] = Vector3(part_pos.x,
 			above - (part_pos.y - above) * squash, part_pos.z)
 		mirror["size"] = Vector3(part_size.x, part_size.y * squash, part_size.z)

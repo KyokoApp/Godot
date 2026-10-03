@@ -62,11 +62,11 @@ func _run() -> void:
 		# Pita pasir dan garis air dari dekat.
 		{"name": "pantai", "distance": 26.0, "yaw": outward + 0.35, "pitch": 0.16,
 			"offset": shore + Vector3(0.0, 3.0, 0.0)},
-		# Sejajar jalan tanah: jalannya melintas tepat di titik spawn (-26, 16) dan
-		# menanjak 0,70 m ke utara tiap meter ke timur, jadi kamera diambil
-		# searah (yaw 0,96) supaya jalannya lurus di tengah layar.
+		# Sejajar jalan tanah: kamera diambil SEPANJANG jalan di x = 40 m
+		# (dulu x = 0, tapi itu sekarang kolam tengah). Yaw 0,96 supaya jalannya
+		# lurus di tengah layar.
 		{"name": "jalan", "distance": 16.0, "yaw": 0.96, "pitch": 0.08,
-			"offset": Vector3(0.0, 3.0, 0.0)},
+			"offset": Vector3(40.0, 3.0, Field.path_centre(40.0))},
 		# Menyusuri garis pantai: pulau terbang, tebing, dan ufuk senja.
 		{"name": "laut", "distance": 120.0, "yaw": outward + PI * 0.5,
 			"pitch": 0.30, "offset": shore + Vector3(0.0, 10.0, 0.0)},

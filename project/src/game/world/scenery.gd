@@ -134,11 +134,13 @@ func _build_floaters() -> void:
 	floaters = Node3D.new()
 	floaters.name = "Floaters"
 	add_child(floaters)
-	for entry in FLOATERS:
-		var distance := entry.x
-		var angle := entry.y
-		var height := entry.z
-		var scale := entry.w
+	for entry: Vector4 in FLOATERS:
+		# Tipe harus ditulis eksplisit: `entry` dari Array tak bertipe adalah
+		# Variant, dan `:=` tidak bisa menyimpulkan tipe darinya (Parse Error).
+		var distance: float = entry.x
+		var angle: float = entry.y
+		var height: float = entry.z
+		var scale: float = entry.w
 		var holder := Node3D.new()
 		holder.position = Vector3(cos(angle) * distance, height, sin(angle) * distance)
 		holder.rotation.y = angle + PI * 0.5
@@ -157,9 +159,9 @@ func _build_floaters() -> void:
 		_floaters.append(holder)
 
 
-## Satu bongkahan pulau terbang: cakram rumput di puncak, cincin tanah, lalu
-## kerucut batu yang meruncing ke bawah. Semuanya flat-shaded (tiga sudut
-## memakai satu normal) supaya terbaca sebagai bidang datar bergaya ilustrasi.
+## Satu bongkahan pulau terbang: cakram rumput di puncak, lalu kerucut batu yang
+## meruncing ke satu titik di bawah. Setiap segitiga memakai satu warna rata,
+## jadi bidangnya terbaca datar seperti ilustrasi.
 func _floater_mesh(radius: float, depth: float) -> ArrayMesh:
 	var vertices := PackedVector3Array()
 	var colors := PackedColorArray()
@@ -214,9 +216,10 @@ func _process(delta: float) -> void:
 	_time += delta
 	for index in range(_floaters.size()):
 		var holder := _floaters[index] as Node3D
+		var entry: Vector4 = FLOATERS[index]
 		if holder == null:
 			continue
-		holder.position.y = FLOATERS[index].z + FLOAT_BOB * sin(
+		holder.position.y = entry.z + FLOAT_BOB * sin(
 			_time * TAU / FLOAT_PERIOD + float(index) * 1.7)
 
 
@@ -342,9 +345,11 @@ func _build_motes() -> void:
 	# spawn: dulu partikelnya hampir tidak pernah terlihat saat pemain berjalan.
 	# Tingginya DIHITUNG dari tanah pulau — dulu tanah rata ± 1 m sehingga y
 	# tetap masih aman, sekarang dataran ± 6 m sehingga y harus dari terrain.
-	var spots: Array[Vector3] = [Vector3(-6.0, 1.4, -14.0), Vector3(-13.0, 1.6, -27.0),
-		Vector3(4.0, 1.3, -8.0)]
-	for step in range(-3, 4):
+	# Titik dekat spawn sengaja dijauhkan: kolam tengah menempati radius 21 m,
+	# jadi titik lama (-6, -14) dan (4, -8) sekarang berada DI DALAM AIR.
+	var spots: Array[Vector3] = [Vector3(-30.0, 1.4, -14.0), Vector3(-38.0, 1.6, -27.0),
+		Vector3(34.0, 1.3, -8.0)]
+	for step in range(-4, 5):
 		var along := step * 15.0
 		# Geser 6 m ke samping jalan supaya partikel melayang di atas rumput,
 		# bukan tepat di atas jalan tanah.

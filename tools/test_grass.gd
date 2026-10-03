@@ -25,7 +25,10 @@ func _run() -> void:
 	var ground := Field.new()
 	world.add_child(ground)
 	var player := Node3D.new()
-	player.position = Vector3(12, ground.surface_height(12, -6) + 0.9, -6)
+	# Titik ini harus bisa DITANAMI rumput (can_grow). Dulu (12, -6) — itu kini
+	# tepat di dalam kolam tengah (radius air 21 m), jadi tile rumputnya kosong
+	# dan tes gagal dengan "Tile dekat kosong".
+	player.position = Vector3(30, ground.surface_height(30, -30) + 0.9, -30)
 	world.add_child(player)
 	var character := Character.new()
 	character.position = player.position - Vector3(0, 0.9, 0)
