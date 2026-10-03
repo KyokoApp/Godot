@@ -34,6 +34,11 @@ const FAR_REACH := 625.0
 ## terjauh (625 m) supaya ujungnya tidak terlihat sebelum ditutup kabut.
 const SEA_LEVEL := -0.15
 const SEA_SIZE := 2100.0
+## Arah celah laut pada cincin bukit (sisi barat dibiarkan rendah supaya
+## siluetnya tidak seragam dari segala arah).
+const SEA_SIDE := -PI * 0.5
+## Jumlah kotak occlusion culling per cincin bukit (satu per 15°).
+const OCCLUDER_ARCS := 24
 ## Tinggi puncak bukit terdekat (di luar garis pantai) dan bukit jauh.
 const HILL_HEIGHT := 26.0
 const FAR_HEIGHT := 62.0
@@ -57,6 +62,8 @@ var ruins: Node3D
 var motes: Node3D
 var island: MeshInstance3D
 var cliff_count := 0
+## Parameter tiap cincin bukit, dipakai lagi untuk membangun kotak occlusion.
+var _ridges: Array = []
 
 
 func _ready() -> void:
@@ -64,6 +71,7 @@ func _ready() -> void:
 	_build_sea()
 	_build_island()
 	_build_hills()
+	_build_occluders()
 	_build_cliffs()
 	_build_ruins()
 	_build_motes()
@@ -121,6 +129,60 @@ func _build_hills() -> void:
 	_add_ridge(HILL_RADIUS, HILL_REACH, HILL_HEIGHT, 0.0, 96, 1.0)
 	# Bukit jauh: lebih tinggi dan lebih pucat (kabut), menutup garis horizon.
 	_add_ridge(FAR_RADIUS, FAR_REACH, FAR_HEIGHT, 0.45, 72, 0.55)
+	_build_occluders()
+
+
+## Penutup untuk occlusion culling. Renderer Mobile TIDAK punya depth prepass,
+## jadi overdraw jadi biaya terbesar; dokumentasi Godot justru menyebut
+## occlusion culling paling terasa di backend Mobile.
+##
+## Yang dijadikan penutup cuma BUKIT: bentuknya besar, statis, dan berdiri
+## minimal 70 m dari pemain, jadi kalau ukurannya meleset sedikit pun tidak
+## mungkin menyembunyikan apa pun di dekat pemain. Tinggi kotak sengaja memakai
+## nilai TERKECIL di rentang sudutnya (bukan tertinggi): kotak tidak boleh lebih
+## tinggi dari puncak bukit, kalau tidak rumput di balik bukit ikut hilang
+## padahal sebenarnya terlihat.
+func _build_occluders() -> void:
+	for ridge: Dictionary in _ridges:
+		var inner: float = ridge["inner"]
+		var outer: float = ridge["outer"]
+		var phase: float = ridge["phase"]
+		var height: float = ridge["height"]
+		var gap: float = ridge["gap"]
+		# Jangkauan jari-jari mesh bukit yang sungguhan dibangun (lihat _add_ridge):
+		# simpul dalam di inner*0,92, simpul luar di outer*0,6 + inner*0,4.
+		var mesh_inner := inner * 0.92
+		var mesh_outer := outer * 0.6 + inner * 0.4
+		var middle_radius := (mesh_inner + mesh_outer) * 0.5
+		var radial_depth := (mesh_outer - mesh_inner) * 0.95
+		for index in range(OCCLUDER_ARCS):
+			var start := TAU * float(index) / float(OCCLUDER_ARCS)
+			var stop := TAU * float(index + 1) / float(OCCLUDER_ARCS)
+			var angle := (start + stop) * 0.5
+			# Ambil puncak TERENDAH di SEPANJANG lebar kotak (kotak selebar 0,85x
+			# busur, jadi dikurangi 0,075 di tiap ujung). Kotak tidak boleh lebih
+			# tinggi dari puncak bukit di sudut mana pun yang ditutupinya, kalau
+			# tidak rumput di balik bukit ikut hilang padahal sebenarnya terlihat.
+			var span_start := start + (stop - start) * 0.075
+			var span_stop := stop - (stop - start) * 0.075
+			var top := height
+			for sample in range(65):
+				var probe := lerpf(span_start, span_stop, float(sample) / 64.0)
+				top = minf(top, _ridge_top(probe, phase, height, gap))
+			if top <= 0.5:
+				continue  # Celah laut: tidak ada bukit yang perlu menutup.
+			var box := BoxOccluder3D.new()
+			# Lebar kotak = panjang busur (0,85x supaya ujungnya tidak menonjol),
+			# kedalaman = tebal cincin bukit, tinggi = dari -4 m sampai puncak.
+			box.size = Vector3(middle_radius * (stop - start) * 0.85,
+				top + 4.0, radial_depth)
+			var occluder := OccluderInstance3D.new()
+			occluder.name = "Occluder_%d" % index
+			occluder.occluder = box
+			var direction := Vector3(cos(angle), 0.0, sin(angle))
+			occluder.position = direction * middle_radius
+			occluder.position.y = (top - 4.0) * 0.5
+			hills.add_child(occluder)
 
 
 ## Satu sabuk bukit: cincin vertex yang tingginya dari gelombang sinus, dengan
@@ -130,14 +192,11 @@ func _add_ridge(inner: float, outer: float, height: float, phase: float,
 	var vertices := PackedVector3Array()
 	var colors := PackedColorArray()
 	var indices := PackedInt32Array()
-	var sea_side := -PI * 0.5
+	_ridges.append({"inner": inner, "outer": outer, "phase": phase,
+		"height": height, "gap": gap})
 	for index in range(segments + 1):
 		var angle := TAU * float(index) / float(segments)
-		var ridge := 0.55 + 0.45 * sin(angle * 3.0 + phase)
-		ridge *= 0.6 + 0.4 * sin(angle * 7.0 - phase * 2.0)
-		# Celah laut: sisi barat dibuat rendah/hilang.
-		var openness := 1.0 - gap * exp(-pow(angle_difference(angle, sea_side) * 2.2, 2.0))
-		var top := height * maxf(0.0, ridge) * openness
+		var top := _ridge_top(angle, phase, height, gap)
 		var direction := Vector3(cos(angle), 0.0, sin(angle))
 		var outer_point := direction * outer
 		var inner_point := direction * inner
@@ -157,6 +216,17 @@ func _add_ridge(inner: float, outer: float, height: float, phase: float,
 			base + 1, next + 1, base + 2,
 			next + 1, next + 2, base + 2]))
 	_commit(vertices, colors, indices, "Hills_%d" % segments, hills)
+
+
+## Puncak bukit pada sudut tertentu (meter di atas permukaan air). Dipakai baik
+## untuk membangun mesh bukit maupun kotak occlusion culling, supaya keduanya
+## selalu sepakat soal setinggi apa bukitnya.
+func _ridge_top(angle: float, phase: float, height: float, gap: float) -> float:
+	var ridge := 0.55 + 0.45 * sin(angle * 3.0 + phase)
+	ridge *= 0.6 + 0.4 * sin(angle * 7.0 - phase * 2.0)
+	# Celah laut: sisi barat dibuat rendah/hilang.
+	var openness := 1.0 - gap * exp(-pow(angle_difference(angle, SEA_SIDE) * 2.2, 2.0))
+	return height * maxf(0.0, ridge) * openness
 
 
 func angle_difference(a: float, b: float) -> float:

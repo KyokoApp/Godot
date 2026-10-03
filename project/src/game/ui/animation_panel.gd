@@ -13,7 +13,7 @@ const ROW_ACTIVE := Color(0.36, 0.28, 0.56)
 const TEXT_COLOR := Color("e9e4f7")
 const DIM_COLOR := Color("9d98b5")
 const REEL_HOLD := 1.6
-## Jendela kecil di tengah layar, bukan fullscreen: daftar 85 klip cukup discroll.
+## Jendela kecil di tengah layar, bukan fullscreen: daftar 86 klip cukup discroll.
 const WINDOW_MAX := Vector2(620, 520)
 const WINDOW_RATIO := Vector2(0.90, 0.78)
 

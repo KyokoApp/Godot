@@ -1237,3 +1237,39 @@ animasi" (setelah dash kadang ada jeda sebelum kaki lanjut ke animasi lari).
   mannequin, dan tombol DASH.
 
 Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-03 — dash dari Mixamo (dash.fbx) + occlusion culling biar ringan
+
+Dua permintaan: memakai teknik culling/LOD bawaan Godot biar game ringan, dan
+memasang animasi dash dari Mixamo (`Female Locomotion Pose.fbx` yang diunggah ke
+repo).
+
+- **Occlusion culling dinyalakan** (`project.godot`:
+  `occlusion_culling/use_occlusion_culling=true`). Dokumentasi Godot menyebut
+  backend **Mobile** justru yang paling diuntungkan karena tidak punya depth
+  prepass — dan project ini memang memakai renderer Mobile.
+- **Penutup occlusion** (`world/scenery.gd`): kedua cincin bukit jauh diberi
+  kotak `BoxOccluder3D` (24 per cincin). Bukit dipilih karena besar, statis, dan
+  berdiri minimal 70 m dari pemain — kalau ukurannya meleset sedikit pun tidak
+  mungkin menyembunyikan apa pun di dekat pemain. Tinggi kotak memakai puncak
+  **terendah** di sepanjang lebarnya (bukan tertinggi): kotak tidak boleh lebih
+  tinggi dari puncak bukit, kalau tidak rumput di balik bukit ikut hilang
+  padahal sebenarnya terlihat. Sudah diuji angka: 0 dari 1518 pemeriksaan kotak
+  melebihi mesh bukit.
+- **Klip dash dari Mixamo** (`assets/combat/dash.fbx`, 16 MB): nama tulang
+  `mixamorig:*` **diterjemahkan** ke tulang UAL mannequin saat pustakanya
+  digabung (`mannequin.gd` → `_merge_dash_library`, 55 tulang + jari). Tanpa
+  terjemahan ini klip Mixamo tidak akan pernah terlihat: kerangka Mixamo dan
+  kerangka UAL berbeda nama. Animasi diberi nama tetap `dash/Dash`, jadi kode
+  tidak bergantung pada nama stack di dalam berkas Mixamo.
+- **PENTING — berkas itu isinya POSE, bukan animasi.** Semua 327 kurva animasi
+  di dalamnya bernilai KONSTAN (tidak ada satu pun yang berubah), jadi
+  karakternya akan diam dalam satu pose selama dash. Kalau mau kakinya gerak,
+  unduh **animasinya**: di Mixamo buka tab *Animations*, cari "dash", pilih
+  salah satu, baru tekan DOWNLOAD (FBX → *Without Skin*, 30 fps), lalu timpa
+  `project/assets/combat/dash.fbx`. Tidak perlu ubah kode — nama klip tetap sama.
+- Yang dari saran AI **sudah terpasang sebelumnya**: frustum culling (otomatis di
+  Godot), dan rumput memakai `MultiMeshInstance3D` (helai rapat + kartu LOD
+  jauh). Yang **tidak berlaku** di project ini: `VisibleOnScreenNotifier2D`
+  (itu 2D, game ini 3D) dan Auto Mesh LOD (medan/rumput dibuat prosedural, bukan
+  model impor).

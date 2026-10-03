@@ -9,6 +9,10 @@ extends RefCounted
 
 const UAL1 := "ual1"
 const UAL2 := "ual2"
+## Klip dash dari Mixamo (assets/combat/dash.fbx). Nama pustaka dan nama animasi
+## dipilih sendiri di mannequin.gd saat penggabungan, jadi tidak bergantung pada
+## nama stack di dalam berkas Mixamo.
+const DASH := "dash"
 
 const GROUPS := [
 	{
@@ -69,6 +73,8 @@ const GROUPS := [
 				"Posisi meluncur rendah yang ditahan."],
 			["Slide_Exit", "Selesai meluncur", UAL2, "once",
 				"Bangkit kembali berdiri setelah meluncur."],
+			["Dash", "Dorongan dash", DASH, "once",
+				"Klip dash dari Mixamo; nama tulang Mixamo diterjemahkan ke tulang UAL."],
 		],
 	},
 	{
@@ -259,6 +265,8 @@ const LOOPS := ["loop", "gait"]
 # Akhiran yang dibuang importer glTF dari nama animasi (lihat play_name()).
 const LOOP_SUFFIX := "_Loop"
 const HOLDS := ["hold"]
+## Nama animasi dash di pustaka "dash" (dipilih mannequin.gd, bukan dari berkas).
+const DASH_ANIMATION := "Dash"
 
 
 static func entries() -> Array[Dictionary]:
@@ -331,4 +339,6 @@ static func play_name(clip: String) -> String:
 	var entry := find(clip)
 	if entry.is_empty() or entry["source"] == UAL1:
 		return runtime
+	if entry["source"] == DASH:
+		return DASH + "/" + DASH_ANIMATION
 	return "ual2/" + runtime

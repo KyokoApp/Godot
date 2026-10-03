@@ -114,8 +114,8 @@ func _run() -> void:
 			"Combo tidak berurutan: harusnya %s, dapat %s" % [expected, visual.clip])
 	_check(int(player.get("combo_index")) == 0, "Indeks combo tidak berputar")
 	_check(orbit.get("_touches").is_empty(), "Tombol serang ikut memutar kamera")
-	# Dash: klip Melee_Hook + dorongan jauh lebih cepat dari lari biasa, dengan
-	# cooldown supaya tidak bisa dipakai berulang tanpa jeda.
+	# Dash: klip dash dari Mixamo + dorongan jauh lebih cepat dari lari biasa,
+	# dengan cooldown supaya tidak bisa dipakai berulang tanpa jeda.
 	stick.set("direction", Vector2.RIGHT)
 	for frame in range(24):
 		await physics_frame
@@ -124,8 +124,8 @@ func _run() -> void:
 	var dash_point := dash_button.get_global_rect().get_center()
 	_touch(20, dash_point, true)
 	_touch(20, dash_point, false)
-	_check(visual.clip == "Melee_Hook",
-		"Dash tidak memakai klip Melee_Hook: %s" % visual.clip)
+	_check(visual.clip == "Dash",
+		"Dash tidak memakai klip dash Mixamo: %s" % visual.clip)
 	for frame in range(3):
 		await physics_frame
 	_check(player.move_speed > speed_before_dash + 1.5,
@@ -252,7 +252,7 @@ func _run() -> void:
 		for frame in range(2):
 			await process_frame
 	var rows: Dictionary = panel.get("_rows")
-	_check(rows.size() == 85, "Panel tidak memuat 85 klip: %d" % rows.size())
+	_check(rows.size() == 86, "Panel tidak memuat 86 klip: %d" % rows.size())
 	var row: Button = rows["Sword_Regular_Combo"]
 	panel.call("_scroll_to", "Sword_Regular_Combo")
 	for frame in range(3):

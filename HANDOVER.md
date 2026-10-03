@@ -1,5 +1,29 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-03 (cicilan 16) — **DASH DARI MIXAMO (dash.fbx) + OCCLUSION CULLING**
+  (permintaan: "kata ai pake ini game jadi ringan" — frustum/visibility range/auto
+  LOD/occlusion culling/2D notifier/MultiMesh — plus "pose animasi dash udah ku
+  masukin ke repo").
+  - `project.godot`: `occlusion_culling/use_occlusion_culling=true`. Backend
+    Mobile tidak punya depth prepass, jadi occlusion culling paling terasa di sana.
+  - `world/scenery.gd`: kedua cincin bukit dapat kotak `BoxOccluder3D` (24 per
+    cincin). Tinggi kotak = puncak TERENDAH di sepanjang lebar kotak (diuji:
+    0/1518 kotak melebihi mesh bukit) supaya tidak ada yang hilang salah.
+  - `assets/combat/dash.fbx` (16 MB, `git add -f` karena folder-nya di .gitignore):
+    klip dash Mixamo. `mannequin.gd` `_merge_dash_library()` menerjemahkan 55 nama
+    tulang `mixamorig:*` → tulang UAL dan memberi nama tetap `dash/Dash`.
+    Dimuat dengan `load()` + cek null supaya impor yang gagal tidak mematikan game.
+  - `catalog.gd`: sumber baru `dash`, entri `["Dash", ...]` (86 klip total).
+    `play_name()` → "dash/Dash". `player.gd` DASH_CLIP = "Dash".
+  - `test_clips.gd` (sumber `dash` + buang awalan pustaka generik),
+    `test_mannequin.gd` (86 + gerbang retarget: semua trek harus kena tulang UAL),
+    `test_hud.gd` (86 klip di panel, dash → "Dash").
+  - **TEMUAN PENTING**: `Female Locomotion Pose.fbx` berisi POSE STATIS — semua
+    327 AnimationCurve bernilai konstan (diperiksa dengan parser FBX sendiri).
+    Jadi dash-nya akan diam dalam satu pose sampai pengguna mengunggah ANIMASI
+    dash sungguhan (Mixamo → tab Animations → cari "dash" → Download, Without
+    Skin, 30 fps). Nama klip tidak berubah, jadi tidak perlu ubah kode.
+
 - 2026-10-03 (cicilan 15) — **DUNIA 500 × 500 m + TRANSISI ANIMASI TANPA JEDA**
   (permintaan: "ukuran map ubah jadi 500m x 500m ajh" + "perbaikin setiap animasi
   pergantian ke animasi lain jangan ada jeda ... gk ada patah patahan per animasi").

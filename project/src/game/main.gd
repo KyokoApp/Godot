@@ -237,8 +237,8 @@ func _build_hud() -> void:
 	layer.add_child(_speed_button)
 	_place(_speed_button, Control.PRESET_BOTTOM_RIGHT, -460, -300)
 	_speed_button.pressed.connect(_toggle_speed)
-	# Dash: dorongan lurus sebentar, animasi Melee_Hook (gerakannya memang seperti
-	# dash di game aksi). Ditaruh di atas tombol serang, mudah dijangkau.
+	# Dash: dorongan lurus sebentar, animasi dash dari Mixamo (dash.fbx).
+	# Ditaruh di atas tombol serang, mudah dijangkau.
 	_dash = _rune("DASH", DASH_DIAMETER, DASH_ICON)
 	_dash.name = "DashRune"
 	_dash.tooltip_text = "Dash: menerjang lurus sebentar"

@@ -46,9 +46,10 @@ const BOOST_MULTIPLIER := 1.35
 ## badan DIPOTONG ikut kecepatan alami klip (natural x skala maks 1,5), jadi
 ## kalau klip jalannya lambat badannya juga lambat dan analog terasa lemas.
 const MAX_SPEED := 6.0
-## Dash: satu dorongan lurus sebentar, pakai klip Melee_Hook (gerakannya memang
-## seperti dash di game aksi). Dipisah dari combo serang supaya tidak membingungkan.
-const DASH_CLIP := "Melee_Hook"
+## Dash: satu dorongan lurus sebentar, pakai klip dash dari Mixamo
+## (assets/combat/dash.fbx, tulangnya diterjemahkan ke UAL saat dimuat).
+## Dipisah dari combo serang supaya tidak membingungkan.
+const DASH_CLIP := "Dash"
 const DASH_SPEED := 12.0
 const DASH_TIME := 0.22
 const DASH_COOLDOWN := 0.85
@@ -168,9 +169,9 @@ func request_dash() -> bool:
 	dash_cooldown = DASH_COOLDOWN
 	velocity.x = direction.x * DASH_SPEED
 	velocity.z = direction.z * DASH_SPEED
-	# Batasi durasi aksi sesuai dorongan dash: klip Melee_Hook 0,47 s, tapi
-	# dorongannya cuma 0,22 s. Kalau klipnya diputar penuh, kakinya berdiam di
-	# sisa pose pukulan sebelum kembali lari — itu jeda yang terlihat.
+	# Batasi durasi aksi sesuai dorongan dash. Kalau klipnya diputar lebih lama
+	# dari dorongannya, kakinya berdiam di sisa pose sebelum kembali lari — itu
+	# jeda yang terlihat.
 	visual.play_action(DASH_CLIP, DASH_TIME)
 	return true
 

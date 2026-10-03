@@ -1,14 +1,16 @@
 extends SceneTree
-## Pastikan 85 klip katalog benar-benar ada di dalam dua berkas GLB.
-## Nama hasil impor engine yang dipakai di sini, bukan nama di dalam JSON GLB.
+## Pastikan klip katalog benar-benar ada di dalam berkas asetnya (dua GLB UAL
+## plus FBX dash Mixamo). Nama hasil impor engine yang dipakai di sini, bukan
+## nama di dalam JSON GLB.
 
 const Catalog = preload("res://src/game/animation/catalog.gd")
 # Kunci mengikuti nilai di katalog ("ual1"/"ual2", huruf kecil).
 const MODELS := {
 	"ual1": "res://assets/mannequin/UAL1_Standard.glb",
 	"ual2": "res://assets/combat/UAL2_Standard.glb",
+	"dash": "res://assets/combat/dash.fbx",
 }
-const EXPECTED_PER_FILE := 43
+const EXPECTED_PER_FILE := {"ual1": 43, "ual2": 43, "dash": 1}
 
 var _failures := 0
 
@@ -43,15 +45,19 @@ func _run() -> void:
 		var names := _clip_names(MODELS[source])
 		available[source] = names
 		print("[clips-test] %s: %d klip" % [source, names.size()])
-		_check(names.size() >= EXPECTED_PER_FILE,
-			"%s hanya %d klip, minimal %d" % [source, names.size(), EXPECTED_PER_FILE])
+		var needed: int = EXPECTED_PER_FILE.get(source, 1)
+		_check(names.size() >= needed,
+			"%s hanya %d klip, minimal %d" % [source, names.size(), needed])
 	# Importer glTF membuang akhiran "_Loop" dari nama di AnimationPlayer, jadi yang
 	# harus ada di sana adalah Catalog.play_name(), bukan nama mentah dari berkas GLB.
 	var seen: Dictionary = {}
 	for clip: String in Catalog.names():
 		var entry: Dictionary = Catalog.find(clip)
 		var source: String = entry["source"]
-		var runtime: String = Catalog.play_name(clip).trim_prefix("ual2/")
+		var runtime: String = Catalog.play_name(clip)
+		var slash := runtime.find("/")
+		if slash >= 0:
+			runtime = runtime.substr(slash + 1)
 		var names: PackedStringArray = available[source]
 		if not names.has(runtime):
 			_check(false, "klip hilang: %s (runtime %s) tidak ada di %s" % [
