@@ -250,15 +250,46 @@ func _bone_path_prefix() -> String:
 ## akan pernah ketemu di kerangka UAL, dan engine akan mengeluh tiap frame.
 func _remap_dash_bones(anim: Animation, prefix: String) -> int:
 	var mapped := 0
+	var dropped := PackedStringArray()
 	for track in range(anim.get_track_count() - 1, -1, -1):
 		var path := str(anim.track_get_path(track))
 		var bone := _bone_of_path(path)
-		if not DASH_BONES.has(bone):
+		var target := _dash_bone_target(bone)
+		if target.is_empty():
+			dropped.append(bone)
 			anim.remove_track(track)
 			continue
-		anim.track_set_path(track, NodePath(prefix + DASH_BONES[bone]))
+		anim.track_set_path(track, NodePath(prefix + target))
 		mapped += 1
+	# Dicetak supaya kalau importer mengubah nama tulangnya, bentuk aslinya
+	# langsung kelihatan di log CI tanpa harus menebak.
+	if not dropped.is_empty():
+		print("[mannequin] dash.fbx awalan jalur='", prefix, "' trek tidak dikenali: ",
+			", ".join(dropped))
 	return mapped
+
+
+## Nama tulang UAL untuk satu nama tulang Mixamo. Dicoba dua kali: persis dulu,
+## lalu lewat bentuk yang dinormalkan. Importer Godot tidak menjamin nama asli
+## tetap utuh — titik dan tanda dua bisa berubah, awalan "mixamorig" bisa hilang.
+func _dash_bone_target(bone: String) -> String:
+	if DASH_BONES.has(bone):
+		return DASH_BONES[bone]
+	var wanted := _normalise_bone(bone)
+	for key: String in DASH_BONES:
+		if _normalise_bone(key) == wanted:
+			return DASH_BONES[key]
+	return ""
+
+
+## Bentuk pembanding: huruf kecil, awalan "mixamorig" dan semua pemisah dibuang.
+## "mixamorig:Hips", "mixamorig_Hips", dan "Hips" jadi sama.
+func _normalise_bone(name: String) -> String:
+	var out := name.to_lower()
+	out = out.replace("mixamorig", "")
+	for marker in [":", "_", "-", " ", ".", "/"]:
+		out = out.replace(marker, "")
+	return out
 
 
 ## Nama tulang dari jalur trek, apa pun awalahnya ("Skeleton:Bone" atau
