@@ -24,10 +24,10 @@ const Dusk = preload("res://src/game/environment/dusk_environment.gd")
 ## dua lekukan pantai 3 = 41 m): kalau tidak, bukitnya tumbuh dari tengah
 ## pulau dan menutupi medan tempat pemain berjalan. Semua jarak pemandangan
 ## mengecil sepersepuluh mengikuti dunia 100 m.
-const HILL_RADIUS := 52.0
-const HILL_REACH := 78.0
-const FAR_RADIUS := 82.0
-const FAR_REACH := 125.0
+const HILL_RADIUS := 62.0
+const HILL_REACH := 95.0
+const FAR_RADIUS := 100.0
+const FAR_REACH := 155.0
 ## Laut: permukaan air sedikit di bawah nol (sedikit di bawah garis pantai pulau,
 ## yang memang berada di tinggi 0) supaya bidang air tidak z-fighting dengan
 ## tanah yang persis menyentuh y = 0. Bidangnya 420 m — jauh melampaui bukit
@@ -110,10 +110,10 @@ func _build_island() -> void:
 	var indices := PackedInt32Array()
 	# Dua blok: yang utama panjang dan rendah, yang kedua lebih kecil di
 	# belakangnya supaya siluetnya tidak terlihat seperti satu balok.
-	_add_rock_block(vertices, colors, indices, Vector3(-76.0, SEA_LEVEL - 12.0, 6.0),
-		Vector3(9.0, 6.0, 4.4), 3)
-	_add_rock_block(vertices, colors, indices, Vector3(-90.0, SEA_LEVEL - 14.0, 13.0),
-		Vector3(6.0, 4.8, 3.2), 7)
+	_add_rock_block(vertices, colors, indices, Vector3(-48.0, SEA_LEVEL - 12.0, 0.0),
+		Vector3(9.0, 16.0, 4.5), 3)
+	_add_rock_block(vertices, colors, indices, Vector3(-52.0, SEA_LEVEL - 14.0, 2.0),
+		Vector3(6.0, 15.0, 3.5), 7)
 	_commit(vertices, colors, indices, "Island", self)
 	island = get_node("Island") as MeshInstance3D
 

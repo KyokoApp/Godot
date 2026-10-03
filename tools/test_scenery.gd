@@ -117,9 +117,14 @@ func _test_layout(scenery: Scenery) -> void:
 		_check(island_bounds.position.y + island_bounds.size.y > sea_position.y,
 			"Puncak pulau batu tenggelam")
 		var west_coast := -Field.island_radius(PI)
-		_check(island_bounds.position.x + island_bounds.size.x < west_coast - 40.0,
-			"Pulau batu terlalu dekat pantai: x=%.1f (pantai barat %.1f)"
-			% [island_bounds.position.x + island_bounds.size.x, west_coast])
+		# Jarak minimum pulau batu dari garis pantai. Dulu angka tetap 40 m untuk
+		# dunia 1 km (4% dari ukuran dunia); dunia sekarang 100 m jadi ikut mengecil
+		# supaya pematokan ini tetap sebanding. Pulau batunya sengaja ditaruh 7-19 m
+		# dari pantai — cukup terbaca sebagai pulau terpisah di laut.
+		var clearance := Field.SIZE * 0.05
+		_check(island_bounds.position.x + island_bounds.size.x < west_coast - clearance,
+			"Pulau batu terlalu dekat pantai: x=%.1f (pantai barat %.1f, minimal %.1f m)"
+				% [island_bounds.position.x + island_bounds.size.x, west_coast, clearance])
 	var sea_width := sea_mesh.size.x if sea_mesh != null else 0.0
 	# Tanda kurung WAJIB: tanpa itu % hanya menempel pada potongan terakhir yang
 	# tidak punya placeholder, dan GDScript melaporkan "not all arguments
