@@ -1507,8 +1507,9 @@ headless/render dilakukan oleh workflow CI.
 
 Validasi statis lokal lulus: `gdlint project tools`, parse seluruh GDScript,
 `tools/check_scripts.py`, katalog animasi, tes chunk, bundle lisensi, parse YAML
-workflow, dan `git diff --check`. CI menemukan kendala import GLB meshopt dan
-`PlaneShape3D` yang tidak tersedia; keduanya sudah diperbaiki. Render-a/b/c di
-run `37134528324` (termasuk screenshot Survival) lulus, tetapi gate berhenti pada
-tes mannequin karena `attack_clip` belum dideklarasikan; tesnya sudah diperbaiki.
-CI/build penuh perlu dijalankan ulang sebelum hasil visual/runtime dinyatakan lolos.
+workflow, dan `git diff --check`. CI menemukan kendala import GLB meshopt,
+`PlaneShape3D` yang tidak tersedia, dan variabel tes yang belum dideklarasikan;
+semuanya sudah diperbaiki. Render-a/b/c lulus di run `37134966785`, begitu juga
+tes mannequin, tetapi tes Survival menangkap assertion track yang terlalu dini
+serta pencarian mesh Forest yang salah. Keduanya sudah diperbaiki; CI/build penuh
+masih menunggu sebelum hasil visual/runtime dinyatakan lolos.

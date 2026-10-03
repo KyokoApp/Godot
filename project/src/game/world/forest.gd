@@ -150,7 +150,13 @@ func _build_one(path: String, spots: Array, spec: Dictionary) -> void:
 		push_error("Forest: model tidak bisa dimuat: " + path)
 		return
 	var sample: Node = scene.instantiate()
-	var mesh_instance := sample.find_child("MeshInstance3D", true, false) as MeshInstance3D
+	var mesh_instance: MeshInstance3D
+	if sample is MeshInstance3D:
+		mesh_instance = sample as MeshInstance3D
+	else:
+		var meshes := sample.find_children("*", "MeshInstance3D", true, false)
+		if not meshes.is_empty():
+			mesh_instance = meshes[0] as MeshInstance3D
 	if mesh_instance == null or mesh_instance.mesh == null:
 		sample.free()
 		push_error("Forest: model tanpa mesh: " + path)

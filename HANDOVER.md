@@ -20,9 +20,13 @@
     aset diserialisasi ulang tanpa kompresi/kuantisasi, geometri tetap sama.
     Run `37134254218` menangkap kelas `PlaneShape3D` yang tak tersedia; collider
     kini memakai `WorldBoundaryShape3D`. Render-a/b/c pada run `37134528324`
-    lulus, termasuk screenshot Survival, tetapi gate menemukan variabel
-    `attack_clip` yang belum dideklarasikan di tes mannequin. Deklarasinya sudah
-    ditambahkan; CI/build penuh masih perlu dijalankan ulang.
+    lulus, termasuk screenshot Survival; gate juga menemukan `attack_clip` yang
+    belum dideklarasikan di tes mannequin, lalu diperbaiki.
+  - Run `37134966785` lulus seluruh render dan tes mannequin, tetapi tes Survival
+    menguji filter tulang sebelum ayunan dimulai (track memang kosong saat idle)
+    dan mendapati Forest mencari node dengan nama, bukan tipe mesh. Assertion
+    dipindah ke sesudah input serang dan Forest kini mencari `MeshInstance3D`;
+    CI/build penuh sesudah perbaikan ini masih menunggu.
 
 - 2026-10-03 (cicilan 22) — **MENU LAYAR PENUH, DUNIA TERLIHAT, KAMERA FOKUS KE MIRA**
   - Koreksi pengguna: pertahankan panel kiri yang sudah disukai; hilangkan

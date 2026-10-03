@@ -22,6 +22,9 @@ func _check(condition: bool, message: String) -> void:
 func _run() -> void:
 	var game := load("res://src/game/main.tscn").instantiate() as Node3D
 	root.add_child(game)
+	var forest: Node = game.get("_forest")
+	_check(forest != null and not str(forest.call("summary")).is_empty(),
+		"Model dedaunan tidak menghasilkan MultiMesh")
 	for _frame in range(12):
 		await physics_frame
 	game.call("_enter_survival")
@@ -60,8 +63,12 @@ func _run() -> void:
 		"Model pedang tidak terikat ke tangan kanan")
 	_check(str(visual.get("clip")) == "Sword_Idle", "Idle pedang tidak dipakai di Survival")
 	var sword_layer: Node = visual.get("sword_layer")
-	_check(sword_layer != null and sword_layer.get("tracks").size() > 20,
-		"Animasi serang tidak terfilter ke upper-body")
+	_check(sword_layer != null, "Layer serang pedang tidak dibuat")
+	if sword_layer == null:
+		game.queue_free()
+		await process_frame
+		quit(1)
+		return
 	var zombies: Array = world.get("zombies")
 	_check(zombies.size() >= 3, "Gelombang zombie awal tidak muncul")
 	var walking := false
@@ -80,6 +87,8 @@ func _run() -> void:
 	zombies = world.get("zombies")
 	_check(zombies.size() == before_spawn + 1, "Zombie baru tidak muncul setelah jeda spawn")
 	_check(player.call("attack") == "Sword_Regular_A", "Tap pertama bukan tebasan A")
+	_check(sword_layer.get("tracks").size() > 20,
+		"Animasi serang tidak terfilter ke upper-body")
 	_check(str(player.call("attack")).is_empty(), "Input kedua otomatis menyambung serangan")
 	_check(str(sword_layer.get("current_name")) == "Sword_Regular_A",
 		"Layer pedang tidak memutar klip tebasan pertama")
