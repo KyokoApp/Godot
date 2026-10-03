@@ -58,10 +58,12 @@ func _run() -> void:
 		and str(fire_button.get("caption")) == "TEMBAK",
 		"HUD Survival tidak menampilkan tombol sihir TEMBAK")
 	var orbit: Node3D = game.get("_orbit")
+	_check(float(orbit.get("pitch")) >= 1.28,
+		"Render Survival tidak memakai sudut kamera top-down")
+	_check(int(world.get("stage")) == 1,
+		"Gameplay Survival render tidak mulai dari stage 1")
 	orbit.set("yaw", 0.0)
-	orbit.set("pitch", 0.28)
-	orbit.set("distance", 13.0)
-	orbit.set("focus_offset", Vector3(0.0, 0.78, 0.0))
+	orbit.set("distance", 17.0)
 	orbit.set("exclusions", [])
 	for node_name in ["_pet", "_speed_aura", "_foot_fire", "_banner"]:
 		var effect: Node = game.get(node_name)

@@ -15,6 +15,10 @@ const ARM_COLLISION_LIMIT := 30.0
 const WHEEL_STEP := 1.15
 const MIN_PITCH := 0.10
 const MAX_PITCH := 1.15
+const SURVIVAL_TOP_DOWN_MIN_PITCH := 1.28
+const SURVIVAL_TOP_DOWN_PITCH := 1.40
+const SURVIVAL_TOP_DOWN_MAX_PITCH := 1.50
+const SURVIVAL_TOP_DOWN_DISTANCE := 17.0
 
 var input_enabled := true
 ## Kontrol yang menangkap sentuhan lebih dulu (panel, tombol); sentuhan di
@@ -22,6 +26,8 @@ var input_enabled := true
 var exclusions: Array[Control] = []
 var yaw := 0.0
 var pitch := 0.30
+var pitch_min := MIN_PITCH
+var pitch_max := MAX_PITCH
 var distance := DEFAULT_DISTANCE
 ## Titik bidik kamera relatif ke pemain. Dulu angka 0,55 ini ditulis di main.gd;
 ## sekarang jadi properti supaya tes render bisa membidik leher atau kain tanpa
@@ -60,6 +66,36 @@ func _notification(what: int) -> void:
 
 func reset_touches() -> void:
 	_touches.clear()
+
+
+func capture_state() -> Dictionary:
+	return {
+		"yaw": yaw,
+		"pitch": pitch,
+		"pitch_min": pitch_min,
+		"pitch_max": pitch_max,
+		"distance": distance,
+		"focus_offset": focus_offset,
+	}
+
+
+func restore_state(state: Dictionary) -> void:
+	pitch_min = float(state.get("pitch_min", MIN_PITCH))
+	pitch_max = float(state.get("pitch_max", MAX_PITCH))
+	yaw = float(state.get("yaw", 0.0))
+	pitch = float(state.get("pitch", 0.30))
+	distance = float(state.get("distance", DEFAULT_DISTANCE))
+	var restored_focus: Vector3 = state.get(
+		"focus_offset", Vector3(0.0, 0.55, 0.0))
+	focus_offset = restored_focus
+	reset_touches()
+
+
+func set_top_down_mode() -> void:
+	pitch_min = SURVIVAL_TOP_DOWN_MIN_PITCH
+	pitch_max = SURVIVAL_TOP_DOWN_MAX_PITCH
+	pitch = SURVIVAL_TOP_DOWN_PITCH
+	distance = SURVIVAL_TOP_DOWN_DISTANCE
 
 
 func _input(event: InputEvent) -> void:
@@ -101,7 +137,7 @@ func _input(event: InputEvent) -> void:
 			# Sensitivitas mengikuti lebar viewport, bukan kepadatan pixel perangkat.
 			var sensitivity := TAU / get_viewport().get_visible_rect().size.x
 			yaw = wrapf(yaw - motion.x * sensitivity, -PI, PI)
-			pitch = clampf(pitch + motion.y * sensitivity, MIN_PITCH, MAX_PITCH)
+			pitch = clampf(pitch + motion.y * sensitivity, pitch_min, pitch_max)
 
 
 ## Ubah jarak kamera dengan faktor: < 1 mendekat, > 1 menjauh. Satu tempat

@@ -1,8 +1,9 @@
 extends SceneTree
-## Tes mode Survival: tanpa melee, auto-lock sihir, damage, dan hitungan zombie tumbang.
+## Tes Survival: top-down, auto-fire, stage satu menit, damage, dan balik ke home.
 
 const FirePet = preload("res://src/game/fire_pet.gd")
 const Projectile = preload("res://src/game/fire_projectile.gd")
+const SurvivalWorld = preload("res://src/game/world/survival_world.gd")
 
 var _failures := 0
 
@@ -20,12 +21,25 @@ func _check(condition: bool, message: String) -> void:
 	print("::error::", message)
 
 
+func _touch(index: int, point: Vector2, pressed: bool) -> void:
+	var event := InputEventScreenTouch.new()
+	event.index = index
+	event.position = point
+	event.pressed = pressed
+	root.push_input(event, true)
+
+
 func _run() -> void:
 	var game := load("res://src/game/main.tscn").instantiate() as Node3D
 	root.add_child(game)
 	var forest: Node = game.get("_forest")
 	_check(forest != null and not str(forest.call("summary")).is_empty(),
 		"Model dedaunan tidak menghasilkan MultiMesh")
+	var orbit: Node3D = game.get("_orbit")
+	var home_pitch := float(orbit.get("pitch"))
+	var home_pitch_min := float(orbit.get("pitch_min"))
+	var home_pitch_max := float(orbit.get("pitch_max"))
+	var home_distance := float(orbit.get("distance"))
 	for _frame in range(12):
 		await physics_frame
 	game.call("_enter_survival")
@@ -71,6 +85,22 @@ func _run() -> void:
 	_check(fire_button != null and fire_button.visible
 		and str(fire_button.get("caption")) == "TEMBAK",
 		"Tombol sihir TEMBAK tidak tersedia di Survival")
+	_check(float(orbit.get("pitch")) >= 1.28
+		and float(orbit.get("pitch")) <= 1.50,
+		"Kamera Survival tidak berada di sudut top-down")
+	_check(float(orbit.get("pitch_min")) >= 1.2,
+		"Kamera Survival bisa ditarik keluar dari sudut top-down")
+	var initial_stage_time := float(world.get("stage_time_left"))
+	_check(initial_stage_time <= SurvivalWorld.STAGE_DURATION
+		and initial_stage_time > SurvivalWorld.STAGE_DURATION - 2.0,
+		"Stage pertama tidak dimulai dengan timer satu menit")
+	_check(int(world.get("stage")) == 1, "Stage awal bukan stage 1")
+	_check(float(orbit.get("distance")) == 17.0,
+		"Jarak kamera Survival tidak mengikuti framing top-down")
+	_check(float(fire_button.get("auto_repeat_interval")) > 0.0,
+		"Tombol sihir tidak mengaktifkan auto-fire saat ditahan")
+	_check(is_equal_approx(float(pet.get("cooldown_duration")), FirePet.RAPID_FIRE_COOLDOWN),
+		"Cooldown sihir tidak dipercepat di Survival")
 	game.call("_attack_action")
 	_check(not bool(pet.get("casting")) and not bool(visual.call("is_busy")),
 		"Input melee masih aktif di mode Survival")
@@ -92,8 +122,7 @@ func _run() -> void:
 	zombies = world.get("zombies")
 	_check(zombies.size() == before_spawn + 1, "Zombie baru tidak muncul setelah jeda spawn")
 
-	# Susun target uji pada jarak tetap. Sihir harus memilih monster terdekat,
-	# mengikuti posisinya, lalu damage kematiannya masuk ke HUD Survival.
+	# Target terdekat diam dulu supaya auto-lock dan hit bisa diuji deterministik.
 	world.set_process(false)
 	for index in range(zombies.size()):
 		var zombie: Node3D = zombies[index]
@@ -152,8 +181,74 @@ func _run() -> void:
 	_check(world.call("acquire_magic_target", player.global_position) != target,
 		"Auto-lock masih memilih zombie yang sudah tumbang")
 
-	print("[survival-test] zombie=%d auto-lock=OK melee=OFF gagal=%d" % [
-		zombies.size(), _failures])
+	# Tahan tombol: satu tekan awal diikuti beberapa tembakan beruntun.
+	farther.set("health", 10000)
+	var shots_before := int(pet.get("shots_fired"))
+	var fire_point := fire_button.get_global_rect().get_center()
+	_touch(21, fire_point, true)
+	for _frame in range(90):
+		await physics_frame
+		if int(pet.get("shots_fired")) >= shots_before + 4:
+			break
+	_touch(21, fire_point, false)
+	var shots_after := int(pet.get("shots_fired"))
+	_check(shots_after >= shots_before + 3,
+		"Tahan tombol TEMBAK tidak mengeluarkan burst otomatis")
+	for _frame in range(40):
+		await physics_frame
+		if int(farther.get("health")) <= 10000 - FirePet.MAGIC_DAMAGE * 2:
+			break
+	_check(int(farther.get("health")) <= 10000 - FirePet.MAGIC_DAMAGE * 2,
+		"Auto-fire tidak memberi hit beruntun ke zombie")
+
+	# Lewati satu menit secara deterministik: stage naik, timer reset, dan wave membesar.
+	var wave_one_size := int(world.get("last_spawn_wave_size"))
+	var living_before_stage := int(world.call("living_zombie_count"))
+	var stage_remaining := SurvivalWorld.STAGE_DURATION - float(world.get("_stage_elapsed"))
+	world.call("_process", stage_remaining)
+	_check(int(world.get("stage")) == 2, "Stage tidak naik setelah satu menit")
+	_check(is_equal_approx(float(world.get("stage_time_left")), SurvivalWorld.STAGE_DURATION),
+		"Timer stage baru tidak kembali ke satu menit")
+	_check(int(world.get("last_spawn_wave_size")) > wave_one_size,
+		"Wave stage 2 tidak menambah jumlah zombie yang muncul")
+	_check(int(world.call("living_zombie_count")) > living_before_stage,
+		"Stage baru tidak menambah jumlah zombie hidup")
+	_check(status != null and status.text.contains("STAGE 02")
+		and status.text.contains("01:00"), "HUD tidak menampilkan stage/timer baru")
+	zombies = world.get("zombies")
+	for zombie in zombies:
+		if is_instance_valid(zombie):
+			zombie.set_physics_process(false)
+
+	# Mati di Survival harus membangun kembali hub, bukan meninggalkan arena kosong.
+	player.call("take_damage", 1000)
+	var returned_home := false
+	for _frame in range(120):
+		await physics_frame
+		if str(game.get("_active_mode")) == "hub":
+			returned_home = true
+			break
+	_check(returned_home, "Pemain mati tetapi tidak kembali ke home")
+	_check(game.get("_survival_world") == null, "Dunia Survival masih aktif setelah kembali")
+	_check(game.get("_field") != null and game.get("_npc") != null,
+		"Hub tidak dibangun kembali setelah mati")
+	var survival_panel: Control = game.get("_survival_panel")
+	_check(survival_panel != null and not survival_panel.visible,
+		"Panel Survival masih tampil di home")
+	_check(int(player.get("health")) == 100, "HP tidak pulih setelah kembali ke home")
+	_check(is_equal_approx(float(orbit.get("pitch")), home_pitch),
+		"Kamera tidak kembali ke sudut home")
+	_check(is_equal_approx(float(orbit.get("pitch_min")), home_pitch_min)
+		and is_equal_approx(float(orbit.get("pitch_max")), home_pitch_max)
+		and is_equal_approx(float(orbit.get("distance")), home_distance),
+		"Batas/jarak kamera home berubah setelah Survival")
+	_check(is_equal_approx(float(fire_button.get("auto_repeat_interval")), 0.0),
+		"Auto-fire tidak berhenti setelah keluar dari Survival")
+	_check(is_equal_approx(float(pet.get("cooldown_duration")), FirePet.COOLDOWN)
+		and int(pet.get("projectile_limit")) == FirePet.MAX_PROJECTILES,
+		"Setelan tembak hub tidak dipulihkan setelah Survival")
+	print("[survival-test] top-down=OK autofire=%d stage=2 return-home=%s gagal=%d" % [
+		shots_after - shots_before, str(returned_home), _failures])
 	game.queue_free()
 	await process_frame
 	print("[survival-test] HASIL: ", "OK" if _failures == 0 else "GAGAL")

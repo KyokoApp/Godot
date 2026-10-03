@@ -8,15 +8,21 @@ const Spirit = preload("res://src/game/legacy_spirit/spirit_visual.gd")
 const Projectile = preload("res://src/game/fire_projectile.gd")
 const Burst = preload("res://src/game/fire_burst.gd")
 const COOLDOWN := 0.85
+const AUTO_FIRE_INTERVAL := 0.18
+const RAPID_FIRE_COOLDOWN := 0.14
 const MAGIC_DAMAGE := 48
 const MAX_PROJECTILES := 3
+const RAPID_FIRE_MAX_PROJECTILES := 16
 const MAX_BURSTS := 2
 
 var player: Node3D
 var facing: Node3D
 var camera: Camera3D
 var cooldown := 0.0
+var cooldown_duration := COOLDOWN
+var projectile_limit := MAX_PROJECTILES
 var casting := false
+var shots_fired := 0
 var projectiles: Array[CharacterBody3D] = []
 var bursts: Array[Node3D] = []
 var _windup := 0.0
@@ -68,12 +74,17 @@ func _physics_process(delta: float) -> void:
 			_release_shot()
 
 
+func set_rapid_fire(enabled: bool) -> void:
+	cooldown_duration = RAPID_FIRE_COOLDOWN if enabled else COOLDOWN
+	projectile_limit = RAPID_FIRE_MAX_PROJECTILES if enabled else MAX_PROJECTILES
+
+
 func attack(lock_target: Node3D = null) -> bool:
 	_prune()
-	if casting or cooldown > 0.0 or projectiles.size() >= MAX_PROJECTILES or camera == null:
+	if casting or cooldown > 0.0 or projectiles.size() >= projectile_limit or camera == null:
 		return false
 	_locked_target = lock_target if is_instance_valid(lock_target) else null
-	cooldown = COOLDOWN
+	cooldown = cooldown_duration
 	casting = true
 	_windup = CastLayer.RELEASE_TIME
 	cast_started.emit()
@@ -115,6 +126,7 @@ func _release_shot() -> void:
 		shot.velocity = (aim - shot.global_position) / duration - Projectile.GRAVITY * duration * 0.5
 	shot.impacted.connect(_on_impact.bind(shot))
 	projectiles.append(shot)
+	shots_fired += 1
 	var audio := get_tree().get_first_node_in_group("world_audio")
 	if audio != null:
 		audio.shoot(global_position)

@@ -64,6 +64,8 @@ var _npc_interaction: NPCInteraction
 var _mode_selector: ModeSelector
 var _survival_world: SurvivalWorld
 var _active_mode := "hub"
+var _home_camera_state: Dictionary = {}
+var _death_return_pending := false
 var _visual: Character
 var _bloom_level := 0.0
 var _orbit: Orbit
@@ -229,7 +231,7 @@ func _build_survival_hud(layer: CanvasLayer) -> void:
 	_survival_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	_survival_panel.offset_left = 20
 	_survival_panel.offset_top = 76
-	_survival_panel.offset_right = 258
+	_survival_panel.offset_right = 360
 	_survival_panel.offset_bottom = 146
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 5)
@@ -325,7 +327,7 @@ func _build_hud() -> void:
 	_attack.pressed.connect(_attack_action)
 	_fire_button = _rune("TEMBAK", FIRE_DIAMETER, FIRE_ICON)
 	_fire_button.name = "FireRune"
-	_fire_button.tooltip_text = "Tembakan sihir pet; auto-lock zombie di Survival"
+	_fire_button.tooltip_text = "Di Survival, tahan TEMBAK untuk sihir beruntun yang auto-lock zombie"
 	layer.add_child(_fire_button)
 	_place(_fire_button, Control.PRESET_BOTTOM_RIGHT, -360, -180)
 	_register_hud_control("Tembak", _fire_button, FIRE_DIAMETER, -360, -180)
@@ -711,7 +713,13 @@ func _on_mode_selector_closed() -> void:
 func _enter_survival() -> void:
 	if _active_mode != "hub":
 		return
+	_home_camera_state = _orbit.capture_state()
+	_death_return_pending = false
 	_active_mode = "survival"
+	_orbit.set_top_down_mode()
+	_pet.set_rapid_fire(true)
+	_fire_button.auto_repeat_interval = FirePet.AUTO_FIRE_INTERVAL
+	_fire_button.reset_touch()
 	if _npc_interaction != null:
 		_npc_interaction.npc = null
 		_npc_interaction.set_process(false)
@@ -740,44 +748,90 @@ func _enter_survival() -> void:
 	_player.spawn(Vector2.ZERO)
 	_player.reset_health()
 	_player.set_sword_mode(false)
-	_survival_world.status_changed.connect(_update_survival_status)
+	_survival_world.status_changed.connect(_survival_status.set_text)
 	_footsteps.field = _survival_world.ground
 	_foot_fire.field = _survival_world.ground
 	_grass.set_ground(_survival_world.ground)
 	_survival_panel.show()
-	_update_survival_status(0.0, _survival_world.zombies.size(), 0)
+	_survival_status.text = SurvivalWorld.format_status(_survival_world.stage,
+		_survival_world.stage_time_left, _survival_world.living_zombie_count(),
+		_survival_world.defeated)
 	_on_health_changed(_player.health)
 	_apply_input_state()
-	print("[main] mode Survival siap; tanah tak berbatas + sihir auto-lock zombie aktif")
-
-
-func _update_survival_status(elapsed: float, living: int, defeated: int) -> void:
-	if _survival_status == null:
-		return
-	var total_seconds := int(elapsed)
-	_survival_status.text = "%02d:%02d · ZOMBI %02d · KALAH %d" % [
-		int(total_seconds / 60), total_seconds % 60, living, defeated]
+	print("[main] mode Survival siap; top-down + tembak otomatis + stage 1 menit")
 
 
 func _on_health_changed(value: int) -> void:
-	if _health_bar == null:
+	if _health_bar != null:
+		_health_bar.value = value
+		_health_text.text = "HP %d" % value
+		var fill_color := Color("cf705c") if value <= 30 else Color("8cc46a")
+		_health_bar.add_theme_stylebox_override("fill", _progress_style(fill_color))
+	if value <= 0 and _active_mode == "survival" and not _death_return_pending:
+		_death_return_pending = true
+		_fire_button.auto_repeat_interval = 0.0
+		_fire_button.reset_touch()
+		_apply_input_state()
+		get_tree().create_timer(SurvivalWorld.RETURN_DELAY).timeout.connect(_return_home_from_survival)
+
+
+func _return_home_from_survival() -> void:
+	if _active_mode != "survival" or not _death_return_pending or _player.health > 0:
 		return
-	_health_bar.value = value
-	_health_text.text = "HP %d" % value
-	var fill_color := Color("cf705c") if value <= 30 else Color("8cc46a")
-	_health_bar.add_theme_stylebox_override("fill", _progress_style(fill_color))
+	_death_return_pending = false
+	_active_mode = "hub"
+	_fire_button.auto_repeat_interval = 0.0
+	_fire_button.reset_touch()
+	_pet.set_rapid_fire(false)
+	if _panel.visible:
+		_panel.close_panel()
+	_graphics_drawer.hide()
+	_layout_editor.hide()
+	_mode_selector.hide()
+	_orbit.restore_state(_home_camera_state)
+	if is_instance_valid(_survival_world):
+		_survival_world.queue_free()
+	_survival_world = null
+	_build_world()
+	_field.player = _player
+	_player.field = _field
+	_player.world_bounds_enabled = true
+	_player.boosted = false
+	_player.crouching = false
+	_player.dashing = false
+	_player.spawn(SPAWN)
+	_player.reset_health()
+	_player.set_sword_mode(false)
+	_speed_button.boosted = false
+	_speed_button.queue_redraw()
+	_crouch.caption = "JONGKOK"
+	_crouch.queue_redraw()
+	_build_npc()
+	_npc_interaction.player = _player
+	_npc_interaction.npc = _npc
+	_npc_interaction.set_process(true)
+	_npc_interaction.set_physics_process(true)
+	_footsteps.field = _field
+	_foot_fire.field = _field
+	_grass.set_ground(_field)
+	_survival_panel.hide()
+	_on_health_changed(_player.health)
+	_apply_input_state()
+	print("[main] mati di Survival; kembali ke home hub")
 
 
 # --------------------------------------------------------------- aksi HUD --
 
 func _attack_action() -> void:
 	# Survival sengaja tidak punya serangan melee; tombolnya disembunyikan di mode ini.
-	if _active_mode == "survival":
+	if _active_mode == "survival" or _death_return_pending:
 		return
 	_player.attack()
 
 
 func _fire_action() -> void:
+	if _death_return_pending or _player.health <= 0:
+		return
 	var target: Node3D
 	if _active_mode == "survival" and is_instance_valid(_survival_world):
 		target = _survival_world.acquire_magic_target(_player.global_position)
@@ -824,21 +878,23 @@ func _toggle_graphics() -> void:
 func _apply_input_state() -> void:
 	var selector_open := _mode_selector != null and _mode_selector.visible
 	var layout_open := _layout_editor != null and _layout_editor.visible
-	var hide_actions := _panel.visible or _graphics_drawer.visible or selector_open
+	var hide_actions := _panel.visible or _graphics_drawer.visible or selector_open \
+		or _death_return_pending
 	var overlay := hide_actions or layout_open
 	_joystick.reset()
 	_joystick.input_enabled = not overlay
 	_orbit.reset_touches()
 	_orbit.input_enabled = not overlay
-	_settings.visible = not selector_open
-	_layout_button.visible = not selector_open
+	_settings.visible = not selector_open and not _death_return_pending
+	_layout_button.visible = not selector_open and not _death_return_pending
 	_attack.visible = not hide_actions and _active_mode != "survival"
 	_fire_button.visible = not hide_actions
 	for control: Control in [_attack, _fire_button, _jump, _crouch, _speed_button, _dash]:
 		control.set("disabled", layout_open)
 	for control: Control in [_jump, _crouch, _speed_button, _dash]:
 		control.visible = not hide_actions
-	_catalog_button.visible = not _graphics_drawer.visible and not layout_open and not selector_open
+	_catalog_button.visible = not _graphics_drawer.visible and not layout_open \
+		and not selector_open and not _death_return_pending
 	_banner.visible = not overlay
 
 
@@ -897,7 +953,8 @@ func _update_dash_bloom(delta: float) -> void:
 
 
 func _process(_delta: float) -> void:
-	_fire_button.cooldown_fraction = clampf(_pet.cooldown / FirePet.COOLDOWN, 0, 1)
+	_fire_button.cooldown_fraction = clampf(
+		_pet.cooldown / maxf(_pet.cooldown_duration, 0.001), 0, 1)
 	_fire_button.queue_redraw()
 	# Sapuan cooldown dash: busur mengikuti sisa waktu tunggu.
 	_dash.cooldown_fraction = clampf(_player.dash_cooldown / Player.DASH_COOLDOWN, 0, 1)

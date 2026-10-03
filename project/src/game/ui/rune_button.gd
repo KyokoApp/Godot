@@ -8,9 +8,12 @@ var glyph: Texture2D
 var caption := ""
 var compact := false
 var cooldown_fraction := 0.0
+## Interval auto-repeat; 0 berarti satu aktivasi per tap seperti biasa.
+var auto_repeat_interval := 0.0
 ## Warna cincin; alpha 0 = putih standar.
 var accent := Color(1, 1, 1, 0)
 var _finger := -1
+var _repeat_left := 0.0
 
 
 func _ready() -> void:
@@ -30,6 +33,7 @@ func _notification(what: int) -> void:
 
 func reset_touch() -> void:
 	_finger = -1
+	_repeat_left = 0.0
 	queue_redraw()
 
 
@@ -50,6 +54,7 @@ func _input(event: InputEvent) -> void:
 		elif touch.pressed and not touch.canceled and _finger == -1:
 			if contains_point(touch.position):
 				_finger = touch.index
+				_repeat_left = auto_repeat_interval
 				queue_redraw()
 				pressed.emit()
 	elif event is InputEventMouseButton and event.device != InputEvent.DEVICE_ID_EMULATION:
@@ -59,8 +64,19 @@ func _input(event: InputEvent) -> void:
 				reset_touch()
 			elif mouse.pressed and _finger == -1 and contains_point(mouse.position):
 				_finger = -2
+				_repeat_left = auto_repeat_interval
 				queue_redraw()
 				pressed.emit()
+
+
+func _process(delta: float) -> void:
+	if auto_repeat_interval <= 0.0 or _finger == -1 or disabled \
+			or not is_visible_in_tree():
+		return
+	_repeat_left -= delta
+	if _repeat_left <= 0.0:
+		_repeat_left = auto_repeat_interval
+		pressed.emit()
 
 
 func _draw() -> void:

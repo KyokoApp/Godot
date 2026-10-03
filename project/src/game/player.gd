@@ -138,8 +138,17 @@ func spawn(point: Vector2) -> void:
 		ground = float(field.call("surface_height", point.x, point.y))
 	global_position = Vector3(point.x, ground + HEIGHT * 0.5 + 0.05, point.y)
 	velocity = Vector3.ZERO
+	move_speed = 0.0
 	gait = IDLE
+	grounded = true
+	_airborne = false
+	_air_time = 0.0
+	dashing = false
+	_dash_left = 0.0
+	_dash_cooldown = 0.0
+	dash_cooldown = 0.0
 	if visual != null:
+		visual.return_to_locomotion()
 		visual.set_locomotion("Sword_Idle" if sword_mode else IDLE, 1.0)
 
 
