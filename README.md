@@ -1507,9 +1507,10 @@ headless/render dilakukan oleh workflow CI.
 
 Validasi statis lokal lulus: `gdlint project tools`, parse seluruh GDScript,
 `tools/check_scripts.py`, katalog animasi, tes chunk, bundle lisensi, parse YAML
-workflow, dan `git diff --check`. CI menemukan kendala import GLB meshopt,
-`PlaneShape3D` yang tidak tersedia, dan variabel tes yang belum dideklarasikan;
-semuanya sudah diperbaiki. Render-a/b/c lulus di run `37134966785`, begitu juga
-tes mannequin, tetapi tes Survival menangkap assertion track yang terlalu dini
-serta pencarian mesh Forest yang salah. Keduanya sudah diperbaiki; CI/build penuh
-masih menunggu sebelum hasil visual/runtime dinyatakan lolos.
+workflow, dan `git diff --check`. Selama validasi, CI membantu menemukan dan
+memperbaiki format GLB meshopt, collider bidang, serta timing tes layer pedang
+& pencarian mesh Forest. Run Godot 4.5.2 **`37135467746` hijau penuh**: semua
+tes headless, render-a/b/c (screenshot selector dan Survival), ekspor PCK/APK,
+audit isi APK, serta tes boot launcher. Hasil visual, runtime, dan build kini
+terverifikasi di CI. APK dan content pack tersedia di [rilis
+`build-5060147`](https://github.com/KyokoApp/Godot/releases/tag/build-5060147).

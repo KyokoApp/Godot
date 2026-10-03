@@ -22,11 +22,16 @@
     kini memakai `WorldBoundaryShape3D`. Render-a/b/c pada run `37134528324`
     lulus, termasuk screenshot Survival; gate juga menemukan `attack_clip` yang
     belum dideklarasikan di tes mannequin, lalu diperbaiki.
-  - Run `37134966785` lulus seluruh render dan tes mannequin, tetapi tes Survival
-    menguji filter tulang sebelum ayunan dimulai (track memang kosong saat idle)
-    dan mendapati Forest mencari node dengan nama, bukan tipe mesh. Assertion
-    dipindah ke sesudah input serang dan Forest kini mencari `MeshInstance3D`;
-    CI/build penuh sesudah perbaikan ini masih menunggu.
+  - Run `37134966785` mengungkap dua tes/lookup yang keliru: pemeriksaan track
+    pedang dilakukan saat idle (track memang kosong sampai ayunan dimulai), dan
+    Forest mencari nama node alih-alih tipe mesh. Assertion kini sesudah input
+    serang, Forest mencari `MeshInstance3D`, dan ada tes agar MultiMesh dedaunan
+    benar-benar terbentuk.
+  - CI Godot 4.5.2 run `37135467746` hijau penuh: gate/headless, render-a/b/c
+    (termasuk screenshot selector dan Survival), ekspor PCK/APK, audit APK, dan
+    boot launcher. Rilis Android `build-5060147` tersedia di
+    https://github.com/KyokoApp/Godot/releases/tag/build-5060147. Hasil
+    visual/runtime/build sudah terverifikasi di CI.
 
 - 2026-10-03 (cicilan 22) — **MENU LAYAR PENUH, DUNIA TERLIHAT, KAMERA FOKUS KE MIRA**
   - Koreksi pengguna: pertahankan panel kiri yang sudah disukai; hilangkan
