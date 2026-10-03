@@ -124,6 +124,10 @@ func _ready() -> void:
 
 func spawn(point: Vector2) -> void:
 	var ground := field.surface_height(point.x, point.y)
+	# Di danau tengah pijakannya adalah PERMUKAAN AIR, bukan dasar kolam:
+	# pemain muncul berdiri di atas air, bukan berdiri di dasarnya.
+	if field != null and Field.is_water(point.x, point.y):
+		ground = maxf(ground, Field.POND_LEVEL)
 	global_position = Vector3(point.x, ground + HEIGHT * 0.5 + 0.05, point.y)
 	velocity = Vector3.ZERO
 	gait = IDLE

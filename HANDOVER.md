@@ -1,5 +1,55 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-03 (cicilan 19) — **DANAU BENER-BENER CETEK: PINTU DI ATAS AIR +
+  JALAN DI ATAS AIR + RIAK TIAP LANGKAH**
+  - Pemain mengoreksi lingkaran tengah ronde 18: *"airnya itu gk dalem bener
+    bener pendek"*, *"pintunya harus ada di tengah dan di ATAS air danau"*, dan
+    *"efek air nya berasa kalo kita jalan di atas nya"*. Tiga hal itu yang
+    dikerjakan, tidak ada yang lain.
+  - **ANGKA BARU (terverifikasi di python)**: dasar kolam 3,85 m
+    (`BASIN_DEPTH` 1,6 → 1,15), air tetap 4,3 m → **dalam 0,45 m**. Garis air
+    turun ke r = 23,83 m, jadi `POND_RADIUS` 27 → 23,5 m (danau 47 m lebar) dan
+    `pond.WATER_RADIUS` ikut 23,5 m. Tanah tepat di tepi bidang air = 4,281 m
+    (di bawah air; 0 dari 72 arah kering).
+  - **PINTU DI ATAS AIR**: `pond.gd` menambah pulau batu tengah — `CylinderMesh`
+    puncak rata r = 2,8 m di y = 4,8 m (`PLATFORM_TOP` 0,5 m di atas air),
+    lereng sampai r = 5,2 m menyentuh garis air (lereng 23%, bisa didaki;
+    `rings` 4 supaya normal lerengnya halus). Pintu pindah dari dasar kolam ke
+    puncak batu (`base = POND_LEVEL + PLATFORM_TOP`).
+  - **JALAN DI ATAS AIR**: `pond.gd` menambah `WaterBody` — StaticBody3D layer 1
+    berisi trimesh cakram DATAR setinggi `Field.POND_LEVEL` (dipakai
+    `_make_disc(WATER_RADIUS, 10, 48)`). Inilah kunci yang membuat pemain
+    benar-benar berjalan di permukaan air, bukan menyelam ke dasar kolam: mesh
+    tanah dan collider-nya TIDAK diubah (satu sumber tinggi, jangan dipecah),
+    yang ditambah adalah pijakan TERPISAH di garis air. Kamera SpringArm tidak
+    terganggu: cakram ini setinggi tanah di sekitarnya.
+  - **RIAK**: `world/water_ripple.gd` + `world/water_ripple.gdshader` (baru).
+    Pool 8 cincin (QuadMesh + ShaderMaterial masing-masing), aditif, tanpa
+    tekstur, tanpa bayangan; `age/life/radius/strength` diatur per slot dari
+    GDScript. `spawn(point, power)` mengunci y ke `POND_LEVEL + 0.05` (di puncak
+    gelombang danau ±0,04 m) dan radius ke `lerpf(1.2, 2.4, power)`.
+    `_process()` menaikkan `age` dan menidurkan slot yang lewat LIFE (1 s).
+    Dipanggil `footsteps.gd` (baru: `var ripples: WaterRipple`).
+  - **PERMUKAAN BARU `"water"`** di `footsteps.surface_at()`: di dalam danau DAN
+    di bawah `POND_LEVEL + 0.3` (titik kontak kaki selalu tanah + 0,08 m).
+    Puncak pulau batu tetap `"stone"` — kalau tidak, langkah di dekat pintu
+    berbunyi air. Air tidak punya bank suara sendiri, jadi pakai sampel
+    `"dirt"` (langkah basah).
+  - `player.gd spawn()` memakai `maxf(surface_height, POND_LEVEL)` di dalam
+    danau. `main.gd` menambah `_ripple = WaterRipple.new()` dan
+    `_footsteps.ripples = _ripple`.
+  - Pantulan tiruan pintu: faktor penampasan tidak lagi angka mati 0,35, tapi
+    dihitung `clampf(above / (top + PLATFORM_TOP), 0.05, 0.35)` → **0,098**,
+    supaya pantulan muat di antara dasar kolam (3,85 m) dan permukaan air
+    (4,3 m) walau airnya cuma setengah meter.
+  - Gerbang yang ikut berubah: `test_scenery.gd` (`_test_pond()`: dalam < 0,7 m,
+    pintu `position.y > POND_LEVEL`, `water_body`/`platform` ada; `_test_ripple()`
+    baru), `test_audio.gd` (titik tengah danau = "water" di y = POND_LEVEL +
+    0,08, puncak batu = "stone" di y = POND_LEVEL + 0,58 — HATI-HATI: `surface_at`
+    sekarang MEMBACA y, jadi titik tes harus memakai tinggi kaki yang nyata,
+    bukan y sembarang; itulah sebabnya titik batu lama di (0, 5, 0) pindah).
+  - gdlint + check_scripts BERSIH. Belum di-push / belum CI — commit + push +
+    tunggu run 7/7 berikutnya.
 - 2026-10-03 (cicilan 18, lanjutan) — **KOLAM RAMP LINEAR + CI HIJAU 7/7**
   - **Bentuk kolam final**: dasar datar sampai r = 16 m (ketinggian 3,4 m),
     lalu dinding NAIK LURUS sampai r = 36 m (dataran 5,0 m). Garis air melintasi

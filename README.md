@@ -1365,4 +1365,45 @@ Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
   memakai titik yang sama dan sekarang juga menolak area kolam lewat
   `can_grow()`.
 
+## Ronde 19 — danau bener-bener cetek: pintu DI ATAS air + jalan di atas air + riak
+
+Permintaan pemain atas lingkaran tengah ronde 18: *"airnya itu gk dalem bener
+bener pendek"*, *"pintunya harus ada di tengah dan di ATAS air danau"*, dan
+*"efek air nya berasa kalo kita jalan di atas nya"*.
+
+- **Airnya jadi danau cetek, bukan kolam 0,9 m.** `BASIN_DEPTH` 1,6 → 1,15 m
+  jadi dasar kolam 3,85 m; dengan permukaan air tetap 4,3 m dalamnya **0,45 m**
+  — lutut orang dewasa. Dasar kolam jelas terlihat lewat air (alpha kedalaman
+  `mix(0,30, 1,0, 0,45/2,6)` = 0,42). Karena garis air ikut turun ke
+  r = 23,8 m, `POND_RADIUS` 27 → 23,5 m (danau 47 m lebar) supaya bidang air
+  tetap tidak menjorok ke daratan kering.
+- **Pintunya berdiri DI ATAS air.** `pond.gd` menambah **pulau batu kecil** di
+  tengah: kerucut pendek (`CylinderMesh`, puncak rata r = 2,8 m setinggi
+  4,8 m, lereng turun sampai menyentuh garis air di r = 5,2 m — lereng 23%,
+  bisa didaki). Pintunya pindah dari dasar kolam ke puncak batu itu, jadi
+  kakinya 0,5 m di atas permukaan air dan tidak tenggelam lagi.
+- **Permukaan air BISA DIAKI.** `pond.gd` menambah `WaterBody`: cakram tabrakan
+  tak terlihat setinggi permukaan air (`Field.POND_LEVEL`). Pemain benar-benar
+  berjalan DI ATAS air (bukan menyelam ke dasar kolam) — kakinya menapak tepat
+  di garis air, loncat dan mendarat jalan seperti biasa.
+- **Riak setiap langkah terasa.** `world/water_ripple.gd` + `water_ripple.gdshader`
+  (baru): pool 8 cincin aditif (satu quad masing-masing, tanpa tekstur, tanpa
+  bayangan) yang lahir di titik kontak kaki, melebar 1,2–2,4 m dan meredam
+  dalam 1 detik. Kekuatannya mengikuti keras langkah (jalan pelan kecil, lari
+  besar, mendarat paling besar) dan posisinya dikunci ke garis air. Dipanggil
+  `footsteps.gd` setiap kali kaki menapak air; kalau tidak ada yang berjalan di
+  air semua cincin tidur (0 panggilan gambar).
+- **Suara ikut basah.** `footsteps.gd` memakai permukaan baru `"water"` di dalam
+  danau (puncak batu tetap `"stone"`); air tidak punya bank suara sendiri jadi
+  dipakai sampel tanah sebagai langkah basah.
+- `player.gd spawn()` ikut: kalau muncul di dalam danau, pijakannya permukaan
+  air, bukan dasar kolam.
+- Pantulan tiruan pintu ikut menyesuaikan: air sekarang cuma 0,45 m, jadi
+  faktor penampasannya dihitung dari tinggi pintu di atas garis air
+  (squash 0,098) supaya pantulannya tetap muat di antara dasar kolam dan
+  permukaan air.
+- Gerbang: `test_scenery.gd` (`_test_pond()` menuntut dalam < 0,7 m, pintu di
+  atas air, pijakan air ada; `_test_ripple()` baru), `test_audio.gd` (titik
+  tengah danau = "water", puncak batu = "stone").
+
 Belum diuji di HP — sandbox tidak bisa menjalankan Godot.

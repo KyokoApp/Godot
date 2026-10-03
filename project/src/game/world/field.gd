@@ -85,14 +85,17 @@ const PATH_PHASE_B := 1.33
 ## selisihnya turun ke 0,03 m.
 const BASIN_INNER := 16.0
 const BASIN_OUTER := 36.0
-## Radius permukaan air kolam (meter). Dengan ramp linear di atas, tanah
-## melintasi POND_LEVEL tepat di r = 16 + (5,0 - 4,3) / 1,6 x 20 = 27,25 m.
+## Radius permukaan air kolam (meter). Dengan ramp linear di atas dan cekungan
+## yang lebih cetek, tanah melintasi POND_LEVEL tepat di
+## r = 16 + (4,3 - 3,85) / 1,15 x 20 = 23,8 m — jadi bidang air 23,5 m pas
+## menutupi kolam tanpa menjorok ke daratan kering.
 ## Dipakai pond.gd untuk lebar bidang airnya dan can_grow() untuk menahan rumput.
-const POND_RADIUS := 27.0
-## Kedalaman cekungan di bawah dataran (meter). Dasar kolam = 5 - 1,6 = 3,4 m.
-const BASIN_DEPTH := 1.6
-## Permukaan air kolam (meter). Antara dasar (3,4 m) dan dataran (5 m), jadi
-## kolamnya CETek: dalamnya 0,9 m dan dasarnya terlihat melalui air.
+const POND_RADIUS := 23.5
+## Kedalaman cekungan di bawah dataran (meter). Dasar kolam = 5 - 1,15 = 3,85 m.
+const BASIN_DEPTH := 1.15
+## Permukaan air kolam (meter). Antara dasar (3,85 m) dan dataran (5 m), jadi
+## kolamnya BENER-BENER CETek seperti danau: dalamnya cuma 0,45 m dan dasarnya
+## jelas terlihat melalui air. Pemain BERJALAN DI ATAS permukaan ini.
 const POND_LEVEL := 4.3
 ## Jarak minimum rumput dari garis air kolam (meter): bibir kolam berlumpur,
 ## tidak berumput tepat sampai garis air.
@@ -320,6 +323,13 @@ static func path_centre(x: float) -> float:
 static func is_inside(x: float, z: float, margin := 0.0) -> bool:
 	var point := Vector2(x, z)
 	return (island_radius(point.angle()) - point.length()) >= margin
+
+
+## Apakah titik ini berada DI ATAS air kolam tengah? Kolam tengah sekarang
+## danau dangkal: pemain berjalan di permukaan airnya (bukan menyelam ke
+## dasar), langkah kaki meninggalkan riak, dan rumput tidak tumbuh di sini.
+static func is_water(x: float, z: float) -> bool:
+	return Vector2(x, z).length() <= POND_RADIUS
 
 
 static func clamp_inside(point: Vector2, margin: float) -> Vector2:

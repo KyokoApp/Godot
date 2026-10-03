@@ -7,6 +7,7 @@ const Field = preload("res://src/game/world/field.gd")
 const Scenery = preload("res://src/game/world/scenery.gd")
 const Forest = preload("res://src/game/world/forest.gd")
 const Pond = preload("res://src/game/world/pond.gd")
+const WaterRipple = preload("res://src/game/world/water_ripple.gd")
 const Grass = preload("res://src/game/grass_field.gd")
 const Player = preload("res://src/game/player.gd")
 const Character = preload("res://src/game/mannequin.gd")
@@ -58,6 +59,7 @@ var _field: Field
 var _scenery: Scenery
 var _forest: Forest
 var _pond: Pond
+var _ripple: WaterRipple
 var _grass: Grass
 var _player: Player
 var _visual: Character
@@ -121,10 +123,15 @@ func _build_world() -> void:
 	# MultiMesh: satu panggilan gambar per model, tidak ada collision.
 	_forest = Forest.new()
 	add_child(_forest)
-	# Kolam tengah pulau: air dangkal + pintu gerbang ala Suzume no Tojimari
-	# beserta pantulan tiruannya (renderer Mobile tidak punya SSR).
+	# Danau tengah pulau: air CETek menggenang di sekitar pintu gerbang ala
+	# Suzume no Tojimari (pintunya berdiri di atas air), plus pantulan tiruan
+	# karena renderer Mobile tidak punya SSR.
 	_pond = Pond.new()
 	add_child(_pond)
+	# Riak air: cincin yang lahir setiap kali kaki pemain menapak permukaan
+	# danau, supaya "jalan di atas air" terasa seperti air.
+	_ripple = WaterRipple.new()
+	add_child(_ripple)
 
 
 func _build_player() -> void:
@@ -165,6 +172,7 @@ func _build_effects() -> void:
 	_footsteps.body = _player
 	_footsteps.field = _field
 	_footsteps.visual = _visual
+	_footsteps.ripples = _ripple
 	add_child(_footsteps)
 	_foot_fire = FootFire.new()
 	_foot_fire.character = _visual

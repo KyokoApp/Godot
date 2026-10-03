@@ -1,6 +1,15 @@
 extends Node3D
-## Kolam tengah pulau: air CETek bergelombang dengan sebuah pintu berdiri di air
+## DANAU tengah pulau (bukan kolam dalam): air cetek bergelombang menggenang di
+## sekitar sebuah pintu yang berdiri di tengah, di ATAS permukaan air
 ## (referensi anime Suzume). Semuanya prosedural — tidak ada aset baru.
+##
+## Yang membuatnya danau dan bukan kolam:
+##   1. airnya cuma 0,45 m — dasarnya jelas terlihat, bukan genangan pekat,
+##   2. pintunya berdiri di puncak pulau batu kecil, jadi kakinya tidak
+##      pernah tenggelam,
+##   3. permukaan air BISA DIAKI: ada cakram tabrakan tak terlihat setinggi
+##      garis air, jadi pemain berjalan DI ATAS air dan setiap langkah
+##      meninggalkan riak (lihat water_ripple.gd).
 ##
 ## Air memakai water.gdshader yang SAMA dengan laut, hanya parameter gelombang
 ## dan warnanya yang lebih tenang. Pintunya punya "pantulan" tiruan: salinan
@@ -11,20 +20,28 @@ const Field = preload("res://src/game/world/field.gd")
 const WATER_SHADER = preload("res://src/game/world/water.gdshader")
 const Dusk = preload("res://src/game/environment/dusk_environment.gd")
 
-## Jari-jari bidang air (meter) = POND_RADIUS di field.gd. Dengan ramp kolam
-## linear (dasar 3,4 m naik 1,6 m sampai dataran 5 m dalam 20 m), tanah melintasi
-## POND_LEVEL tepat di 27,25 m — jadi bidang air 27 m pas menutupi kolam tanpa
-## menjorok ke daratan kering.
-const WATER_RADIUS := 27.0
+## Jari-jari bidang air (meter) = POND_RADIUS di field.gd. Dengan cekungan
+## cetek (dasar 3,85 m naik 1,15 m sampai dataran 5 m dalam 20 m), tanah
+## melintasi POND_LEVEL tepat di 23,8 m — jadi bidang air 23,5 m pas menutupi
+## danau tanpa menjorok ke daratan kering.
+const WATER_RADIUS := 23.5
 ## Cincin dan juring mesh air: 24 x 64 = 3 ribu segitiga, cukup halus untuk
-## gelombang yang terlihat di kolam selebar 42 m.
+## gelombang yang terlihat di danau selebar 47 m.
 const RINGS := 24
 const SEGMENTS := 64
 ## Ukuran pintu (meter).
 const DOOR_HEIGHT := 3.8
 const DOOR_WIDTH := 1.9
+## Pulau batu kecil di tengah danau: pintunya berdiri DI ATAS batu ini, jadi
+## dasar pintu tidak pernah tenggelam di air. Puncaknya 0,5 m di atas garis air
+## dan lerengnya landai sampai menyentuh air, jadi pemain tetap bisa naik.
+const PLATFORM_TOP := 0.5
+const PLATFORM_FLAT := 2.8
+const PLATFORM_OUTER := 5.2
 
 var water: MeshInstance3D
+var platform: MeshInstance3D
+var water_body: StaticBody3D
 var door: Node3D
 var reflection: Node3D
 
@@ -32,6 +49,8 @@ var reflection: Node3D
 func _ready() -> void:
 	name = "Pond"
 	_build_water()
+	_build_platform()
+	_build_walkable()
 	_build_door()
 
 
@@ -41,8 +60,8 @@ func _build_water() -> void:
 	var material := ShaderMaterial.new()
 	material.shader = WATER_SHADER
 	material.set_shader_parameter("sun_direction", Dusk.SUN_DIRECTION)
-	# Kolam tenang: gelombang lebih pendek dan lebih pendek tingginya dari laut.
-	material.set_shader_parameter("wave_height", 0.055)
+	# Danau tenang: gelombang lebih pendek dan lebih pendek tingginya dari laut.
+	material.set_shader_parameter("wave_height", 0.04)
 	material.set_shader_parameter("wave_length", 5.0)
 	material.set_shader_parameter("wave_speed", 0.55)
 	material.set_shader_parameter("depth_fade", 0.7)
@@ -61,6 +80,59 @@ func _build_water() -> void:
 	# Air tidak melindungi bayangan: bayangan pintu sudah ada di pintunya.
 	water.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(water)
+
+
+# ------------------------------------------------- pulau batu & pijakan ----
+
+## Pulau batu di tengah danau (kerucut pendek). Pintunya berdiri di puncak yang
+## rata, lerengnya turun sampai menyentuh garis air — bentuk inilah yang membuat
+## pintu terbaca "berdiri di tengah danau" tapi TIDAK tenggelam.
+func _build_platform() -> void:
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = PLATFORM_FLAT
+	mesh.bottom_radius = PLATFORM_OUTER
+	# Sengaja dimasukkan ke bawah garis air supaya tidak ada garis pertemuan
+	# yang berkedip tepat di permukaan air.
+	mesh.height = PLATFORM_TOP + 0.06
+	mesh.radial_segments = 48
+	mesh.rings = 4
+	var material := StandardMaterial3D.new()
+	# Batu basah: gelap, sedikit kehijauan seperti lumutan di garis air.
+	material.albedo_color = Color(0.15, 0.17, 0.17)
+	material.roughness = 0.92
+	platform = MeshInstance3D.new()
+	platform.name = "Platform"
+	platform.mesh = mesh
+	platform.material_override = material
+	platform.position = Vector3(0.0, Field.POND_LEVEL - 0.06, 0.0)
+	platform.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	add_child(platform)
+	# Tanpa collider, pemain tertahan di dinding batu dan tidak bisa naik ke
+	# pintu — lerengnya harus bisa didaki seperti tanah biasa.
+	var body := StaticBody3D.new()
+	body.name = "PlatformBody"
+	body.collision_layer = 1
+	var shape := CollisionShape3D.new()
+	shape.shape = mesh.create_trimesh_shape()
+	body.add_child(shape)
+	body.position = platform.position
+	add_child(body)
+
+
+## Permukaan air yang BISA DIAKI: cakram datar tak terlihat setinggi permukaan
+## air. Inilah yang membuat pemain benar-benar BERJALAN DI ATAS air danau
+## (bukan menyelam ke dasar kolam): kakinya menapak tepat di garis air, jadi
+## riak tiap langkah lahir di tempat yang benar.
+func _build_walkable() -> void:
+	var mesh := _make_disc(WATER_RADIUS, 10, 48)
+	water_body = StaticBody3D.new()
+	water_body.name = "WaterBody"
+	water_body.collision_layer = 1
+	var shape := CollisionShape3D.new()
+	shape.shape = mesh.create_trimesh_shape()
+	water_body.add_child(shape)
+	water_body.position = Vector3(0.0, Field.POND_LEVEL, 0.0)
+	add_child(water_body)
 
 
 ## Cakram berjajaran kutub (cincin x juring). Dipakai supaya bidang airnya
@@ -131,18 +203,30 @@ func _door_parts() -> Array:
 
 func _build_door() -> void:
 	var floor_height := Field.terrain_height(0.0, 0.0)
+	# Pintunya berdiri di PUNCAK pulau batu, bukan di dasar kolam: kakinya
+	# selalu di ATAS permukaan air danau, persis yang diminta pemain.
+	var base := Field.POND_LEVEL + PLATFORM_TOP
+
 	door = Node3D.new()
 	door.name = "Door"
-	door.position = Vector3(0.0, floor_height, 0.0)
+	door.position = Vector3(0.0, base, 0.0)
 	add_child(door)
 	for part: Dictionary in _door_parts():
 		door.add_child(_make_block(part, false))
-	# Pantulan tiruan: salinan terbalik di bawah permukaan air. Air kolam cuma
-	# sekitar 0,9 m dalam, jadi pantulan setinggi aslinya akan terkubur tanah —
-	# karena itu tingginya DIMPATKAN (squash) supaya tetap terbaca di antara
-	# dasar kolam dan permukaan air, persis seperti pantulan di air cetek.
+	# Pantulan tiruan: salinan terbalik di bawah permukaan air. Air danau
+	# sekarang cuma setengah meter dalam, jadi pantulan setinggi aslinya akan
+	# terkubur tanah — karena itu tingginya DIPENAMPAS (squash) supaya tetap
+	# terbaca di antara dasar kolam dan permukaan air, persis seperti
+	# pantulan benda tinggi di air cetek.
 	var above := Field.POND_LEVEL - floor_height
-	var squash := 0.35
+	# Bagian tertinggi pintu (diukur dari dasar kolam) menentukan seberapa
+	# kuat pantulan harus dipenampas: makin cetek air, makin tipis pantulan.
+	var top := 0.0
+	for part: Dictionary in _door_parts():
+		var part_pos: Vector3 = part["pos"]
+		var part_size: Vector3 = part["size"]
+		top = maxf(top, part_pos.y + part_size.y * 0.5)
+	var squash := clampf(above / maxf(top + PLATFORM_TOP, 0.1), 0.05, 0.35)
 	reflection = Node3D.new()
 	reflection.name = "DoorReflection"
 	reflection.position = Vector3(0.0, floor_height, 0.0)
@@ -150,14 +234,16 @@ func _build_door() -> void:
 	for part: Dictionary in _door_parts():
 		var part_pos: Vector3 = part["pos"]
 		var part_size: Vector3 = part["size"]
-		# Bagian yang sudah tenggelam tidak dipantulkan.
-		if part_pos.y + part_size.y * 0.5 <= above:
+		# Tinggi pantulan diukur dari DASAR kolam: permukaan air di `above`,
+		# lalu jarak bagian itu di atas garis air dipenampas oleh squash.
+		var mirror_y := above - (PLATFORM_TOP + part_pos.y) * squash
+		# Bagian yang pantulannya sudah lewat dasar kolam tidak dipantulkan.
+		if mirror_y + part_size.y * squash * 0.5 <= 0.0:
 			continue
 		# Tipe harus eksplisit: `part` bertipe Dictionary, tapi `duplicate()`
 		# mengembalikan Variant — `:=` tidak bisa menyimpulkannya (Parse Error).
 		var mirror: Dictionary = part.duplicate()
-		mirror["pos"] = Vector3(part_pos.x,
-			above - (part_pos.y - above) * squash, part_pos.z)
+		mirror["pos"] = Vector3(part_pos.x, mirror_y, part_pos.z)
 		mirror["size"] = Vector3(part_size.x, part_size.y * squash, part_size.z)
 		reflection.add_child(_make_block(mirror, true))
 
@@ -202,5 +288,8 @@ func _make_block(part: Dictionary, faded: bool) -> MeshInstance3D:
 func summary() -> String:
 	var parts := door.get_child_count() if door != null else 0
 	var mirror := reflection.get_child_count() if reflection != null else 0
-	return "kolam r=%.0f m di y=%.2f, pintu %d bagian, pantulan %d bagian" % [
-		WATER_RADIUS, Field.POND_LEVEL, parts, mirror]
+	return ("danau r=%.0f m di y=%.2f (dalam %.2f m), batu tengah %.1f m di "
+		+ "atas air, pintu %d bagian, pantulan %d bagian, pijakan air %s") % [
+		WATER_RADIUS, Field.POND_LEVEL,
+		Field.POND_LEVEL - Field.terrain_height(0.0, 0.0), PLATFORM_TOP,
+		parts, mirror, "ada" if water_body != null else "tidak ada"]
