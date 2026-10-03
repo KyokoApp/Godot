@@ -1418,7 +1418,7 @@ bener pendek"*, *"pintunya harus ada di tengah dan di ATAS air danau"*, dan
   pemain terkunci di `POND_LEVEL` saat di daratan. Loop collider keliru memakai
   `is_inside()` (cek pulau), sehingga vertex daratan pada chunk sekitar danau
   ikut diratakan ke 4,3 m. Kini hanya `is_water()` yang menaikkan vertex di
-  dalam `POND_RADIUS`. Pemeriksaan lokal lulus; tes runtime menunggu CI setelah
-  push.
+  dalam `POND_RADIUS`. Pemeriksaan lokal lulus; run `37124361906` hijau 7/7 (gate,
+  render-a/b/c, package).
 
 Belum diuji di HP — sandbox tidak bisa menjalankan Godot.

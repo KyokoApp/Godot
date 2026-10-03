@@ -9,9 +9,10 @@
     daratan pada chunk yang menyentuh danau ikut diratakan ke 4,3 m.
   - **Perbaikan**: kondisi diganti ke `is_water()`; hanya vertex di radius
     danau yang dinaikkan. Mesh visual tetap tidak berubah.
-  - `gdlint project tools`, `python3 tools/check_scripts.py .`, dan `git diff
-    --check` lulus. Godot tidak tersedia di sandbox; tes runtime menunggu CI
-    setelah push.
+  - Pemeriksaan lokal `gdlint project tools`, `python3 tools/check_scripts.py .`,
+    dan `git diff --check` lulus.
+  - Run `37124361906` hijau 7/7; `test_movement.gd` kini lulus (pemain
+    berakhir di y 5,4088 m di daratan). Render-b dan package juga lulus.
 
 - 2026-10-03 (cicilan 19, perbaikan) — **PIJAKAN AIR PINDAH KE COLLIDER TERRAIN**
   - Run `37111265298` (`789ea44`) bukan 7/7: gate, render-a, render-c hijau, tapi
