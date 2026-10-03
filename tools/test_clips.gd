@@ -54,6 +54,12 @@ func _run() -> void:
 	for clip: String in Catalog.names():
 		var entry: Dictionary = Catalog.find(clip)
 		var source: String = entry["source"]
+		if source == Catalog.DASH:
+			# Nama animasi di dalam berkas Mixamo TIDAK penting: mannequin
+			# menggantinya jadi "dash/Dash" saat menggabung pustaka (importer
+			# Godot bahkan mengubah "mixamo.com" menjadi "mixamo_com"). Yang
+			# dijaga di sini cuma: berkasnya benar-benar memuat animasi.
+			continue
 		var runtime: String = Catalog.play_name(clip)
 		var slash := runtime.find("/")
 		if slash >= 0:
