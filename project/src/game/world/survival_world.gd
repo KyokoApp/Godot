@@ -11,7 +11,7 @@ const FIRST_WAVE := 3
 const SPAWN_INTERVAL := 3.2
 const SPAWN_NEAR := 13.0
 const SPAWN_FAR := 20.0
-const MELEE_RANGE := 2.35
+const MAGIC_LOCK_RANGE := 32.0
 
 var player: CharacterBody3D
 var ground: SurvivalField
@@ -49,45 +49,22 @@ func _process(delta: float) -> void:
 		_publish_status()
 
 
-func resolve_player_attack(clip: String) -> void:
-	# Jeda kecil menempatkan hit di awal ayunan, bukan tepat saat tombol disentuh.
-	var delay := 0.27 if clip != "Sword_Regular_C" else 0.34
-	get_tree().create_timer(delay).timeout.connect(_resolve_melee_hit.bind(clip))
-
-
-func _resolve_melee_hit(clip: String) -> void:
-	if player == null or not is_instance_valid(player) or player.get("health") <= 0:
-		return
-	var visual := player.get("visual") as Node3D
-	if visual == null:
-		return
-	var facing := -visual.global_transform.basis.z
-	facing.y = 0.0
-	if facing.length_squared() < 0.001:
-		return
-	facing = facing.normalized()
+func acquire_magic_target(from_position: Vector3) -> Zombie:
 	var nearest: Zombie
-	var nearest_distance := MELEE_RANGE
+	var nearest_distance_squared := MAGIC_LOCK_RANGE * MAGIC_LOCK_RANGE
 	for zombie in zombies:
-		if not is_instance_valid(zombie) or zombie.dead:
+		if not is_instance_valid(zombie) or not zombie.can_be_targeted():
 			continue
-		var to_zombie := Vector3(
-			zombie.global_position.x - player.global_position.x,
-			0.0,
-			zombie.global_position.z - player.global_position.z)
-		var distance := to_zombie.length()
-		if distance > 0.01 and distance <= nearest_distance \
-				and facing.dot(to_zombie / distance) >= -0.12:
+		var distance_squared := from_position.distance_squared_to(zombie.global_position)
+		if distance_squared <= nearest_distance_squared:
 			nearest = zombie
-			nearest_distance = distance
-	if nearest == null:
-		return
-	var damage := 40 if clip == "Sword_Regular_C" else 32
-	var was_alive := not nearest.dead
-	nearest.take_damage(damage)
-	if was_alive and nearest.dead:
-		defeated += 1
-		_publish_status()
+			nearest_distance_squared = distance_squared
+	return nearest
+
+
+func _on_zombie_died() -> void:
+	defeated += 1
+	_publish_status()
 
 
 func _spawn_zombie() -> void:
@@ -102,6 +79,7 @@ func _spawn_zombie() -> void:
 	var zombie := Zombie.new()
 	zombie.player = player
 	zombie.field = ground
+	zombie.died.connect(_on_zombie_died)
 	add_child(zombie)
 	zombie.global_position = point
 	zombies.append(zombie)

@@ -325,7 +325,7 @@ func _build_hud() -> void:
 	_attack.pressed.connect(_attack_action)
 	_fire_button = _rune("TEMBAK", FIRE_DIAMETER, FIRE_ICON)
 	_fire_button.name = "FireRune"
-	_fire_button.tooltip_text = "Tembakan api pet"
+	_fire_button.tooltip_text = "Tembakan sihir pet; auto-lock zombie di Survival"
 	layer.add_child(_fire_button)
 	_place(_fire_button, Control.PRESET_BOTTOM_RIGHT, -360, -180)
 	_register_hud_control("Tembak", _fire_button, FIRE_DIAMETER, -360, -180)
@@ -739,8 +739,7 @@ func _enter_survival() -> void:
 	_player.dashing = false
 	_player.spawn(Vector2.ZERO)
 	_player.reset_health()
-	_player.set_sword_mode(true)
-	_player.attack_started.connect(_on_player_attack_started)
+	_player.set_sword_mode(false)
 	_survival_world.status_changed.connect(_update_survival_status)
 	_footsteps.field = _survival_world.ground
 	_foot_fire.field = _survival_world.ground
@@ -748,12 +747,8 @@ func _enter_survival() -> void:
 	_survival_panel.show()
 	_update_survival_status(0.0, _survival_world.zombies.size(), 0)
 	_on_health_changed(_player.health)
-	print("[main] mode Survival siap; tanah tak berbatas + zombie UAL aktif")
-
-
-func _on_player_attack_started(clip: String) -> void:
-	if _survival_world != null and is_instance_valid(_survival_world):
-		_survival_world.resolve_player_attack(clip)
+	_apply_input_state()
+	print("[main] mode Survival siap; tanah tak berbatas + sihir auto-lock zombie aktif")
 
 
 func _update_survival_status(elapsed: float, living: int, defeated: int) -> void:
@@ -776,11 +771,17 @@ func _on_health_changed(value: int) -> void:
 # --------------------------------------------------------------- aksi HUD --
 
 func _attack_action() -> void:
+	# Survival sengaja tidak punya serangan melee; tombolnya disembunyikan di mode ini.
+	if _active_mode == "survival":
+		return
 	_player.attack()
 
 
 func _fire_action() -> void:
-	_pet.attack()
+	var target: Node3D
+	if _active_mode == "survival" and is_instance_valid(_survival_world):
+		target = _survival_world.acquire_magic_target(_player.global_position)
+	_pet.attack(target)
 
 
 func _toggle_speed() -> void:
@@ -831,9 +832,12 @@ func _apply_input_state() -> void:
 	_orbit.input_enabled = not overlay
 	_settings.visible = not selector_open
 	_layout_button.visible = not selector_open
+	_attack.visible = not hide_actions and _active_mode != "survival"
+	_fire_button.visible = not hide_actions
 	for control: Control in [_attack, _fire_button, _jump, _crouch, _speed_button, _dash]:
-		control.visible = not hide_actions
 		control.set("disabled", layout_open)
+	for control: Control in [_jump, _crouch, _speed_button, _dash]:
+		control.visible = not hide_actions
 	_catalog_button.visible = not _graphics_drawer.visible and not layout_open and not selector_open
 	_banner.visible = not overlay
 

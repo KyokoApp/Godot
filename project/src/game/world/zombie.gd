@@ -1,5 +1,7 @@
 extends CharacterBody3D
-## Zombie mannequin UAL: mengejar pemain, mencakar dari dekat, lalu tumbang kena pedang.
+## Zombie mannequin UAL: mengejar pemain, mencakar dari dekat, lalu tumbang kena sihir.
+
+signal died
 
 const Character = preload("res://src/game/mannequin.gd")
 const Catalog = preload("res://src/game/animation/catalog.gd")
@@ -101,6 +103,10 @@ func _physics_process(delta: float) -> void:
 	visual.set_locomotion("Zombie_Walk_Fwd_Loop", WALK_SPEED / natural_speed)
 
 
+func can_be_targeted() -> bool:
+	return not dead and health > 0 and is_inside_tree()
+
+
 func take_damage(amount: int) -> void:
 	if dead or amount <= 0:
 		return
@@ -114,6 +120,7 @@ func take_damage(amount: int) -> void:
 	collision_mask = 0
 	_death_left = DEATH_LIFETIME
 	visual.play_action("Death01")
+	died.emit()
 
 
 func _update_ground_height() -> void:

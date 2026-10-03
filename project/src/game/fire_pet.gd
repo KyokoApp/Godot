@@ -1,5 +1,5 @@
 extends Node3D
-## Pet adalah node dunia terpisah dari rig. Attack diarahkan ke titik bidik kamera.
+## Pet terpisah dari rig; tembakan yang sama bisa dikunci ke target Survival.
 
 signal cast_started
 
@@ -8,6 +8,7 @@ const Spirit = preload("res://src/game/legacy_spirit/spirit_visual.gd")
 const Projectile = preload("res://src/game/fire_projectile.gd")
 const Burst = preload("res://src/game/fire_burst.gd")
 const COOLDOWN := 0.85
+const MAGIC_DAMAGE := 48
 const MAX_PROJECTILES := 3
 const MAX_BURSTS := 2
 
@@ -19,6 +20,7 @@ var casting := false
 var projectiles: Array[CharacterBody3D] = []
 var bursts: Array[Node3D] = []
 var _windup := 0.0
+var _locked_target: Node3D
 var _body: Spirit
 var _previous_player := Vector3.ZERO
 var _time := 0.0
@@ -66,10 +68,11 @@ func _physics_process(delta: float) -> void:
 			_release_shot()
 
 
-func attack() -> bool:
+func attack(lock_target: Node3D = null) -> bool:
 	_prune()
 	if casting or cooldown > 0.0 or projectiles.size() >= MAX_PROJECTILES or camera == null:
 		return false
+	_locked_target = lock_target if is_instance_valid(lock_target) else null
 	cooldown = COOLDOWN
 	casting = true
 	_windup = CastLayer.RELEASE_TIME
@@ -79,24 +82,38 @@ func attack() -> bool:
 
 func _release_shot() -> void:
 	if not is_instance_valid(camera):
+		_locked_target = null
 		return
 	_body.pulse()
-	var screen := camera.get_viewport().get_visible_rect().size * Vector2(0.5, 0.42)
-	var start := camera.project_ray_origin(screen)
-	var direction := camera.project_ray_normal(screen)
-	var aim := start + direction * 35.0
-	var query := PhysicsRayQueryParameters3D.create(start, aim, 1)
-	var hit := get_world_3d().direct_space_state.intersect_ray(query)
-	if not hit.is_empty():
-		aim = hit["position"]
+	var lock_target := _locked_target
+	_locked_target = null
+	var has_target := is_instance_valid(lock_target)
+	if has_target and lock_target.has_method("can_be_targeted"):
+		has_target = bool(lock_target.call("can_be_targeted"))
+	var aim: Vector3
+	if has_target:
+		aim = lock_target.global_position + Projectile.HOMING_AIM_OFFSET
+	else:
+		var screen := camera.get_viewport().get_visible_rect().size * Vector2(0.5, 0.42)
+		var start := camera.project_ray_origin(screen)
+		var direction := camera.project_ray_normal(screen)
+		aim = start + direction * 35.0
+		var query := PhysicsRayQueryParameters3D.create(start, aim, 1)
+		var hit := get_world_3d().direct_space_state.intersect_ray(query)
+		if not hit.is_empty():
+			aim = hit["position"]
 	var shot := Projectile.new()
 	shot.position = global_position
+	shot.homing_target = lock_target if has_target else null
 	# Parent game berada pada origin dunia; set global sesudah add agar tetap aman.
 	get_parent().add_child(shot)
 	shot.global_position = global_position
-	var duration := clampf(global_position.distance_to(aim) / 18.0, 0.25, 1.5)
-	shot.velocity = (aim - shot.global_position) / duration - Projectile.GRAVITY * duration * 0.5
-	shot.impacted.connect(_on_impact)
+	if has_target:
+		shot.velocity = (aim - shot.global_position).normalized() * Projectile.HOMING_SPEED
+	else:
+		var duration := clampf(global_position.distance_to(aim) / 18.0, 0.25, 1.5)
+		shot.velocity = (aim - shot.global_position) / duration - Projectile.GRAVITY * duration * 0.5
+	shot.impacted.connect(_on_impact.bind(shot))
 	projectiles.append(shot)
 	var audio := get_tree().get_first_node_in_group("world_audio")
 	if audio != null:
@@ -104,7 +121,12 @@ func _release_shot() -> void:
 		audio.follow_fire(shot, true)
 
 
-func _on_impact(point: Vector3, normal: Vector3) -> void:
+func _on_impact(point: Vector3, normal: Vector3,
+		projectile: CharacterBody3D = null) -> void:
+	if projectile != null:
+		var collider := projectile.get("impact_collider") as Node
+		if collider != null and collider.has_method("take_damage"):
+			collider.call("take_damage", MAGIC_DAMAGE)
 	_prune()
 	if bursts.size() >= MAX_BURSTS:
 		bursts.pop_front().queue_free()

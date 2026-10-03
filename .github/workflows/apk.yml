@@ -239,7 +239,7 @@ jobs:
           fi
           grep -F '[npc-test] HASIL: OK' npc-test.log
 
-      - name: Tes mode Survival, pedang, dan zombie (headless)
+      - name: Tes mode Survival, sihir auto-lock, dan zombie (headless)
         run: |
           set +e
           timeout 300 ./godot --headless --path project \
