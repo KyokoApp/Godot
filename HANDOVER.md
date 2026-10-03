@@ -29,6 +29,26 @@
     → "AKTIF, dikirim di APK/PCK".
   - Katalog kembali ke 85 klip; `test_clips`/`test_mannequin`/`test_hud`/panel
     animasi dikembalikan ke 85 dan dash diperiksa lewat gait (Sprint_Loop).
+  - **DUNIA 100 m — LEMPENGAN YANG HARUS IKUT DISETEL** (bukan cuma panjang):
+    dataran 1,8 m ternyata lebih RENDAH dari pita pasir shader (2,6 m) → seluruh
+    pulau berbunyi tanah (audio-test gagal). Jadi `PLATEAU` 3,0 m +
+    `BEACH_RUN` 12 m (kemiringan 0,25 < MAX_SLOPE 0,30). Lekukan pantai 2/1 → 3/1,5
+    supaya `distinct` di test_island tetap > 90% (ambang 1 m dulu = 12% dari
+    rentang radius pulau 100 m → jadi 2,5% dari rentang).
+  - **`field.gd` `_build_everything()`**: semua chunk tanah dibangun sekali di
+    `_ready()`. Kalau tidak, tile rumput dibangun SEBELUM chunk-nya ada (memakai
+    fungsi analitik) lalu tingginya bergeser beberapa sentimeter saat chunk
+    muncul → "Akar rumput mengambang" + "Transform GPU berbeda". Hasil: selisih
+    grid vs analitik turun 0,0218 → 0,0027 m.
+  - **PEMANDANGAN 100 m**: pulau batu (x=-49/-53, tinggi 16/15 m — kalau tingginya
+    ikut dikecilkan 10x puncaknya tenggelam), cincin bukit digeser ke 62-95 m dan
+    100-155 m supaya tidak menelan pulau batu, dan jarak minimum pulau batu dari
+    pantai jadi proporsional (`Field.SIZE * 0,05`).
+  - **PELAJARAN GDScript**: `sqrtf()` TIDAK ada di Godot 4 → `var x := sqrtf(...)`
+    gagal parse ("Cannot infer the type") dan SEMUA scene yang membangun dunia
+    ikut mati. Untuk sebaran acak di dalam pulau pakai kotak + penolakan
+    (`is_inside`), tidak perlu akar kuadrat. Juga: `set` adalah kata kunci
+    (setter properti) — jangan dipakai jadi nama variabel.
 
 - 2026-10-03 (cicilan 16) — **DASH DARI MIXAMO (dash.fbx) + OCCLUSION CULLING**
   (permintaan: "kata ai pake ini game jadi ringan" — frustum/visibility range/auto
