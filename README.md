@@ -1414,5 +1414,11 @@ bener pendek"*, *"pintunya harus ada di tengah dan di ATAS air danau"*, dan
 - Gerbang: `test_scenery.gd` (`_test_pond()` menuntut dalam < 0,7 m, pintu di
   atas air, seluruh bidang air ada di dalam kolam; `_test_ripple()` baru),
   `test_audio.gd` (titik tengah danau = "water", puncak batu = "stone").
+- **Koreksi gate gerak** (`37113303786`): tes pijakan gagal karena kaki
+  pemain terkunci di `POND_LEVEL` saat di daratan. Loop collider keliru memakai
+  `is_inside()` (cek pulau), sehingga vertex daratan pada chunk sekitar danau
+  ikut diratakan ke 4,3 m. Kini hanya `is_water()` yang menaikkan vertex di
+  dalam `POND_RADIUS`. Pemeriksaan lokal lulus; tes runtime menunggu CI setelah
+  push.
 
 Belum diuji di HP — sandbox tidak bisa menjalankan Godot.

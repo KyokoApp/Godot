@@ -1,5 +1,18 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-03 (cicilan 19, koreksi gate) — **COLLIDER AIR HANYA DI DALAM DANAU**
+  - Run `37113303786` gagal di `tools/test_movement.gd:99`: kaki pemain berada
+    tepat di `POND_LEVEL` (4,3 m) padahal berjalan di daratan sekitar
+    (-23,6, 13,8); tinggi visual tanah di sana sekitar 4,50 m.
+  - **Penyebab**: loop collider di `field.gd _build_chunk()` keliru memakai
+    `is_inside()` (cek seluruh pulau), bukan `is_water()`. Akibatnya vertex
+    daratan pada chunk yang menyentuh danau ikut diratakan ke 4,3 m.
+  - **Perbaikan**: kondisi diganti ke `is_water()`; hanya vertex di radius
+    danau yang dinaikkan. Mesh visual tetap tidak berubah.
+  - `gdlint project tools`, `python3 tools/check_scripts.py .`, dan `git diff
+    --check` lulus. Godot tidak tersedia di sandbox; tes runtime menunggu CI
+    setelah push.
+
 - 2026-10-03 (cicilan 19, perbaikan) — **PIJAKAN AIR PINDAH KE COLLIDER TERRAIN**
   - Run `37111265298` (`789ea44`) bukan 7/7: gate, render-a, render-c hijau, tapi
     render-b (tes HUD 640×360) merah di TIGA assertion `tools/test_hud.gd`

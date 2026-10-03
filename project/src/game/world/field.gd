@@ -460,7 +460,7 @@ func _build_chunk(key: Vector2i) -> void:
 		var wet := false
 		for iz in range(SIDE):
 			for ix in range(SIDE):
-				if is_inside(origin.x + float(ix) * CELL, origin.y + float(iz) * CELL):
+				if is_water(origin.x + float(ix) * CELL, origin.y + float(iz) * CELL):
 					raised[iz * SIDE + ix] = POND_LEVEL
 					wet = true
 		if wet:
