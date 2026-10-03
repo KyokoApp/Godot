@@ -57,7 +57,9 @@ been cleared for public redistribution, commercial use, or app-store release.
 - **Lisensi:** CC0 1.0 Universal; berkas lisensi ikut paket asli.
   https://creativecommons.org/publicdomain/zero/1.0/
 - **Model yang dibundel:** `project/assets/weapons/Sword.glb`, mesh GLB
-  16.936 byte, grip di pangkal dan bilah sepanjang sumbu +Y.
+  42.368 byte, grip di pangkal dan bilah sepanjang sumbu +Y. Geometri sumber
+  sama; kompresi `EXT_meshopt_compression` dan kuantisasi dibuka losslessly agar
+  importer Godot dapat membacanya.
 - **Provenance:** konversi GLB CC0 yang dibagikan di
   `Vizboom/tome-of-heroes`, `models/weapons/Sword.glb`, commit
   `afd3af369b648d520e2a7d0a5e1bc05f9eaddf3b` (asal: paket Medieval Weapons
