@@ -23,6 +23,16 @@
     Jadi dash-nya akan diam dalam satu pose sampai pengguna mengunggah ANIMASI
     dash sungguhan (Mixamo → tab Animations → cari "dash" → Download, Without
     Skin, 30 fps). Nama klip tidak berubah, jadi tidak perlu ubah kode.
+  - **PELAJARAN IMPOR FBX**: importer Godot TIDAK menjaga nama asli — nama stack
+    "mixamo.com" jadi **"mixamo_com"** (titik → garis bawah) di AnimationPlayer, dan
+    nama tulang `mixamorig:Hips` juga bisa berubah bentuk. Karena itu:
+    (a) kode TIDAK bergantung pada nama stack — `mannequin._merge_dash_library()`
+    memberi nama sendiri "dash/Dash";
+    (b) pencocokan tulang dicoba dua kali: persis, lalu bentuk ternormalkan
+    (huruf kecil, buang "mixamorig" dan semua pemisah);
+    (c) `test_clips.gd` tidak membandingkan nama untuk sumber "dash", cuma
+    memastikan berkasnya memuat animasi.
+    Push pertama gagal 2x karena dua hal ini — jangan ulangi.
 
 - 2026-10-03 (cicilan 15) — **DUNIA 500 × 500 m + TRANSISI ANIMASI TANPA JEDA**
   (permintaan: "ukuran map ubah jadi 500m x 500m ajh" + "perbaikin setiap animasi
