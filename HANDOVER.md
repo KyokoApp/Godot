@@ -1,5 +1,41 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-03 (cicilan 18, lanjutan) — **KOLAM RAMP LINEAR + CI HIJAU 7/7**
+  - **Bentuk kolam final**: dasar datar sampai r = 16 m (ketinggian 3,4 m),
+    lalu dinding NAIK LURUS sampai r = 36 m (dataran 5,0 m). Garis air melintasi
+    POND_LEVEL tepat di r = 27,3 m, jadi bidang air 27 m (kolam 54 m lebar) dan
+    dalamnya 0,9 m (CETek, dasarnya terlihat).
+  - **PELAJARAN 1 — ramp smoothstep terlalu lekuk untuk grid chunk 4 m**:
+    selisih tinggi grid vs fungsi analitik 0,17 m, sedangkan gerbang
+    test_island minta < 0,05 m. Dengan ramp LINEAR selisihnya 0,027 m. (Ramuan
+    smoothstep hanya bagus untuk nilai, bukan untuk medan yang harus dicari
+    ulang oleh grid.)
+  - **PELAJARAN 2 — bukit JANGAN dipakai untuk membentuk kolam**: kalau
+    perbukitan masih hidup di dalam cekungan, tanahnya naik-turun sampai DI ATAS
+    permukaan air (4,3 m) dan garis airnya jadi berlekuk-lekuk, bukan lingkaran.
+    Sekarang perbukitan MATI TOTAL sampai BASIN_OUTER (36 m) dan baru hidup
+    sesudahnya (smoothstep 36 → 65 m).
+  - Karena garis airnya bulat bersih, `can_grow()` kembali memakai RADIUS
+    (`POND_RADIUS 27 m + GRASS_BASIN_MARGIN 1,5 m`) alih-alih ketinggian tanah.
+  - **Angka dunia 300 m yang terverifikasi**: radius pulau 80-114,5 m
+    (berubah 30% antar arah), tepi dunia -4,51 m, 70% daratan bisa ditanami
+    rumput, selisih grid vs analitik 0,027 m.
+  - **PELAJARAN 3 — gdlint TIDAK menangkap tiga kelas error yang mematikan
+    skrip** (semuanya baru kelihatan di CI):
+    * `var x := entry.y` ketika `entry` dari Array tak bertipe (Variant) →
+      Parse Error "Cannot infer the type". Loop harus bertipe
+      (`for entry: Vector4 in FLOATERS`) dan tiap variabel bertipe eksplisit.
+    * `var m := part.duplicate()` → sama, `duplicate()` mengembalikan Variant.
+    * identifier yang belum dideklarasikan (`point` di can_grow) → Parse Error
+      "Identifier not declared in the current scope". Godot 4.5 JUGAM menghapus
+      bawaan `DEPTH_TEXTURE` (harus `uniform sampler2D DEPTH_TEXTURE :
+      hint_depth_texture, filter_linear_mipmap;`) → shader gagal kompilasi, dan
+      karena pond.gd mem-preload shader yang sama, `Pond.new()` ikut mati.
+  - Gerbang yang ikut menyesuaikan dunia 300 m: `test_island.gd` (SIZE 300),
+    `test_grass.gd` (`_test_lod_subset` memakai tile pemain (2, -3) → tile
+    (0,0) sekarang kolam), `test_scenery.gd` (`_test_pond()` baru).
+  - **CI 7/7 hijau** pada `b5bc722` (run 37099878959).
+
 - 2026-10-03 (cicilan 18) — **DUNIA 300 m + KOLAM BERPINTU + PULAU TERBANG +
   AIR GELOMBANG (Simple Water) + JEJAK/BLOOM DASH**
   - **Bukit tajam DIHAPUS** (`scenery.gd`: `_build_hills`, `_add_ridge`,

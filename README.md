@@ -1332,13 +1332,17 @@ Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
   tembus pandang, `METALLIC`/`ROUGHNESS` untuk pantulan langit+bulan, dan kilau
   bulan mengikuti riak. Laut ikut diperhalus: sel 24 → 128 (33 ribu segitiga).
 - **Kolam besar di tengah dengan pintu + air CETek** (`world/pond.gd`, baru):
-  mangkuk ber-dasar datar (`BASIN_INNER` 18 m → `BASIN_OUTER` 30 m), dasar
-  3,4 m, permukaan air 4,3 m → **dalam 0,9 m** (dasar kolam terlihat).
-  Bidang air bundar 21 m (garis air sebenarnya ada di mana tanah melintasi
-  `POND_LEVEL`, ≈ 21 m). Di tengah berdiri **pintu ala Suzume no Tojimari**
-  (bingkai, ambang, dua daun sedikit terbuka, celah cahaya emissif yang mekar)
-  plus **pantulan tiruan** di bawah air — salinan terbalik yang dimampatkan,
-  karena renderer Mobile tidak punya SSR.
+  mangkuk ber-dasar datar — dasar rata sampai 16 m dari pusat (tinggi 3,4 m),
+  lalu dinding naik LURUS sampai 36 m tempat dataran (5 m) mengambil alih.
+  Permukaan air 4,3 m → **dalam 0,9 m** (dasar kolam terlihat), garis air tepat
+  di r = 27,3 m sehingga bidang airnya 27 m (kolam 54 m lebar). Di tengah
+  berdiri **pintu ala Suzume no Tojimari** (bingkai, ambang, dua daun sedikit
+  terbuka, celah cahaya emissif yang mekar) plus **pantulan tiruan** di bawah
+  air — salinan terbalik yang dimampatkan, karena renderer Mobile tidak punya
+  SSR. Ramp-nya sengaja LINEAR (bukan smoothstep): lekukan smoothstep membuat
+  grid tanah 4 m tidak bisa mengikutinya (selisih 0,17 m → 0,027 m dengan
+  linear), dan perbukitan dimatikan total di dalam kolam supaya garis airnya
+  bulat bersih, bukan berlekuk-lekuk.
 - **Efek dash = JEJAK + BLOOM, bukan afterimage.** Permintaan: *"kalo pas lari
   nari bakal ada efek ny di character seperti blur/glow ... bkan hanya setelah
   gambar doank"* dan *"jangan polos polos banget"*. Bekas pose beku
