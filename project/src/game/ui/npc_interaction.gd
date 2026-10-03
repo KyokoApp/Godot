@@ -19,6 +19,13 @@ var _modal_open := false
 var _saved_visibility: Dictionary = {}
 var _saved_joystick_input := true
 var _saved_orbit_input := true
+var _saved_orbit_yaw := 0.0
+var _saved_orbit_pitch := 0.0
+var _saved_orbit_distance := 0.0
+var _saved_orbit_focus := Vector3.ZERO
+var _camera_tween: Tween
+var _dialogue_close_done := false
+var _camera_restore_done := true
 
 
 func _ready() -> void:
@@ -82,6 +89,7 @@ func _build_prompt() -> void:
 func _build_dialogue() -> void:
 	_dialogue = Dialogue.new()
 	_dialogue.name = "NPCDialogue"
+	_dialogue.closing.connect(_on_dialogue_closing)
 	_dialogue.closed.connect(_on_dialogue_closed)
 	canvas_layer.add_child(_dialogue)
 
@@ -128,16 +136,91 @@ func _begin_interaction() -> void:
 		_saved_orbit_input = bool(orbit.get("input_enabled"))
 		orbit.set("input_enabled", false)
 		orbit.call("reset_touches")
+	_dialogue_close_done = false
+	_camera_restore_done = orbit == null
 	player.velocity = Vector3.ZERO
 	player.set("move_speed", 0.0)
 	_face_pair()
+	_focus_conversation_camera()
 	npc.call("start_conversation", player.global_position)
 	var character_name := str(npc.get("display_name"))
 	_dialogue.call("open_dialogue", character_name)
 
 
+func _focus_conversation_camera() -> void:
+	if orbit == null or player == null or npc == null:
+		_camera_restore_done = true
+		return
+	_saved_orbit_yaw = float(orbit.get("yaw"))
+	_saved_orbit_pitch = float(orbit.get("pitch"))
+	_saved_orbit_distance = float(orbit.get("distance"))
+	_saved_orbit_focus = orbit.get("focus_offset")
+	_camera_restore_done = false
+
+	# Arah NPC dijadikan sisi kanan kamera agar Mira masuk ke area kanan,
+	# tanpa SubViewport atau panggung putih yang menutupi dunia aktif.
+	var toward_npc := Vector2(
+		npc.global_position.x - player.global_position.x,
+		npc.global_position.z - player.global_position.z
+	)
+	var separation := toward_npc.length()
+	if separation < 0.01:
+		toward_npc = Vector2(0.0, -1.0)
+	else:
+		toward_npc /= separation
+	# Sedikit dari sisi pemain memberi wajah Mira sudut tiga perempat, bukan profil penuh.
+	var desired_yaw := atan2(-toward_npc.y, toward_npc.x) + 0.14
+	var current_yaw := float(orbit.get("yaw"))
+	var target_yaw := current_yaw + wrapf(desired_yaw - current_yaw, -PI, PI)
+	var viewport_size := get_viewport().get_visible_rect().size
+	var landscape := viewport_size.x >= viewport_size.y
+	var target_distance := 2.7 if landscape else 5.0
+	var aspect := viewport_size.x / maxf(viewport_size.y, 1.0)
+	var half_horizontal_fov := atan(tan(deg_to_rad(65.0) * 0.5) * aspect)
+	var frame_width := 2.0 * target_distance * tan(half_horizontal_fov)
+	# Komposisi kamera memusatkan NPC kira-kira di 3/4 layar. Jika jarak
+	# percakapan lebar, fokus bergeser ke tengah pasangan agar Mira tidak terpotong.
+	var focus_ratio := clampf(1.0 - frame_width * 0.24 / maxf(separation, 0.01), 0.0, 0.45)
+	var focus_point := player.global_position.lerp(npc.global_position, focus_ratio)
+	focus_point.y += 0.35
+	var focus_offset := focus_point - player.global_position
+	var tween := _new_camera_tween(Tween.EASE_OUT)
+	tween.tween_property(orbit, "yaw", target_yaw, 0.56)
+	tween.tween_property(orbit, "pitch", 0.16, 0.56)
+	tween.tween_property(orbit, "distance", target_distance, 0.56)
+	tween.tween_property(orbit, "focus_offset", focus_offset, 0.56)
+
+
+func _on_dialogue_closing() -> void:
+	if not _modal_open:
+		return
+	_dialogue_close_done = false
+	if orbit == null or not is_instance_valid(orbit):
+		_camera_restore_done = true
+		return
+	_camera_restore_done = false
+	var tween := _new_camera_tween(Tween.EASE_IN_OUT)
+	tween.tween_property(orbit, "yaw", _saved_orbit_yaw, 0.48)
+	tween.tween_property(orbit, "pitch", _saved_orbit_pitch, 0.48)
+	tween.tween_property(orbit, "distance", _saved_orbit_distance, 0.48)
+	tween.tween_property(orbit, "focus_offset", _saved_orbit_focus, 0.48)
+	tween.finished.connect(_on_camera_restored)
+
+
 func _on_dialogue_closed() -> void:
 	if not _modal_open:
+		return
+	_dialogue_close_done = true
+	_finish_close_if_ready()
+
+
+func _on_camera_restored() -> void:
+	_camera_restore_done = true
+	_finish_close_if_ready()
+
+
+func _finish_close_if_ready() -> void:
+	if not _modal_open or not _dialogue_close_done or not _camera_restore_done:
 		return
 	_modal_open = false
 	if is_instance_valid(npc):
@@ -153,6 +236,14 @@ func _on_dialogue_closed() -> void:
 		orbit.set("input_enabled", _saved_orbit_input)
 		orbit.call("reset_touches")
 	_prompt.hide()
+
+
+func _new_camera_tween(ease: int) -> Tween:
+	if _camera_tween != null and _camera_tween.is_running():
+		_camera_tween.kill()
+	_camera_tween = create_tween().set_parallel(true)
+	_camera_tween.set_trans(Tween.TRANS_CUBIC).set_ease(ease)
+	return _camera_tween
 
 
 func _face_pair() -> void:

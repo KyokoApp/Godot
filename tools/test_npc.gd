@@ -91,6 +91,9 @@ func _run() -> void:
 		for _frame in range(2):
 			await process_frame
 		var prompt: Control = interaction.get("_prompt")
+		var original_yaw := float(orbit.get("yaw"))
+		var original_distance := float(orbit.get("distance"))
+		var original_focus: Vector3 = orbit.get("focus_offset")
 		_check(prompt != null and prompt.visible, "Tombol bicara tidak muncul saat dekat NPC")
 		interaction.call("_begin_interaction")
 		var dialogue: Control = interaction.get("_dialogue")
@@ -100,13 +103,32 @@ func _run() -> void:
 		if dialogue != null:
 			var options: Array = dialogue.get("_options")
 			_check(options.size() == 4, "Pilihan gameplay tidak lengkap: %d" % options.size())
-			_check(dialogue.get("_portrait") != null, "Panggung 3D NPC di sisi kanan tidak dibuat")
-			var portrait_character: Node3D = dialogue.get("_portrait_character")
+			var page: Control = dialogue.get("_page")
+			var backdrop: ColorRect = dialogue.get("_backdrop")
 			_check(
-				portrait_character != null and portrait_character.position.x > 0.4,
-				"Karakter tidak bergeser ke samping saat menu dibuka"
+				page != null
+				and is_zero_approx(page.offset_left)
+				and is_zero_approx(page.offset_top)
+				and is_zero_approx(page.offset_right)
+				and is_zero_approx(page.offset_bottom),
+				"Menu tidak memenuhi layar tanpa margin luar"
+			)
+			_check(
+				backdrop != null and backdrop.color.a < 0.5,
+				"Dunia game tertutup oleh lapisan latar opak"
 			)
 			_check(dialogue.get("_sidebar") != null, "Panel menu miring tidak dibuat")
+			_check(
+				float(orbit.get("distance")) < original_distance - 0.2,
+				"Kamera tidak zoom ke karakter saat menu dibuka"
+			)
+			var yaw_change := absf(wrapf(float(orbit.get("yaw")) - original_yaw, -PI, PI))
+			_check(yaw_change > 0.3, "Kamera tidak membingkai karakter di sisi kanan")
+			var conversation_focus: Vector3 = orbit.get("focus_offset")
+			_check(
+				conversation_focus.distance_to(original_focus) > 0.1,
+				"Titik pandang kamera tidak bergeser ke percakapan"
+			)
 			dialogue.call("move_selection", 1)
 			_check(int(dialogue.get("_selected")) == 1, "Navigasi pilihan tidak berpindah")
 			dialogue.call("activate_selected")
@@ -118,10 +140,23 @@ func _run() -> void:
 		_check(not bool(joystick.get("input_enabled")), "Joystick aktif saat dialog terbuka")
 		_check(not bool(orbit.get("input_enabled")), "Kamera aktif saat dialog terbuka")
 		dialogue.call("close_dialogue")
-		await create_timer(0.4).timeout
+		await create_timer(0.8).timeout
 		_check(not bool(interaction.call("is_open")), "Dialog tidak menutup dengan transisi")
 		_check(bool(joystick.get("input_enabled")), "Joystick tidak pulih setelah dialog")
 		_check(bool(orbit.get("input_enabled")), "Kamera tidak pulih setelah dialog")
+		_check(
+			absf(float(orbit.get("distance")) - original_distance) < 0.03,
+			"Jarak kamera tidak pulih setelah dialog"
+		)
+		_check(
+			absf(wrapf(float(orbit.get("yaw")) - original_yaw, -PI, PI)) < 0.03,
+			"Sudut kamera tidak pulih setelah dialog"
+		)
+		var restored_focus: Vector3 = orbit.get("focus_offset")
+		_check(
+			restored_focus.distance_to(original_focus) < 0.03,
+			"Titik pandang kamera tidak pulih setelah dialog"
+		)
 
 	game.queue_free()
 	await process_frame

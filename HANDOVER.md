@@ -1,5 +1,22 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-03 (cicilan 22) — **MENU LAYAR PENUH, DUNIA TERLIHAT, KAMERA FOKUS KE MIRA**
+  - Koreksi pengguna: pertahankan panel kiri yang sudah disukai; hilangkan
+    margin layar dan bidang putih di kanan supaya dunia tetap terlihat; zoom
+    karakter ke area kanan.
+  - `npc_dialogue.gd` sekarang mengisi viewport penuh, menghapus latar kertas
+    serta panggung `SubViewport` kosong, dan memakai dimmer transparan. Panel
+    diagonal kiri/menu vertikal tidak didesain ulang.
+  - `npc_interaction.gd` membingkai Mira dari dunia aktif: kamera menghadap sisi
+    percakapan, meletakkan NPC di kanan, lalu zoom masuk. Saat dialog ditutup,
+    yaw, pitch, jarak, dan titik fokus kamera kembali halus ke nilai sebelumnya.
+  - `tools/test_npc.gd` memeriksa layar tanpa margin, dimmer transparan,
+    pembingkaian/zoom kamera, dan pemulihan state kamera. Opsi belum tersedia
+    tetap menampilkan `COMING SOON`.
+  - `gdlint project tools`, `python3 tools/check_scripts.py .`, dan
+    `git diff --check` lulus. Godot runtime tidak tersedia lokal; validasi
+    headless/render dilakukan melalui workflow CI setelah branch diperbarui.
+
 - 2026-10-03 (cicilan 21) — **ARAH JALAN MIRA + MENU ASIMETRIS DAN KARAKTER GESER**
   - Feedback terbaru: jalan Mira terlihat miring, dan layar interaksi perlu
     mengikuti referensi visual terlampir dengan karakter berpindah ke sisi layar

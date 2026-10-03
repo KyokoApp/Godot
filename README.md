@@ -1462,3 +1462,27 @@ compile, seluruh tes headless (termasuk NPC), tiga render regresi, dan packaging
 Validasi statis lokal: `gdlint project tools`, `python3 tools/check_scripts.py .`, dan
 `git diff --check` lulus. Godot 4.5.2 CI run **37128597905** hijau **7/7**,
 termasuk tes compile, wander/arah NPC, UI interaksi, render regresi, dan packaging.
+
+## Ronde 22 — dunia terlihat di menu interaksi, kamera fokus ke Mira
+
+Koreksi pengguna: layar harus benar-benar penuh, bidang putih di sisi kanan
+harus hilang agar dunia permainan tetap terlihat, dan karakter diperbesar di
+area kanan. Panel/menu kiri yang sebelumnya disetujui dipertahankan.
+
+- **Menu memenuhi viewport tanpa margin.** Latar kertas dan panggung `SubViewport`
+  dihapus. Bidang dunia sekarang tetap terlihat di belakang UI dengan dimmer
+  gelap transparan; panel diagonal kiri dan pilihan vertikal tetap seperti
+  rancangan yang disetujui.
+- **Karakter berasal dari dunia aktif.** Saat interaksi dimulai, kamera berputar
+  ke sisi yang menempatkan Mira di kanan pemain, mendekat, dan menggeser titik
+  fokus ke arah percakapan. Ini juga menghindari panggung kosong yang sebelumnya
+  tampak seperti bidang krem/putih.
+- **Kamera dipulihkan saat menu ditutup.** Yaw, pitch, jarak, dan titik fokus
+  awal disimpan lalu dianimasikan kembali bersamaan dengan transisi keluar.
+- Tes NPC diperluas untuk memeriksa halaman tanpa margin, dimmer yang transparan,
+  kamera zoom/komposisi, dan pemulihan state kamera; pilihan yang belum tersedia
+  tetap menampilkan **COMING SOON**.
+
+`gdlint project tools`, `python3 tools/check_scripts.py .`, dan
+`git diff --check` lulus. Sandbox ini tidak menyediakan Godot runtime; uji
+headless/render dilakukan oleh workflow CI.
