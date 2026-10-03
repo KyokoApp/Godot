@@ -16,11 +16,13 @@
     Mobile Vulkan untuk screenshot selector + dunia Survival. Validasi statis
     terbaru lulus (`gdlint`, `gdparse`, pemeriksaan tipe, katalog animasi, chunk,
     lisensi, YAML workflow, dan `git diff --check`).
-  - CI run `37133688930` lebih dulu menemukan GLB pedang memakai ekstensi meshopt
-    yang tidak terbaca Godot; aset kini diserialisasi ulang tanpa kompresi/kuantisasi
-    (geometri tetap sama). Run `37134254218` lalu menangkap `PlaneShape3D` yang
-    memang tidak ada di Godot; collider kini memakai `WorldBoundaryShape3D`.
-    CI sesudah perbaikan terakhir masih menunggu, jadi render/build belum lolos.
+  - CI run `37133688930` menemukan GLB pedang meshopt yang tak terbaca Godot;
+    aset diserialisasi ulang tanpa kompresi/kuantisasi, geometri tetap sama.
+    Run `37134254218` menangkap kelas `PlaneShape3D` yang tak tersedia; collider
+    kini memakai `WorldBoundaryShape3D`. Render-a/b/c pada run `37134528324`
+    lulus, termasuk screenshot Survival, tetapi gate menemukan variabel
+    `attack_clip` yang belum dideklarasikan di tes mannequin. Deklarasinya sudah
+    ditambahkan; CI/build penuh masih perlu dijalankan ulang.
 
 - 2026-10-03 (cicilan 22) — **MENU LAYAR PENUH, DUNIA TERLIHAT, KAMERA FOKUS KE MIRA**
   - Koreksi pengguna: pertahankan panel kiri yang sudah disukai; hilangkan

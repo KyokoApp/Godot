@@ -229,6 +229,8 @@ func _test_sword(character: Character, skeleton: Skeleton3D) -> void:
 	_check(total > 0.9 and character._is_sword_attacking(),
 		"Urutan satu tebasan + recovery tidak dimulai")
 	_check(layer.tracks.size() > 20, "Animasi pedang tidak punya track upper-body")
+	var attack_clip := character.animation.get_animation(
+		Catalog.play_name("Sword_Regular_A"))
 	for bone: int in layer.tracks.values():
 		var name := skeleton.get_bone_name(bone)
 		_check(not name.contains("thigh") and not name.contains("calf")
