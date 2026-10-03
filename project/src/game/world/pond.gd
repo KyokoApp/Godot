@@ -11,11 +11,11 @@ const Field = preload("res://src/game/world/field.gd")
 const WATER_SHADER = preload("res://src/game/world/water.gdshader")
 const Dusk = preload("res://src/game/environment/dusk_environment.gd")
 
-## Jari-jari bidang air (meter). Garis air sebenarnya ada di mana tanah melintasi
-## POND_LEVEL — sekitar 21 m dari pusat (dasar kolam 3,4 m naik landai sampai
-## dataran 5 m). Bidang air sengaja dibuat 21 m supaya tepinya tidak pernah
-## menjorok ke daratan kering dan terlihat mengambang di atas rumput.
-const WATER_RADIUS := 21.0
+## Jari-jari bidang air (meter) = POND_RADIUS di field.gd. Dengan ramp kolam
+## linear (dasar 3,4 m naik 1,6 m sampai dataran 5 m dalam 20 m), tanah melintasi
+## POND_LEVEL tepat di 27,25 m — jadi bidang air 27 m pas menutupi kolam tanpa
+## menjorok ke daratan kering.
+const WATER_RADIUS := 27.0
 ## Cincin dan juring mesh air: 24 x 64 = 3 ribu segitiga, cukup halus untuk
 ## gelombang yang terlihat di kolam selebar 42 m.
 const RINGS := 24

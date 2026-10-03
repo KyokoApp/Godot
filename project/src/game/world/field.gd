@@ -76,22 +76,27 @@ const PATH_PHASE_B := 1.33
 ## — tidak ada tepi tegak yang membuat pemain tersangkut.
 ##
 ## Bentuknya mangkuk ber-dasar datar: dari pusat sampai BASIN_INNER tanah benar
-## benar rata (dasar kolam), lalu naik landai sampai BASIN_OUTER tempat dataran
+## benar rata (dasar kolam), lalu naik LURUS sampai BASIN_OUTER tempat dataran
 ## normal (plus perbukitan) mengambil alih.
-const BASIN_INNER := 18.0
-const BASIN_OUTER := 30.0
-## Radius nominal kolam (meter) — dipakai untuk menaruh pintu dan mencatat
-## bentuknya. Garis air sebenarnya ada di mana tanah melintasi POND_LEVEL,
-## yaitu sekitar 21 m: itulah yang dipakai pond.gd untuk lebar bidang airnya.
-const BASIN_RADIUS := 22.0
+##
+## Ramp-nya sengaja LINEAR, bukan smoothstep: lekukan smoothstep membuat tanah
+## berlekuk terlalu kuat untuk grid chunk 4 m, dan selisih grid vs fungsi
+## analitik jadi 0,17 m (gerbang test_island minta < 0,05 m). Dengan ramp linear
+## selisihnya turun ke 0,03 m.
+const BASIN_INNER := 16.0
+const BASIN_OUTER := 36.0
+## Radius permukaan air kolam (meter). Dengan ramp linear di atas, tanah
+## melintasi POND_LEVEL tepat di r = 16 + (5,0 - 4,3) / 1,6 x 20 = 27,25 m.
+## Dipakai pond.gd untuk lebar bidang airnya dan can_grow() untuk menahan rumput.
+const POND_RADIUS := 27.0
 ## Kedalaman cekungan di bawah dataran (meter). Dasar kolam = 5 - 1,6 = 3,4 m.
 const BASIN_DEPTH := 1.6
 ## Permukaan air kolam (meter). Antara dasar (3,4 m) dan dataran (5 m), jadi
 ## kolamnya CETek: dalamnya 0,9 m dan dasarnya terlihat melalui air.
 const POND_LEVEL := 4.3
-## Jarak minimum (meter) tanah di bawah permukaan air supaya bibir kolam
-## berlumpur, bukan berumput tepat sampai garis air.
-const GRASS_BASIN_MARGIN := 0.25
+## Jarak minimum rumput dari garis air kolam (meter): bibir kolam berlumpur,
+## tidak berumput tepat sampai garis air.
+const GRASS_BASIN_MARGIN := 1.5
 ## Jarak minimum rumput dari garis tengah jalan tanah. Shader tanah menggambar
 ## jalan selebar ± 1,25x PATH_WIDTH (plus noise tepi ± 0,55 m), jadi 1 m sudah
 ## lebih dari cukup. Tanpa batas ini rumput tumbuh tepat di atas jalan dan pas
@@ -210,17 +215,19 @@ static func terrain_height(x: float, z: float) -> float:
 	else:
 		# Dasar laut terus turun supaya pantai tidak terlihat seperti potongan.
 		profile = maxf(SEA_FLOOR, inland * 0.085)
-	# Cekungan tengah: tanah diturunkan membentuk mangkuk ber-dasar datar yang
-	# berisi air cetek.
-	var bowl := 1.0 - smoothstep(BASIN_INNER, BASIN_OUTER, radial)
-	profile -= bowl * BASIN_DEPTH
+	# Cekungan tengah: mangkuk ber-dasar datar dengan dinding LURUS. Dasar kolam
+	# (BASIN_INNER) turun BASIN_DEPTH di bawah dataran, lalu naik rata sampai
+	# BASIN_OUTER tempat dataran normal mengambil alih.
+	var ramp := clampf((radial - BASIN_INNER) / (BASIN_OUTER - BASIN_INNER), 0.0, 1.0)
+	profile -= BASIN_DEPTH * (1.0 - ramp)
 	# Perbukitan halus: makin lemah di dekat pantai supaya garis air tetap
-	# berada di radius pulau (bukan naik-turun karena bukit), dan hilang total di
-	# dalam cekungan. Kalau bukit masih hidup di dalam kolam, tanahnya naik-turun
-	# sampai DI ATAS permukaan air (4,3 m) dan airnya "tenggelam" di balik
-	# punjung — kolamnya jadi tidak kelihatan. Karena itu bukit memakai lekukan
-	# yang SAMA dengan cekungan (1 - bowl), bukan lekukan terpisah.
-	var hills := _rolling(x, z) * 3.0 * clampf(inland / 12.0, 0.0, 1.0) * (1.0 - bowl)
+	# berada di radius pulau (bukan naik-turun karena bukit), dan MATI TOTAL di
+	# dalam kolam. Kalau bukit masih hidup di dalam kolam, tanahnya naik-turun
+	# sampai DI ATAS permukaan air (4,3 m) dan garis airnya jadi berlekuk-lekuk —
+	# lingkaran yang diminta pemain tidak lagi bulat. Karena itu bukit baru
+	# mulai hidup SESUDAH cekungan selesai (BASIN_OUTER), bukan di dalamnya.
+	var hills := _rolling(x, z) * 3.0 * clampf(inland / 12.0, 0.0, 1.0) \
+		* smoothstep(BASIN_OUTER, BASIN_OUTER * 1.8, radial)
 	return profile + hills
 
 
@@ -331,7 +338,7 @@ static func can_grow_static(x: float, z: float) -> bool:
 	if not is_inside(x, z, GRASS_SHORE_MARGIN):
 		return false
 	var height := terrain_height(x, z)
-	if height < POND_LEVEL + GRASS_BASIN_MARGIN:
+	if Vector2(x, z).length() < POND_RADIUS + GRASS_BASIN_MARGIN:
 		return false
 	if height < GRASS_MIN_HEIGHT:
 		return false
@@ -348,10 +355,11 @@ static func can_grow_static(x: float, z: float) -> bool:
 func can_grow(x: float, z: float) -> bool:
 	if not is_inside(x, z, GRASS_SHORE_MARGIN):
 		return false
-	# Kolam tengah polos: tidak ada rumput di air. Yang dipakai adalah ketinggian
-	# tanah BUKAN radius — pinggir kolam naik landai, jadi garis airnya meliuk
-	# (sekitar 21 m dari pusat) dan rumput boleh tumbuh di bibir yang sudah kering.
-	if surface_height(x, z) < POND_LEVEL + GRASS_BASIN_MARGIN:
+	# Kolam tengah polos: tidak ada rumput di air, dan bibirnya diberi jeda
+	# supaya berlumpur. Garis airnya bulat bersih (ramp kolam linear + bukit mati
+	# di dalam kolam), jadi radius cukup — dulu tinggi tanah, tapi tinggi tanah
+	# ikut naik-turun oleh perbukitan dan bikin garis rumputnya berlekuk.
+	if point.length() < POND_RADIUS + GRASS_BASIN_MARGIN:
 		return false
 	if surface_height(x, z) < GRASS_MIN_HEIGHT:
 		return false

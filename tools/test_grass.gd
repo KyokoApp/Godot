@@ -103,7 +103,7 @@ func _run() -> void:
 			_check(field.can_grow(point.x, point.z), "Penempatan di area terlarang")
 			_check(absf(point.y + 0.03 - ground.surface_height(point.x, point.z)) < 0.01,
 				"Akar rumput mengambang")
-	_test_lod_subset(field)
+	_test_lod_subset(field, Vector2i(2, -3))
 	_check(total > 100, "Tidak ada padang rumput yang cukup untuk dirender")
 	_check(total <= Grass.MAX_CLUMPS, "Budget rumput terlampaui")
 	if "--render" in OS.get_cmdline_user_args():
@@ -132,8 +132,10 @@ func _run() -> void:
 	quit(0 if _failures == 0 else 1)
 
 
-func _test_lod_subset(field: Grass) -> void:
-	var near := field.placements_for(Vector2i(0, 0))
+func _test_lod_subset(field: Grass, tile: Vector2i) -> void:
+	# Tile yang dipakai harus tile PEMAIN (yang berisi rumput). Dulu (0, 0) —
+	# itu sekarang tepat di tengah kolam, jadi tile-nya kosong.
+	var near := field.placements_for(tile)
 	_check(not near.is_empty(), "Tile dekat kosong")
 	# Grid jauh adalah subset grid dekat supaya akar tidak melompat saat LOD turun.
 	var far_count := 0

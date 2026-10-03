@@ -1,10 +1,10 @@
 extends SceneTree
-## Gerbang bentuk pulau 100 m × 100 m (permintaan: "map ubah ukuran jadi
-## 100m x 100m"; pinggirannya
+## Gerbang bentuk pulau 300 m × 300 m (permintaan: "map ubah ukuran jadi
+## 300m x 300m"; pinggirannya
 ## jangan bulat atau kotak tapi kayak pulau gitu bergelombang").
 ##
 ## Yang diuji adalah JANJI ke pemain, bukan sekadar "tidak ada error":
-##   1. dunia benar-benar 100 m × 100 m,
+##   1. dunia benar-benar 300 m × 300 m,
 ##   2. garis pantainya BERUBAH — radius pulau berubah jauh antar arah, jadi
 ##      tidak bulat dan tidak kotak,
 ##   3. ada daratan di tengah dan air di luar: tanah di atas nol di pusat, di
@@ -54,7 +54,7 @@ func _run() -> void:
 
 
 func _test_size() -> void:
-	_check(is_equal_approx(Field.SIZE, 100.0), "Dunia bukan 100 m: %.0f m" % Field.SIZE)
+	_check(is_equal_approx(Field.SIZE, 300.0), "Dunia bukan 300 m: %.0f m" % Field.SIZE)
 	_notes.append("dunia: %.0f x %.0f m, dataran pulau %.2f km²"
 		% [Field.SIZE, Field.SIZE, _land_area()])
 
@@ -87,7 +87,7 @@ func _test_coast_is_wavy() -> void:
 		% [min_radius, max_radius])
 	# Tidak bulat: hampir semua arah harus punya radius yang berbeda.
 	# Toleransi "beda" ikut mengecil bersama pulau. Dulu dunia 1 km dengan radius
-	# 146-190 m, jadi 1 m = 2% dari rentang. Pulau 100 m rentangnya cuma ± 11 m,
+	# 146-190 m, jadi 1 m = 2% dari rentang. Pulau 300 m rentangnya ± 13 m,
 	# jadi toleransinya 2,5% dari rentang itu (0,28 m) — sama ketatnya.
 	var tolerance := (max_radius - min_radius) * 0.025
 	var distinct := 0
@@ -122,7 +122,7 @@ func _test_land_and_sea() -> void:
 			"Di luar pantai masih ada darat pada sudut %.1f" % angle)
 		_check(not Field.is_inside(x, z, 0.0),
 			"Titik di laut dihitung di dalam pulau pada sudut %.1f" % angle)
-	# Tepi dunia (100 m) pasti air: pemain tidak pernah bisa jalan keluar pulau.
+	# Tepi dunia (300 m) pasti air: pemain tidak pernah bisa jalan keluar pulau.
 	_check(Field.terrain_height(Field.HALF - 1.0, 0.0) < 0.0,
 		"Tepi dunia timur masih darat")
 	_check(Field.terrain_height(-Field.HALF + 1.0, 0.0) < 0.0,
@@ -206,11 +206,11 @@ func _test_grass() -> void:
 	var field := Field.new()
 	root.add_child(field)
 	await process_frame
-	# Kolam tengah (radius BASIN_RADIUS) sengaja tidak ditanami rumput, jadi
+	# Kolam tengah (radius POND_RADIUS) sengaja tidak ditanami rumput, jadi
 	# titik uji pindah ke dataran dalam di luar lekukannya.
 	_check(field.can_grow(-14.0, 40.0), "Rumput tidak tumbuh di dataran dalam")
 	_check(not field.can_grow(0.0, 0.0), "Rumput tumbuh di kolam tengah")
-	_check(not field.can_grow(0.0, Field.BASIN_RADIUS - 2.0),
+	_check(not field.can_grow(0.0, Field.POND_RADIUS - 2.0),
 		"Rumput tumbuh di bibir kolam")
 	for step in range(12):
 		var angle := TAU * float(step) / 12.0
