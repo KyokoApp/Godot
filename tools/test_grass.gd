@@ -58,9 +58,14 @@ func _run() -> void:
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-50, 20, 0)
 	world.add_child(sun)
-	# Rumput hanya di daratan pulau: tidak di laut, tidak menembus garis pantai.
-	_check(field.can_grow(0, 0), "Rumput tidak tumbuh di tengah pulau")
-	_check(field.can_grow(-14, 10), "Rumput tidak tumbuh di dataran dalam")
+	# Rumput hanya di daratan pulau: tidak di laut, tidak menembus garis pantai,
+	# dan tidak di kolam tengah (ronde 18: kolam itu sengaja dibiarkan polos).
+	# Titik uji pindah dari (0,0)/(-14,10) — keduanya kini berada di dalam kolam
+	# radius 22 m — ke dataran dalam di luar lekukan kolam.
+	_check(field.can_grow(-14, 40), "Rumput tidak tumbuh di dataran dalam")
+	_check(field.can_grow(30, 30), "Rumput tidak tumbuh di dataran timur")
+	_check(not field.can_grow(0, 0), "Rumput tumbuh di kolam tengah")
+	_check(not field.can_grow(0, 20), "Rumput tumbuh di bibir kolam")
 	for angle in [0.0, 1.1, 2.2, 3.3, 4.4, 5.5]:
 		var coast := Field.island_radius(angle) + 25.0
 		_check(not field.can_grow(cos(angle) * coast, sin(angle) * coast),
@@ -71,8 +76,8 @@ func _run() -> void:
 		sin(shore_angle) * shore_radius),
 		"Rumput tumbuh menempel garis pantai (pasir harus polos)")
 	for _sample in range(40):
-		var x := randf_range(-60, 60)
-		var z := randf_range(-60, 60)
+		var x := randf_range(-Field.HALF, Field.HALF)
+		var z := randf_range(-Field.HALF, Field.HALF)
 		if ground.can_grow(x, z):
 			_check(Field.is_inside(x, z, 0.0), "Penempatan rumput di luar pulau")
 	# 49 tile dibangun satu per frame, jadi butuh 49 frame (bukan 35).

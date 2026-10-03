@@ -1,5 +1,66 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-03 (cicilan 18) — **DUNIA 300 m + KOLAM BERPINTU + PULAU TERBANG +
+  AIR GELOMBANG (Simple Water) + JEJAK/BLOOM DASH**
+  - **Bukit tajam DIHAPUS** (`scenery.gd`: `_build_hills`, `_add_ridge`,
+    `_build_occluders`, `_ridges`, konstanta `HILL_*`/`FAR_*`/`OCCLUDER_ARCS`).
+    Keluhan: *"kayak bantuk gunung tajam sama gelombang"*.
+  - **Pulau terbang** (`_build_floaters`, `_floater_mesh`): 6 bongkahan,
+    150-290 m dari pusat, tinggi 18-44 m, melayang naik-turun (FLOAT_BOB 1,6 m,
+    FLOAT_PERIOD 7 s). Daftar `FLOATERS` = [jarak, sudut, tinggi, skala].
+    `test_scenery.gd` sekarang memeriksa "Floaters" (bukan "Hills").
+  - **`water.gdshader` DITULIS ULANG** dari "Simple Water" (dairycultist,
+    godotshaders.com, CC0). Yang penting:
+    * normal riak dihitung **per piksel** (`wave_slope_at`) — dulu cuma di
+      vertex, dan sel laut 37 m membuat riaknya rata;
+    * laut diperhalus 24 → 128 sel (± 7 m, 33 ribu segitiga);
+    * `ALPHA` memakai `depth_full` (bukan `depth_fade`) supaya kolam 0,9 m tidak
+      langsung buram penuh.
+  - **`world/pond.gd` (BARU)**: cakram kutub 24x64 segmen di `Field.POND_LEVEL`,
+    pintu prosedural (`_door_parts`: frame, step, 2 leaf, glow emissif) +
+    `DoorReflection` (pantulan terbalik DIMPATKAN 0,35x — air cuma 0,9 m dalam,
+    pantulan setinggi aslinya akan terkubur tanah).
+  - **`field.gd` 300 m + kolam**: SIZE 300, ISLAND_MIN/MAX 87/114,
+    COAST_WAVE 9/4,5, SEA_FLOOR -8, PLATEAU 5, BEACH_RUN 30, CHUNK 96
+    (CHUNK_CELLS 24 → sel tetap 4 m), PATH_WIDTH 2,5, PATH_CURVE 14,4,
+    frekuensi 0,035/0,055, GRASS_SHORE_MARGIN 6, GRASS_PATH_MARGIN 3.
+    Kolam: `BASIN_INNER` 18, `BASIN_OUTER` 30, `BASIN_DEPTH` 1,6,
+    `POND_LEVEL` 4,3 (dasar 3,4 → dalam 0,9 m).
+    **PELAJARAN**: bukit JANGAN dipakai untuk membentuk kolam — amplitudo ±3 m
+    mengangkat tanah di dalam kolam sampai DI ATAS air (4,3 m) sehingga airnya
+    "tenggelam". Karena itu bukit memakai lekukan yang SAMA dengan cekungan
+    (`1 - bowl`), dan `can_grow()` menolak area kolam lewat **ketinggian tanah**
+    (`< POND_LEVEL + 0,25`), bukan lewat radius (pinggir kolam naik landai, jadi
+    garis airnya meliuk sekitar 21 m).
+  - **Angka kolam (terverifikasi dengan simulasi python)**: dasar 3,40 m, air
+    4,30 m, dalam 0,90 m, tepi air r = 21 m (0 dari 24 arah berdaratan kering),
+    radius pulau 93-106 m (spread 6 %), 58 % daratan bisa ditanami rumput,
+    lereng pantai maksimum 0,34.
+  - **Efek dash**: `speed/afterimage_trail.gd` + `afterimage.gdshader` DIHAPUS
+    (itu "setelah gambar" yang ditolak). Penggantinya `speed/speed_trail.gd`
+    (pita aditif 22 ruas + `speed/trail.gdshader`): digambar di `_process`
+    (ImmediateMesh = sumber daya gambar, jangan ditulis dari physics), lebar
+    WIDTH 0,46 m di kepala pita, inti hampir putih (`core` 1,6/1,45/2,0 supaya
+    melewati ambang glow 1,15). Ditambah uniform `bloom` baru di
+    `character/skin_shell.gdshader` + `SkinShell.set_bloom()`, digerakkan
+    `main.gd::_update_dash_bloom()` (1,0 saat dash, 0,25 saat boost).
+    `test_speed.gd`: "Jumlah bayangan bukan 3" → "Pita jejak tidak terisi".
+  - **Ikut 300 m**: `player.gd` SHORE_MARGIN 1,4 → 3,0, `orbit_camera.gd`
+    MAX_DISTANCE 62 → 190 & ARM_COLLISION_LIMIT 30 → 90,
+    `dusk_environment.gd` fog 20-140 → 45-420 (kabut harus berakhir JAUH di
+    belakang pulau terbang), `scenery.gd` SEA_SIZE 420 → 900, pulau batu
+    -49/-53 → -147/-159, `forest.gd` kotak sebar ± 45 → ± Field.HALF.
+  - **SPAWN** (0, 7) → (-26, 16) di `main.gd` DAN `forest.gd` (keduanya harus
+    sama); dipakai juga `test_speed.gd`. Titik uji rumput pindah dari
+    (0,0)/(-14,10) (kini di kolam) ke (-14,40)/(30,30); `test_audio.gd` titik
+    rumput (0,10)/(8,10) → (0,40)/(8,40).
+  - `test_scenery.gd` dapat bagian baru `_test_pond()`: kolam cetek (0,15-1,5 m),
+    bidang air BUNDAR (>= 32 titik tepi), tepi air tidak berdaratan kering,
+    pintu lengkap (frame/step/leaf/glow), pantulan tidak keluar dari air.
+    `_outside_island()` sekarang memakai `to_global()` (pulau terbang digambar
+    relatif holder-nya, jadi titik lokalnya dekat nol).
+  - **Belum diuji di HP** — sandbox tidak bisa menjalankan Godot.
+
 - 2026-10-03 (cicilan 17) — **DASH = ANIMASI LARI DIPERLAMBAT + BLOOM + DUNIA
   100 m + DEDAUNAN QUATERNIUS KEMBALI**
   - **FBX dash Mixamo DIHAPUS** (`assets/combat/dash.fbx`). Isinya pose statis

@@ -65,10 +65,11 @@ const SCALE_MIN := 0.62
 const SCALE_MAX := 1.5
 const SCALE_MAX_BOOST := 2.05
 const HYSTERESIS := 0.35
-## Jarak minimum pemain dari garis pantai (meter). Tanjakan pantai 1,8 m / 7 m,
-## jadi 1,4 m ke dalam berarti ± 0,36 m di atas permukaan air: pemain berhenti di
-## pasir kering, tidak berdiri tenggelam sampai mata kaki.
-const SHORE_MARGIN := 1.4
+## Jarak minimum pemain dari garis pantai (meter). Tanjakan pantai pulau 300 m
+## adalah 5 m / 30 m, jadi 3 m ke dalam berarti ± 0,5 m di atas permukaan air:
+## pemain berhenti di pasir kering, tidak berdiri tenggelam sampai mata kaki.
+## (Dulu 1,4 m saat pulau 100 m — tanjakannya 1,8 m / 7 m.)
+const SHORE_MARGIN := 3.0
 const FALL_RESET := -12.0
 const IDLE := "Idle_Loop"
 const AIR_FALL := "Jump_Loop"
@@ -95,6 +96,9 @@ var gait := IDLE
 var grounded := true
 var combo_index := 0
 var dash_cooldown := 0.0
+## True selama dorongan dash sedang berjalan. Dipakai main.gd untuk menyalakan
+## pita jejak + bloom karakter (efek "blur/glow" ronde 18).
+var dashing := false
 var _airborne := false
 var _air_time := 0.0
 var _combo_timer := 0.0
@@ -168,6 +172,7 @@ func request_dash() -> bool:
 	direction.y = 0.0
 	direction = direction.normalized()
 	_dash_left = DASH_TIME
+	dashing = true
 	_dash_cooldown = DASH_COOLDOWN
 	dash_cooldown = DASH_COOLDOWN
 	velocity.x = direction.x * DASH_SPEED
@@ -191,6 +196,7 @@ func _physics_process(delta: float) -> void:
 		dash_cooldown = _dash_cooldown
 	if _dash_left > 0.0:
 		_dash_left = maxf(0.0, _dash_left - delta)
+	dashing = _dash_left > 0.0 and grounded
 	var stick := Vector2.ZERO
 	if joystick != null and joystick.input_enabled:
 		stick = joystick.direction

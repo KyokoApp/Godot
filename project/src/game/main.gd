@@ -6,6 +6,7 @@ extends Node3D
 const Field = preload("res://src/game/world/field.gd")
 const Scenery = preload("res://src/game/world/scenery.gd")
 const Forest = preload("res://src/game/world/forest.gd")
+const Pond = preload("res://src/game/world/pond.gd")
 const Grass = preload("res://src/game/grass_field.gd")
 const Player = preload("res://src/game/player.gd")
 const Character = preload("res://src/game/mannequin.gd")
@@ -36,7 +37,11 @@ const SWORD_ICON = preload("res://src/game/ui/sword.svg")
 const JUMP_ICON = preload("res://src/game/ui/jump.svg")
 const CROUCH_ICON = preload("res://src/game/ui/crouch.svg")
 const DASH_ICON = preload("res://src/game/ui/dash.svg")
-const SPAWN := Vector2(0, 7)
+## Titik muncul pemain: di pinggir barat daya kolam tengah, di darat kering dan
+## rata. Dulu (0, 7) — itu sekarang tepat di tengah kolam (radius 22 m), jadi
+## pemain akan muncul berdiri di dalam air. JARAK ini harus sama dengan SPAWN di
+## forest.gd supaya dedaunan tidak menutupi titik muncul.
+const SPAWN := Vector2(-26.0, 16.0)
 ## HUD gaya game aksi: satu tombol serang besar, tombol aksi bulat di sekitarnya.
 const ATTACK_DIAMETER := 136.0
 const FIRE_DIAMETER := 100.0
@@ -52,9 +57,11 @@ var _previous_occlusion := false
 var _field: Field
 var _scenery: Scenery
 var _forest: Forest
+var _pond: Pond
 var _grass: Grass
 var _player: Player
 var _visual: Character
+var _bloom_level := 0.0
 var _orbit: Orbit
 var _sun: DirectionalLight3D
 var _audio: WorldAudio
@@ -114,6 +121,10 @@ func _build_world() -> void:
 	# MultiMesh: satu panggilan gambar per model, tidak ada collision.
 	_forest = Forest.new()
 	add_child(_forest)
+	# Kolam tengah pulau: air dangkal + pintu gerbang ala Suzume no Tojimari
+	# beserta pantulan tiruannya (renderer Mobile tidak punya SSR).
+	_pond = Pond.new()
+	add_child(_pond)
 
 
 func _build_player() -> void:
@@ -399,8 +410,31 @@ func _physics_process(delta: float) -> void:
 		return
 	_orbit.follow(_player.global_position + _orbit.focus_offset, delta)
 	_footsteps.update_motion(delta, _player.move_speed)
+	# Efek kecepatan: pita jejak + asap + bloom layar. `_player.dashing` membuat
+	# efeknya jauh lebih kuat saat dash daripada saat sekadar boost.
 	_speed_aura.update_motion(delta, _player.move_speed,
 		_player.boosted and _player.grounded)
+	_update_dash_bloom(delta)
+
+
+## Pancaran bloom pada KARAKTER saat dash (permintaan ronde 18: "efek blur/glow
+## di karakter, bukan hanya setelah gambar"). Kulit menyala di pinggir siluet
+## dengan warna yang melewati ambang glow, jadi benar-benar mekar, lalu memudar
+## perlahan sesudah dash selesai.
+func _update_dash_bloom(delta: float) -> void:
+	if _visual == null or _visual.skin == null:
+		return
+	var wanted := 0.0
+	if _player != null and _player.dashing:
+		wanted = 1.0
+	elif _player != null and _player.boosted and _player.grounded and _player.move_speed > 0.3:
+		# Saat boost biasa bloom-nya tipis saja — dash yang harus terasa jelas.
+		wanted = 0.25
+	var speed := 14.0 if wanted > _bloom_level else 5.0
+	_bloom_level = lerpf(_bloom_level, wanted, 1.0 - exp(-delta * speed))
+	if _bloom_level < 0.004 and wanted == 0.0:
+		_bloom_level = 0.0
+	_visual.skin.set_bloom(_bloom_level)
 
 
 func _process(_delta: float) -> void:

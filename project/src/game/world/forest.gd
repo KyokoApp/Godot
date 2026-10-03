@@ -16,7 +16,11 @@ const Field = preload("res://src/game/world/field.gd")
 
 ## Titik muncul pemain (harus sama dengan main.gd): tidak ada dedaunan di sini
 ## supaya pemain tidak muncul di dalam semak.
-const SPAWN := Vector2(0.0, 7.0)
+## Titik muncul pemain: HARUS sama dengan SPAWN di main.gd (pintu gerbang
+## berada tepat di situ). Dulu (0, 7); sekarang kolam tengah pulau menghabiskan
+## radius 22 m di sekitar pusat, jadi pemain muncul di pinggir barat daya kolam
+## yang datar dan tetap di darat kering.
+const SPAWN := Vector2(-26.0, 16.0)
 
 ## Satu baris per jenis: model, jumlah, rentang skala, jarak minimum dari garis
 ## pantai, dan jarak minimum antar objek (0 = boleh rapat).
@@ -110,12 +114,16 @@ func _candidates(count: int, margin: float, spacing: float) -> Array:
 	var limit := maxi(count * 120, 600)
 	while result.size() < count and guard < limit:
 		guard += 1
-		# Sebaran merata lewat kotak + penolakan: titik acak di kotak ± 45 m,
-		# yang jatuh di laut dibuang oleh is_inside() di bawah. Lebih rata
-		# daripada sampling lingkaran, dan tidak butuh akar kuadrat.
-		var x := _rng.randf_range(-45.0, 45.0)
-		var z := _rng.randf_range(-45.0, 45.0)
+		# Sebaran merata lewat kotak + penolakan: titik acak di kotak setengah
+		# dunia (Field.HALF), yang jatuh di laut atau di kolam tengah dibuang
+		# oleh is_inside()/can_grow() di bawah. Lebih rata daripada sampling
+		# lingkaran, dan tidak butuh akar kuadrat. Kotaknya ikut dunia: dulu
+		# ± 45 m (pulau 100 m), sekarang ± Field.HALF (pulau 300 m).
+		var x := _rng.randf_range(-Field.HALF, Field.HALF)
+		var z := _rng.randf_range(-Field.HALF, Field.HALF)
 		if not Field.is_inside(x, z, margin):
+			continue
+		if not Field.can_grow(x, z):
 			continue
 		if absf(z - Field.path_centre(x)) < 1.6:
 			continue

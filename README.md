@@ -1310,3 +1310,55 @@ Empat permintaan sekaligus: hapus FBX dash Mixamo, tambah bloom, map jadi
   itu terbaca seperti menara).
 
 Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+## Ronde 18 — pulau 300 m, kolam berpintu, pulau terbang, air bergelombang, jejak dash
+
+- **Bukit tajam tiga segitiga DIHAPUS.** Permintaan: *"hapus itu pemandangan di
+  depan apaan dah kayak bantuk gunung tajam sama gelombang"*. Seluruh
+  `_build_hills()`/`_add_ridge()`/`_build_occluders()` beserta konstanta
+  `HILL_*`/`FAR_*` dibuang dari `world/scenery.gd`.
+- **Gantinya: PULAU TERBANG yang terbaca 2D tapi terasa 3D.** Enam bongkahan
+  batu rendah-poli (`_floater_mesh()`: cakram rumput + kerucut batu yang
+  meruncing ke satu titik) melayang 150-290 m dari pusat, tinggi 18-44 m.
+  Bentuk pipih + warna rata bikin terbaca seperti ilustrasi; miring
+  (`rotation.z`), berbayang, dan mengapung naik-turun (`FLOAT_BOB` 1,6 m,
+  periode 7 s) bikin tetap terasa 3D. Semuanya di luar garis pantai, tanpa
+  collision.
+- **Air diganti total** memakai shader **"Simple Water"** (dairycultist,
+  godotshaders.com, CC0) yang diminta: tiga gelombang sinus berjalan
+  (vertex), normal dari **turunan analitik per piksel** (fragment) supaya riak
+  tetap terlihat walau sel mesh air selebar 7 m, transparansi menurut
+  kedalaman layar (`DEPTH_TEXTURE` + `INV_PROJECTION_MATRIX`) supaya air cetek
+  tembus pandang, `METALLIC`/`ROUGHNESS` untuk pantulan langit+bulan, dan kilau
+  bulan mengikuti riak. Laut ikut diperhalus: sel 24 → 128 (33 ribu segitiga).
+- **Kolam besar di tengah dengan pintu + air CETek** (`world/pond.gd`, baru):
+  mangkuk ber-dasar datar (`BASIN_INNER` 18 m → `BASIN_OUTER` 30 m), dasar
+  3,4 m, permukaan air 4,3 m → **dalam 0,9 m** (dasar kolam terlihat).
+  Bidang air bundar 21 m (garis air sebenarnya ada di mana tanah melintasi
+  `POND_LEVEL`, ≈ 21 m). Di tengah berdiri **pintu ala Suzume no Tojimari**
+  (bingkai, ambang, dua daun sedikit terbuka, celah cahaya emissif yang mekar)
+  plus **pantulan tiruan** di bawah air — salinan terbalik yang dimampatkan,
+  karena renderer Mobile tidak punya SSR.
+- **Efek dash = JEJAK + BLOOM, bukan afterimage.** Permintaan: *"kalo pas lari
+  nari bakal ada efek ny di character seperti blur/glow ... bkan hanya setelah
+  gambar doank"* dan *"jangan polos polos banget"*. Bekas pose beku
+  (`speed/afterimage_trail.gd` + shader-nya) **DIHAPUS** dan diganti
+  `speed/speed_trail.gd`: pita aditif 22 ruas yang mengikuti jejak posisi
+  karakter — lebar dan hampir putih di dekat karakter, menyempit dan memudar ke
+  belakang, selalu tegak lurus arah pandang kamera. Ditambah pancaran bloom di
+  pinggir siluet karakter (`skin_shell.gdshader`: uniform `bloom` baru yang
+  nilainya sengaja melewati ambang glow 1,15), menyala 1,0 saat dash dan 0,25
+  saat boost biasa, memudar pelan sesudahnya.
+- **Dunia 300 m × 300 m.** Semua panjang ×3 dari versi 100 m: `SIZE` 300,
+  radius pulau 87-114 m, lekukan pantai 9/4,5 m, tanjakan pantai 30 m, dataran
+  5 m, dasar laut -8 m, chunk 96 m (sel tetap 4 m), jalan ± 14,4 m dengan
+  lebar 2,5 m. Ikut naik: batas pantai pemain 1,4 → 3 m, zoom kamera terjauh
+  62 → 190 m, laut 420 → 900 m, kabut 20-140 → 45-420 m (harus berakhir JAUH di
+  belakang pulau terbang supaya bentuknya terlihat utuh), pulau batu di laut
+  ×3.
+- **Titik spawn pindah** dari (0, 7) — yang kini tepat di tengah kolam — ke
+  (-26, 16): pinggir barat daya kolam, daratan kering dan rata. `forest.gd`
+  memakai titik yang sama dan sekarang juga menolak area kolam lewat
+  `can_grow()`.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.

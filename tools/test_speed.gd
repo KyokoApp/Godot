@@ -36,7 +36,9 @@ func _run() -> void:
 	stick.set("direction", Vector2.ZERO)
 	for frame in range(20):
 		await physics_frame
-	player.spawn(Vector2(0, 7))
+	# Sama dengan SPAWN di main.gd: pinggir barat daya kolam tengah (dulu (0, 7),
+	# sekarang tepat di tengah kolam).
+	player.spawn(Vector2(-26.0, 16.0))
 	for frame in range(10):
 		await physics_frame
 	game._toggle_speed()
@@ -45,7 +47,9 @@ func _run() -> void:
 	var ratio := float(fast["distance"]) / maxf(float(normal["distance"]), 0.001)
 	_check(ratio > 1.15 and ratio < 1.6, "Boost bukan 1,35×: %.2f" % ratio)
 	_check(trail.strength > 0.4, "Aura cepat tidak aktif saat boost")
-	_check(trail.ghosts.ghosts.size() == 3, "Jumlah bayangan bukan 3")
+	# Efek ronde 18: pita jejak gerak (bukan afterimage) harus benar-benar
+	# terisi saat boost, dan memudar lagi sesudahnya.
+	_check(trail.trail.sample_count() >= 2, "Pita jejak tidak terisi saat boost")
 	_check(trail.tint == Trail.TINT, "Warna aura bukan ungu mannequin")
 	var glow_before: bool = trail.environment.glow_enabled
 	_check(trail.environment.glow_enabled and trail.wash.visible, "Bloom/wash speed mati")

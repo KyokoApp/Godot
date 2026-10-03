@@ -37,6 +37,12 @@ uniform float rim_power = 2.4;
 uniform float rim_strength = 0.55;
 uniform float pulse : hint_range(0.0, 1.0) = 0.0;
 uniform float charge : hint_range(0.0, 1.0) = 0.0;
+// Bloom dash (permintaan ronde 18: "efek blur/glow di karakter"). Nilai > 0
+// menambah pancaran terang di pinggir siluet yang sengaja dibuat MELEBIHI
+// ambang glow (1.15), jadi karakter benar-benar mekar saat dash — bukan cuma
+// garis tepi yang naik sedikit. Badan tetap hitam: yang menyala hanya rim.
+uniform vec4 bloom_color : source_color = vec4(0.80, 0.62, 1.20, 1.0);
+uniform float bloom : hint_range(0.0, 1.0) = 0.0;
 uniform float roughness : hint_range(0.0, 1.0) = 0.42;
 uniform float metallic : hint_range(0.0, 1.0) = 0.0;
 uniform float grow = 0.0;
@@ -71,6 +77,7 @@ void fragment() {
 	// Satu-satunya cahaya yang tersisa: rim abu tipis di pinggir siluet. Di badan
 	// hitam polos ini yang menjaga bentuk bahu/kepala tetap terbaca, tanpa
 	// membuat tubuhnya terlihat abu-abu.
-	EMISSION = rim_color.rgb * rim * rim_strength * (0.35 + pulse * 0.65 + charge * 0.5);
+	EMISSION = rim_color.rgb * rim * rim_strength * (0.35 + pulse * 0.65 + charge * 0.5)
+		+ bloom_color.rgb * bloom * (rim * 1.45 + 0.22);
 	SPECULAR = 0.35;
 }

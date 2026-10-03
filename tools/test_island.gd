@@ -206,7 +206,12 @@ func _test_grass() -> void:
 	var field := Field.new()
 	root.add_child(field)
 	await process_frame
-	_check(field.can_grow(0.0, 0.0), "Rumput tidak tumbuh di tengah pulau")
+	# Kolam tengah (radius BASIN_RADIUS) sengaja tidak ditanami rumput, jadi
+	# titik uji pindah ke dataran dalam di luar lekukannya.
+	_check(field.can_grow(-14.0, 40.0), "Rumput tidak tumbuh di dataran dalam")
+	_check(not field.can_grow(0.0, 0.0), "Rumput tumbuh di kolam tengah")
+	_check(not field.can_grow(0.0, Field.BASIN_RADIUS - 2.0),
+		"Rumput tumbuh di bibir kolam")
 	for step in range(12):
 		var angle := TAU * float(step) / 12.0
 		var coast := Field.island_radius(angle) - 2.0
