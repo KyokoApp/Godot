@@ -20,8 +20,9 @@
     menguji idle/wander, prompt, menu, dan pemulihan kontrol. Kamera/scene render
     disesuaikan untuk skala baru.
   - Validasi lokal lulus: `gdlint project tools`, `python3 tools/check_scripts.py .`,
-    dan `git diff --check`. Sandbox tidak menyediakan Godot runtime; CI belum
-    dijalankan pada checkpoint ini. Perlu jalankan test/CI setelah commit-push.
+    dan `git diff --check`. Godot 4.5.2 CI run `37126825496` hijau **7/7**:
+    compile, seluruh tes headless (termasuk NPC), render regresi, dan packaging.
+    Sandbox tidak menyediakan Godot runtime; pengujian runtime dilakukan lewat CI.
 
 - 2026-10-03 (cicilan 19, koreksi gate) — **COLLIDER AIR HANYA DI DALAM DANAU**
   - Run `37113303786` gagal di `tools/test_movement.gd:99`: kaki pemain berada

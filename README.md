@@ -1448,6 +1448,6 @@ Permintaan terbaru membatalkan lake/door dan efek berjalan di atas air dari rond
 - Regresi diperbarui untuk ukuran dan relief pulau, surface langkah, serta
   interaksi/wander NPC (`tools/test_npc.gd` dan gerbang CI baru).
 
-Validasi statis lokal: `gdlint project tools`, `tools/check_scripts.py`, dan
-`git diff --check` lulus. Runtime Godot belum tersedia di sandbox; verifikasi CI
-masih diperlukan.
+Validasi statis lokal: `gdlint project tools`, `python3 tools/check_scripts.py .`,
+dan `git diff --check` lulus. Godot 4.5.2 CI run **37126825496** hijau **7/7**:
+compile, seluruh tes headless (termasuk NPC), tiga render regresi, dan packaging.
