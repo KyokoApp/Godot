@@ -36,13 +36,14 @@ const ISLAND_MAX := 38.0
 const COAST_WAVE := 3.0
 const COAST_WAVE_B := 1.5
 ## Dasar laut dan tinggi dataran pulau (meter di atas permukaan air). Dataran
-## sengaja RENDAH (1,8 m) supaya tanjakan pantai tidak melewati MAX_SLOPE:
-## 1,8 m / 7 m = 0,26 < 0,30. Kalau lebih curam, rumput tidak tumbuh di pantai.
+## harus DI ATAS pita pasir shader (2,6 m), kalau tidak seluruh pulau berbunyi
+## tanah dan bukan rumput. 3 m / 12 m = 0,25 < 0,30 (MAX_SLOPE), jadi rumput
+## tetap tumbuh di tanjakan pantai.
 const SEA_FLOOR := -3.0
-const PLATEAU := 1.8
-## Tanjakan dari garis air ke dataran (meter). 1,8 m / 7 m ≈ 26% — masih bisa
+const PLATEAU := 3.0
+## Tanjakan dari garis air ke dataran (meter). 3 m / 12 m ≈ 25% — masih bisa
 ## dilalui dan terbaca sebagai pantai curam, bukan ramp panjang.
-const BEACH_RUN := 7.0
+const BEACH_RUN := 12.0
 ## Kemiringan maksimum supaya rumput/akar tidak melayang di lereng.
 const MAX_SLOPE := 0.30
 ## Rumput butuh tanah kering: minimal setinggi ini di atas air.

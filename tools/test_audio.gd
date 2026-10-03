@@ -134,9 +134,12 @@ func _test_steps() -> void:
 		await physics_frame
 	_check(footsteps.get("emitted") == stopped, "Langkah tidak berhenti")
 	# Pulau 100 m: tengah = rumput, pesisir rendah = pasir/tanah, lereng curam = batu.
-	_check(footsteps.surface_at(Vector3(0, 5, 0), Vector3.UP) == "grass",
+	# Titik rumput dipilih JAUH dari jalan tanah (jalan berbunyi tanah) dan di
+	# atas pita pasir pantai. Jalan meliuk di sekitar z=0 sampai ± 8 m, jadi
+	# z = 10 m pasti di luar jalan.
+	_check(footsteps.surface_at(Vector3(0, 5, 10), Vector3.UP) == "grass",
 		"Tengah pulau bukan rumput")
-	_check(footsteps.surface_at(Vector3(4, 5, 0), Vector3.UP) == "grass",
+	_check(footsteps.surface_at(Vector3(8, 5, 10), Vector3.UP) == "grass",
 		"Dekat tengah sudah berubah jadi tanah")
 	# Titik pesisir dicari dari bentuk pulau: tanah di bawah 2,6 m di atas air
 	# (batas yang sama dengan pita pasir di ground.gdshader) harus berbunyi tanah.
