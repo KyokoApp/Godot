@@ -1,20 +1,22 @@
 extends Node3D
-## Pulau 1 km × 1 km: dataran bergelombang dengan garis pantai tidak beraturan
-## (bukan bulat, bukan kotak), dikelilingi laut di permukaan y = 0.
+## Pulau 500 m × 500 m: dataran bergelombang dengan garis pantai tidak beraturan
+## (bukan bulat, bukan kotak), dikelilingi laut di permukaan y = 0. Semua
+## panjang (radius pulau, lekukan pantai, tanjakan pantai, jalan) ditulis
+## SETENGAH dari versi 1 km supaya bentuk dunia tetap sama — cuma lebih kecil.
 ##
 ## Satu fungsi tinggi (`terrain_height`) dipakai oleh SEMUA: mesh, collider,
 ## karakter, rumput, tapak api, dan langkah kaki. Itu sebabnya fungsi ini statis
 ## dan murni — tidak boleh bergantung pada node, frame, atau urutan build.
 ##
-## Kenapa chunk streaming (bukan satu mesh 1 km): medan 1 km pada sel 4 m =
-## 250 ribu sel. Kalau dibuat sekaligus, boot melambat dan memori membengkak.
+## Kenapa chunk streaming (bukan satu mesh 500 m): medan 500 m pada sel 4 m =
+## 62 ribu sel. Kalau dibuat sekaligus, boot melambat dan memori membengkak.
 ## Chunk 128 m × 128 m dibangun SATU per frame mengelilingi pemain; maksimal
 ## 7 × 7 = 49 chunk (± 448 m) sehingga seluruh pulau selalu bertanah dari mana
 ## pun pemain berdiri.
 
 const SHADER = preload("res://src/game/ground.gdshader")
 const MEADOW = preload("res://assets/nature/meadow_cover.png")
-const SIZE := 1000.0
+const SIZE := 500.0
 const HALF := SIZE * 0.5
 
 ## Chunk 128 m, sel 4 m (32 × 32 sel, 33 × 33 titik).
@@ -27,22 +29,23 @@ const CHUNK_RADIUS := 3
 const WALK_MARGIN := 0.7
 
 ## Bentuk pulau.
-const ISLAND_MIN := 292.0
-const ISLAND_MAX := 380.0
+const ISLAND_MIN := 146.0
+const ISLAND_MAX := 190.0
 ## Lekukan halus garis pantai (meter) supaya tidak terlihat seperti lingkaran.
-const COAST_WAVE := 20.0
-const COAST_WAVE_B := 10.0
+const COAST_WAVE := 10.0
+const COAST_WAVE_B := 5.0
 ## Dasar laut dan tinggi dataran pulau (meter di atas permukaan air).
 const SEA_FLOOR := -9.0
 const PLATEAU := 6.0
-## Tanjakan dari garis air ke dataran (meter). 6 m / 70 m ≈ 8,5% — bisa dilalui.
-const BEACH_RUN := 70.0
+## Tanjakan dari garis air ke dataran (meter). 6 m / 35 m ≈ 17% — masih
+## bisa dilalui dan terbaca sebagai pantai curam, bukan ramp panjang.
+const BEACH_RUN := 35.0
 ## Kemiringan maksimum supaya rumput/akar tidak melayang di lereng.
 const MAX_SLOPE := 0.30
 ## Rumput butuh tanah kering: minimal setinggi ini di atas air.
 const GRASS_MIN_HEIGHT := 0.55
 ## Jarak minimum rumput dari garis pantai (meter) supaya pasir tetap polos.
-const GRASS_SHORE_MARGIN := 5.0
+const GRASS_SHORE_MARGIN := 2.5
 
 ## Palet senja: hijau tua yang MASIH terbaca (bukan hitam). Permintaan pengguna:
 ## "tanah dan rumput jadi gelap tapi tetap kelihatan, dan rumput satu warna dengan
@@ -54,11 +57,16 @@ const GRASS_DARK := Color("2d4f27")
 const SAND_COLOR := Color("9a8260")
 # Jalan tanah berliku (digambar shader, tanpa mesh/collision tambahan).
 const PATH_WIDTH := 3.0
-## Lekuk 42 m dengan panjang gelombang ± 520 m: jalan berkeluk 2-3 kali sepanjang
-## pulau tapi kemiringannya tetap di bawah 37° (jalan setengah menanjak 55 m /
-## frekuensi 0,021 dulu condong ke 60° — terbaca garis diagonal, bukan jalan).
-const PATH_CURVE := 42.0
-const PATH_FREQUENCY := 0.012
+## Lekuk 24 m dengan panjang gelombang ± 300 m: jalan berliku ± 2 kali sepanjang
+## pulau 500 m dan kemiringannya tetap di bawah 37°. Aturannya: hasil kali
+## lekuk × frekuensi harus di bawah 0,75, kalau tidak jalannya terbelok tajam
+## (terbaca garis diagonal, bukan jalan) — itu yang terjadi dulu.
+const PATH_CURVE := 24.0
+const PATH_FREQUENCY := 0.021
+## Lekukan kedua: lebih pendek dan amplitudo lebih kecil supaya jalannya tidak
+## terlihat seperti satu sinus raksasa.
+const PATH_FREQUENCY_B := 0.033
+const PATH_PHASE_B := 1.33
 ## Jarak minimum rumput dari garis tengah jalan tanah. Shader tanah menggambar
 ## jalan selebar ± 1,25x PATH_WIDTH (plus noise tepi ± 0,55 m), jadi 5 m sudah
 ## lebih dari cukup. Tanpa batas ini rumput tumbuh tepat di atas jalan dan pas
@@ -162,15 +170,20 @@ static func terrain_height(x: float, z: float) -> float:
 		profile = maxf(SEA_FLOOR, inland * 0.085)
 	# Perbukitan halus: makin lemah di dekat pantai supaya garis air tetap
 	# berada di radius pulau (bukan naik-turun karena bukit).
-	var hills := _rolling(x, z) * 4.2 * clampf(inland / 45.0, 0.0, 1.0)
+	var hills := _rolling(x, z) * 3.4 * clampf(inland / 22.5, 0.0, 1.0)
 	return profile + hills
 
 
 ## Perbukitan: beberapa gelombang panjang berpola tidak berulang.
 static func _rolling(x: float, z: float) -> float:
-	var v := sin(x * 0.021 + 1.3) * cos(z * 0.017 - 0.4)
-	v += 0.62 * sin((x + z) * 0.037 + 2.1)
-	v += 0.34 * sin(x * 0.055 - 1.1) * cos(z * 0.061 + 0.7)
+	# Panjang gelombang diperpendek 1,5x supaya jumlah bukit tetap sama di pulau
+	# yang kini setengahnya, dan amplitudo diturunkan 4,2 -> 3,4 m supaya
+	# kemiringan bukit TIDAK melewati MAX_SLOPE (0,30). Kalau melewati, rumput
+	# tidak tumbuh di puncak bukit dan pulau jadi botak bergaris — terukur:
+	# amplitudo 4,2 dengan gelombang pendek memberi 3,8% daratan terlalu curam.
+	var v := sin(x * 0.032 + 1.3) * cos(z * 0.026 - 0.4)
+	v += 0.62 * sin((x + z) * 0.056 + 2.1)
+	v += 0.34 * sin(x * 0.083 - 1.1) * cos(z * 0.092 + 0.7)
 	return clampf(v * 0.62, -1.0, 1.0)
 
 
@@ -243,7 +256,8 @@ func surface_height(x: float, z: float) -> float:
 ## menahan rumput keluar dari jalan, jadi kalau salah satu berubah jalan dan
 ## rumput jadi tidak sejajar.
 static func path_centre(x: float) -> float:
-	return PATH_CURVE * sin(x * PATH_FREQUENCY) + PATH_CURVE * 0.3 * sin(x * 0.019 + 0.59)
+	return PATH_CURVE * sin(x * PATH_FREQUENCY) \
+		+ PATH_CURVE * 0.3 * sin(x * PATH_FREQUENCY_B + PATH_PHASE_B)
 
 
 static func is_inside(x: float, z: float, margin := 0.0) -> bool:

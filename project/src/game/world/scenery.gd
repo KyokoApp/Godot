@@ -1,5 +1,5 @@
 extends Node3D
-## Pemandangan di sekitar pulau 1 km, disusun supaya dunia terlihat seperti
+## Pemandangan di sekitar pulau 500 m, disusun supaya dunia terlihat seperti
 ## ilustrasi layar muat (`launcher/art/loading.jpg`): laut mengelilingi pulau,
 ## deretan bukit jauh di seberang air, tebing batu di timur, jalan tanah
 ## berliku, reruntuhan batu, dan titik cahaya melayang.
@@ -20,19 +20,20 @@ const Field = preload("res://src/game/world/field.gd")
 const WATER_SHADER = preload("res://src/game/world/water.gdshader")
 const Dusk = preload("res://src/game/environment/dusk_environment.gd")
 
-## Radius cincin bukit. HARUS di luar radius pulau maksimum (ISLAND_MAX 380 +
-## dua lekukan pantai 30 = 410 m): kalau tidak, bukitnya tumbuh dari tengah
-## pulau dan menutupi medan tempat pemain berjalan.
-const HILL_RADIUS := 520.0
-const HILL_REACH := 780.0
-const FAR_RADIUS := 820.0
-const FAR_REACH := 1250.0
+## Radius cincin bukit. HARUS di luar radius pulau maksimum (ISLAND_MAX 190 +
+## dua lekukan pantai 15 = 205 m): kalau tidak, bukitnya tumbuh dari tengah
+## pulau dan menutupi medan tempat pemain berjalan. Semua jarak pemandangan
+## mengecil setengahnya mengikuti dunia 500 m.
+const HILL_RADIUS := 260.0
+const HILL_REACH := 390.0
+const FAR_RADIUS := 410.0
+const FAR_REACH := 625.0
 ## Laut: permukaan air sedikit di bawah nol (sedikit di bawah garis pantai pulau,
 ## yang memang berada di tinggi 0) supaya bidang air tidak z-fighting dengan
-## tanah yang persis menyentuh y = 0. Bidangnya 4200 m — jauh melampaui bukit
-## terjauh (1250 m) supaya ujungnya tidak terlihat sebelum ditutup kabut.
+## tanah yang persis menyentuh y = 0. Bidangnya 2100 m — jauh melampaui bukit
+## terjauh (625 m) supaya ujungnya tidak terlihat sebelum ditutup kabut.
 const SEA_LEVEL := -0.15
-const SEA_SIZE := 4200.0
+const SEA_SIZE := 2100.0
 ## Tinggi puncak bukit terdekat (di luar garis pantai) dan bukit jauh.
 const HILL_HEIGHT := 26.0
 const FAR_HEIGHT := 62.0
@@ -85,7 +86,7 @@ func _build_sea() -> void:
 	sea.material_override = material
 	sea.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	# Laut mengelilingi SELURUH pulau: satu bidang besar di y = 0 (garis pantai
-	# pulau) yang menutup sampai jauh di luar bukit puncak (± 2100 m).
+	# pulau) yang menutup sampai jauh di luar bukit puncak (± 1050 m).
 	sea.position = Vector3(0.0, SEA_LEVEL, 0.0)
 	add_child(sea)
 
@@ -99,10 +100,10 @@ func _build_island() -> void:
 	var indices := PackedInt32Array()
 	# Dua blok: yang utama panjang dan rendah, yang kedua lebih kecil di
 	# belakangnya supaya siluetnya tidak terlihat seperti satu balok.
-	_add_rock_block(vertices, colors, indices, Vector3(-760.0, SEA_LEVEL - 12.0, 60.0),
-		Vector3(90.0, 30.0, 44.0), 3)
-	_add_rock_block(vertices, colors, indices, Vector3(-905.0, SEA_LEVEL - 14.0, 130.0),
-		Vector3(60.0, 24.0, 32.0), 7)
+	_add_rock_block(vertices, colors, indices, Vector3(-380.0, SEA_LEVEL - 12.0, 30.0),
+		Vector3(45.0, 30.0, 22.0), 3)
+	_add_rock_block(vertices, colors, indices, Vector3(-452.0, SEA_LEVEL - 14.0, 65.0),
+		Vector3(30.0, 24.0, 16.0), 7)
 	_commit(vertices, colors, indices, "Island", self)
 	island = get_node("Island") as MeshInstance3D
 
@@ -114,7 +115,7 @@ func _build_hills() -> void:
 	hills.name = "Hills"
 	add_child(hills)
 	# Cincin bukit terdekat: bergelombang mengelilingi pulau. Sengaja BERJAUHAN
-	# dari garis pantai (radius 520 m, pulau maksimum ± 410 m) supaya tidak pernah
+	# dari garis pantai (radius 260 m, pulau maksimum ± 205 m) supaya tidak pernah
 	# tumbuh di tanah tempat pemain berjalan. Celah di sisi barat membuat
 	# siluetnya tidak seragam dari segala arah.
 	_add_ridge(HILL_RADIUS, HILL_REACH, HILL_HEIGHT, 0.0, 96, 1.0)

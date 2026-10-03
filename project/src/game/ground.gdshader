@@ -1,6 +1,6 @@
 shader_type spatial;
 render_mode diffuse_burley, specular_disabled;
-// Permukaan pulau 1 km: rumput pastel dengan variasi pola + jalan tanah
+// Permukaan pulau 500 m: rumput pastel dengan variasi pola + jalan tanah
 // berliku seperti di ilustrasi layar muat. Jalan digambar di shader (bukan mesh
 // terpisah) supaya tidak ada collision/tambahan draw call: pemain tetap berjalan
 // di medan yang sama.
@@ -19,7 +19,7 @@ uniform vec4 sand_color : source_color = vec4(0.788, 0.659, 0.451, 1.0);
 uniform bool cover_enabled = true;
 uniform vec4 path_color : source_color = vec4(0.788, 0.659, 0.451, 1.0);
 uniform float path_width = 3.0;
-uniform float path_curve = 55.0;
+uniform float path_curve = 24.0;
 uniform float path_frequency = 0.021;
 uniform bool path_enabled = true;
 // Pita pasir: di rentang ketinggian ini di atas permukaan laut, tanah berubah
@@ -55,11 +55,11 @@ void fragment() {
 	// sedikit oleh noise supaya tepinya tidak terlihat seperti hasil rumus.
 	if (path_enabled) {
 		// Dua gelombang supaya jalannya berkeluk tidak berulang; fasa 0,59
-		// dipilih agar jalan melintas TEPAT di titik muncul pemain (0, 7) —
-		// dengan fasa lama jalannya mulai 19 m di utara spawn dan pemain harus
-		// berjalan dulu untuk melihatnya.
+		// Angka fasa dipilih agar jalan melintas TEPAT di titik muncul pemain
+		// (0, 7): path_centre(0) = 6,99 m. Angkanya harus SAMA dengan
+		// Field.path_centre() di field.gd, kalau berbeda rumput tumbuh di jalan.
 		float centre = path_curve * sin(world_position.x * path_frequency)
-			+ path_curve * 0.3 * sin(world_position.x * 0.019 + 0.59);
+			+ path_curve * 0.3 * sin(world_position.x * 0.033 + 1.33);
 		float wobble = (fine - 0.5) * 1.1;
 		float distance_to_path = abs(world_position.z - centre) + wobble;
 		float path = 1.0 - smoothstep(path_width * 0.55, path_width * 1.25,

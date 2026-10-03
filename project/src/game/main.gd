@@ -1,5 +1,5 @@
 extends Node3D
-## Pulau 1 km × 1 km dengan garis pantai bergelombang + mannequin UAL berkulit
+## Pulau 500 m × 500 m dengan garis pantai bergelombang + mannequin UAL berkulit
 ## beranimasi yang digerakkan katalog animasi lengkap (85 klip UAL1 + UAL2) lewat
 ## retarget, plus goyangan kain/rambut simulasi verlet.
 

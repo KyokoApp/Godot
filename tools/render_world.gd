@@ -54,7 +54,7 @@ func _run() -> void:
 	var views := [
 		# Seluruh pulau dari udara: kamera tinggi di timur laut, melihat ke
 		# barat daya. Inilah gambar yang menjawab "bulat atau kotak?".
-		{"name": "pulau", "distance": 620.0, "yaw": PI * 0.25, "pitch": 1.10,
+		{"name": "pulau", "distance": 310.0, "yaw": PI * 0.25, "pitch": 1.10,
 			"offset": Vector3(0.0, 40.0, 0.0)},
 		# Dari dataran menghadap garis pantai dan laut.
 		{"name": "pemandangan", "distance": 120.0, "yaw": outward, "pitch": 0.22,

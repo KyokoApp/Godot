@@ -1,5 +1,32 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-03 (cicilan 15) — **DUNIA 500 × 500 m + TRANSISI ANIMASI TANPA JEDA**
+  (permintaan: "ukuran map ubah jadi 500m x 500m ajh" + "perbaikin setiap animasi
+  pergantian ke animasi lain jangan ada jeda ... gk ada patah patahan per animasi").
+  - `world/field.gd`: SIZE 1000 → 500; ISLAND_MIN/MAX 292/380 → 146/190;
+    COAST_WAVE 20/10 → 10/5; BEACH_RUN 70 → 35; GRASS_SHORE_MARGIN 5 → 2,5;
+    jalan PATH_CURVE 42 → 24 + frekuensi 0,012/0,019 → 0,021/0,033 dan fasa
+    kedua 0,59 → 1,33 (supaya `path_centre(0)` tetap 6,99 m: spawn (0,7) tetap
+    di jalan dan `can_grow(0,0)` tetap lolos margin 5 m).
+  - `world/field.gd` perbukitan: panjang gelombang ×1,5, amplitudo 4,2 → 3,4 m.
+    WAJIB: amplitudo lama + gelombang pendek = 3,8% daratan melewati MAX_SLOPE
+    (0,30) → rumput tidak tumbuh di puncak bukit. Diukur 2,1% (sperti dunia 1 km).
+  - Ikut mengecil: `scenery.gd` (SEA_SIZE 4200→2100, HILL 520-1250→260-625, pulau
+    batu), `dusk_environment.gd` (fog 200-1400 → 100-700), `water.gdshader`
+    (horizon_fade 1400→700), `orbit_camera.gd` (MAX_DISTANCE 620→310),
+    `player.gd` (SHORE_MARGIN 14→7), `render_world.gd`, `test_island.gd`.
+  - `ground.gdshader`: konstanta jalan disamakan dengan field.gd (24 / 0,021 /
+    0,033 + 1,33) — kalau berbeda, rumput tumbuh di atas jalan.
+  - `mannequin.gd`: FADE 0,18 → 0,10; HANDOFF (aksi → lokomosi) 0,24 → 0,08;
+    `play_action(name, max_time)` membatasi durasi aksi; `_locomotion_scale`
+    diingat supaya tidak ada frame dengan kecepatan main 1×.
+  - `player.gd`: dash memakai `play_action(DASH_CLIP, DASH_TIME)` (0,22 s, bukan
+    0,47 s) dan `_apply_animation` tidak lagi `return` saat is_busy() — gait
+    tetap dilacak supaya setelah dash tidak ada frame memakai gait lama.
+  - **Mixamo TIDAK BISA diambil dari sandbox** (butuh login + jaringan tertutup).
+    Alternatif jika pengguna mau klip dash asli: ia unduh sendiri, taruh di
+    `project/assets/combat/`, lalu sambungkan ke katalog + mannequin + tombol DASH.
+
 - 2026-10-03 (cicilan 14) — **GERAK DIPERBAIKI + DASH + POSISI UI + KAKI DI TANAH**
   (permintaan: "masa jalan gerak nya lambat banget ... animasi jalan kanan kiri
   depan belakang ,miring ... rapihin posisi ui ... attack pojok bawah susah

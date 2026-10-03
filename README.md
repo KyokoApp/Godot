@@ -1189,3 +1189,51 @@ kaki jalan atau jongkok kaki nya masih ada yang tenggelam sedikit ketanah".
   baru `ui/dash.svg`.
 
 Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-03 — dunia dikecilkan ke 500 × 500 m, transisi animasi tanpa jeda
+
+Permintaan: "ukuran map ubah jadi 500m x 500m ajh" dan "perbaikin setiap animasi
+pergantian ke animasi lain jangan ada jeda ... biar gk ada patah patahan per
+animasi" (setelah dash kadang ada jeda sebelum kaki lanjut ke animasi lari).
+
+- **Dunia 500 m × 500 m** (`world/field.gd` + semua yang bergantung padanya):
+  setiap PANJANG ditulis setengahnya supaya bentuk dunianya tetap sama — radius
+  pulau 292-380 → 146-190 m, lekukan pantai 20/10 → 10/5 m, tanjakan pantai
+  70 → 35 m, jarak rumput dari pantai 5 → 2,5 m. Ikut mengecil: jarak pandang
+  kabut 200-1400 → 100-700 m, laut 4200 → 2100 m, cincin bukit 520-1250 →
+  260-625 m, pulau batu di laut, batas rumput pantai pemain 14 → 7 m, zoom
+  kamera terjauh 620 → 310 m, dan panjang gelombang jalan tanah (biar jalannya
+  masih berliku ± 2 kali, bukan lurus).
+- **Perbukitan disetel ulang**: panjang gelombang diperpendek 1,5× dan amplitudo
+  diturunkan 4,2 → 3,4 m. Ini penting — kalau bukit dibuat lebih curam, garis
+  pantainya melewati batas kemiringan `MAX_SLOPE` dan rumput TIDAK tumbuh di
+  puncak bukit (pulau jadi botak bergaris). Diukur: amplitudo lama dengan
+  gelombang pendek = 3,8% daratan terlalu curam; sekarang 2,1% (sama seperti
+  dunia 1 km dulu).
+- **Jalan tanah**: lekukan 42 → 24 m, panjang gelombang 524 → 300 m. Fasa
+  lekukan kedua digeser supaya jalan tetap melintas TEPAT di titik muncul
+  pemain (0, 7) — kalau bergeser, pemain muncul di tengah rumput atau di luar
+  jalan, dan tes `test_island` gagal.
+- **Transisi animasi tanpa jeda** (`mannequin.gd` + `player.gd`), tiga sebab:
+  1. serah-terima aksi → lokomosi dulu 0,24 s cross-fade; sekarang **0,08 s**.
+     Selama cross-fade badan masih memakai pose akhir klip aksi — itu "jeda"-nya.
+  2. klip aksi kini boleh dibatasi durasinya (`play_action(name, max_time)`).
+     Dash memakainya: klip Melee_Hook 0,47 s tapi dorongannya cuma 0,22 s, jadi
+     dulu kakinya berdiam 0,25 s di sisa pose pukulan sebelum kembali lari.
+  3. gait tidak lagi berhenti dilacak saat menyerang/dash. Dulu `_apply_animation`
+     langsung `return` ketika `is_busy()`, sehingga saat dash selesai badan
+     memakai gait SEBELUM dash (mis. jalan pelan) selama satu frame selagi masih
+     12 m/s — kaki meluncur sesaat, terbaca patah. Skala kecepatan lokomosi
+     terakhir juga diingat supaya tidak ada frame dengan kecepatan main 1×.
+- **Catatan jujur soal animasi dash dari Mixamo**: akun/layanan Mixamo butuh
+  login dan jaringan sandbox ini tertutup (mixamo.com pun tidak bisa dihubungi),
+  jadi aku TIDAK bisa mengunduh klip dash dari sana. Aku periksa isi UAL1 + UAL2
+  (43 + 43 klip) dan ukur gerak pelvis tiap klip: satu-satunya klip dengan
+  dorongan MAJU yang cepat adalah `Melee_Hook` (jongkok + luncur maju 0,33 m
+  dalam 0,27 s). `NinjaJump_Start` melompat ke ATAS, `Shield_Dash` melompat,
+  `Slide_Start` justru menjatuhkan badan ke tanah — tidak cocok untuk dash.
+  Kalau kamu bisa mengunduh sendiri dari Mixamo (FBX, Without Skin, 30 fps),
+  taruh di `project/assets/combat/` dan bilang aku — aku sambungkan ke katalog,
+  mannequin, dan tombol DASH.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.

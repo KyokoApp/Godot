@@ -1,8 +1,8 @@
 extends Node3D
-## Rumput berlapis di pulau 1 km: helai rapat + lapisan bawah sampai 24 m,
+## Rumput berlapis di pulau 500 m: helai rapat + lapisan bawah sampai 24 m,
 ## lalu makin renggang sampai 36 m, lalu kartu LOD (distant_grass.gd) sampai 128 m.
 ## Jarak tile tetap mengikuti pemain (radius 3 tile = 36 m), jadi kepadatan dan
-## biaya gambar TIDAK berubah walau dunianya kini 1 km — yang menentukan adalah
+## biaya gambar TIDAK berubah walau dunianya kini 500 m — yang menentukan adalah
 ## `Field.can_grow()`, bukan ukuran dunia.
 
 const DistantGrass = preload("res://src/game/world/distant_grass.gd")

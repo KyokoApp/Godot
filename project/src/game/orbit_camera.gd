@@ -6,12 +6,12 @@ const DEFAULT_DISTANCE := 4.0
 ## Titik pandang ada di setinggi kepala, jadi pada jarak ini yang tampak hanya
 ## sebagian wajah/rambut — bukan lagi seluruh badan seperti batas 2,4 m dulu.
 const MIN_DISTANCE := 0.35
-## Pulau sekarang 1 km × 1 km (garis pantai ± 285-370 m dari pusat). Batas 8 m
+## Pulau sekarang 500 m × 500 m (garis pantai ± 143-185 m dari pusat). Batas 8 m
 ## dulu membuat pemain TIDAK BISA melihat pulau yang baru mereka minta, jadi
-## zoom terjauh dinaikkan ke 620 m: dari ketinggian itu (pitch maksimum 1,15)
+## zoom terjauh 310 m: dari ketinggian itu (pitch maksimum 1,15)
 ## SELURUH pulau masuk ke layar sekaligus, dan tetap bisa dicubit kembali ke
 ## jarak biasa.
-const MAX_DISTANCE := 620.0
+const MAX_DISTANCE := 310.0
 ## Di atas jarak ini SpringArm berhenti menabrak tanah: kalau tetap menabrak,
 ## kamera terjepit di bukit pertama dan pemain tidak pernah mendapat pemandangan
 ## pulau — persis masalah yang membuat zoom jauh terasa rusak.

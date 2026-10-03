@@ -29,7 +29,11 @@ const Metrics = preload("res://src/game/animation/anim_metrics.gd")
 const IDLE := "Idle_Loop"
 const AIR_CLIP := "Jump_Loop"
 const COMBAT_LIBRARY := "ual2"
-const FADE := 0.18
+const FADE := 0.10
+## Serah-terima aksi → lokomosi. Sekecil mungkin: dulu 0,24 s, dan selama
+## cross-fade itu badan masih memakai pose akhir klip aksi — itulah "jeda"
+## yang terlihat setelah dash/serangan sebelum kakinya jalan lagi.
+const HANDOFF := 0.08
 ## Pemulihan setelah mendarat: klip mendarat hanya dipakai sesaat, lalu badan
 ## kembali ke gait supaya tidak terasa berhenti mendadak.
 const LAND_RECOVERY := 0.28
@@ -50,6 +54,10 @@ var ground_offset := 0.0
 var playback_scale := 1.0
 var _hold_after := false
 var _action_left := 0.0
+## Skala kecepatan lokomosi terakhir. Dipakai lagi saat aksi selesai supaya kaki
+## tidak sempat memutar 1x (kelamaan) selama satu frame sebelum pemain menyetel
+## skala yang benar lagi.
+var _locomotion_scale := 1.0
 var _model: Node3D
 var _skin_material: ShaderMaterial
 var _library: AnimationLibrary
@@ -192,6 +200,7 @@ func natural_speed(name: String) -> float:
 
 
 func set_locomotion(name: String, playback_speed := 1.0) -> void:
+	_locomotion_scale = clampf(playback_speed, 0.1, 3.0)
 	if mode == Mode.HELD:
 		# Pose tahan (klip aksi yang berhenti di frame terakhir) DILEPAS begitu
 		# pemain meminta gait. Dulu mode HELD juga menolak mengganti klip, jadi
@@ -204,9 +213,9 @@ func set_locomotion(name: String, playback_speed := 1.0) -> void:
 	gait = name
 	mode = Mode.LOCOMOTION
 	if name != clip:
-		_play(name, FADE, playback_speed)
+		_play(name, FADE, _locomotion_scale)
 	else:
-		animation.speed_scale = clampf(playback_speed, 0.1, 3.0)
+		animation.speed_scale = _locomotion_scale
 
 
 func set_air_clip(name: String, playback_speed := 1.0) -> void:
@@ -219,14 +228,17 @@ func set_air_clip(name: String, playback_speed := 1.0) -> void:
 		animation.speed_scale = clampf(playback_speed, 0.1, 3.0)
 
 
-func play_action(name: String) -> float:
+func play_action(name: String, max_time := 0.0) -> float:
 	var measured: Dictionary = metrics.get(name, {})
 	var length := float(measured.get("length", 0.0))
 	if length <= 0.0 or not animation.has_animation(Catalog.play_name(name)):
 		return 0.0
 	_hold_after = Catalog.holds_last_frame(name)
 	mode = Mode.ACTION
-	_action_left = length
+	# Klip boleh lebih panjang daripada aksinya (Melee_Hook 0,47 s dipakai untuk
+	# dash 0,22 s). Tanpa batas ini kaki berdiam di SISA klip yang tidak dipakai
+	# selama seperempat detik sebelum kembali jalan — persis "jeda" yang dikeluhkan.
+	_action_left = length if max_time <= 0.0 else minf(length, max_time)
 	_play(name, FADE, 1.0)
 	return length
 
@@ -271,7 +283,7 @@ func return_to_locomotion() -> void:
 	# di frame berikutnya.
 	if gait == AIR_CLIP:
 		gait = IDLE
-	_play(gait, 0.24, 1.0)
+	_play(gait, HANDOFF, _locomotion_scale)
 
 
 func freeze_at_last_frame() -> void:

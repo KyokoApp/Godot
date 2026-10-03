@@ -1,5 +1,5 @@
 extends CharacterBody3D
-## Pemain di pulau 1 km. Gerak mengikuti animasi, bukan sebaliknya.
+## Pemain di pulau 500 m. Gerak mengikuti animasi, bukan sebaliknya.
 ##
 ## Satu keputusan gait per frame dipakai bersama oleh badan dan animasi:
 ##   kecepatan input → gait (band dari kecepatan alami terukur) → skala main
@@ -61,10 +61,10 @@ const SCALE_MIN := 0.62
 const SCALE_MAX := 1.5
 const SCALE_MAX_BOOST := 2.05
 const HYSTERESIS := 0.35
-## Jarak minimum pemain dari garis pantai (meter). Tanjakan pantai 6 m / 70 m,
-## jadi 14 m ke dalam berarti ± 1,2 m di atas permukaan air: pemain berhenti di
+## Jarak minimum pemain dari garis pantai (meter). Tanjakan pantai 6 m / 35 m,
+## jadi 7 m ke dalam berarti ± 1,2 m di atas permukaan air: pemain berhenti di
 ## pasir kering, tidak berdiri tenggelam sampai mata kaki.
-const SHORE_MARGIN := 14.0
+const SHORE_MARGIN := 7.0
 const FALL_RESET := -12.0
 const IDLE := "Idle_Loop"
 const AIR_FALL := "Jump_Loop"
@@ -168,7 +168,10 @@ func request_dash() -> bool:
 	dash_cooldown = DASH_COOLDOWN
 	velocity.x = direction.x * DASH_SPEED
 	velocity.z = direction.z * DASH_SPEED
-	visual.play_action(DASH_CLIP)
+	# Batasi durasi aksi sesuai dorongan dash: klip Melee_Hook 0,47 s, tapi
+	# dorongannya cuma 0,22 s. Kalau klipnya diputar penuh, kakinya berdiam di
+	# sisa pose pukulan sebelum kembali lari — itu jeda yang terlihat.
+	visual.play_action(DASH_CLIP, DASH_TIME)
 	return true
 
 
@@ -280,11 +283,15 @@ func _apply_animation(desired: float) -> void:
 		if visual.gait != AIR_FALL and _air_time >= JUMP_POSE_TIME:
 			visual.set_air_clip(AIR_FALL, 1.0)
 		return
-	# Aksi sekali jalan (termasuk dash) dan klip pilihan panel tidak boleh ditimpa.
-	if visual.is_busy():
-		return
 	# Klip gait mengikuti laju badan (bukan cuma input tekanan analog): saat
 	# meluncur berhenti setelah berlari, kaki tetap mengayun secepat badan.
+	#
+	# set_locomotion TIDAK menimpa klip aksi sekali jalan (mannequin menyimpan
+	# gait-nya saja lalu memutarnya saat aksinya habis), jadi ini aman dipanggil
+	# juga saat sedang menyerang atau dash. Dulu ada `return` lebih awal ketika
+	# is_busy(): akibatnya gait tertinggal di nilai SEBELUM dash, dan begitu dash
+	# selesai badan memakai gait lama (mis. jalan pelan) selama satu frame selagi
+	# masih 12 m/s — kakinya meluncur sesaat, terbaca sebagai patah.
 	var reference := maxf(desired, move_speed)
 	var scale := 1.0
 	if reference > 0.05:
