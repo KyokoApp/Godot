@@ -1514,3 +1514,23 @@ tes headless, render-a/b/c (screenshot selector dan Survival), ekspor PCK/APK,
 audit isi APK, serta tes boot launcher. Hasil visual, runtime, dan build kini
 terverifikasi di CI. APK dan content pack tersedia di [rilis
 `build-5060147`](https://github.com/KyokoApp/Godot/releases/tag/build-5060147).
+
+## Ronde 24 — Survival memakai sihir auto-lock, bukan melee
+
+Koreksi pengguna: jangan gunakan serangan pedang di Survival; pakai tembakan
+sihir yang sudah tersedia dan kunci otomatis ke zombie.
+
+- Kontrol `SERANG` dan model pedang tidak ditampilkan di Survival. Tombol sihir
+  `TEMBAK` yang sudah ada menjadi kontrol serangan; mode hub tidak berubah.
+- FirePet memakai projectile, ekor api, dan efek impact yang sudah ada. Saat
+  Survival, tembakan mengunci zombie hidup terdekat (jangkauan 32 m), terus
+  mengikuti geraknya, mengenai collision zombie, lalu memberi 48 damage dari
+  96 HP. Kematian memperbarui hitungan `KALAH` dan HUD.
+- Tes headless memverifikasi tombol tanpa melee, pemilihan target, homing setelah
+  target bergeser, collision, damage, kematian, dan hitungan HUD. Tes render
+  Mobile Vulkan juga memeriksa tombol sihir tampil dan pedang tidak terlihat.
+- Validasi lokal lulus: seluruh GDScript lolos `gdparse`/`gdlint`, pemeriksaan
+  tipe, katalog animasi, tes chunk, bundle lisensi, dan `git diff --check`.
+  Godot 4.5.2 CI run **`37157092349` hijau penuh**: semua tes headless, render
+  Mobile Vulkan, ekspor PCK/APK, audit APK, dan boot launcher. Build Android
+  tersedia di [rilis `build-c5562f0`](https://github.com/KyokoApp/Godot/releases/tag/build-c5562f0).

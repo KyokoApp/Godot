@@ -1,5 +1,26 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-04 (cicilan 24) — **SURVIVAL: SIHIR AUTO-LOCK, TANPA MELEE**
+  - Koreksi pengguna: ganti serangan pedang Survival dengan tembakan sihir yang
+    sudah ada. Tombol `SERANG` dan pedang disembunyikan di Survival; tombol
+    `TEMBAK` memanggil FirePet yang sama. Perilaku hub tetap seperti sebelumnya.
+  - FirePet kini bisa mengunci zombie hidup terdekat dalam jarak 32 m. Proyektil
+    sihir lama mengikuti target dan collision mask-nya mencakup terrain serta
+    zombie; setiap hit memberi 48 damage dari 96 HP. Sinyal mati zombie langsung
+    memperbarui jumlah `KALAH` di HUD.
+  - Jalur melee dan resolver damage melee di `survival_world.gd` dihapus.
+    `tools/test_survival.gd` menguji tombol tanpa melee, pemilihan target,
+    homing saat target bergeser, hit/damage, kematian, dan hitungan HUD.
+    Render test Survival diperbarui agar memastikan pedang tidak tampil dan
+    tombol sihir tetap tersedia.
+  - Run CI `37156788864` lulus gate/headless (termasuk tes auto-lock), tetapi
+    render-c masih punya assertion lama yang mewajibkan pedang. Setelah assertion
+    render diperbarui, run Godot 4.5.2 `37157092349` hijau penuh: seluruh tes
+    headless, render Mobile Vulkan, ekspor PCK/APK, audit APK, dan boot launcher.
+    Build tersedia di [rilis `build-c5562f0`](https://github.com/KyokoApp/Godot/releases/tag/build-c5562f0).
+  - Validasi lokal: `gdparse`, `gdlint project tools`, `tools/check_scripts.py`,
+    katalog animasi, tes chunk, bundle lisensi, dan `git diff --check` lulus.
+
 - 2026-10-03 (cicilan 23) — **GAMEPLAY SELECTOR, SURVIVAL, PEDANG, DAN EDITOR HUD**
   - Opsi pertama dialog Mira kini `GAMEPLAY`; setelah transisi dialog/kamera,
     selector mode beranimasi menawarkan Survival dan placeholder `COMING SOON`.
