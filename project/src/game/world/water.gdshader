@@ -38,6 +38,11 @@ uniform float depth_full = 6.0;
 // Kekuatan pantulan langit (0..1).
 uniform float reflectivity = 0.85;
 uniform float horizon_fade = 420.0;
+// Godot 4.5: DEPTH_TEXTURE tidak lagi jadi bawaan. Tanpa baris ini shader
+// GAGAL kompilasi ("DEPTH_TEXTURE has been removed in favor of using
+// hint_depth_texture") — dan karena pond.gd mem-preload shader yang sama,
+// kegagalan itu ikut mematikan Pond.new() di main.gd.
+uniform sampler2D DEPTH_TEXTURE : hint_depth_texture, filter_linear_mipmap;
 
 varying vec3 world_position;
 

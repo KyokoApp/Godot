@@ -322,6 +322,29 @@ static func clamp_inside(point: Vector2, margin: float) -> Vector2:
 	return Vector2(cos(angle), sin(angle)) * clampf(wanted, 0.0, HALF)
 
 
+## Versi STATIS dari can_grow(): untuk pemakai yang tidak punya instance Field
+## (misalnya forest.gd, yang hanya memakai fungsi statis). Bedanya cuma sumber
+## tinggi tanah — instance memakai grid chunk, versi ini memakai fungsi
+## analitik. Selisihnya beberapa milimeter (grid memang dibangun dari fungsi
+## yang sama), jadi aturan kolam dan jalan tetap identik.
+static func can_grow_static(x: float, z: float) -> bool:
+	if not is_inside(x, z, GRASS_SHORE_MARGIN):
+		return false
+	var height := terrain_height(x, z)
+	if height < POND_LEVEL + GRASS_BASIN_MARGIN:
+		return false
+	if height < GRASS_MIN_HEIGHT:
+		return false
+	var gradient := Vector2(
+		terrain_height(x + 0.5, z) - terrain_height(x - 0.5, z),
+		terrain_height(x, z + 0.5) - terrain_height(x, z - 0.5))
+	if gradient.length() > MAX_SLOPE:
+		return false
+	if absf(z - path_centre(x)) < GRASS_PATH_MARGIN:
+		return false
+	return true
+
+
 func can_grow(x: float, z: float) -> bool:
 	if not is_inside(x, z, GRASS_SHORE_MARGIN):
 		return false
