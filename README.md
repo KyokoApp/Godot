@@ -1451,3 +1451,13 @@ Permintaan terbaru membatalkan lake/door dan efek berjalan di atas air dari rond
 Validasi statis lokal: `gdlint project tools`, `python3 tools/check_scripts.py .`,
 dan `git diff --check` lulus. Godot 4.5.2 CI run **37126825496** hijau **7/7**:
 compile, seluruh tes headless (termasuk NPC), tiga render regresi, dan packaging.
+
+## Ronde 21 — Mira berjalan lurus + menu bersudut dengan karakter bergeser
+
+- **Arah jalan Mira diperbaiki.** Ia kini memakai `Walk_Loop` (bukan `Walk_Formal_Loop`, yang dipakai pemain untuk berjalan mundur), menghadap sasaran dulu sambil berputar di tempat, baru mulai melangkah. Ini mencegah animasi jalan tampak menyamping/miring.
+- **UI interaksi mengikuti referensi gambar.** Kartu dua kolom diganti halaman asimetris: panel hitam bertepi diagonal di kiri, pilihan tersusun vertikal, aksen merah/emas, dan area terang di kanan.
+- **Mira bergeser ke sisi kanan saat menu masuk.** Potret 3D bergerak dari tengah ke samping seiring panel menu dan footer masuk; saat ditutup, gerakannya kembali dengan transisi halus. Pilihan yang belum tersedia tetap menampilkan **COMING SOON**.
+- Tes NPC kini memeriksa klip jalan depan, keselarasan arah badan dengan sasaran, dan animasi geser potret.
+
+Validasi statis lokal: `gdlint project tools`, `python3 tools/check_scripts.py .`, dan
+`git diff --check` lulus. Tes runtime Godot/CI untuk perubahan ronde ini menunggu push.

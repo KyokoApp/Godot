@@ -1,5 +1,23 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-03 (cicilan 21) — **ARAH JALAN MIRA + MENU ASIMETRIS DAN KARAKTER GESER**
+  - Feedback terbaru: jalan Mira terlihat miring, dan layar interaksi perlu
+    mengikuti referensi visual terlampir dengan karakter berpindah ke sisi layar
+    saat menu masuk.
+  - `npc.gd` mengganti `Walk_Formal_Loop` (klip jalan mundur pemain) ke
+    `Walk_Loop`. Mira kini berputar di tempat hingga menghadap sasaran, baru
+    bergerak; rotasinya mengikuti arah lintasan dan kecepatan frame. Tes
+    membandingkan arah badan dengan sasaran sebelum menguji perpindahan.
+  - `npc_dialogue.gd` memakai halaman menu berkontras tinggi dengan bidang
+    hitam bersudut di kiri, daftar pilihan vertikal dan footer seperti referensi.
+    Panggung 3D Mira memenuhi bidang kanan; transisi menggeser karakter dari
+    tengah ke samping sambil panel masuk, lalu kembali saat ditutup. Opsi yang
+    belum tersedia tetap menampilkan COMING SOON.
+  - `test_npc.gd` kini menguji klip jalan depan, sudut arah badan, panel miring,
+    animasi geser potret, pilihan, dan transisi penutupan.
+  - Validasi statis lokal akan diperbarui setelah pemeriksaan ronde ini; tes
+    runtime Godot/CI belum dijalankan.
+
 - 2026-10-03 (cicilan 20) — **PULAU 100 M BERGULIR + NPC MIRA + UI INTERAKSI**
   - Permintaan terbaru membatalkan danau/pintu serta jalan/riak air ronde 18–19.
     `pond.gd`, `water_ripple.gd`, dan shader riaknya sudah dihapus; `Field` tidak

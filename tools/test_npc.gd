@@ -52,11 +52,23 @@ func _run() -> void:
 			npc.set("_idle_time", 0.0)
 			npc.call("_physics_process", 1.0 / 60.0)
 		_check(int(npc.get("walk_count")) > 0, "NPC tidak pernah memilih untuk berjalan")
-		_check(bool(npc.call("is_walking")), "NPC tidak masuk ke animasi jalan")
+		_check(bool(npc.get("_walking")), "NPC tidak menyiapkan gerak wander")
+		for _frame in range(120):
+			if bool(npc.call("is_walking")):
+				break
+			await physics_frame
+		_check(bool(npc.call("is_walking")), "NPC tidak menghadap jalur sebelum berjalan")
 		if npc_visual != null:
 			_check(
-				str(npc_visual.get("clip")) == "Walk_Formal_Loop",
-				"NPC memakai klip jalan yang salah: %s" % str(npc_visual.get("clip"))
+				str(npc_visual.get("clip")) == "Walk_Loop",
+				"NPC memakai klip jalan depan yang salah: %s" % str(npc_visual.get("clip"))
+			)
+			var target: Vector2 = npc.get("_walk_target")
+			var direction := target - Vector2(npc.global_position.x, npc.global_position.z)
+			var facing := atan2(-direction.x, -direction.y)
+			var error := absf(wrapf(facing - npc_visual.rotation.y, -PI, PI))
+			_check(
+				error < 0.04, "NPC mulai berjalan menyamping: sudut arah %.2f°" % rad_to_deg(error)
 			)
 		var before := npc.global_position
 		for _frame in range(24):
@@ -82,14 +94,19 @@ func _run() -> void:
 		_check(prompt != null and prompt.visible, "Tombol bicara tidak muncul saat dekat NPC")
 		interaction.call("_begin_interaction")
 		var dialogue: Control = interaction.get("_dialogue")
-		for _frame in range(36):
-			await process_frame
+		await create_timer(0.7).timeout
 		_check(bool(interaction.call("is_open")), "Interaksi tidak membuka layar pilihan")
 		_check(dialogue != null and dialogue.visible, "Layar dialog tidak terlihat")
 		if dialogue != null:
 			var options: Array = dialogue.get("_options")
 			_check(options.size() == 4, "Pilihan gameplay tidak lengkap: %d" % options.size())
-			_check(dialogue.get("_portrait") != null, "Potret 3D NPC di panel kiri tidak dibuat")
+			_check(dialogue.get("_portrait") != null, "Panggung 3D NPC di sisi kanan tidak dibuat")
+			var portrait_character: Node3D = dialogue.get("_portrait_character")
+			_check(
+				portrait_character != null and portrait_character.position.x > 0.4,
+				"Karakter tidak bergeser ke samping saat menu dibuka"
+			)
+			_check(dialogue.get("_sidebar") != null, "Panel menu miring tidak dibuat")
 			dialogue.call("move_selection", 1)
 			_check(int(dialogue.get("_selected")) == 1, "Navigasi pilihan tidak berpindah")
 			dialogue.call("activate_selected")
@@ -101,8 +118,7 @@ func _run() -> void:
 		_check(not bool(joystick.get("input_enabled")), "Joystick aktif saat dialog terbuka")
 		_check(not bool(orbit.get("input_enabled")), "Kamera aktif saat dialog terbuka")
 		dialogue.call("close_dialogue")
-		for _frame in range(24):
-			await process_frame
+		await create_timer(0.4).timeout
 		_check(not bool(interaction.call("is_open")), "Dialog tidak menutup dengan transisi")
 		_check(bool(joystick.get("input_enabled")), "Joystick tidak pulih setelah dialog")
 		_check(bool(orbit.get("input_enabled")), "Kamera tidak pulih setelah dialog")

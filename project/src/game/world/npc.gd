@@ -7,13 +7,14 @@ const Character = preload("res://src/game/mannequin.gd")
 
 const HEIGHT := 1.8
 const WALK_SPEED := 0.85
+const WALK_TURN_RATE := 8.0
 const WANDER_RADIUS := 4.5
 const IDLE_CLIPS: Array[String] = [
 	"Idle_FoldArms_Loop",
 	"Idle_Rail_Loop",
 	"Idle_No_Loop",
 ]
-const WALK_CLIP := "Walk_Formal_Loop"
+const WALK_CLIP := "Walk_Loop"
 const TALK_CLIP := "Idle_Talking_Loop"
 
 var display_name := "Mira"
@@ -26,6 +27,7 @@ var _rng := RandomNumberGenerator.new()
 var _idle_time := 1.8
 var _walk_target := Vector2.ZERO
 var _walking := false
+var _turning := false
 var _talking := false
 
 
@@ -48,10 +50,13 @@ func _physics_process(delta: float) -> void:
 		return
 	if _talking:
 		if player != null:
-			_face_point(Vector2(player.global_position.x, player.global_position.z))
+			_face_point(Vector2(player.global_position.x, player.global_position.z), delta)
 		return
 	if _walking:
-		_step_toward_target(delta)
+		if _turning:
+			_turn_toward_target(delta)
+		else:
+			_step_toward_target(delta)
 		return
 	_idle_time -= delta
 	if _idle_time <= 0.0:
@@ -61,6 +66,7 @@ func _physics_process(delta: float) -> void:
 func start_conversation(player_position: Vector3) -> void:
 	_talking = true
 	_walking = false
+	_turning = false
 	_idle_time = 3.0
 	_face_point(Vector2(player_position.x, player_position.z))
 	if visual != null:
@@ -70,13 +76,14 @@ func start_conversation(player_position: Vector3) -> void:
 func end_conversation() -> void:
 	_talking = false
 	_walking = false
+	_turning = false
 	_idle_time = _rng.randf_range(2.5, 5.0)
 	if visual != null:
 		visual.set_locomotion(IDLE_CLIPS[0], 1.0)
 
 
 func is_walking() -> bool:
-	return _walking
+	return _walking and not _turning
 
 
 func _choose_next_action() -> void:
@@ -99,8 +106,23 @@ func _begin_wander() -> void:
 	if _walk_target.distance_to(Vector2(global_position.x, global_position.z)) < 1.0:
 		_walk_target = Field.clamp_inside(home + Vector2(2.0, 0.0), 2.0)
 	_walking = true
+	_turning = true
 	walk_count += 1
-	visual.set_locomotion(WALK_CLIP, 1.0)
+	visual.set_locomotion(IDLE_CLIPS[0], 1.0)
+
+
+func _turn_toward_target(delta: float) -> void:
+	var here := Vector2(global_position.x, global_position.z)
+	var direction := _walk_target - here
+	if direction.length_squared() < 0.001:
+		_turning = false
+		return
+	_face_direction(direction, delta)
+	var facing := atan2(-direction.x, -direction.y)
+	if absf(wrapf(facing - visual.rotation.y, -PI, PI)) < 0.035:
+		visual.rotation.y = facing
+		_turning = false
+		visual.set_locomotion(WALK_CLIP, 1.0)
 
 
 func _step_toward_target(delta: float) -> void:
@@ -115,7 +137,7 @@ func _step_toward_target(delta: float) -> void:
 		return
 	var step := offset.normalized() * minf(WALK_SPEED * delta, offset.length())
 	_set_ground_position(here + step)
-	_face_direction(step)
+	_face_direction(step, delta)
 
 
 func _set_ground_position(point: Vector2) -> void:
@@ -123,15 +145,18 @@ func _set_ground_position(point: Vector2) -> void:
 	global_position = Vector3(point.x, ground + HEIGHT * 0.5, point.y)
 
 
-func _face_point(point: Vector2) -> void:
-	_face_direction(point - Vector2(global_position.x, global_position.z))
+func _face_point(point: Vector2, delta := 0.0) -> void:
+	_face_direction(point - Vector2(global_position.x, global_position.z), delta)
 
 
-func _face_direction(direction: Vector2) -> void:
+func _face_direction(direction: Vector2, delta := 0.0) -> void:
 	if visual == null or direction.length_squared() < 0.001:
 		return
 	var facing := atan2(-direction.x, -direction.y)
-	visual.rotation.y = lerp_angle(visual.rotation.y, facing, 0.18)
+	if delta <= 0.0:
+		visual.rotation.y = facing
+	else:
+		visual.rotation.y = rotate_toward(visual.rotation.y, facing, WALK_TURN_RATE * delta)
 
 
 func _apply_npc_palette() -> void:
