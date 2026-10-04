@@ -54,7 +54,12 @@ func _run() -> void:
 	_check(game.process_mode == Node.PROCESS_MODE_INHERIT, "Gameplay tidak dipulihkan")
 	await process_frame
 	_check(game.find_child("WarmupViewport", true, false) == null, "Viewport warmup bocor")
-	_check(game.get("_attack").is_visible_in_tree(), "HUD tidak muncul setelah warmup")
+	var joystick: Control = game.get("_joystick")
+	_check(joystick.is_visible_in_tree() and bool(joystick.get("input_enabled")),
+		"Analog HUD tidak aktif setelah warmup")
+	var attack: Button = game.get("_attack")
+	_check(not attack.is_visible_in_tree() and attack.disabled,
+		"Tombol aksi muncul kembali setelah warmup")
 	for voice in game.get("_audio").get("voices"):
 		_check(not voice.stream_paused, "Audio tetap pause setelah loading")
 	# Skip must use the same cleanup path, not strand gameplay in DISABLED mode.

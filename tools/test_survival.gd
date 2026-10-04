@@ -399,6 +399,7 @@ func _run() -> void:
 			live_burn_target = zombie
 			break
 	var chain_target: Node3D
+	var chain_health_before := 0
 	if live_burn_target != null:
 		for zombie in zombies:
 			if is_instance_valid(zombie) and zombie != live_burn_target \
@@ -408,7 +409,7 @@ func _run() -> void:
 	if live_burn_target != null:
 		if chain_target != null:
 			chain_target.global_position = live_burn_target.global_position + Vector3(2.0, 0, 0)
-			var chain_health_before := int(chain_target.get("health"))
+			chain_health_before = int(chain_target.get("health"))
 		var health_before_impact := int(player.get("health"))
 		pet.emit_signal("impact_landed", live_burn_target, FirePet.MAGIC_DAMAGE, false)
 		_check(float(live_burn_target.get("_burn_left")) > 0.0
