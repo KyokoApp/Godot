@@ -110,6 +110,12 @@ func living_zombie_count() -> int:
 	return living
 
 
+func get_magic_lock_range_bonus() -> float:
+	if not is_instance_valid(buff_system):
+		return 0.0
+	return buff_system.magic_lock_range_bonus
+
+
 func acquire_magic_target(from_position: Vector3, range_bonus: float = 0.0) -> Zombie:
 	var nearest: Zombie
 	var lock_range := MAGIC_LOCK_RANGE + maxf(0.0, range_bonus)

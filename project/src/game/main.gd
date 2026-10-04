@@ -815,7 +815,7 @@ func _fire_action() -> void:
 		return
 	var target: Node3D
 	if _active_mode == "survival" and is_instance_valid(_survival_world):
-		var range_bonus := _survival_world.buff_system.magic_lock_range_bonus
+		var range_bonus: float = _survival_world.get_magic_lock_range_bonus()
 		target = _survival_world.acquire_magic_target(_player.global_position, range_bonus)
 	_pet.attack(target)
 
