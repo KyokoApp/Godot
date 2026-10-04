@@ -23,10 +23,15 @@
     hold/release pose.
   - Validasi lokal lulus: parse semua `.gd` dengan `gdparse`, `gdlint project tools`,
     `tools/check_scripts.py .`, katalog animasi, tes chunk, bundle lisensi, dan
-    `git diff --check`. Runtime Godot 4.5.2 tidak tersedia; unduhan gagal pada TLS.
-    Belum ada build, tes headless Godot, render, atau CI setelah edit ini; visual
-    belum terverifikasi. Belum commit/push; branch sesi tetap
-    `arena/01a0fc4a-godot`.
+    `git diff --check`. Binary Godot 4.5.2 tidak tersedia lokal.
+  - CI Godot 4.5.2 run [`37241849407`](https://github.com/KyokoApp/Godot/actions/runs/37241849407)
+    pada commit `c0aa56b` hijau penuh: compile, semua tes headless, render-a/b/c
+    Mobile Vulkan (termasuk hold/release casting), ekspor PCK/APK, audit APK, dan
+    boot launcher. Rilis APK: [`build-c0aa56b`](https://github.com/KyokoApp/Godot/releases/tag/build-c0aa56b).
+    Render regresi CI lulus; tes pada perangkat Android fisik belum dilakukan.
+  - Commit/push: `70a7d37` fitur; `7c5740a` cakupan variabel tes Survival dan
+    ekspektasi HUD warmup analog-only; `c0aa56b` tes pengecualian kamera memakai
+    katalog yang tetap terlihat. Branch tetap `arena/01a0fc4a-godot`.
 
 - 2026-10-04 (cicilan 27) — **SURVIVAL: TEMBAK OTOMATIS TANPA INPUT**
   - Ketika mode Survival aktif, loop utama mencoba cast setiap 0,18 detik dan

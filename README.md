@@ -1641,6 +1641,8 @@ sihir yang sudah tersedia dan kunci otomatis ke zombie.
   pulih setelah tembakan berhenti; casting satu kali di hub tetap memakai alur biasa.
 - Validasi statis lokal lulus: `gdparse`, `gdlint project tools`, pemeriksaan
   tipe, katalog animasi, tes chunk, bundle lisensi, dan `git diff --check`.
-  Runtime Godot 4.5.2 tidak tersedia di sandbox; unduhan binary gagal pada TLS,
-  jadi build, tes headless, dan render CI belum dijalankan setelah perubahan ini.
-  Belum ada klaim tampilan visual terverifikasi.
+  CI Godot 4.5.2 run **[`37241849407`](https://github.com/KyokoApp/Godot/actions/runs/37241849407)**
+  pada commit `c0aa56b` hijau penuh: compile, semua tes headless, render Mobile
+  Vulkan (termasuk pose casting tertahan dan pemulihannya), ekspor PCK/APK, audit
+  APK, dan boot launcher. APK: **[`build-c0aa56b`](https://github.com/KyokoApp/Godot/releases/tag/build-c0aa56b)**.
+  Render regresi CI lolos; tes langsung di perangkat Android fisik belum dilakukan.
