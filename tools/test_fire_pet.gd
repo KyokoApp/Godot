@@ -46,13 +46,13 @@ func _run() -> void:
 		await physics_frame
 	_check(pet.global_position.distance_to(start) > 0.005, "Pet tidak beranimasi melayang")
 	var orbit: Node3D = game.get("_orbit")
-	var attack: Button = game.get("_attack")
+	var catalog: Button = game.get("_catalog_button")
 	var touch := InputEventScreenTouch.new()
 	touch.index = 9
 	touch.pressed = true
-	touch.position = attack.get_global_rect().get_center()
+	touch.position = catalog.get_global_rect().get_center()
 	orbit._input(touch)
-	_check(orbit.get("_touches").is_empty(), "Attack ikut memutar kamera")
+	_check(orbit.get("_touches").is_empty(), "Katalog ikut memutar kamera")
 	_check(pet.attack(), "Serangan pertama gagal")
 	_check(not pet.attack(), "Cooldown tidak mencegah spam")
 	_check(pet.casting and pet.projectiles.is_empty(), "Windup casting dilewati")
