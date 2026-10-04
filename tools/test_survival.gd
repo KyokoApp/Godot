@@ -25,14 +25,6 @@ func _check(condition: bool, message: String) -> void:
 	print("::error::", message)
 
 
-func _touch(index: int, point: Vector2, pressed: bool) -> void:
-	var event := InputEventScreenTouch.new()
-	event.index = index
-	event.position = point
-	event.pressed = pressed
-	root.push_input(event, true)
-
-
 func _test_repeatable_buff_pool() -> void:
 	var capped_stacks: Dictionary = {}
 	for card_data: Dictionary in BuffCatalog.all_cards():
@@ -61,6 +53,9 @@ func _run() -> void:
 	_test_repeatable_buff_pool()
 	var game := load("res://src/game/main.tscn").instantiate() as Node3D
 	root.add_child(game)
+	# Bekukan loop main sampai target uji diposisikan, lalu panggil eksplisit
+	# untuk membuktikan auto-fire tetap berjalan tanpa event tombol.
+	game.set_process(false)
 	var forest: Node = game.get("_forest")
 	_check(forest != null and not str(forest.call("summary")).is_empty(),
 		"Model dedaunan tidak menghasilkan MultiMesh")
@@ -147,8 +142,8 @@ func _run() -> void:
 	orbit.call("_input", wheel_zoom)
 	_check(is_equal_approx(float(orbit.get("distance")), survival_distance),
 		"Kamera Survival masih bisa di-zoom lewat API/roda tetikus")
-	_check(float(fire_button.get("auto_repeat_interval")) > 0.0,
-		"Tombol sihir tidak mengaktifkan auto-fire saat ditahan")
+	_check(is_equal_approx(float(fire_button.get("auto_repeat_interval")), 0.0),
+		"Auto-fire masih bergantung pada menahan tombol TEMBAK")
 	_check(is_equal_approx(float(pet.get("cooldown_duration")), FirePet.RAPID_FIRE_COOLDOWN),
 		"Cooldown sihir tidak dipercepat di Survival")
 	game.call("_attack_action")
@@ -189,9 +184,10 @@ func _run() -> void:
 	_check(picked == target, "Auto-lock tidak memilih zombie hidup yang terdekat")
 	var defeated_before := int(world.get("defeated"))
 	target.set("health", FirePet.MAGIC_DAMAGE)
-	fire_button.pressed.emit()
-	_check(bool(pet.get("casting")), "Tombol TEMBAK tidak memulai casting sihir")
-	_check(pet.get("_locked_target") == target, "Casting sihir tidak menyimpan target terkunci")
+	game.call("_process", FirePet.AUTO_FIRE_INTERVAL)
+	_check(bool(pet.get("casting")), "Sihir tidak otomatis mulai casting tanpa input")
+	_check(pet.get("_locked_target") == target,
+		"Auto-fire tidak mengunci zombie hidup yang terdekat")
 	var saw_homing_projectile := false
 	var locked_shot: CharacterBody3D
 	for _frame in range(12):
@@ -233,25 +229,24 @@ func _run() -> void:
 	_check(world.call("acquire_magic_target", player.global_position) != target,
 		"Auto-lock masih memilih zombie yang sudah tumbang")
 
-	# Tahan tombol: satu tekan awal diikuti beberapa tembakan beruntun.
+	# Auto-fire mandiri: jangan kirim tap/hold; cukup jalankan loop main.
 	farther.set("health", 10000)
 	var shots_before := int(pet.get("shots_fired"))
-	var fire_point := fire_button.get_global_rect().get_center()
-	_touch(21, fire_point, true)
-	for _frame in range(90):
+	for _frame in range(180):
+		game.call("_process", 1.0 / 60.0)
 		await physics_frame
-		if int(pet.get("shots_fired")) >= shots_before + 4:
+		if int(pet.get("shots_fired")) >= shots_before + 3:
 			break
-	_touch(21, fire_point, false)
 	var shots_after := int(pet.get("shots_fired"))
 	_check(shots_after >= shots_before + 3,
-		"Tahan tombol TEMBAK tidak mengeluarkan burst otomatis")
-	for _frame in range(40):
+		"Tanpa input tombol, Survival tidak menembak zombie berulang kali")
+	for _frame in range(90):
+		game.call("_process", 1.0 / 60.0)
 		await physics_frame
 		if int(farther.get("health")) <= 10000 - FirePet.MAGIC_DAMAGE * 2:
 			break
 	_check(int(farther.get("health")) <= 10000 - FirePet.MAGIC_DAMAGE * 2,
-		"Auto-fire tidak memberi hit beruntun ke zombie")
+		"Auto-fire tanpa input tidak memberi hit beruntun ke zombie")
 
 	# Lewati satu menit secara deterministik: stage naik, timer reset, dan wave membesar.
 	var wave_one_size := int(world.get("last_spawn_wave_size"))
@@ -377,6 +372,10 @@ func _run() -> void:
 		"Batas/jarak kamera home berubah setelah Survival")
 	_check(is_equal_approx(float(fire_button.get("auto_repeat_interval")), 0.0),
 		"Auto-fire tidak berhenti setelah keluar dari Survival")
+	var hub_shots_before := int(pet.get("shots_fired"))
+	game.call("_process", FirePet.AUTO_FIRE_INTERVAL * 2.0)
+	_check(int(pet.get("shots_fired")) == hub_shots_before,
+		"Auto-fire Survival masih menembak setelah kembali ke hub")
 	_check(is_equal_approx(float(pet.get("cooldown_duration")), FirePet.COOLDOWN)
 		and int(pet.get("projectile_limit")) == FirePet.MAX_PROJECTILES,
 		"Setelan tembak hub tidak dipulihkan setelah Survival")

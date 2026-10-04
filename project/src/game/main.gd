@@ -68,6 +68,7 @@ var _survival_hud: SurvivalHUD
 var _active_mode := "hub"
 var _home_camera_state: Dictionary = {}
 var _death_return_pending := false
+var _survival_auto_fire_left := 0.0
 var _visual: Character
 var _bloom_level := 0.0
 var _orbit: Orbit
@@ -288,7 +289,7 @@ func _build_hud() -> void:
 	_attack.pressed.connect(_attack_action)
 	_fire_button = _rune("TEMBAK", FIRE_DIAMETER, FIRE_ICON)
 	_fire_button.name = "FireRune"
-	_fire_button.tooltip_text = "Di Survival, tahan TEMBAK untuk sihir beruntun yang auto-lock zombie"
+	_fire_button.tooltip_text = "Sihir otomatis mengunci zombie terdekat; tap untuk tembakan manual"
 	layer.add_child(_fire_button)
 	_place(_fire_button, Control.PRESET_BOTTOM_RIGHT, -360, -180)
 	_register_hud_control("Tembak", _fire_button, FIRE_DIAMETER, -360, -180)
@@ -681,7 +682,8 @@ func _enter_survival() -> void:
 	_player.clear_survival_bonuses()
 	_pet.reset_survival_modifiers()
 	_pet.set_rapid_fire(true)
-	_fire_button.auto_repeat_interval = FirePet.AUTO_FIRE_INTERVAL
+	_survival_auto_fire_left = 0.0
+	_fire_button.auto_repeat_interval = 0.0
 	_fire_button.reset_touch()
 	if _npc_interaction != null:
 		_npc_interaction.npc = null
@@ -734,6 +736,7 @@ func _on_health_changed(value: int) -> void:
 			_player.shield_points, _player.shield_capacity)
 	if value <= 0 and _active_mode == "survival" and not _death_return_pending:
 		_death_return_pending = true
+		_survival_auto_fire_left = 0.0
 		_fire_button.auto_repeat_interval = 0.0
 		_fire_button.reset_touch()
 		_apply_input_state()
@@ -760,6 +763,7 @@ func _return_home_from_survival() -> void:
 		return
 	_death_return_pending = false
 	_active_mode = "hub"
+	_survival_auto_fire_left = 0.0
 	_fire_button.auto_repeat_interval = 0.0
 	_fire_button.reset_touch()
 	_pet.set_rapid_fire(false)
@@ -811,13 +815,16 @@ func _attack_action() -> void:
 
 
 func _fire_action() -> void:
-	if _death_return_pending or _player.health <= 0:
+	if _death_return_pending or _player.health <= 0 \
+			or _active_mode != "survival" or not is_instance_valid(_survival_world):
 		return
-	var target: Node3D
-	if _active_mode == "survival" and is_instance_valid(_survival_world):
-		var range_bonus: float = _survival_world.get_magic_lock_range_bonus()
-		target = _survival_world.acquire_magic_target(_player.global_position, range_bonus)
-	_pet.attack(target)
+	var range_bonus: float = _survival_world.get_magic_lock_range_bonus()
+	var target: Node3D = _survival_world.acquire_magic_target(
+		_player.global_position, range_bonus)
+	if not is_instance_valid(target):
+		return
+	if _pet.attack(target):
+		_survival_auto_fire_left = FirePet.AUTO_FIRE_INTERVAL
 
 
 func _toggle_speed() -> void:
@@ -934,10 +941,18 @@ func _update_dash_bloom(delta: float) -> void:
 	_visual.skin.set_bloom(_bloom_level)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	_fire_button.cooldown_fraction = clampf(
 		_pet.cooldown / maxf(_pet.cooldown_duration, 0.001), 0, 1)
 	_fire_button.queue_redraw()
+	if _active_mode == "survival" and not _death_return_pending \
+			and is_instance_valid(_survival_world):
+		_survival_auto_fire_left = maxf(0.0, _survival_auto_fire_left - delta)
+		if _survival_auto_fire_left <= 0.0:
+			_survival_auto_fire_left = FirePet.AUTO_FIRE_INTERVAL
+			_fire_action()
+	else:
+		_survival_auto_fire_left = 0.0
 	# Sapuan cooldown dash: busur mengikuti sisa waktu tunggu.
 	_dash.cooldown_fraction = clampf(_player.dash_cooldown / Player.DASH_COOLDOWN, 0, 1)
 	_dash.queue_redraw()
