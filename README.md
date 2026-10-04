@@ -1592,3 +1592,25 @@ sihir yang sudah tersedia dan kunci otomatis ke zombie.
   dan APK, audit APK, serta boot launcher. Build tersedia di [rilis
   `build-5ac52e5`](https://github.com/KyokoApp/Godot/releases/tag/build-5ac52e5).
   Render CI lolos; belum ada uji langsung di perangkat Android fisik.
+
+## Ronde 27 — Survival menembak otomatis tanpa menahan tombol
+
+- Saat Survival aktif, loop gameplay menembakkan sihir otomatis tiap 0,18 detik
+  ke zombie hidup terdekat dalam jangkauan auto-lock (termasuk bonus jangkauan
+  buff). Pemain tidak perlu menekan atau menahan `TEMBAK`.
+- Tidak ada target berarti tidak ada tembakan membabi buta. Auto-fire berhenti
+  saat run berakhir atau pemain kembali ke hub; kontrol hub tidak memulai
+  tembakan otomatis. Tombol `TEMBAK` tetap dapat ditap untuk satu cast manual,
+  sedangkan repeat saat ditahan tidak diperlukan lagi.
+- `tools/test_survival.gd` menguji casting, auto-lock, tembakan berulang, dan
+  damage tanpa mengirim input tombol, lalu memastikan tembakan otomatis berhenti
+  di hub.
+- Validasi lokal lulus: `gdparse`, `gdlint` pada file yang berubah,
+  `tools/check_scripts.py .`, dan `git diff --check`. CI Godot 4.5.2 run
+  **[`37210636688`](https://github.com/KyokoApp/Godot/actions/runs/37210636688)**
+  meluluskan compile + seluruh tes headless (termasuk tes auto-fire Survival),
+  render-a/render-c (termasuk render dunia Survival), ekspor PCK/APK, audit APK,
+  dan boot launcher. Run keseluruhan masih merah karena job render-b gagal pada
+  assertion multitouch HUD `Jari kedua gagal casting sambil jalan`; validasi
+  penuh baru dapat diklaim setelah workflow berikutnya hijau. Paket rilis
+  `build-32511ae` berhasil diterbitkan.

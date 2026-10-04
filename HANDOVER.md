@@ -1,5 +1,23 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-04 (cicilan 27) — **SURVIVAL: TEMBAK OTOMATIS TANPA INPUT**
+  - Ketika mode Survival aktif, loop utama mencoba cast setiap 0,18 detik dan
+    mengunci zombie hidup terdekat dengan auto-lock serta bonus jangkauan buff.
+    Pemain tidak perlu menekan/menahan `TEMBAK`; target kosong tidak ditembak
+    membabi buta. Repeat tombol dinonaktifkan, tetapi tap manual tetap tersedia.
+  - Auto-fire berhenti ketika run berakhir atau kembali ke hub; hub tidak
+    menembak otomatis. `tools/test_survival.gd` membekukan loop untuk setup
+    target, lalu memanggilnya tanpa event tombol dan memastikan cast, lock,
+    tembakan berulang, damage, serta tidak ada auto-fire di hub.
+  - `gdparse`, `gdlint` file berubah, `tools/check_scripts.py .`, dan
+    `git diff --check` lulus lokal. CI [`37210636688`](https://github.com/KyokoApp/Godot/actions/runs/37210636688)
+    meluluskan compile/tes headless (termasuk auto-fire), render-a dan render-c
+    (termasuk dunia Survival), ekspor PCK/APK, audit, dan boot launcher. Run
+    keseluruhan belum hijau: render-b gagal pada assertion multitouch HUD
+    `Jari kedua gagal casting sambil jalan`; cek penuh perlu run baru. Rilis
+    `build-32511ae` terbit dari job package yang sukses.
+  - Commit kode: `32511ae`; branch: `arena/01a0fc4a-godot`.
+
 - 2026-10-04 (cicilan 26) — **SURVIVAL: PROGRES RUN-ONLY, BUFF SETIAP 5 LEVEL, API ORBIT + AEGIS**
   - Zombie terus muncul; tiap stage 60 detik meminta wave lebih besar, batas
     zombie hidup naik 3 per stage (maksimum 36), interval spawn makin pendek,
