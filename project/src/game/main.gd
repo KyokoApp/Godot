@@ -815,8 +815,12 @@ func _attack_action() -> void:
 
 
 func _fire_action() -> void:
-	if _death_return_pending or _player.health <= 0 \
-			or _active_mode != "survival" or not is_instance_valid(_survival_world):
+	if _death_return_pending or _player.health <= 0:
+		return
+	if _active_mode != "survival":
+		_pet.attack()
+		return
+	if not is_instance_valid(_survival_world):
 		return
 	var range_bonus: float = _survival_world.get_magic_lock_range_bonus()
 	var target: Node3D = _survival_world.acquire_magic_target(

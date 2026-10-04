@@ -1599,9 +1599,9 @@ sihir yang sudah tersedia dan kunci otomatis ke zombie.
   ke zombie hidup terdekat dalam jangkauan auto-lock (termasuk bonus jangkauan
   buff). Pemain tidak perlu menekan atau menahan `TEMBAK`.
 - Tidak ada target berarti tidak ada tembakan membabi buta. Auto-fire berhenti
-  saat run berakhir atau pemain kembali ke hub; kontrol hub tidak memulai
-  tembakan otomatis. Tombol `TEMBAK` tetap dapat ditap untuk satu cast manual,
-  sedangkan repeat saat ditahan tidak diperlukan lagi.
+  saat run berakhir atau pemain kembali ke hub. Survival tetap menerima tap
+  manual; di hub, `TEMBAK` hanya menembak saat ditap dengan cooldown normal,
+  tanpa auto-fire. Repeat saat ditahan tidak diperlukan lagi.
 - `tools/test_survival.gd` menguji casting, auto-lock, tembakan berulang, dan
   damage tanpa mengirim input tombol, lalu memastikan tembakan otomatis berhenti
   di hub.
