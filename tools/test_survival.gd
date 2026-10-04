@@ -6,6 +6,8 @@ const Projectile = preload("res://src/game/fire_projectile.gd")
 const SurvivalWorld = preload("res://src/game/world/survival_world.gd")
 const Zombie = preload("res://src/game/world/zombie.gd")
 const Player = preload("res://src/game/player.gd")
+const BuffCatalog = preload("res://src/game/survival/buff_catalog.gd")
+const BuffSystem = preload("res://src/game/survival/buff_system.gd")
 
 var _failures := 0
 
@@ -31,7 +33,32 @@ func _touch(index: int, point: Vector2, pressed: bool) -> void:
 	root.push_input(event, true)
 
 
+func _test_repeatable_buff_pool() -> void:
+	var capped_stacks: Dictionary = {}
+	for card_data: Dictionary in BuffCatalog.all_cards():
+		var maximum := int(card_data.get("max_stacks", 1))
+		if maximum > 0:
+			capped_stacks[str(card_data.get("id", ""))] = maximum
+	for buff_id in ["ember_core", "long_reach", "ascendant_sigil"]:
+		capped_stacks[buff_id] = 999
+	var manager := BuffSystem.new()
+	manager.set("stacks", capped_stacks)
+	var choices: Array = manager.call("available_choices", 3)
+	_check(choices.size() == 3,
+		"Pool buff akhir run tidak menyediakan tepat tiga pilihan")
+	var unique_ids: Dictionary = {}
+	for card_data: Dictionary in choices:
+		unique_ids[str(card_data.get("id", ""))] = true
+	_check(unique_ids.size() == 3,
+		"Pool buff akhir run mengulang kartu yang sama")
+	for buff_id in ["ember_core", "long_reach", "ascendant_sigil"]:
+		_check(bool(manager.call("apply_buff", buff_id)),
+			"Buff tanpa batas tidak bisa dipilih lagi: " + buff_id)
+	manager.free()
+
+
 func _run() -> void:
+	_test_repeatable_buff_pool()
 	var game := load("res://src/game/main.tscn").instantiate() as Node3D
 	root.add_child(game)
 	var forest: Node = game.get("_forest")

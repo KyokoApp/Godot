@@ -3,7 +3,7 @@ extends RefCounted
 
 const CARDS: Array[Dictionary] = [
 	{"id": "ember_core", "name": "JANTUNG BARA", "rarity": "LANGKA", "icon": "flame",
-		"accent": "#ff7a45", "description": "+18% damage sihir per stack", "max_stacks": 5},
+		"accent": "#ff7a45", "description": "Tanpa batas: +18% damage sihir per stack", "max_stacks": 0},
 	{"id": "rapid_cast", "name": "MANTRA KILAT", "rarity": "LANGKA", "icon": "bolt",
 		"accent": "#62d9ff", "description": "Cooldown tembak -10% per stack", "max_stacks": 5},
 	{"id": "cinder_orbit", "name": "ORBIT BARA", "rarity": "EPIC", "icon": "orbit",
@@ -17,7 +17,8 @@ const CARDS: Array[Dictionary] = [
 	{"id": "echo_volley", "name": "ECHO VOLLEY", "rarity": "EPIC", "icon": "twin",
 		"accent": "#ff8b62", "description": "+12% peluang tembakan sihir ganda", "max_stacks": 4},
 	{"id": "long_reach", "name": "MATA PEMBURU", "rarity": "LANGKA", "icon": "eye",
-		"accent": "#72e1ca", "description": "+7 m jangkauan auto-lock per stack", "max_stacks": 4},
+		"accent": "#72e1ca", "description": "Tanpa batas: +7 m jangkauan auto-lock per stack",
+		"max_stacks": 0},
 	{"id": "volatile_nova", "name": "NOVA VOLATIL", "rarity": "EPIC", "icon": "nova",
 		"accent": "#ffba55", "description": "Kill meledak, memberi damage area", "max_stacks": 4},
 	{"id": "vitality", "name": "JANTUNG RAKSASA", "rarity": "LANGKA", "icon": "vitality",
@@ -29,7 +30,7 @@ const CARDS: Array[Dictionary] = [
 	{"id": "seeking_flame", "name": "API PENCARI", "rarity": "LANGKA", "icon": "comet",
 		"accent": "#99aaff", "description": "+18% kecepatan belok sihir per stack", "max_stacks": 4},
 	{"id": "ascendant_sigil", "name": "SIGIL KEABADIAN", "rarity": "MITIK", "icon": "nova",
-		"accent": "#f2d58b", "description": "+3% damage sihir per stack", "max_stacks": 999},
+		"accent": "#f2d58b", "description": "Tanpa batas: +3% damage sihir per stack", "max_stacks": 0},
 ]
 
 

@@ -72,7 +72,8 @@ func available_choices(count: int = 3) -> Array[Dictionary]:
 	var available: Array[Dictionary] = []
 	for card in Catalog.all_cards():
 		var current := get_stacks(str(card.get("id", "")))
-		if current >= int(card.get("max_stacks", 1)):
+		var maximum := int(card.get("max_stacks", 1))
+		if maximum > 0 and current >= maximum:
 			continue
 		card["stack_count"] = current
 		available.append(card)
@@ -88,7 +89,7 @@ func apply_buff(buff_id: String) -> bool:
 		return false
 	var current := get_stacks(buff_id)
 	var maximum := int(card.get("max_stacks", 1))
-	if current >= maximum:
+	if maximum > 0 and current >= maximum:
 		return false
 	stacks[buff_id] = current + 1
 	_apply_modifiers(buff_id)

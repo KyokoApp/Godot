@@ -131,7 +131,9 @@ func _refresh_text() -> void:
 		return
 	_rarity_label.text = str(_card_data.get("rarity", "BUFF"))
 	_rarity_label.add_theme_color_override("font_color", accent)
-	_stack_label.text = "%d/%d" % [_stack_count, int(_card_data.get("max_stacks", 1))]
+	var maximum := int(_card_data.get("max_stacks", 1))
+	var stack_limit := "∞" if maximum <= 0 else str(maximum)
+	_stack_label.text = "%d/%s" % [_stack_count, stack_limit]
 	_name_label.text = str(_card_data.get("name", "BERKAH"))
 	_description_label.text = str(_card_data.get("description", ""))
 	_icon.icon_kind = str(_card_data.get("icon", "flame"))
