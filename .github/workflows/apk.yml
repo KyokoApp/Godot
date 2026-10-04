@@ -837,9 +837,10 @@ jobs:
 
       - name: Export content pack
         run: |
+          set -o pipefail
           mkdir -p build
           ./godot --headless --path project --export-pack "Content" \
-            "$GITHUB_WORKSPACE/build/content.pck"
+            "$GITHUB_WORKSPACE/build/content.pck" 2>&1 | tee build/content-export.log
           python3 tools/make_manifest.py
           python3 tools/chunk_content.py
           mkdir -p build/pack-test
