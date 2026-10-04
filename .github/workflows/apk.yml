@@ -91,7 +91,15 @@ jobs:
                 project/src/game/world/survival_field.gd \
                 project/src/game/world/survival_ground.gdshader \
                 project/src/game/world/zombie.gd \
+                project/src/game/survival/buff_catalog.gd \
+                project/src/game/survival/buff_system.gd \
+                project/src/game/survival/aegis_shell.gdshader \
+                project/src/game/loading/warmup_samples.gd \
                 project/src/game/ui/game_mode_selector.gd \
+                project/src/game/ui/survival_hud.gd \
+                project/src/game/ui/survival_buff_card.gd \
+                project/src/game/ui/survival_buff_icon.gd \
+                project/src/game/ui/survival_avatar.svg \
                 project/src/game/animation/sword_layer.gd \
                 project/assets/weapons/Sword.glb \
                 project/src/game/world/water.gdshader \

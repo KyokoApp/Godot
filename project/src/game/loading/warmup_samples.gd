@@ -9,7 +9,8 @@ const Projectile = preload("res://src/game/fire_projectile.gd")
 const Burst = preload("res://src/game/fire_burst.gd")
 const FootFire = preload("res://src/game/foot_fire/foot_fire_trail.gd")
 const SpeedAura = preload("res://src/game/speed/speed_aura.gd")
-const STAGES := 13
+const AEGIS_SHADER = preload("res://src/game/survival/aegis_shell.gdshader")
+const STAGES := 14
 
 
 static func populate(stage: int, world: Node3D, game: Node3D) -> void:
@@ -28,6 +29,8 @@ static func populate(stage: int, world: Node3D, game: Node3D) -> void:
 		_foot_fire(world)
 	elif stage == 10 or stage == 11:
 		_speed(world, game, stage == 11)
+	elif stage == 13:
+		_survival_aegis(world)
 	else:
 		_field_ground(world, game)
 
@@ -119,6 +122,23 @@ static func _speed(world: Node3D, game: Node3D, with_ghosts: bool) -> void:
 			character.position.z += 0.08
 			trail.update_motion(1.0 / 60.0, 15, true)
 	character.hide()
+
+
+static func _survival_aegis(world: Node3D) -> void:
+	var shell := MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius = 1.0
+	sphere.height = 2.0
+	sphere.radial_segments = 28
+	sphere.rings = 14
+	shell.mesh = sphere
+	shell.position.y = 0.9
+	var material := ShaderMaterial.new()
+	material.shader = AEGIS_SHADER
+	material.set_shader_parameter("strength", 0.75)
+	material.set_shader_parameter("tint", Color(0.47, 0.34, 1.0, 1.0))
+	shell.material_override = material
+	world.add_child(shell)
 
 
 static func _add_grass(world: Node3D, mesh: Mesh, source: ShaderMaterial,

@@ -29,6 +29,7 @@ var pitch := 0.30
 var pitch_min := MIN_PITCH
 var pitch_max := MAX_PITCH
 var distance := DEFAULT_DISTANCE
+var zoom_enabled := true
 ## Titik bidik kamera relatif ke pemain. Dulu angka 0,55 ini ditulis di main.gd;
 ## sekarang jadi properti supaya tes render bisa membidik leher atau kain tanpa
 ## mengubah perilaku permainan (nilainya tidak pernah diubah selain tes).
@@ -75,6 +76,7 @@ func capture_state() -> Dictionary:
 		"pitch_min": pitch_min,
 		"pitch_max": pitch_max,
 		"distance": distance,
+		"zoom_enabled": zoom_enabled,
 		"focus_offset": focus_offset,
 	}
 
@@ -85,6 +87,7 @@ func restore_state(state: Dictionary) -> void:
 	yaw = float(state.get("yaw", 0.0))
 	pitch = float(state.get("pitch", 0.30))
 	distance = float(state.get("distance", DEFAULT_DISTANCE))
+	zoom_enabled = bool(state.get("zoom_enabled", true))
 	var restored_focus: Vector3 = state.get(
 		"focus_offset", Vector3(0.0, 0.55, 0.0))
 	focus_offset = restored_focus
@@ -96,6 +99,7 @@ func set_top_down_mode() -> void:
 	pitch_max = SURVIVAL_TOP_DOWN_MAX_PITCH
 	pitch = SURVIVAL_TOP_DOWN_PITCH
 	distance = SURVIVAL_TOP_DOWN_DISTANCE
+	zoom_enabled = false
 
 
 func _input(event: InputEvent) -> void:
@@ -143,6 +147,8 @@ func _input(event: InputEvent) -> void:
 ## Ubah jarak kamera dengan faktor: < 1 mendekat, > 1 menjauh. Satu tempat
 ## untuk semua masukan (cubit, roda tetikus, dan tes) supaya batasnya konsisten.
 func zoom_by(factor: float) -> void:
+	if not zoom_enabled:
+		return
 	distance = clampf(distance * factor, MIN_DISTANCE, MAX_DISTANCE)
 
 

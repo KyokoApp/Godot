@@ -11,6 +11,7 @@ extends CharacterBody3D
 
 signal attack_started(clip: String)
 signal health_changed(value: int)
+signal survival_stats_changed
 
 const Character = preload("res://src/game/mannequin.gd")
 const Field = preload("res://src/game/world/field.gd")
@@ -98,7 +99,11 @@ var crouching := false
 var boosted := false
 var sword_mode := false
 var world_bounds_enabled := true
+var max_health := MAX_HEALTH
 var health := MAX_HEALTH
+var shield_points := 0
+var shield_capacity := 0
+var damage_reduction := 0.0
 var move_speed := 0.0
 var speed_scale := 1.0
 var gait := IDLE
@@ -199,16 +204,58 @@ func set_sword_mode(enabled: bool) -> void:
 
 
 func reset_health() -> void:
-	health = MAX_HEALTH
+	health = max_health
 	_damage_cooldown = 0.0
 	health_changed.emit(health)
+	survival_stats_changed.emit()
+
+
+func heal(amount: int) -> void:
+	if amount <= 0 or health <= 0:
+		return
+	var healed := mini(max_health, health + amount)
+	if healed == health:
+		return
+	health = healed
+	health_changed.emit(health)
+	survival_stats_changed.emit()
+
+
+func set_survival_bonuses(health_bonus: int, shield_capacity_value: int,
+		shield_refill: int, reduction: float) -> void:
+	var previous_maximum := max_health
+	max_health = MAX_HEALTH + maxi(0, health_bonus)
+	if max_health > previous_maximum and health > 0:
+		health = mini(max_health, health + max_health - previous_maximum)
+	else:
+		health = mini(health, max_health)
+	shield_capacity = maxi(0, shield_capacity_value)
+	if shield_refill > 0:
+		shield_points = mini(shield_capacity, shield_points + shield_refill)
+	else:
+		shield_points = mini(shield_points, shield_capacity)
+	damage_reduction = clampf(reduction, 0.0, 0.6)
+	health_changed.emit(health)
+	survival_stats_changed.emit()
+
+
+func clear_survival_bonuses() -> void:
+	set_survival_bonuses(0, 0, 0, 0.0)
 
 
 func take_damage(amount: int) -> void:
 	if amount <= 0 or health <= 0 or _damage_cooldown > 0.0:
 		return
-	health = maxi(0, health - amount)
+	var remaining := maxi(1, roundi(amount * (1.0 - clampf(damage_reduction, 0.0, 0.6))))
+	if shield_points > 0:
+		var absorbed := mini(shield_points, remaining)
+		shield_points -= absorbed
+		remaining -= absorbed
 	_damage_cooldown = DAMAGE_COOLDOWN
+	survival_stats_changed.emit()
+	if remaining <= 0:
+		return
+	health = maxi(0, health - remaining)
 	health_changed.emit(health)
 	if health <= 0:
 		velocity = Vector3.ZERO

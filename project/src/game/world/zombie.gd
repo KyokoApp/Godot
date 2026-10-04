@@ -1,7 +1,7 @@
 extends CharacterBody3D
 ## Zombie mannequin UAL: mengejar pemain, mencakar dari dekat, lalu tumbang kena sihir.
 
-signal died
+signal died(zombie: Node3D)
 
 const Character = preload("res://src/game/mannequin.gd")
 const Catalog = preload("res://src/game/animation/catalog.gd")
@@ -14,15 +14,35 @@ const ATTACK_RANGE := 1.55
 const ATTACK_INTERVAL := 2.35
 const ATTACK_DAMAGE := 12
 const START_HEALTH := 96
+const STAGE_HEALTH_GAIN := 24
 const DEATH_LIFETIME := 3.2
 
 var player: CharacterBody3D
 var field: Node3D
 var visual: Character
+var stage := 1
+var max_health := START_HEALTH
 var health := START_HEALTH
 var dead := false
+var _burn_left := 0.0
+var _burn_tick_left := 0.0
+var _burn_damage := 0
 var _attack_cooldown := 0.8
 var _death_left := 0.0
+
+
+func set_stage_difficulty(stage_value: int) -> void:
+	stage = maxi(1, stage_value)
+	max_health = START_HEALTH + (stage - 1) * STAGE_HEALTH_GAIN
+	health = max_health
+
+
+func apply_burn(damage_per_tick: int, duration: float) -> void:
+	if dead or damage_per_tick <= 0 or duration <= 0.0:
+		return
+	_burn_damage = maxi(_burn_damage, damage_per_tick)
+	_burn_left = maxf(_burn_left, duration)
+	_burn_tick_left = minf(_burn_tick_left, 0.38)
 
 
 func _ready() -> void:
@@ -66,6 +86,9 @@ func _physics_process(delta: float) -> void:
 		if _death_left <= 0.0:
 			queue_free()
 		return
+	_update_burn(delta)
+	if dead:
+		return
 	if player == null or visual == null:
 		return
 	_attack_cooldown = maxf(0.0, _attack_cooldown - delta)
@@ -103,6 +126,16 @@ func _physics_process(delta: float) -> void:
 	visual.set_locomotion("Zombie_Walk_Fwd_Loop", WALK_SPEED / natural_speed)
 
 
+func _update_burn(delta: float) -> void:
+	if _burn_left <= 0.0:
+		return
+	_burn_left = maxf(0.0, _burn_left - delta)
+	_burn_tick_left -= delta
+	while _burn_tick_left <= 0.0 and _burn_left > 0.0 and not dead:
+		_burn_tick_left += 0.46
+		take_damage(_burn_damage)
+
+
 func can_be_targeted() -> bool:
 	return not dead and health > 0 and is_inside_tree()
 
@@ -120,7 +153,7 @@ func take_damage(amount: int) -> void:
 	collision_mask = 0
 	_death_left = DEATH_LIFETIME
 	visual.play_action("Death01")
-	died.emit()
+	died.emit(self)
 
 
 func _update_ground_height() -> void:

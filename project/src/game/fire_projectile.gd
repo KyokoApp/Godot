@@ -14,6 +14,8 @@ const TAIL_LIFETIME := 0.7
 var age := 0.0
 var finished := false
 var homing_target: Node3D
+var homing_speed := HOMING_SPEED
+var homing_turn_rate := HOMING_TURN_RATE
 var impact_collider: Object
 var _tail_age := 0.0
 var _trail := Vector3.ZERO
@@ -75,9 +77,9 @@ func _physics_process(delta: float) -> void:
 		var aim := homing_target.global_position + HOMING_AIM_OFFSET
 		var toward_target := aim - global_position
 		var desired_direction := toward_target.normalized()
-		var speed := maxf(velocity.length(), HOMING_SPEED)
+		var speed := maxf(velocity.length(), homing_speed)
 		if velocity.length_squared() > 0.001:
-			var turn := 1.0 - exp(-HOMING_TURN_RATE * delta)
+			var turn := 1.0 - exp(-homing_turn_rate * delta)
 			desired_direction = velocity.normalized().lerp(desired_direction, turn).normalized()
 		if desired_direction.length_squared() < 0.001:
 			desired_direction = toward_target.normalized()

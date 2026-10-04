@@ -2,6 +2,7 @@ extends Node3D
 ## Pet terpisah dari rig; tembakan yang sama bisa dikunci ke target Survival.
 
 signal cast_started
+signal impact_landed(target: Node3D, damage: int, critical: bool)
 
 const CastLayer = preload("res://src/game/animation/cast_layer.gd")
 const Spirit = preload("res://src/game/legacy_spirit/spirit_visual.gd")
@@ -21,6 +22,13 @@ var camera: Camera3D
 var cooldown := 0.0
 var cooldown_duration := COOLDOWN
 var projectile_limit := MAX_PROJECTILES
+var damage_multiplier := 1.0
+var cooldown_multiplier := 1.0
+var critical_chance := 0.0
+var critical_multiplier := 2.0
+var extra_shot_chance := 0.0
+var homing_turn_rate_multiplier := 1.0
+var rapid_fire_enabled := false
 var casting := false
 var shots_fired := 0
 var projectiles: Array[CharacterBody3D] = []
@@ -75,8 +83,25 @@ func _physics_process(delta: float) -> void:
 
 
 func set_rapid_fire(enabled: bool) -> void:
-	cooldown_duration = RAPID_FIRE_COOLDOWN if enabled else COOLDOWN
+	rapid_fire_enabled = enabled
+	var base_cooldown := RAPID_FIRE_COOLDOWN if enabled else COOLDOWN
+	cooldown_duration = base_cooldown * cooldown_multiplier
 	projectile_limit = RAPID_FIRE_MAX_PROJECTILES if enabled else MAX_PROJECTILES
+
+
+func set_survival_modifiers(modifiers: Dictionary) -> void:
+	damage_multiplier = float(modifiers.get("damage_multiplier", 1.0))
+	cooldown_multiplier = float(modifiers.get("cooldown_multiplier", 1.0))
+	critical_chance = clampf(float(modifiers.get("critical_chance", 0.0)), 0.0, 0.75)
+	critical_multiplier = maxf(1.25, float(modifiers.get("critical_multiplier", 2.0)))
+	extra_shot_chance = clampf(float(modifiers.get("extra_shot_chance", 0.0)), 0.0, 0.75)
+	homing_turn_rate_multiplier = maxf(1.0, float(modifiers.get("homing_turn_rate_multiplier", 1.0)))
+	set_rapid_fire(rapid_fire_enabled)
+
+
+func reset_survival_modifiers() -> void:
+	set_survival_modifiers({})
+	set_rapid_fire(false)
 
 
 func attack(lock_target: Node3D = null) -> bool:
@@ -113,14 +138,25 @@ func _release_shot() -> void:
 		var hit := get_world_3d().direct_space_state.intersect_ray(query)
 		if not hit.is_empty():
 			aim = hit["position"]
+	var projectile_count := 1
+	if randf() < extra_shot_chance:
+		projectile_count = 2
+	for shot_index in projectile_count:
+		_spawn_projectile(lock_target, has_target, aim, shot_index, projectile_count)
+
+
+func _spawn_projectile(lock_target: Node3D, has_target: bool, aim: Vector3,
+		shot_index: int, projectile_count: int) -> void:
 	var shot := Projectile.new()
-	shot.position = global_position
 	shot.homing_target = lock_target if has_target else null
-	# Parent game berada pada origin dunia; set global sesudah add agar tetap aman.
+	shot.homing_speed = Projectile.HOMING_SPEED * homing_turn_rate_multiplier
+	shot.homing_turn_rate = Projectile.HOMING_TURN_RATE * homing_turn_rate_multiplier
 	get_parent().add_child(shot)
 	shot.global_position = global_position
 	if has_target:
-		shot.velocity = (aim - shot.global_position).normalized() * Projectile.HOMING_SPEED
+		var spread := camera.global_basis.x \
+			* (float(shot_index) - float(projectile_count - 1) * 0.5) * 0.24
+		shot.velocity = (aim + spread - shot.global_position).normalized() * shot.homing_speed
 	else:
 		var duration := clampf(global_position.distance_to(aim) / 18.0, 0.25, 1.5)
 		shot.velocity = (aim - shot.global_position) / duration - Projectile.GRAVITY * duration * 0.5
@@ -138,7 +174,13 @@ func _on_impact(point: Vector3, normal: Vector3,
 	if projectile != null:
 		var collider := projectile.get("impact_collider") as Node
 		if collider != null and collider.has_method("take_damage"):
-			collider.call("take_damage", MAGIC_DAMAGE)
+			var critical := randf() < critical_chance
+			var damage := maxi(1, roundi(MAGIC_DAMAGE * damage_multiplier))
+			if critical:
+				damage = maxi(1, roundi(damage * critical_multiplier))
+			collider.call("take_damage", damage)
+			if collider is Node3D:
+				impact_landed.emit(collider as Node3D, damage, critical)
 	_prune()
 	if bursts.size() >= MAX_BURSTS:
 		bursts.pop_front().queue_free()

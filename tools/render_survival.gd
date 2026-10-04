@@ -80,6 +80,18 @@ func _run() -> void:
 	for _frame in range(100):
 		await physics_frame
 	await _capture("survival-world")
+	var buff_system: Node = world.get("buff_system")
+	var choices: Array = buff_system.call("available_choices", 3)
+	world.set("_pending_buff_choices", 1)
+	world.set("_awaiting_buff_choice", true)
+	var survival_hud: Control = game.get("_survival_hud")
+	survival_hud.call("show_buff_choices", world, choices, 5)
+	for _frame in range(24):
+		await process_frame
+	await _capture("survival-buff-choice")
+	survival_hud.call("_finish_buff_choice", str(choices[0].get("id", "")))
+	for _frame in range(3):
+		await physics_frame
 	print("[survival-render-test] zombies=", zombies.size(),
 		" sihir=", fire_button.get("caption"),
 		" pedang=", "terlihat" if weapon != null and weapon.visible else "hilang")

@@ -9,6 +9,7 @@ const NPC = preload("res://src/game/world/npc.gd")
 const NPCInteraction = preload("res://src/game/ui/npc_interaction.gd")
 const ModeSelector = preload("res://src/game/ui/game_mode_selector.gd")
 const SurvivalWorld = preload("res://src/game/world/survival_world.gd")
+const SurvivalHUD = preload("res://src/game/ui/survival_hud.gd")
 const Grass = preload("res://src/game/grass_field.gd")
 const Player = preload("res://src/game/player.gd")
 const Character = preload("res://src/game/mannequin.gd")
@@ -63,6 +64,7 @@ var _npc: NPC
 var _npc_interaction: NPCInteraction
 var _mode_selector: ModeSelector
 var _survival_world: SurvivalWorld
+var _survival_hud: SurvivalHUD
 var _active_mode := "hub"
 var _home_camera_state: Dictionary = {}
 var _death_return_pending := false
@@ -91,8 +93,6 @@ var _performance: PerformancePanel
 var _graphics_drawer: PanelContainer
 var _survival_panel: PanelContainer
 var _survival_status: Label
-var _health_bar: ProgressBar
-var _health_text: Label
 var _hud_layer: CanvasLayer
 var _layout_editor: PanelContainer
 var _layout_target: OptionButton
@@ -161,6 +161,7 @@ func _build_player() -> void:
 	_player.visual = _visual
 	_player.spawn(SPAWN)
 	_player.health_changed.connect(_on_health_changed)
+	_player.survival_stats_changed.connect(_on_survival_stats_changed)
 
 
 func _build_npc() -> void:
@@ -215,51 +216,11 @@ func _build_effects() -> void:
 
 
 func _build_survival_hud(layer: CanvasLayer) -> void:
-	_survival_panel = PanelContainer.new()
-	_survival_panel.name = "SurvivalStatus"
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.025, 0.035, 0.03, 0.86)
-	style.border_color = Color("8db66c")
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(8)
-	style.content_margin_left = 12
-	style.content_margin_right = 12
-	style.content_margin_top = 8
-	style.content_margin_bottom = 8
-	_survival_panel.add_theme_stylebox_override("panel", style)
-	layer.add_child(_survival_panel)
-	_survival_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-	_survival_panel.offset_left = 20
-	_survival_panel.offset_top = 76
-	_survival_panel.offset_right = 360
-	_survival_panel.offset_bottom = 146
-	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation", 5)
-	_survival_panel.add_child(content)
-	_survival_status = Label.new()
-	_survival_status.text = "SURVIVAL   00:00   ·   ZOMBI 0"
-	_survival_status.add_theme_font_size_override("font_size", 13)
-	_survival_status.add_theme_color_override("font_color", Color("f2f0e8"))
-	content.add_child(_survival_status)
-	var health_row := HBoxContainer.new()
-	health_row.add_theme_constant_override("separation", 8)
-	content.add_child(health_row)
-	_health_text = Label.new()
-	_health_text.text = "HP"
-	_health_text.add_theme_font_size_override("font_size", 11)
-	_health_text.add_theme_color_override("font_color", Color("bdd1b0"))
-	health_row.add_child(_health_text)
-	_health_bar = ProgressBar.new()
-	_health_bar.name = "HealthBar"
-	_health_bar.min_value = 0
-	_health_bar.max_value = Player.MAX_HEALTH
-	_health_bar.value = Player.MAX_HEALTH
-	_health_bar.show_percentage = false
-	_health_bar.custom_minimum_size = Vector2(178, 14)
-	_health_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_health_bar.add_theme_stylebox_override("background", _progress_style(Color(0.11, 0.14, 0.11, 1)))
-	_health_bar.add_theme_stylebox_override("fill", _progress_style(Color("8cc46a")))
-	health_row.add_child(_health_bar)
+	_survival_hud = SurvivalHUD.new()
+	_survival_hud.name = "SurvivalHUD"
+	layer.add_child(_survival_hud)
+	_survival_panel = _survival_hud.profile_panel
+	_survival_status = _survival_hud.status_label
 	_survival_panel.hide()
 
 
@@ -717,6 +678,8 @@ func _enter_survival() -> void:
 	_death_return_pending = false
 	_active_mode = "survival"
 	_orbit.set_top_down_mode()
+	_player.clear_survival_bonuses()
+	_pet.reset_survival_modifiers()
 	_pet.set_rapid_fire(true)
 	_fire_button.auto_repeat_interval = FirePet.AUTO_FIRE_INTERVAL
 	_fire_button.reset_touch()
@@ -739,6 +702,7 @@ func _enter_survival() -> void:
 	_player.global_position = Vector3.ZERO
 	_survival_world = SurvivalWorld.new()
 	_survival_world.player = _player
+	_survival_world.fire_pet = _pet
 	add_child(_survival_world)
 	_player.field = _survival_world.ground
 	_player.world_bounds_enabled = false
@@ -749,6 +713,9 @@ func _enter_survival() -> void:
 	_player.reset_health()
 	_player.set_sword_mode(false)
 	_survival_world.status_changed.connect(_survival_status.set_text)
+	_survival_world.progression_changed.connect(_survival_hud.update_progress)
+	_survival_world.buff_choice_requested.connect(_on_survival_buff_choice_requested)
+	_survival_world.publish_progress()
 	_footsteps.field = _survival_world.ground
 	_foot_fire.field = _survival_world.ground
 	_grass.set_ground(_survival_world.ground)
@@ -762,17 +729,30 @@ func _enter_survival() -> void:
 
 
 func _on_health_changed(value: int) -> void:
-	if _health_bar != null:
-		_health_bar.value = value
-		_health_text.text = "HP %d" % value
-		var fill_color := Color("cf705c") if value <= 30 else Color("8cc46a")
-		_health_bar.add_theme_stylebox_override("fill", _progress_style(fill_color))
+	if _survival_hud != null and _player != null:
+		_survival_hud.update_health(value, _player.max_health,
+			_player.shield_points, _player.shield_capacity)
 	if value <= 0 and _active_mode == "survival" and not _death_return_pending:
 		_death_return_pending = true
 		_fire_button.auto_repeat_interval = 0.0
 		_fire_button.reset_touch()
 		_apply_input_state()
 		get_tree().create_timer(SurvivalWorld.RETURN_DELAY).timeout.connect(_return_home_from_survival)
+
+
+func _on_survival_stats_changed() -> void:
+	if _player == null:
+		return
+	_on_health_changed(_player.health)
+	if is_instance_valid(_survival_world):
+		_survival_world.publish_progress()
+
+
+func _on_survival_buff_choice_requested(choices: Array, level: int) -> void:
+	if _active_mode != "survival" or _survival_hud == null \
+			or not is_instance_valid(_survival_world):
+		return
+	_survival_hud.show_buff_choices(_survival_world, choices, level)
 
 
 func _return_home_from_survival() -> void:
@@ -790,6 +770,7 @@ func _return_home_from_survival() -> void:
 	_mode_selector.hide()
 	_orbit.restore_state(_home_camera_state)
 	if is_instance_valid(_survival_world):
+		_survival_world.clear_run()
 		_survival_world.queue_free()
 	_survival_world = null
 	_build_world()
@@ -834,7 +815,8 @@ func _fire_action() -> void:
 		return
 	var target: Node3D
 	if _active_mode == "survival" and is_instance_valid(_survival_world):
-		target = _survival_world.acquire_magic_target(_player.global_position)
+		var range_bonus := _survival_world.buff_system.magic_lock_range_bonus
+		target = _survival_world.acquire_magic_target(_player.global_position, range_bonus)
 	_pet.attack(target)
 
 

@@ -4,6 +4,8 @@ extends SceneTree
 const FirePet = preload("res://src/game/fire_pet.gd")
 const Projectile = preload("res://src/game/fire_projectile.gd")
 const SurvivalWorld = preload("res://src/game/world/survival_world.gd")
+const Zombie = preload("res://src/game/world/zombie.gd")
+const Player = preload("res://src/game/player.gd")
 
 var _failures := 0
 
@@ -40,6 +42,7 @@ func _run() -> void:
 	var home_pitch_min := float(orbit.get("pitch_min"))
 	var home_pitch_max := float(orbit.get("pitch_max"))
 	var home_distance := float(orbit.get("distance"))
+	var home_zoom_enabled := bool(orbit.get("zoom_enabled"))
 	for _frame in range(12):
 		await physics_frame
 	game.call("_enter_survival")
@@ -95,8 +98,28 @@ func _run() -> void:
 		and initial_stage_time > SurvivalWorld.STAGE_DURATION - 2.0,
 		"Stage pertama tidak dimulai dengan timer satu menit")
 	_check(int(world.get("stage")) == 1, "Stage awal bukan stage 1")
+	_check(int(world.get("run_level")) == 1 and int(world.get("experience")) == 0,
+		"Progress level Survival tidak mulai dari nol")
+	var survival_hud: Control = game.get("_survival_hud")
+	_check(survival_hud != null and survival_hud.get_node_or_null("SurvivalProfile") != null,
+		"HUD profil Survival tidak dibuat")
+	_check(survival_hud != null
+		and survival_hud.get_node_or_null("BuffChoiceBackdrop") != null,
+		"Overlay kartu buff tidak dibuat")
+	var buffs: Node = world.get("buff_system")
+	_check(buffs != null, "Manager buff run tidak dibuat")
 	_check(float(orbit.get("distance")) == 17.0,
 		"Jarak kamera Survival tidak mengikuti framing top-down")
+	_check(not bool(orbit.get("zoom_enabled")),
+		"Zoom kamera top-down masih aktif")
+	var survival_distance := float(orbit.get("distance"))
+	orbit.call("zoom_by", 2.0)
+	var wheel_zoom := InputEventMouseButton.new()
+	wheel_zoom.button_index = MOUSE_BUTTON_WHEEL_DOWN
+	wheel_zoom.pressed = true
+	orbit.call("_input", wheel_zoom)
+	_check(is_equal_approx(float(orbit.get("distance")), survival_distance),
+		"Kamera Survival masih bisa di-zoom lewat API/roda tetikus")
 	_check(float(fire_button.get("auto_repeat_interval")) > 0.0,
 		"Tombol sihir tidak mengaktifkan auto-fire saat ditahan")
 	_check(is_equal_approx(float(pet.get("cooldown_duration")), FirePet.RAPID_FIRE_COOLDOWN),
@@ -175,6 +198,8 @@ func _run() -> void:
 	_check(target_died, "Proyektil sihir tidak memberi damage sampai zombie tumbang")
 	_check(int(world.get("defeated")) == defeated_before + 1,
 		"Kematian zombie tidak menambah hitungan Survival")
+	_check(int(world.get("experience")) == 24 and int(world.get("run_level")) == 1,
+		"Kill zombie tidak memberi EXP run-only")
 	var status: Label = game.get("_survival_status")
 	_check(status != null and status.text.contains("KALAH 1"),
 		"HUD Survival tidak memperbarui jumlah zombie tumbang")
@@ -213,12 +238,92 @@ func _run() -> void:
 		"Wave stage 2 tidak menambah jumlah zombie yang muncul")
 	_check(int(world.call("living_zombie_count")) > living_before_stage,
 		"Stage baru tidak menambah jumlah zombie hidup")
+	_check(int(world.call("maximum_living_zombies")) > SurvivalWorld.BASE_MAX_LIVING
+		and float(world.call("spawn_interval_for_stage")) < SurvivalWorld.SPAWN_INTERVAL,
+		"Kapasitas/tempo spawn tidak meningkat mengikuti stage")
+	var stage_two_health := 0
+	for zombie in world.get("zombies"):
+		if is_instance_valid(zombie) and int(zombie.get("stage")) == 2:
+			stage_two_health = int(zombie.get("max_health"))
+			break
+	_check(stage_two_health == Zombie.START_HEALTH + Zombie.STAGE_HEALTH_GAIN,
+		"HP zombie stage 2 tidak lebih tebal")
 	_check(status != null and status.text.contains("STAGE 02")
 		and status.text.contains("01:00"), "HUD tidak menampilkan stage/timer baru")
 	zombies = world.get("zombies")
 	for zombie in zombies:
 		if is_instance_valid(zombie):
 			zombie.set_physics_process(false)
+
+	# Level lima membuka tiga kartu, memberi satu pilihan, lalu mengubah statistik/VFX run.
+	var stage_two_reward := SurvivalWorld.BASE_KILL_EXPERIENCE + 2
+	world.set("run_level", 4)
+	world.set("experience", int(world.call("_experience_required", 4)) - stage_two_reward)
+	var xp_test_zombie: Node3D
+	for zombie in zombies:
+		if is_instance_valid(zombie) and bool(zombie.call("can_be_targeted")):
+			xp_test_zombie = zombie
+			break
+	world.call("_on_zombie_died", xp_test_zombie)
+	_check(int(world.get("run_level")) == 5,
+		"EXP tidak menaikkan level sampai level 5")
+	_check(bool(world.get("_awaiting_buff_choice")) and paused,
+		"Level kelipatan 5 tidak membuka pilihan buff dan pause gameplay")
+	var choice_row := survival_hud.get_node(
+		"BuffChoiceBackdrop/BuffChoicePanel/Margin/Content/CardRow")
+	_check(choice_row.get_child_count() == 3,
+		"Level 5 tidak menampilkan tepat tiga kartu buff")
+	if choice_row.get_child_count() == 3:
+		var chosen_buff_id := ""
+		for choice in choice_row.get_children():
+			var option_id := str(choice.get("buff_id"))
+			if option_id != "arcane_aegis":
+				chosen_buff_id = option_id
+				break
+		if chosen_buff_id.is_empty():
+			chosen_buff_id = str(choice_row.get_child(0).get("buff_id"))
+		survival_hud.call("_on_buff_card_pressed", chosen_buff_id)
+		for _frame in range(36):
+			await process_frame
+			if not paused:
+				break
+		_check(not paused and int(buffs.call("get_stacks", chosen_buff_id)) == 1,
+			"Memilih kartu tidak menerapkan tepat satu buff")
+	if paused:
+		paused = false
+	_check(bool(buffs.call("apply_buff", "cinder_orbit")),
+		"Buff api orbit tidak dapat diambil")
+	var orbit_nodes: Array = buffs.get("_orbit_nodes")
+	_check(orbit_nodes.size() >= 3,
+		"Buff api orbit tidak memunculkan efek mengelilingi karakter")
+	_check(bool(buffs.call("apply_buff", "arcane_aegis")),
+		"Buff shield arcana tidak dapat diambil")
+	var aegis_mesh: MeshInstance3D = buffs.get("_aegis_mesh")
+	_check(int(player.get("shield_capacity")) == 70
+		and int(player.get("shield_points")) == 70
+		and is_instance_valid(aegis_mesh) and aegis_mesh.visible,
+		"Buff shield tidak memberi barier visual dan kapasitas shield")
+	var hp_before_shield := int(player.get("health"))
+	player.call("take_damage", 24)
+	_check(int(player.get("health")) == hp_before_shield
+		and int(player.get("shield_points")) < 70,
+		"Shield tidak menyerap damage sebelum HP")
+	_check(bool(buffs.call("apply_buff", "burning_brand")),
+		"Buff sihir pembakar tidak dapat diambil")
+	var live_burn_target: Node3D
+	for zombie in zombies:
+		if is_instance_valid(zombie) and zombie.call("can_be_targeted"):
+			live_burn_target = zombie
+			break
+	if live_burn_target != null:
+		pet.emit_signal("impact_landed", live_burn_target, FirePet.MAGIC_DAMAGE, false)
+		_check(float(live_burn_target.get("_burn_left")) > 0.0,
+			"Tembakan buff tidak menerapkan efek burn")
+	for _frame in range(50):
+		await physics_frame
+	_check(int(world.get("experience")) >= 0
+		and int(world.get("run_level")) == 5,
+		"Level/EXP berubah tidak semestinya setelah memilih buff")
 
 	# Mati di Survival harus membangun kembali hub, bukan meninggalkan arena kosong.
 	player.call("take_damage", 1000)
@@ -240,14 +345,28 @@ func _run() -> void:
 		"Kamera tidak kembali ke sudut home")
 	_check(is_equal_approx(float(orbit.get("pitch_min")), home_pitch_min)
 		and is_equal_approx(float(orbit.get("pitch_max")), home_pitch_max)
-		and is_equal_approx(float(orbit.get("distance")), home_distance),
+		and is_equal_approx(float(orbit.get("distance")), home_distance)
+		and bool(orbit.get("zoom_enabled")) == home_zoom_enabled,
 		"Batas/jarak kamera home berubah setelah Survival")
 	_check(is_equal_approx(float(fire_button.get("auto_repeat_interval")), 0.0),
 		"Auto-fire tidak berhenti setelah keluar dari Survival")
 	_check(is_equal_approx(float(pet.get("cooldown_duration")), FirePet.COOLDOWN)
 		and int(pet.get("projectile_limit")) == FirePet.MAX_PROJECTILES,
 		"Setelan tembak hub tidak dipulihkan setelah Survival")
-	print("[survival-test] top-down=OK autofire=%d stage=2 return-home=%s gagal=%d" % [
+	game.call("_enter_survival")
+	var fresh_world: Node = game.get("_survival_world")
+	var fresh_buffs: Node = fresh_world.get("buff_system")
+	var fresh_stacks: Dictionary = fresh_buffs.get("stacks")
+	_check(int(fresh_world.get("run_level")) == 1
+		and int(fresh_world.get("experience")) == 0,
+		"Level/EXP tersimpan antar-run Survival")
+	_check(fresh_stacks.is_empty()
+		and int(player.get("max_health")) == Player.MAX_HEALTH
+		and int(player.get("shield_points")) == 0,
+		"Buff/bonus HP tersimpan saat mulai run baru")
+	_check(not bool(orbit.get("zoom_enabled")) and is_equal_approx(float(orbit.get("distance")), 17.0),
+		"Kamera top-down tidak terkunci permanen pada run baru")
+	print("[survival-test] top-down=OK autofire=%d stage=2 level=5 reset-run=%s gagal=%d" % [
 		shots_after - shots_before, str(returned_home), _failures])
 	game.queue_free()
 	await process_frame
