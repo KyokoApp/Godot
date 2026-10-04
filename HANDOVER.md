@@ -1,5 +1,36 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-04 (cicilan 26) — **SURVIVAL: PROGRES RUN-ONLY, BUFF SETIAP 5 LEVEL, API ORBIT + AEGIS**
+  - Zombie terus muncul; tiap stage 60 detik meminta wave lebih besar, batas
+    zombie hidup naik 3 per stage (maksimum 36), interval spawn makin pendek,
+    dan HP zombie bertambah 24 per stage.
+  - Kill memberi EXP dan menaikkan level. Progress level/EXP serta buff tidak
+    ditulis ke disk; keluar dari Survival lalu mulai run baru mengembalikan
+    level 1, EXP 0, dan stack kosong.
+  - HUD pojok kiri atas menampilkan avatar, bar HP tipis, dan bar EXP di bawah;
+    perubahan bar memakai tween dan kill memunculkan feedback EXP.
+  - Pada level 5, 10, 15, dan seterusnya game pause untuk tiga kartu buff; pilih
+    satu. Katalog mencakup damage, cooldown, critical, volley, auto-lock, burn,
+    nova, healing, vitality, EXP, api orbit, dan shield. ORBIT BARA mengelilingi
+    pemain dengan api/partikel yang memberi damage; AEGIS ARCANA menambah shield,
+    mengurangi damage, dan menampilkan shell ungu berdenyut. JANTUNG BARA,
+    MATA PEMBURU, dan SIGIL KEABADIAN tidak punya batas stack sehingga pilihan
+    tetap tiga kartu unik walau buff capped lainnya habis.
+  - Kamera Survival top-down dikunci pada jarak tetap; API zoom dan input roda
+    tetikus ditolak selama run. State kamera hub dipulihkan saat kembali ke hub.
+  - `tools/test_survival.gd` memeriksa EXP, level 5/tiga kartu, pilihan unik
+    tetap tiga walau semua buff berbatas stack sudah penuh, buff orbit+shield,
+    reset run, stage, dan zoom; render selector/dunia/kartu buff lulus Mobile
+    Vulkan. Compile pack test awal menangkap akses langsung ke `buff_system` yang
+    gagal di PCK; main kini memakai accessor `get_magic_lock_range_bonus()`.
+    Tipe `pop_back()` dan offset Nova juga dibuat eksplisit. Workflow menyimpan
+    log penuh rangkaian ekspor PCK untuk diagnosis berikutnya.
+  - `gdlint project tools`, `tools/check_scripts.py .`, dan `git diff --check`
+    lulus. Godot 4.5.2 CI run [`37207879922`](https://github.com/KyokoApp/Godot/actions/runs/37207879922)
+    hijau penuh: compile, seluruh tes headless, render HUD/Survival, ekspor PCK
+    dan APK, audit APK, serta boot launcher. Rilis: [`build-5ac52e5`](https://github.com/KyokoApp/Godot/releases/tag/build-5ac52e5).
+    Render CI sudah lolos; tes fisik di Android belum dilakukan.
+
 - 2026-10-04 (cicilan 25) — **SURVIVAL: TOP-DOWN, AUTO-FIRE, STAGE 60 DETIK, BALIK KE HOME**
   - Kamera Survival dikunci pada pitch 1,40 radian (rentang 1,28–1,50) dan
     jarak 17 m. `OrbitCamera` menyimpan state sebelum masuk, lalu memulihkan

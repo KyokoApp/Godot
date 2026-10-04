@@ -1558,3 +1558,37 @@ sihir yang sudah tersedia dan kunci otomatis ke zombie.
   Godot 4.5.2 CI run **`37157092349` hijau penuh**: semua tes headless, render
   Mobile Vulkan, ekspor PCK/APK, audit APK, dan boot launcher. Build Android
   tersedia di [rilis `build-c5562f0`](https://github.com/KyokoApp/Godot/releases/tag/build-c5562f0).
+
+## Ronde 26 — EXP per run, buff tiap 5 level, api orbit, dan shield arcana
+
+- Setiap kill memberi EXP. Level, EXP, dan stack buff hanya hidup di
+  `SurvivalWorld` untuk run itu; keluar lalu memulai Survival lagi mengembalikan
+  level 1, EXP 0, serta buff/statistik ke kondisi awal. Tidak ada penyimpanan
+  progress Survival ke disk.
+- HUD pojok kiri atas menampilkan avatar, bar HP tipis, dan bar EXP di bawahnya.
+  Angka level/kill dan stage ikut tampil; perubahan bar dianimasikan halus dan
+  EXP kill memberi feedback singkat.
+- Saat level mencapai 5, 10, 15, dan seterusnya, permainan pause dan membuka
+  tepat tiga kartu buff untuk dipilih satu. Overlay/kartu masuk dengan tween.
+  Katalog mencakup damage/cooldown/critical/tembakan ganda, jangkauan auto-lock,
+  burn, nova area, healing, vitality, harvest EXP, api orbit, dan shield. Tiga
+  berkah tanpa batas memastikan pool tetap memberi tiga opsi unik setelah stack
+  buff lain mencapai batas.
+- **ORBIT BARA** menambahkan api berpartikel yang mengelilingi pemain dan
+  melukai zombie dekat. **AEGIS ARCANA** menambah kapasitas shield dan
+  pengurangan damage dengan shell ungu berdenyut.
+- Stage tetap berdurasi 60 detik; jumlah gelombang, kapasitas zombie, dan tempo
+  spawn meningkat mengikuti stage, sementara HP zombie bertambah 24 per stage.
+  Kamera top-down Survival terkunci pada jarak tetap dan zoom dinonaktifkan;
+  state kamera hub dipulihkan saat keluar.
+- `tools/test_survival.gd` menguji XP/level, tepat tiga pilihan di level 5,
+  pilihan unik tetap tersedia setelah semua buff terbatas mencapai stack maksimum,
+  penerapan buff orbit/shield, reset saat run baru, stage, dan penolakan zoom.
+  `tools/render_survival.gd` menghasilkan render selector, dunia Survival, dan
+  layar kartu buff untuk pemeriksaan CI.
+- Pemeriksaan lokal `gdlint`, `tools/check_scripts.py`, dan `git diff --check`
+  lulus. Godot 4.5.2 CI run **[`37207879922`](https://github.com/KyokoApp/Godot/actions/runs/37207879922)**
+  hijau penuh: compile, seluruh tes headless, render HUD/Survival, ekspor PCK
+  dan APK, audit APK, serta boot launcher. Build tersedia di [rilis
+  `build-5ac52e5`](https://github.com/KyokoApp/Godot/releases/tag/build-5ac52e5).
+  Render CI lolos; belum ada uji langsung di perangkat Android fisik.
