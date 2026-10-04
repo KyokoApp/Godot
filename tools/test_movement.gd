@@ -73,11 +73,21 @@ func _run() -> void:
 	# tulang kaki), jadi yang diuji adalah sifat histeresisnya, bukan angka
 	# kecepatan yang bisa bergeser kalau aset animasi diganti.
 	var bands: Array = player.call("_gait_bands")
+	var walk_band := {}
 	var jog_band := {}
 	for entry in bands:
-		if str(entry["clip"]) == "Jog_Fwd_Loop":
+		if str(entry["clip"]) == "Walk_Loop":
+			walk_band = entry
+		elif str(entry["clip"]) == "Jog_Fwd_Loop":
 			jog_band = entry
+	_check(not walk_band.is_empty(), "Band Walk tidak terbentuk dari ukuran klip")
 	_check(not jog_band.is_empty(), "Band Jog tidak terbentuk dari ukuran klip")
+	if not walk_band.is_empty():
+		var backward_walk_speed: float = (float(walk_band["min"])
+			+ float(walk_band["max"])) * 0.5
+		_check(player.select_gait(backward_walk_speed, "Idle_Loop", Vector2.DOWN)
+			== "Walk_Formal_Loop",
+			"Jalan mundur pelan tidak memilih klip formal")
 	if not jog_band.is_empty():
 		var middle: float = (float(jog_band["min"]) + float(jog_band["max"])) * 0.5
 		_check(player.select_gait(middle, "Jog_Fwd_Loop") == "Jog_Fwd_Loop",
@@ -92,6 +102,13 @@ func _run() -> void:
 		await physics_frame
 	_check(player.position.z < start.z - 1.0, "Arah atas joystick salah")
 	print("::notice::gerak atas dari ", start, " ke ", player.position)
+	# Analog penuh ke bawah tetap memilih Sprint, bukan klip jalan mundur formal.
+	stick.set("direction", Vector2.DOWN)
+	for _frame in range(48):
+		await physics_frame
+	_check(player.gait == "Sprint_Loop",
+		"Analog penuh ke bawah masih memakai animasi jalan: " + player.gait)
+	stick.set("direction", Vector2.ZERO)
 	stick.notification(NOTIFICATION_APPLICATION_FOCUS_OUT)
 	_check(stick.get("direction") == Vector2.ZERO, "Input tersangkut saat kehilangan fokus")
 	var field: Node3D = game.get("_field")

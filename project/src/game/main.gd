@@ -43,13 +43,14 @@ const DASH_ICON = preload("res://src/game/ui/dash.svg")
 ## Titik muncul pemain di padang 100 m; dijaga kosong dari dedaunan.
 const SPAWN := Vector2(0.0, 7.0)
 const NPC_HOME := Vector2(0.0, 0.0)
-## HUD gaya game aksi: satu tombol serang besar, tombol aksi bulat di sekitarnya.
 const ATTACK_DIAMETER := 136.0
 const FIRE_DIAMETER := 100.0
 const ACTION_DIAMETER := 94.0
 const DASH_DIAMETER := 94.0
 const SPEED_DIAMETER := 88.0
 const RUNE_DIAMETER := 68.0
+## Beri jeda di antara cast auto supaya pose tangan tidak turun di sela tembakan.
+const CAST_POSE_RELEASE_DELAY := 0.42
 
 var warmup_requested := false
 var warmup_complete := false
@@ -118,6 +119,7 @@ func _ready() -> void:
 	_build_grass()
 	_build_effects()
 	_build_hud()
+	_apply_input_state()
 	print("[main] pulau %.0f m + pemain + NPC (%d klip) siap" % [
 		Field.SIZE, Catalog.clip_count()])
 	_confirm_boot.call_deferred()
@@ -678,6 +680,7 @@ func _enter_survival() -> void:
 	_home_camera_state = _orbit.capture_state()
 	_death_return_pending = false
 	_active_mode = "survival"
+	_visual.sustained_cast = true
 	_orbit.set_top_down_mode()
 	_player.clear_survival_bonuses()
 	_pet.reset_survival_modifiers()
@@ -763,6 +766,7 @@ func _return_home_from_survival() -> void:
 		return
 	_death_return_pending = false
 	_active_mode = "hub"
+	_visual.sustained_cast = false
 	_survival_auto_fire_left = 0.0
 	_fire_button.auto_repeat_interval = 0.0
 	_fire_button.reset_touch()
@@ -879,13 +883,12 @@ func _apply_input_state() -> void:
 	_orbit.reset_touches()
 	_orbit.input_enabled = not overlay
 	_settings.visible = not selector_open and not _death_return_pending
-	_layout_button.visible = not selector_open and not _death_return_pending
-	_attack.visible = not hide_actions and _active_mode != "survival"
-	_fire_button.visible = not hide_actions
+	# HUD analog-only: semua aksi tombol disembunyikan dan tidak bisa dipicu.
+	# Tembakan otomatis Survival berjalan mandiri dari loop utama, bukan tombol.
+	_layout_button.hide()
 	for control: Control in [_attack, _fire_button, _jump, _crouch, _speed_button, _dash]:
-		control.set("disabled", layout_open)
-	for control: Control in [_jump, _crouch, _speed_button, _dash]:
-		control.visible = not hide_actions
+		control.hide()
+		control.set("disabled", true)
 	_catalog_button.visible = not _graphics_drawer.visible and not layout_open \
 		and not selector_open and not _death_return_pending
 	_banner.visible = not overlay
@@ -957,7 +960,6 @@ func _process(delta: float) -> void:
 			_fire_action()
 	else:
 		_survival_auto_fire_left = 0.0
-	# Sapuan cooldown dash: busur mengikuti sisa waktu tunggu.
 	_dash.cooldown_fraction = clampf(_player.dash_cooldown / Player.DASH_COOLDOWN, 0, 1)
 	_dash.queue_redraw()
 	if _speed_button.boosted != _player.boosted:

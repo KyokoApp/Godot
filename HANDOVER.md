@@ -1,5 +1,33 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-05 (cicilan 28) — **ANALOG-ONLY, GAIT MUNDUR, +11 KARTU BUFF SURVIVAL**
+  - Sembunyikan/nonaktifkan semua tombol aksi HUD (`SERANG`, `TEMBAK`, `LOMPAT`,
+    `JONGKOK`, `LARI`, `DASH`) dan tombol editor layout; analog tetap satu-satunya
+    input aksi. Pengaturan, katalog animasi, HUD status tetap ada. Auto-fire tetap
+    khusus Survival; tidak diaktifkan di hub.
+  - Gait `Walk_Formal_Loop` sekarang terbatas pada band jalan. Lari mundur yang
+    mencapai band Jog/Sprint tetap memakai animasi lari. Tes movement dan tes HUD
+    memeriksa analog penuh ke bawah selama 48 tick fisika.
+  - Katalog naik dari 14 menjadi 25 kartu. Sebelas skill baru memakai pilihan dan
+    stack yang sama: damage sihir, slow, chain lightning, lifesteal, execution
+    bonus, critical AoE, shield/isi ulang saat kill, cooldown saat kill, burn,
+    regenerasi HP, dan tembakan ganda. Slow zombie serta modifier damage/proyektil
+    ditangani langsung; tiap buff punya batas stack dan tes efeknya.
+  - `tools/test_hud.gd`, `tools/test_survival.gd`, dan `tools/render_survival.gd`
+    diperbarui untuk HUD analog-only dan skill baru.
+  - Pose Spell_Simple_Shoot kini berhenti di frame tangan terangkat selama
+    auto-fire Survival berlanjut. Jeda antartembakan 0,42 dtk menjaga tangan
+    tidak turun di sela cast; setelah target/tembakan berhenti, klip dilanjutkan
+    supaya tangan turun natural. Hub tetap memakai casting satu kali.
+    `test_mannequin.gd`, `test_survival.gd`, dan `test_cast_render.gd` mencakup
+    hold/release pose.
+  - Validasi lokal lulus: parse semua `.gd` dengan `gdparse`, `gdlint project tools`,
+    `tools/check_scripts.py .`, katalog animasi, tes chunk, bundle lisensi, dan
+    `git diff --check`. Runtime Godot 4.5.2 tidak tersedia; unduhan gagal pada TLS.
+    Belum ada build, tes headless Godot, render, atau CI setelah edit ini; visual
+    belum terverifikasi. Belum commit/push; branch sesi tetap
+    `arena/01a0fc4a-godot`.
+
 - 2026-10-04 (cicilan 27) — **SURVIVAL: TEMBAK OTOMATIS TANPA INPUT**
   - Ketika mode Survival aktif, loop utama mencoba cast setiap 0,18 detik dan
     mengunci zombie hidup terdekat dengan auto-lock serta bonus jangkauan buff.

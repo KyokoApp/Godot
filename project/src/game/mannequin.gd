@@ -51,6 +51,7 @@ var cast_layer: CastLayer
 var metrics: Dictionary = {}
 var measure_metrics := true
 var sword_layer_enabled := false
+var sustained_cast := false
 var sword_layer: SwordLayer
 var weapon_attachment: BoneAttachment3D
 var weapon_instance: Node3D
@@ -212,9 +213,7 @@ func _start_sword_attack(names: Array[String]) -> float:
 	if sword_layer == null:
 		return 0.0
 	if cast_layer != null:
-		cast_layer.playing = false
-		cast_layer.active = false
-		cast_layer.influence = 0.0
+		cast_layer.cancel()
 	return sword_layer.play_sequence(names)
 
 
@@ -404,7 +403,11 @@ func is_busy() -> bool:
 
 
 func start_cast() -> void:
-	if cast_layer != null:
+	if cast_layer == null:
+		return
+	if sustained_cast:
+		cast_layer.begin_held()
+	else:
 		cast_layer.begin()
 
 

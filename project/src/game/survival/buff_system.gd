@@ -27,6 +27,7 @@ var _orbit_nodes: Array[Node3D] = []
 var _orbit_clock := 0.0
 var _orbit_damage_clock := 0.0
 var _shield_flash := 0.0
+var _regen_clock := 0.0
 var _nova_active := false
 var _nova_damage := 0
 var _nova_radius := 0.0
@@ -46,6 +47,17 @@ func _process(delta: float) -> void:
 	if not is_instance_valid(player):
 		return
 	global_position = player.global_position
+	var regen_stacks := get_stacks("soul_spring")
+	if regen_stacks > 0 and int(player.get("health")) < int(player.get("max_health")):
+		_regen_clock += delta * regen_stacks
+		while _regen_clock >= 1.0:
+			_regen_clock -= 1.0
+			player.call("heal", 1)
+			if int(player.get("health")) >= int(player.get("max_health")):
+				_regen_clock = 0.0
+				break
+	else:
+		_regen_clock = 0.0
 	_orbit_clock += delta
 	_orbit_damage_clock += delta
 	if _aegis_mesh != null:
@@ -115,6 +127,13 @@ func on_zombie_killed(zombie: Node3D) -> void:
 	var siphon := get_stacks("soul_siphon")
 	if siphon > 0 and is_instance_valid(player):
 		player.call("heal", 8 * siphon)
+	var ward := get_stacks("soul_ward")
+	if ward > 0 and is_instance_valid(player) and player.has_method("grant_shield"):
+		player.call("grant_shield", 5 * ward)
+	var kill_haste := get_stacks("kill_haste")
+	if kill_haste > 0 and is_instance_valid(fire_pet):
+		var remaining := float(fire_pet.get("cooldown"))
+		fire_pet.set("cooldown", maxf(0.0, remaining - 0.08 * kill_haste))
 	var nova := get_stacks("volatile_nova")
 	if nova <= 0 or _nova_active or not is_instance_valid(zombie):
 		return
@@ -134,6 +153,7 @@ func clear_run() -> void:
 	magic_lock_range_bonus = 0.0
 	xp_multiplier = 1.0
 	_nova_active = false
+	_regen_clock = 0.0
 	_burn_stacks = 0
 	for orb in _orbit_nodes:
 		if is_instance_valid(orb):
@@ -157,24 +177,32 @@ func _apply_modifiers(last_buff_id: String) -> void:
 	var seeker := get_stacks("seeking_flame")
 	var vitality := get_stacks("vitality")
 	var harvest := get_stacks("harvest")
-	var shield_refill := 70 if last_buff_id == "arcane_aegis" else 0
+	var focus := get_stacks("arcane_focus")
+	var prism := get_stacks("prismatic_echo")
+	var ward := get_stacks("soul_ward")
+	var shield_refill := 0
+	if last_buff_id == "arcane_aegis":
+		shield_refill = 70
+	elif last_buff_id == "soul_ward":
+		shield_refill = 20
 	if is_instance_valid(player):
-		player.call("set_survival_bonuses", vitality * 25, aegis * 70,
-			shield_refill, aegis * 0.07)
+		player.call("set_survival_bonuses", vitality * 25,
+			aegis * 70 + ward * 20, shield_refill,
+			aegis * 0.07 + ward * 0.015)
 	if is_instance_valid(fire_pet):
 		fire_pet.call("set_survival_modifiers", {
-			"damage_multiplier": 1.0 + 0.18 * ember,
+			"damage_multiplier": 1.0 + 0.18 * ember + 0.08 * focus,
 			"cooldown_multiplier": maxf(0.54, 1.0 - 0.10 * rapid),
 			"critical_chance": overcharge * 0.08,
 			"critical_multiplier": 2.0 + 0.12 * overcharge,
-			"extra_shot_chance": volley * 0.12,
+			"extra_shot_chance": volley * 0.12 + prism * 0.08,
 			"homing_turn_rate_multiplier": 1.0 + seeker * 0.18,
 		})
 	magic_lock_range_bonus = get_stacks("long_reach") * 7.0
 	xp_multiplier = 1.0 + 0.20 * harvest
 	_nova_damage = 30 + 22 * (get_stacks("volatile_nova") - 1)
 	_nova_radius = 3.4 + 0.3 * get_stacks("volatile_nova")
-	_burn_stacks = get_stacks("burning_brand")
+	_burn_stacks = get_stacks("burning_brand") + get_stacks("wildfire")
 	set_orbit_stacks(get_stacks("cinder_orbit"))
 	_refresh_aegis()
 
@@ -184,16 +212,106 @@ func _on_player_stats_changed() -> void:
 		_shield_flash = 1.0
 
 
-func _on_magic_impact(target: Node3D, _damage: int, _critical: bool) -> void:
-	if _burn_stacks <= 0 or not is_instance_valid(target):
+func _on_magic_impact(target: Node3D, damage: int, critical: bool) -> void:
+	if not is_instance_valid(target):
 		return
-	if target.has_method("apply_burn") and target.has_method("can_be_targeted") \
-			and bool(target.call("can_be_targeted")):
-		target.call("apply_burn", 5 + 3 * (_burn_stacks - 1), 2.5)
+	var vampiric := get_stacks("vampiric_flame")
+	if vampiric > 0 and is_instance_valid(player):
+		player.call("heal", maxi(1, roundi(damage * 0.03 * vampiric)))
+	var live_target := target.has_method("can_be_targeted") \
+		and bool(target.call("can_be_targeted"))
+	if live_target:
+		var brand := get_stacks("burning_brand")
+		var wildfire := get_stacks("wildfire")
+		var total_burn := brand + wildfire
+		if total_burn > 0 and target.has_method("apply_burn"):
+			var burn_damage := 5 + maxi(0, brand - 1) * 3 + wildfire * 2
+			target.call("apply_burn", burn_damage, 2.5 + wildfire * 0.35)
+		var frost := get_stacks("frost_rune")
+		if frost > 0 and target.has_method("apply_slow"):
+			var slow_multiplier := maxf(0.35, 1.0 - frost * 0.16)
+			target.call("apply_slow", slow_multiplier, 1.6 + frost * 0.3)
+		var executioner := get_stacks("executioner")
+		var maximum_health := maxi(1, int(target.get("max_health")))
+		var remaining_health := int(target.get("health"))
+		if executioner > 0 and remaining_health > 0 \
+				and float(remaining_health) / float(maximum_health) <= 0.35:
+			target.call("take_damage", maxi(1, roundi(damage * 0.12 * executioner)))
+	var chain_stacks := get_stacks("storm_chain")
+	if chain_stacks > 0:
+		_chain_lightning(target, chain_stacks)
+	var bloom := get_stacks("critical_bloom")
+	if critical and bloom > 0 and not _nova_active:
+		_nova_active = true
+		var radius := 2.2 + 0.22 * bloom
+		var splash_damage := 14 + 10 * bloom
+		_spawn_burst(target.global_position)
+		_damage_area_targets(target.global_position, radius, splash_damage, target)
+		_nova_active = false
+
+
+func _chain_lightning(origin: Node3D, stacks_value: int) -> void:
+	if world == null or not is_instance_valid(world) or stacks_value <= 0:
+		return
+	var remaining_targets: Array[Node3D] = []
+	for zombie_value in world.get("zombies"):
+		var zombie := zombie_value as Node3D
+		if not is_instance_valid(zombie) or zombie == origin \
+				or not zombie.has_method("can_be_targeted") \
+				or not bool(zombie.call("can_be_targeted")):
+			continue
+		remaining_targets.append(zombie)
+	var radius := 3.2 + stacks_value * 0.55
+	for _chain in mini(stacks_value, remaining_targets.size()):
+		var nearest: Node3D
+		var nearest_distance := radius * radius
+		for zombie in remaining_targets:
+			var offset := zombie.global_position - origin.global_position
+			offset.y = 0.0
+			var distance_squared := offset.length_squared()
+			if distance_squared < nearest_distance:
+				nearest = zombie
+				nearest_distance = distance_squared
+		if nearest == null:
+			break
+		remaining_targets.erase(nearest)
+		nearest.call("take_damage", 8 + 4 * stacks_value)
+		var frost := get_stacks("frost_rune")
+		if frost > 0 and nearest.has_method("apply_slow"):
+			nearest.call("apply_slow", maxf(0.35, 1.0 - frost * 0.16),
+				1.6 + frost * 0.3)
+
+
+func _spawn_burst(position: Vector3) -> void:
+	if world == null or not is_instance_valid(world):
+		return
+	var burst_position := position
+	burst_position.y = 0.0
+	var burst := FireBurst.new()
+	burst.surface_normal = Vector3.UP
+	burst.position = world.to_local(burst_position + Vector3(0, 0.04, 0))
+	world.add_child(burst)
+
+
+func _damage_area_targets(position: Vector3, radius: float,
+		damage: int, excluded: Node3D = null) -> void:
+	if world == null or not is_instance_valid(world) or damage <= 0:
+		return
+	var zombie_list: Array = world.get("zombies")
+	for zombie_value in zombie_list:
+		var zombie := zombie_value as Node3D
+		if not is_instance_valid(zombie) or zombie == excluded \
+				or not zombie.has_method("can_be_targeted") \
+				or not bool(zombie.call("can_be_targeted")):
+			continue
+		var offset := zombie.global_position - position
+		offset.y = 0.0
+		if offset.length_squared() <= radius * radius:
+			zombie.call("take_damage", damage)
 
 
 func _refresh_aegis() -> void:
-	var aegis := get_stacks("arcane_aegis")
+	var aegis := get_stacks("arcane_aegis") + get_stacks("soul_ward")
 	if aegis <= 0:
 		if is_instance_valid(_aegis_mesh):
 			_aegis_mesh.visible = false
@@ -284,19 +402,5 @@ func _damage_nearby_zombies() -> void:
 
 
 func _spawn_nova(position: Vector3) -> void:
-	if world == null or not is_instance_valid(world):
-		return
-	var burst := FireBurst.new()
-	burst.surface_normal = Vector3.UP
-	burst.position = world.to_local(position + Vector3(0, 0.04, 0))
-	world.add_child(burst)
-	var zombie_list: Array = world.get("zombies")
-	for zombie_value in zombie_list:
-		var zombie := zombie_value as Node3D
-		if not is_instance_valid(zombie) or not zombie.has_method("can_be_targeted") \
-				or not bool(zombie.call("can_be_targeted")):
-			continue
-		var offset: Vector3 = zombie.global_position - position
-		offset.y = 0.0
-		if offset.length_squared() <= _nova_radius * _nova_radius:
-			zombie.call("take_damage", _nova_damage)
+	_spawn_burst(position)
+	_damage_area_targets(position, _nova_radius, _nova_damage)

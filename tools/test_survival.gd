@@ -26,8 +26,16 @@ func _check(condition: bool, message: String) -> void:
 
 
 func _test_repeatable_buff_pool() -> void:
+	var catalog_cards := BuffCatalog.all_cards()
+	_check(catalog_cards.size() >= 25,
+		"Katalog Survival belum memuat banyak pilihan skill buff")
+	var catalog_ids: Dictionary = {}
+	for card_data: Dictionary in catalog_cards:
+		catalog_ids[str(card_data.get("id", ""))] = true
+	_check(catalog_ids.size() == catalog_cards.size(),
+		"Katalog skill buff memiliki ID kartu duplikat")
 	var capped_stacks: Dictionary = {}
-	for card_data: Dictionary in BuffCatalog.all_cards():
+	for card_data: Dictionary in catalog_cards:
 		var maximum := int(card_data.get("max_stacks", 1))
 		if maximum > 0:
 			capped_stacks[str(card_data.get("id", ""))] = maximum
@@ -47,6 +55,19 @@ func _test_repeatable_buff_pool() -> void:
 		_check(bool(manager.call("apply_buff", buff_id)),
 			"Buff tanpa batas tidak bisa dipilih lagi: " + buff_id)
 	manager.free()
+	var skill_manager := BuffSystem.new()
+	var new_choices: Array = skill_manager.call("available_choices", catalog_cards.size())
+	var new_choice_ids: Dictionary = {}
+	for card_data: Dictionary in new_choices:
+		new_choice_ids[str(card_data.get("id", ""))] = true
+	_check(new_choice_ids.size() == catalog_cards.size(),
+		"Tidak semua kartu baru masuk ke pilihan stack Survival")
+	for buff_id in ["arcane_focus", "frost_rune", "storm_chain", "vampiric_flame",
+			"executioner", "critical_bloom", "soul_ward", "kill_haste", "wildfire",
+			"soul_spring", "prismatic_echo"]:
+		_check(bool(skill_manager.call("apply_buff", buff_id)),
+			"Skill kartu baru tidak bisa dipilih: " + buff_id)
+	skill_manager.free()
 
 
 func _run() -> void:
@@ -72,7 +93,7 @@ func _run() -> void:
 		await physics_frame
 	var player: CharacterBody3D = game.get("_player")
 	var visual: Node3D = game.get("_visual")
-	var world: Node = game.get("_survival_world")
+	var world: Node3D = game.get("_survival_world")
 	var selector: Control = game.get("_mode_selector")
 	_check(str(game.get("_active_mode")) == "survival", "Mode Survival tidak aktif")
 	_check(world != null, "Dunia Survival tidak dibuat")
@@ -100,16 +121,17 @@ func _run() -> void:
 	player.call("spawn", Vector2.ZERO)
 	var attack_button: Button = game.get("_attack")
 	var fire_button: Button = game.get("_fire_button")
-	var pet: Node = game.get("_pet")
+	var pet: Node3D = game.get("_pet")
 	var weapon: Node3D = visual.get("weapon_instance")
 	_check(not bool(player.get("sword_mode")), "Mode Survival masih mengaktifkan pedang")
 	_check(weapon == null or not weapon.visible, "Model pedang masih terlihat di Survival")
 	_check(str(visual.get("clip")) != "Sword_Idle", "Idle pedang masih dipakai di Survival")
-	_check(attack_button != null and not attack_button.visible,
+	_check(attack_button != null and not attack_button.is_visible_in_tree()
+		and attack_button.disabled,
 		"HUD Survival masih menawarkan serangan melee")
-	_check(fire_button != null and fire_button.visible
-		and str(fire_button.get("caption")) == "TEMBAK",
-		"Tombol sihir TEMBAK tidak tersedia di Survival")
+	_check(fire_button != null and not fire_button.is_visible_in_tree()
+		and fire_button.disabled,
+		"Tombol aksi TEMBAK masih terlihat/aktif di Survival")
 	_check(float(orbit.get("pitch")) >= 1.28
 		and float(orbit.get("pitch")) <= 1.50,
 		"Kamera Survival tidak berada di sudut top-down")
@@ -240,6 +262,9 @@ func _run() -> void:
 	var shots_after := int(pet.get("shots_fired"))
 	_check(shots_after >= shots_before + 3,
 		"Tanpa input tombol, Survival tidak menembak zombie berulang kali")
+	var cast_layer: Node = visual.get("cast_layer")
+	_check(bool(cast_layer.get("holding_pose")),
+		"Tangan sihir tidak tetap terangkat saat auto-fire Survival berlanjut")
 	for _frame in range(90):
 		game.call("_process", 1.0 / 60.0)
 		await physics_frame
@@ -247,6 +272,12 @@ func _run() -> void:
 			break
 	_check(int(farther.get("health")) <= 10000 - FirePet.MAGIC_DAMAGE * 2,
 		"Auto-fire tanpa input tidak memberi hit beruntun ke zombie")
+	farther.global_position = player.global_position + Vector3(0, 0, 80)
+	for _frame in range(60):
+		game.call("_process", 1.0 / 60.0)
+		await physics_frame
+	_check(not bool(cast_layer.get("holding_pose")) and not bool(cast_layer.get("active")),
+		"Pose tangan tidak turun setelah Survival berhenti menembak")
 
 	# Lewati satu menit secara deterministik: stage naik, timer reset, dan wave membesar.
 	var wave_one_size := int(world.get("last_spawn_wave_size"))
@@ -321,26 +352,118 @@ func _run() -> void:
 	_check(bool(buffs.call("apply_buff", "arcane_aegis")),
 		"Buff shield arcana tidak dapat diambil")
 	var aegis_mesh: MeshInstance3D = buffs.get("_aegis_mesh")
-	_check(int(player.get("shield_capacity")) == 70
-		and int(player.get("shield_points")) == 70
+	_check(int(player.get("shield_capacity")) >= 70
+		and int(player.get("shield_points")) >= 70
 		and is_instance_valid(aegis_mesh) and aegis_mesh.visible,
 		"Buff shield tidak memberi barier visual dan kapasitas shield")
 	var hp_before_shield := int(player.get("health"))
+	var shield_before_hit := int(player.get("shield_points"))
 	player.call("take_damage", 24)
 	_check(int(player.get("health")) == hp_before_shield
-		and int(player.get("shield_points")) < 70,
+		and int(player.get("shield_points")) < shield_before_hit,
 		"Shield tidak menyerap damage sebelum HP")
+	var base_damage_multiplier := float(pet.get("damage_multiplier"))
+	_check(bool(buffs.call("apply_buff", "arcane_focus")),
+		"Buff fokus arkana tidak dapat diambil")
+	_check(float(pet.get("damage_multiplier")) > base_damage_multiplier,
+		"Fokus arkana tidak menaikkan damage sihir")
+	var base_echo_chance := float(pet.get("extra_shot_chance"))
+	_check(bool(buffs.call("apply_buff", "prismatic_echo")),
+		"Buff echo prismatik tidak dapat diambil")
+	_check(float(pet.get("extra_shot_chance")) > base_echo_chance,
+		"Echo prismatik tidak menaikkan peluang tembakan ganda")
+	var capacity_before_ward := int(player.get("shield_capacity"))
+	_check(bool(buffs.call("apply_buff", "soul_ward")),
+		"Buff perisai jiwa tidak dapat diambil")
+	_check(int(player.get("shield_capacity")) >= capacity_before_ward + 20,
+		"Perisai jiwa tidak menambah kapasitas shield")
 	_check(bool(buffs.call("apply_buff", "burning_brand")),
 		"Buff sihir pembakar tidak dapat diambil")
+	_check(bool(buffs.call("apply_buff", "wildfire")),
+		"Buff kebakaran liar tidak dapat diambil")
+	_check(bool(buffs.call("apply_buff", "frost_rune")),
+		"Buff runa embun tidak dapat diambil")
+	_check(bool(buffs.call("apply_buff", "storm_chain")),
+		"Buff rantai petir tidak dapat diambil")
+	_check(bool(buffs.call("apply_buff", "vampiric_flame")),
+		"Buff api penghisap tidak dapat diambil")
+	_check(bool(buffs.call("apply_buff", "executioner")),
+		"Buff tanda penuai tidak dapat diambil")
+	_check(bool(buffs.call("apply_buff", "kill_haste")),
+		"Buff ritme penuai tidak dapat diambil")
+	_check(bool(buffs.call("apply_buff", "soul_spring")),
+		"Buff mata air jiwa tidak dapat diambil")
 	var live_burn_target: Node3D
 	for zombie in zombies:
 		if is_instance_valid(zombie) and zombie.call("can_be_targeted"):
 			live_burn_target = zombie
 			break
+	var chain_target: Node3D
 	if live_burn_target != null:
+		for zombie in zombies:
+			if is_instance_valid(zombie) and zombie != live_burn_target \
+					and zombie.call("can_be_targeted"):
+				chain_target = zombie
+				break
+	if live_burn_target != null:
+		if chain_target != null:
+			chain_target.global_position = live_burn_target.global_position + Vector3(2.0, 0, 0)
+			var chain_health_before := int(chain_target.get("health"))
+		var health_before_impact := int(player.get("health"))
 		pet.emit_signal("impact_landed", live_burn_target, FirePet.MAGIC_DAMAGE, false)
-		_check(float(live_burn_target.get("_burn_left")) > 0.0,
-			"Tembakan buff tidak menerapkan efek burn")
+		_check(float(live_burn_target.get("_burn_left")) > 0.0
+			and int(live_burn_target.get("_burn_damage")) >= 7,
+			"Burning Brand/Wildfire tidak menerapkan damage bakar")
+		_check(float(live_burn_target.get("_slow_left")) > 0.0
+			and float(live_burn_target.get("_slow_multiplier")) < 1.0,
+			"Runa embun tidak memperlambat zombie")
+		if chain_target != null:
+			_check(int(chain_target.get("health")) < chain_health_before,
+				"Rantai petir tidak memberi damage ke zombie lain")
+		player.set("health", maxi(1, health_before_impact - 20))
+		var health_after_setup := int(player.get("health"))
+		pet.emit_signal("impact_landed", live_burn_target, FirePet.MAGIC_DAMAGE, false)
+		_check(int(player.get("health")) > health_after_setup,
+			"Api penghisap tidak memulihkan HP dari damage sihir")
+		if chain_target != null:
+			var maximum_health := int(chain_target.get("max_health"))
+			chain_target.set("health", maxi(1, roundi(maximum_health * 0.30)))
+			var execution_health_before := int(chain_target.get("health"))
+			buffs.call("_on_magic_impact", chain_target, FirePet.MAGIC_DAMAGE, false)
+			_check(int(chain_target.get("health")) < execution_health_before,
+				"Tanda penuai tidak memberi bonus damage saat zombie sekarat")
+		var bloom_target: Node3D
+		for zombie in zombies:
+			if is_instance_valid(zombie) and zombie != live_burn_target \
+					and zombie != chain_target and zombie.call("can_be_targeted"):
+				bloom_target = zombie
+				break
+		if bloom_target != null:
+			bloom_target.global_position = live_burn_target.global_position + Vector3(2.0, 0, 0)
+			bloom_target.set("health", int(bloom_target.get("max_health")))
+			var bloom_health_before := int(bloom_target.get("health"))
+			var bloom_manager := BuffSystem.new()
+			bloom_manager.world = world
+			bloom_manager.stacks = {"critical_bloom": 1}
+			bloom_manager.call("_on_magic_impact", live_burn_target,
+				FirePet.MAGIC_DAMAGE, true)
+			_check(int(bloom_target.get("health")) < bloom_health_before,
+				"Bunga kritikal tidak memberi damage area saat critical")
+			bloom_manager.free()
+		var health_maximum := int(player.get("max_health"))
+		player.set("health", maxi(1, health_maximum - 8))
+		var health_before_regen := int(player.get("health"))
+		buffs.call("_process", 1.1)
+		_check(int(player.get("health")) > health_before_regen,
+			"Mata air jiwa tidak memulihkan HP seiring waktu")
+		player.set("shield_points", 0)
+		pet.set("cooldown", 0.8)
+		var cooldown_before_kill := float(pet.get("cooldown"))
+		buffs.call("on_zombie_killed", live_burn_target)
+		_check(int(player.get("shield_points")) >= 5 * int(buffs.call("get_stacks", "soul_ward")),
+			"Kill tidak mengisi shield Perisai Jiwa")
+		_check(float(pet.get("cooldown")) < cooldown_before_kill,
+			"Kill tidak memangkas cooldown dengan Ritme Penuai")
 	for _frame in range(50):
 		await physics_frame
 	_check(int(world.get("experience")) >= 0

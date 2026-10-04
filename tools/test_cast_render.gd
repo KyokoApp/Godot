@@ -52,6 +52,21 @@ func _pose_gap(rest: PackedFloat32Array, character: Character) -> float:
 	return worst
 
 
+func _rotation_snapshot(character: Character) -> Array[Quaternion]:
+	var rotations: Array[Quaternion] = []
+	for bone in range(character.skeleton.get_bone_count()):
+		rotations.append(character.skeleton.get_bone_pose_rotation(bone))
+	return rotations
+
+
+func _rotation_differences(rest: Array[Quaternion], character: Character) -> int:
+	var changed := 0
+	for bone in range(character.skeleton.get_bone_count()):
+		if not rest[bone].is_equal_approx(character.skeleton.get_bone_pose_rotation(bone)):
+			changed += 1
+	return changed
+
+
 func _difference(first: Image, second: Image) -> int:
 	var changed := 0
 	for y in range(first.get_height()):
@@ -95,6 +110,7 @@ func _run() -> void:
 		character.cast_layer.connect("modification_processed",
 			func() -> void: _processed += 1)
 	await _test_clip(character)
+	await _test_held_cast(character)
 	print("[cast-render-test] modifier processed=", _processed)
 	world.queue_free()
 	for frame in range(5):
@@ -122,3 +138,36 @@ func _test_clip(character: Character) -> void:
 			% [motion, gap])
 		print("[cast-render-test] ", motion, " changed pixels=", changed,
 			" selisih pose pulih=%.5f m" % gap)
+
+
+func _test_held_cast(character: Character) -> void:
+	character.animation.play(Catalog.play_name("Idle_Loop"), 0.0)
+	character.animation.advance(0.2)
+	var rest_image: Image = await _capture(character)
+	var rest_rotations := _rotation_snapshot(character)
+	character.sustained_cast = true
+	character.start_cast()
+	character.cast_layer._physics_process(0.20)
+	var raised: Image = await _capture(character)
+	var raised_rotations := _rotation_snapshot(character)
+	var changed := _difference(rest_image, raised)
+	_check(changed > 30, "Pose tangan terangkat tidak terlihat")
+	_check(character.cast_layer.holding_pose,
+		"Layer sihir tidak masuk mode tahan selama menembak")
+	character.cast_layer._physics_process(0.45)
+	var held: Image = await _capture(character)
+	var drifted_bones := _rotation_differences(raised_rotations, character)
+	_check(drifted_bones == 0,
+		"Tangan berubah/turun saat pose tembak ditahan: %d tulang" % drifted_bones)
+	held.save_png("user://casting-held-test.png")
+	character.sustained_cast = false
+	character.cast_layer.end_held()
+	character.cast_layer._physics_process(character.cast_layer.clip.length)
+	var released: Image = await _capture(character)
+	var changed_after_release := _rotation_differences(rest_rotations, character)
+	_check(not character.cast_layer.active and not character.cast_layer.holding_pose
+		and changed_after_release == 0,
+		"Pose tangan tidak pulih setelah tembakan berhenti")
+	released.save_png("user://casting-released-test.png")
+	print("[cast-render-test] held changed=", changed,
+		" pose drift=", drifted_bones, " released rotation diff=", changed_after_release)

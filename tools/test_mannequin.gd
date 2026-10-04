@@ -55,6 +55,7 @@ func _run() -> void:
 	_test_metrics(character)
 	_test_state_machine(character)
 	_test_cast(character, skeleton)
+	_test_cast_hold(character)
 	_test_sword(character, skeleton)
 	_test_feet(character)
 	_test_avatar_motion(character)
@@ -209,6 +210,26 @@ func _test_cast(character: Character, skeleton: Skeleton3D) -> void:
 	_check(layer.playing, "Casting tidak jalan saat aksi sihir")
 	character._physics_process(1.0)
 	_check(not character.is_busy(), "Aksi sihir tidak selesai")
+
+
+func _test_cast_hold(character: Character) -> void:
+	var layer := character.cast_layer
+	character.animation.play(Catalog.play_name("Idle_Loop"), 0.0)
+	character.animation.advance(0.2)
+	character.sustained_cast = true
+	character.start_cast()
+	layer._physics_process(0.20)
+	_check(layer.holding_pose and layer.active,
+		"Pose tangan tidak bertahan saat tembakan beruntun")
+	var held_time := layer.elapsed
+	layer._physics_process(0.45)
+	_check(is_equal_approx(layer.elapsed, held_time) and layer.holding_pose,
+		"Pose tangan turun padahal tembakan masih ditahan")
+	character.sustained_cast = false
+	layer.end_held()
+	layer._physics_process(layer.clip.length)
+	_check(not layer.holding_pose and not layer.active and not layer.playing,
+		"Pose tangan tidak dilepas setelah tembakan berhenti")
 
 
 func _test_sword(character: Character, skeleton: Skeleton3D) -> void:

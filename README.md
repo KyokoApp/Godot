@@ -1613,3 +1613,34 @@ sihir yang sudah tersedia dan kunci otomatis ke zombie.
   multitouch HUD), render Mobile Vulkan, ekspor PCK/APK, audit APK, serta boot
   launcher. Rilis: [`build-3b7bf29`](https://github.com/KyokoApp/Godot/releases/tag/build-3b7bf29).
   Render CI lolos; belum ada uji langsung di perangkat Android fisik.
+
+## Ronde 28 — analog-only, gait mundur, dan 11 kartu skill Survival
+
+- Semua tombol aksi gameplay (`SERANG`, `TEMBAK`, `LOMPAT`, `JONGKOK`, `LARI`,
+  `DASH`) kini tersembunyi dan dinonaktifkan. Analog tetap satu-satunya input
+  aksi; pengaturan, katalog animasi, dan HUD status tetap tersedia. Tombol editor
+  tata letak HUD ikut disembunyikan. Auto-fire tetap khusus Survival; hub tidak
+  mendapat auto-fire.
+- Perbaikan gait mundur: `Walk_Formal_Loop` hanya dipilih pada band jalan.
+  Analog penuh ke bawah yang mencapai kecepatan lari tetap memakai gait Jog/Sprint,
+  bukan turun kembali ke animasi jalan.
+- Katalog Survival bertambah 11 kartu yang ikut pilihan/stack: Fokus Arkana
+  (damage sihir), Runa Embun (slow), Rantai Petir (damage berantai), Api Penghisap
+  (lifesteal), Tanda Penuai (bonus damage ke target sekarat), Bunga Kritikal
+  (ledakan area saat critical), Perisai Jiwa (kapasitas + isi shield saat kill),
+  Ritme Penuai (cooldown turun saat kill), Kebakaran Liar (burn lebih kuat),
+  Mata Air Jiwa (regenerasi HP), dan Echo Prismatik (peluang tembakan ganda).
+  Efek stack dan batas stack ditangani `SurvivalBuffSystem`.
+- Tes HUD dan Survival diperbarui untuk memastikan tombol gameplay tak bisa
+  dipicu, analog bergerak, Sprint bertahan saat analog penuh ke bawah, buff baru
+  tersedia/berstack/berdampak, serta auto-fire Survival tetap bekerja. Tes render
+  Survival kini mengharapkan HUD analog-only.
+- Pose sihir kini menaikkan tangan sekali saat auto-fire mulai, menahannya selama
+  jeda antartembakan, lalu melanjutkan klip untuk menurunkan tangan setelah tidak
+  ada tembakan selama 0,42 detik. Render test memeriksa pose tetap stabil dan
+  pulih setelah tembakan berhenti; casting satu kali di hub tetap memakai alur biasa.
+- Validasi statis lokal lulus: `gdparse`, `gdlint project tools`, pemeriksaan
+  tipe, katalog animasi, tes chunk, bundle lisensi, dan `git diff --check`.
+  Runtime Godot 4.5.2 tidak tersedia di sandbox; unduhan binary gagal pada TLS,
+  jadi build, tes headless, dan render CI belum dijalankan setelah perubahan ini.
+  Belum ada klaim tampilan visual terverifikasi.

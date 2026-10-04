@@ -27,6 +27,8 @@ var dead := false
 var _burn_left := 0.0
 var _burn_tick_left := 0.0
 var _burn_damage := 0
+var _slow_left := 0.0
+var _slow_multiplier := 1.0
 var _attack_cooldown := 0.8
 var _death_left := 0.0
 
@@ -43,6 +45,13 @@ func apply_burn(damage_per_tick: int, duration: float) -> void:
 	_burn_damage = maxi(_burn_damage, damage_per_tick)
 	_burn_left = maxf(_burn_left, duration)
 	_burn_tick_left = minf(_burn_tick_left, 0.38)
+
+
+func apply_slow(multiplier: float, duration: float) -> void:
+	if dead or duration <= 0.0:
+		return
+	_slow_multiplier = minf(_slow_multiplier, clampf(multiplier, 0.35, 1.0))
+	_slow_left = maxf(_slow_left, duration)
 
 
 func _ready() -> void:
@@ -89,6 +98,9 @@ func _physics_process(delta: float) -> void:
 	_update_burn(delta)
 	if dead:
 		return
+	_slow_left = maxf(0.0, _slow_left - delta)
+	if _slow_left <= 0.0:
+		_slow_multiplier = 1.0
 	if player == null or visual == null:
 		return
 	_attack_cooldown = maxf(0.0, _attack_cooldown - delta)
@@ -116,14 +128,15 @@ func _physics_process(delta: float) -> void:
 	if distance <= 0.01:
 		return
 	var direction := offset / distance
-	velocity.x = direction.x * WALK_SPEED
-	velocity.z = direction.y * WALK_SPEED
+	var current_speed := WALK_SPEED * _slow_multiplier
+	velocity.x = direction.x * current_speed
+	velocity.z = direction.y * current_speed
 	move_and_slide()
 	var facing := atan2(-direction.x, -direction.y)
 	visual.rotation.y = lerp_angle(visual.rotation.y, facing, 1.0 - exp(-8.0 * delta))
 	# Satu klip gait diukur per zombie; skala main disetel ke langkah aktual.
 	var natural_speed := visual.natural_speed("Zombie_Walk_Fwd_Loop")
-	visual.set_locomotion("Zombie_Walk_Fwd_Loop", WALK_SPEED / natural_speed)
+	visual.set_locomotion("Zombie_Walk_Fwd_Loop", current_speed / natural_speed)
 
 
 func _update_burn(delta: float) -> void:

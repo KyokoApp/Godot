@@ -79,8 +79,39 @@ func _draw() -> void:
 			draw_polyline(tail, Color(accent.r, accent.g, accent.b, 0.8), 2.2, true)
 			draw_circle(center + Vector2(radius * 0.18, -radius * 0.16), radius * 0.32,
 				accent.lightened(0.28))
+		"ice":
+			_draw_ice(center, radius * 0.68, accent)
+		"skull":
+			_draw_skull(center, radius * 0.66, accent)
 		_:
 			_draw_star(center, radius * 0.65, accent, 8)
+
+
+func _draw_ice(center: Vector2, scale: float, color: Color) -> void:
+	for ray in 6:
+		var angle := TAU * float(ray) / 6.0 + PI * 0.5
+		var direction := Vector2(cos(angle), sin(angle))
+		var end := center + direction * scale
+		draw_line(center - direction * scale, end, color.lightened(0.2), 2.0, true)
+		for branch_side in [-1.0, 1.0]:
+			var branch := end - direction.rotated(branch_side * 0.72) * scale * 0.30
+			draw_line(end - direction * scale * 0.36, branch, color, 1.4, true)
+
+
+func _draw_skull(center: Vector2, scale: float, color: Color) -> void:
+	draw_circle(center + Vector2(0, -scale * 0.12), scale * 0.49, color)
+	draw_rect(Rect2(center + Vector2(-scale * 0.34, scale * 0.08),
+		Vector2(scale * 0.68, scale * 0.48)), color)
+	var shadow := Color(0.10, 0.08, 0.16, 1.0)
+	draw_circle(center + Vector2(-scale * 0.20, -scale * 0.08), scale * 0.12, shadow)
+	draw_circle(center + Vector2(scale * 0.20, -scale * 0.08), scale * 0.12, shadow)
+	_draw_polygon(center, scale, PackedVector2Array([
+		Vector2(0, 0.02), Vector2(-0.10, 0.25), Vector2(0.10, 0.25),
+	]), shadow)
+	for tooth in 3:
+		var x := center.x + (float(tooth) - 1.0) * scale * 0.20
+		draw_line(Vector2(x, center.y + scale * 0.30),
+			Vector2(x, center.y + scale * 0.49), shadow, 1.4, true)
 
 
 func _draw_flame(center: Vector2, scale: float, color: Color) -> void:

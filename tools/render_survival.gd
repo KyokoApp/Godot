@@ -50,13 +50,14 @@ func _run() -> void:
 	var weapon := visual.get("weapon_instance") as Node3D
 	_check(not bool(player.get("sword_mode")), "Mode Survival masih mengaktifkan pedang")
 	_check(weapon == null or not weapon.visible, "Pedang masih terlihat di Survival")
-	var attack_button: Control = game.get("_attack")
-	var fire_button: Control = game.get("_fire_button")
-	_check(attack_button != null and not attack_button.visible,
-		"HUD Survival masih menampilkan serangan melee")
-	_check(fire_button != null and fire_button.visible
-		and str(fire_button.get("caption")) == "TEMBAK",
-		"HUD Survival tidak menampilkan tombol sihir TEMBAK")
+	var joystick: Control = game.get("_joystick")
+	_check(joystick != null and joystick.visible,
+		"HUD analog-only tidak menampilkan joystick")
+	for node_name in ["_attack", "_fire_button", "_jump", "_crouch", "_speed_button", "_dash"]:
+		var action_button: Control = game.get(node_name)
+		_check(action_button != null and not action_button.is_visible_in_tree()
+			and bool(action_button.get("disabled")),
+			"HUD Survival masih menampilkan tombol gameplay: " + node_name)
 	var orbit: Node3D = game.get("_orbit")
 	_check(float(orbit.get("pitch")) >= 1.28,
 		"Render Survival tidak memakai sudut kamera top-down")
@@ -93,7 +94,7 @@ func _run() -> void:
 	for _frame in range(3):
 		await physics_frame
 	print("[survival-render-test] zombies=", zombies.size(),
-		" sihir=", fire_button.get("caption"),
+		" auto-fire=aktif, analog=aktif",
 		" pedang=", "terlihat" if weapon != null and weapon.visible else "hilang")
 	print("[survival-render-test] HASIL: ", "OK" if _failures == 0 else "GAGAL")
 	game.queue_free()

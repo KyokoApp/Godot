@@ -66,8 +66,8 @@ const DASH_SPEED := 12.0
 const DASH_TIME := 0.40
 const DASH_PLAYBACK := 0.8
 const DASH_COOLDOWN := 0.85
-## Jalan mundur pakai klip berbeda (Walk_Formal_Loop) supaya arah gerak terbaca.
-## UAL tidak punya klip strafe kiri/kanan — lihat catatan di _apply_animation.
+## Jalan mundur pelan memakai klip formal; jog/sprint tetap mengikuti laju.
+## UAL tidak punya klip mundur jog/sprint atau strafe kiri/kanan.
 const BACKWARD_CLIP := "Walk_Formal_Loop"
 const BACKWARD_DOT := -0.35
 const CROUCH_SPEED := 1.2
@@ -241,6 +241,15 @@ func set_survival_bonuses(health_bonus: int, shield_capacity_value: int,
 
 func clear_survival_bonuses() -> void:
 	set_survival_bonuses(0, 0, 0, 0.0)
+
+
+func grant_shield(amount: int) -> void:
+	if amount <= 0 or shield_capacity <= 0:
+		return
+	var previous := shield_points
+	shield_points = mini(shield_capacity, shield_points + amount)
+	if shield_points != previous:
+		survival_stats_changed.emit()
 
 
 func take_damage(amount: int) -> void:
@@ -469,11 +478,11 @@ func select_gait(speed: float, current: String, stick := Vector2.ZERO,
 	if crouching:
 		return CROUCH_WALK if speed > 0.12 else CROUCH_IDLE
 	var target := _band_for(speed)
-	# Jalan MUNDUR pakai klip berbeda supaya arah gerak terbaca. UAL tidak punya
-	# klip strafe kiri/kanan (sudah diperiksa langsung dari isi GLB UAL1 & UAL2),
-	# jadi gerak menyamping tetap memakai klip jalan depan — badan yang berputar
-	# ke arah gerak, dan itu tetap terbaca benar.
-	if speed > IDLE_EXIT and _moving_backward(stick, body_velocity):
+	# Jalan mundur pelan memakai Walk_Formal. Saat analog penuh, band Jog/Sprint
+	# menang supaya animasi tidak turun jadi jalan ketika badan sudah berlari.
+	# UAL tidak punya klip mundur Jog/Sprint atau strafe kiri/kanan.
+	var moving_backward := speed > IDLE_EXIT and _moving_backward(stick, body_velocity)
+	if moving_backward and target == GAIT_CLIPS[0]:
 		target = BACKWARD_CLIP
 	if target == current:
 		return current
@@ -484,7 +493,7 @@ func select_gait(speed: float, current: String, stick := Vector2.ZERO,
 	if current == IDLE:
 		return current if speed <= IDLE_EXIT else target
 	if current == BACKWARD_CLIP:
-		return current if speed > IDLE_EXIT else IDLE
+		return current if target == BACKWARD_CLIP else target
 	for entry in _gait_bands():
 		if str(entry["clip"]) != current:
 			continue

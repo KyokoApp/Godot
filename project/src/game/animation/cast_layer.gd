@@ -4,13 +4,17 @@ extends SkeletonModifier3D
 
 const CLIP := "Spell_Simple_Shoot"
 const RELEASE_TIME := 0.16
+const HOLD_POSE_TIME := 0.20
+const HOLD_RELEASE_DELAY := 0.42
 const FADE_IN := 0.08
 const FADE_OUT := 0.14
 
 var clip: Animation
 var elapsed := 0.0
 var playing := false
+var holding_pose := false
 var tracks: Dictionary[int, int] = {}
+var _hold_release_left := 0.0
 
 
 func configure(source: Animation) -> void:
@@ -36,14 +40,61 @@ func configure(source: Animation) -> void:
 func begin() -> void:
 	if clip == null or tracks.is_empty():
 		return
+	holding_pose = false
+	_hold_release_left = 0.0
 	elapsed = 0.0
 	playing = true
 	active = true
 	influence = 0.0
 
 
+func begin_held() -> void:
+	if clip == null or tracks.is_empty():
+		return
+	_hold_release_left = HOLD_RELEASE_DELAY
+	if holding_pose and playing:
+		return
+	# Mainkan bagian menaikkan tangan sekali, lalu tahan pose di frame 0,20 dtk.
+	# Panggilan tembakan berulang tidak mengulang animasi dari awal.
+	holding_pose = true
+	elapsed = 0.0
+	playing = true
+	active = true
+	influence = 0.0
+
+
+func end_held() -> void:
+	# Setelah input tembakan berhenti, sisa klip berjalan lagi sehingga tangan
+	# turun lewat animasi aslinya, bukan dipotong mendadak.
+	holding_pose = false
+	_hold_release_left = 0.0
+
+
+func cancel() -> void:
+	holding_pose = false
+	_hold_release_left = 0.0
+	playing = false
+	active = false
+	influence = 0.0
+	elapsed = 0.0
+
+
+func _process(delta: float) -> void:
+	if not holding_pose or not playing:
+		return
+	_hold_release_left = maxf(0.0, _hold_release_left - delta)
+	if _hold_release_left <= 0.0:
+		end_held()
+
+
 func _physics_process(delta: float) -> void:
 	if not playing:
+		return
+	if holding_pose:
+		elapsed = minf(elapsed + delta, HOLD_POSE_TIME)
+		influence = smoothstep(0.0, FADE_IN, elapsed)
+		if elapsed >= HOLD_POSE_TIME:
+			influence = 1.0
 		return
 	elapsed = minf(elapsed + delta, clip.length)
 	influence = minf(smoothstep(0, FADE_IN, elapsed),
@@ -52,6 +103,8 @@ func _physics_process(delta: float) -> void:
 		playing = false
 		active = false
 		influence = 0.0
+		holding_pose = false
+		_hold_release_left = 0.0
 
 
 func _process_modification_with_delta(_delta: float) -> void:
