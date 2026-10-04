@@ -1606,11 +1606,10 @@ sihir yang sudah tersedia dan kunci otomatis ke zombie.
   damage tanpa mengirim input tombol, lalu memastikan tembakan otomatis berhenti
   di hub.
 - Validasi lokal lulus: `gdparse`, `gdlint` pada file yang berubah,
-  `tools/check_scripts.py .`, dan `git diff --check`. CI Godot 4.5.2 run
-  **[`37210636688`](https://github.com/KyokoApp/Godot/actions/runs/37210636688)**
-  meluluskan compile + seluruh tes headless (termasuk tes auto-fire Survival),
-  render-a/render-c (termasuk render dunia Survival), ekspor PCK/APK, audit APK,
-  dan boot launcher. Run keseluruhan masih merah karena job render-b gagal pada
-  assertion multitouch HUD `Jari kedua gagal casting sambil jalan`; validasi
-  penuh baru dapat diklaim setelah workflow berikutnya hijau. Paket rilis
-  `build-32511ae` berhasil diterbitkan.
+  `tools/check_scripts.py .`, dan `git diff --check`. Setelah dua run menemukan
+  regression tap manual TEMBAK di hub pada tes multitouch HUD dan jalur hub
+  manual dipulihkan, CI Godot 4.5.2 run **[`37211533068`](https://github.com/KyokoApp/Godot/actions/runs/37211533068)**
+  hijau penuh: compile, semua tes headless (termasuk auto-fire Survival dan
+  multitouch HUD), render Mobile Vulkan, ekspor PCK/APK, audit APK, serta boot
+  launcher. Rilis: [`build-3b7bf29`](https://github.com/KyokoApp/Godot/releases/tag/build-3b7bf29).
+  Render CI lolos; belum ada uji langsung di perangkat Android fisik.
