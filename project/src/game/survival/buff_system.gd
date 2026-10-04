@@ -103,7 +103,7 @@ func set_orbit_stacks(count: int) -> void:
 	while _orbit_nodes.size() < desired:
 		_add_orbit_flame(_orbit_nodes.size())
 	while _orbit_nodes.size() > desired:
-		var orb := _orbit_nodes.pop_back()
+		var orb: Node3D = _orbit_nodes.pop_back() as Node3D
 		if is_instance_valid(orb):
 			orb.queue_free()
 	if count > 0:
@@ -290,11 +290,12 @@ func _spawn_nova(position: Vector3) -> void:
 	burst.position = world.to_local(position + Vector3(0, 0.04, 0))
 	world.add_child(burst)
 	var zombie_list: Array = world.get("zombies")
-	for zombie in zombie_list:
+	for zombie_value in zombie_list:
+		var zombie := zombie_value as Node3D
 		if not is_instance_valid(zombie) or not zombie.has_method("can_be_targeted") \
 				or not bool(zombie.call("can_be_targeted")):
 			continue
-		var offset := zombie.global_position - position
+		var offset: Vector3 = zombie.global_position - position
 		offset.y = 0.0
 		if offset.length_squared() <= _nova_radius * _nova_radius:
 			zombie.call("take_damage", _nova_damage)
