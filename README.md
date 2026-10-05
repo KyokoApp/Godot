@@ -1666,9 +1666,12 @@ sihir yang sudah tersedia dan kunci otomatis ke zombie.
 - `tools/test_survival.gd`, `tools/test_fire_pet.gd`, `tools/test_npc.gd`,
   `tools/test_scenery.gd`, dan tes baru `tools/test_meta_progress.gd` diperbarui.
   Pemeriksaan lokal statis lulus (`gdparse`, `gdlint`, cek tipe, lisensi, chunk,
-  katalog animasi, YAML workflow, dan `git diff --check`). CI Godot 4.5.2 pertama
+  katalog animasi, YAML workflow, dan `git diff --check`). CI pertama
   [`37347651748`](https://github.com/KyokoApp/Godot/actions/runs/37347651748)
-  gagal saat compile karena nilai `pop_front()` belum bertipe eksplisit (`Variant`,
-  warning dianggap error). Render-a lulus; render-b/render-c terhenti akibat
-  compile dan package tidak berjalan. Cast `Node3D` sudah diperbaiki lokal;
-  push dan CI ulang masih menunggu. Visual/runtime belum terverifikasi.
+  gagal compile pada `pop_front()` tanpa tipe eksplisit; cast `Node3D` diperbaiki.
+  CI kedua [`37348220019`](https://github.com/KyokoApp/Godot/actions/runs/37348220019)
+  lulus compile, semua render Mobile Vulkan, serta tes scenery, NPC, meta-progression,
+  dan Survival. Gate berhenti di `tools/test_fire_pet.gd:79` karena tes membaca
+  proyektil sesudah terhapus. Tes kini mencatat `finished` sebelum cleanup; push
+  dan CI ketiga masih menunggu. Render lulus, tetapi runtime gate lengkap dan APK
+  belum terverifikasi.

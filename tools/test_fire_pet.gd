@@ -73,12 +73,15 @@ func _run() -> void:
 	await physics_frame
 	await physics_frame
 	_check(shot.velocity.y < vertical, "Proyektil tidak dipengaruhi gravitasi")
+	var saw_finished := false
 	for frame in range(240):
 		await physics_frame
+		if is_instance_valid(shot):
+			saw_finished = saw_finished or shot.finished
 		pet._prune()
-		if shot.finished and pet.projectiles.is_empty():
+		if saw_finished and pet.projectiles.is_empty():
 			break
-	_check(shot.finished, "Proyektil tidak berakhir setelah lintasannya")
+	_check(saw_finished, "Proyektil tidak berakhir setelah lintasannya")
 	_check(pet.projectiles.is_empty(), "Proyektil tidak dibersihkan")
 	_check(Pet.RAPID_FIRE_MAX_PROJECTILES == 10,
 		"Batas auto-fire/volley tidak dijaga tetap ringan")
