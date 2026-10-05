@@ -267,7 +267,8 @@ func _on_black_flash_reached(main: Node3D) -> void:
 	if world_environment != null and world_environment.environment != null:
 		world_environment.environment.adjustment_enabled = true
 		world_environment.environment.adjustment_saturation = 0.0
-		world_environment.environment.adjustment_contrast = 1.22
+		world_environment.environment.adjustment_contrast = 1.06
+		world_environment.environment.adjustment_brightness = 1.10
 	(main.get("_run_zone_hud") as RunZoneHUD).play_black_flash()
 	var orbit := main.get("_orbit") as Orbit
 	orbit.combat_shake(0.15, 0.22)
@@ -292,6 +293,7 @@ func _save_environment_state(main: Node3D) -> void:
 		"adjustment_enabled": environment.adjustment_enabled,
 		"saturation": environment.adjustment_saturation,
 		"contrast": environment.adjustment_contrast,
+		"brightness": environment.adjustment_brightness,
 	}
 
 
@@ -304,4 +306,5 @@ func _restore_environment_state(main: Node3D) -> void:
 		environment.adjustment_enabled = bool(_environment_state.get("adjustment_enabled", true))
 		environment.adjustment_saturation = float(_environment_state.get("saturation", 1.0))
 		environment.adjustment_contrast = float(_environment_state.get("contrast", 1.0))
+		environment.adjustment_brightness = float(_environment_state.get("brightness", 1.0))
 	_environment_state.clear()

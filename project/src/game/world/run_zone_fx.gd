@@ -5,7 +5,7 @@ signal hollow_purple_impact(position: Vector3)
 
 const SLASH_SHADER := preload("res://src/game/world/run_zone_slash.gdshader")
 
-const ORB_RADIUS := 8.0
+const ORB_RADIUS := 9.5
 const CHARGE_TIME := 2.25
 const FLIGHT_TIME := 1.05
 const AFTERMATH_TIME := 1.35
@@ -59,7 +59,7 @@ func start_hollow_purple() -> void:
 	phase = "charging"
 	_elapsed = 0.0
 	_orb.scale = Vector3.ONE * 0.18
-	_orb.global_position = player.global_position + Vector3(0.0, 9.0, -30.0)
+	_orb.global_position = player.global_position + Vector3(0.0, 8.0, -26.0)
 
 
 func finish() -> void:
@@ -208,16 +208,16 @@ func _build_orb() -> void:
 	_shell_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_shell_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_shell_material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	_shell_material.albedo_color = Color(0.38, 0.055, 0.76, 0.52)
+	_shell_material.albedo_color = Color(0.62, 0.20, 0.95, 0.82)
 	_shell_material.emission_enabled = true
-	_shell_material.emission = Color(0.42, 0.08, 1.0)
-	_shell_material.emission_energy_multiplier = 3.3
+	_shell_material.emission = Color(0.80, 0.48, 1.0)
+	_shell_material.emission_energy_multiplier = 5.5
 	shell.material_override = _shell_material
 	_orb.add_child(shell)
 
 	var core_mesh := SphereMesh.new()
-	core_mesh.radius = 0.46
-	core_mesh.height = 0.92
+	core_mesh.radius = 0.30
+	core_mesh.height = 0.60
 	core_mesh.radial_segments = 32
 	core_mesh.rings = 20
 	var core := MeshInstance3D.new()
@@ -245,7 +245,7 @@ func _build_orb() -> void:
 		ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		var color := Color(0.84, 0.48, 1.0, 0.94) if index != 1 \
 			else Color(0.40, 0.13, 0.95, 0.94)
-		var material := _energy_material(color, 3.7)
+		var material := _energy_material(color, 4.8)
 		ring.material_override = material
 		ring.rotation = Vector3(float(index) * 0.74, float(index) * 1.05,
 			float(index) * 0.42)
@@ -260,7 +260,7 @@ func _update_charge(delta: float) -> void:
 	var pulse := 1.0 + 0.045 * sin(_elapsed * 9.0)
 	_orb.scale = Vector3.ONE * lerpf(0.18, ORB_RADIUS, smoothstep(0.0, 1.0, growth)) * pulse
 	_orb.global_position = player.global_position + Vector3(0.0,
-		9.0 + 0.22 * sin(_elapsed * 3.6), -30.0)
+		8.0 + 0.22 * sin(_elapsed * 3.6), -26.0)
 	_orb.rotation.y += delta * 0.75
 	_orb.rotation.z += delta * 0.31
 	for index in range(_rings.size()):
@@ -275,7 +275,7 @@ func _update_flight(delta: float) -> void:
 	_elapsed += delta
 	var progress := clampf(_elapsed / FLIGHT_TIME, 0.0, 1.0)
 	var eased := progress * progress * (3.0 - 2.0 * progress)
-	var target := player.global_position + Vector3(0.0, 6.0, -10.0)
+	var target := player.global_position + Vector3(0.0, 6.0, -8.0)
 	_orb.global_position = _flight_start.lerp(target, eased)
 	_orb.rotation.y += delta * 3.8
 	_orb.scale = Vector3.ONE * ORB_RADIUS * (1.0 + 0.055 * sin(_elapsed * 18.0))

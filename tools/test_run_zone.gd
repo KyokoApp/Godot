@@ -23,6 +23,8 @@ func _run() -> void:
 	var game := MainScene.instantiate() as Node3D
 	root.add_child(game)
 	var player := game.get("_player") as CharacterBody3D
+	var environment := (game.get_node("DuskEnvironment") as WorldEnvironment).environment
+	var home_environment_brightness := environment.adjustment_brightness
 	for _frame in range(90):
 		await physics_frame
 		if player.is_on_floor():
@@ -139,7 +141,6 @@ func _run() -> void:
 	var flash_label := hud.get("_flash_label") as Label
 	_check(flash_label != null and flash_label.visible and flash_label.text == "BLACK FLASH!",
 		"Burst kartun BLACK FLASH tidak muncul")
-	var environment := (game.get_node("DuskEnvironment") as WorldEnvironment).environment
 	_check(environment.adjustment_saturation < 0.01,
 		"Dunia tidak berubah menjadi monokrom di Speed 20")
 	_check(home_camera != null and home_camera.fov > 86.0,
@@ -187,6 +188,8 @@ func _run() -> void:
 		"Field of view kamera home tidak dipulihkan")
 	_check(environment.adjustment_saturation > 0.9,
 		"Warna home tidak dipulihkan setelah Black Flash")
+	_check(absf(environment.adjustment_brightness - home_environment_brightness) < 0.01,
+		"Kecerahan home tidak dipulihkan setelah Black Flash")
 
 	game.queue_free()
 	await process_frame
