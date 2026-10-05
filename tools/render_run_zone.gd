@@ -92,9 +92,11 @@ func _run() -> void:
 	for _frame in range(3):
 		await physics_frame
 	var triggered := bool(world.get("hollow_purple_started"))
-	var trigger_detail := "phase=%s jarak=%.2fm z=%.2fm run=%s" % [
+	var trigger_detail := "phase=%s jarak=%.2fm z=%.2fm run=%s proses=%s paused=%s waktu=%.2f skala=%.2f" % [
 		str(world.get("phase")), float(world.get("distance_m")),
 		player.global_position.z, str(game.get("_active_mode")),
+		str(world.is_processing()), str(game.get_tree().paused),
+		float(world.get("elapsed_seconds")), Engine.time_scale,
 	]
 	_check(triggered, "Hollow Purple tidak mulai pada jarak pemicu (" + trigger_detail + ")")
 	print("[run-zone-render-test] pemicu Hollow Purple: ", trigger_detail,
