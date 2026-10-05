@@ -5,11 +5,16 @@ const Player = preload("res://src/game/player.gd")
 const Orbit = preload("res://src/game/orbit_camera.gd")
 const RunZoneWorld = preload("res://src/game/world/run_zone.gd")
 const RunZoneHUD = preload("res://src/game/ui/run_zone_hud.gd")
+const Joystick = preload("res://src/game/virtual_joystick.gd")
+
+var _home_camera_fov := 65.0
+var _environment_state: Dictionary = {}
 
 
-func build_hud(layer: CanvasLayer) -> RunZoneHUD:
+func build_hud(layer: CanvasLayer, main: Node3D) -> RunZoneHUD:
 	var hud := RunZoneHUD.new()
 	layer.add_child(hud)
+	hud.speed_pressed.connect(_on_speed_pressed.bind(main))
 	hud.hide()
 	return hud
 
@@ -36,6 +41,8 @@ func enter(main: Node3D) -> void:
 	var orbit := main.get("_orbit") as Orbit
 	var player := main.get("_player") as Player
 	main.set("_home_camera_state", orbit.capture_state())
+	_home_camera_fov = orbit.camera.fov if orbit.camera != null else 65.0
+	_save_environment_state(main)
 	main.set("_death_return_pending", false)
 	main.set("_active_mode", "run_zone")
 	main.set("_run_zone_intro_active", true)
@@ -82,6 +89,15 @@ func enter(main: Node3D) -> void:
 	run_zone.intro_finished.connect(_on_intro_finished.bind(main))
 	run_zone.run_started.connect(_on_run_started.bind(main))
 	run_zone.progress_changed.connect(_on_progress.bind(main))
+	run_zone.speed_level_changed.connect(_on_speed_level_changed.bind(main))
+	run_zone.black_flash_reached.connect(_on_black_flash_reached.bind(main))
+	run_zone.hollow_purple_impact.connect(_on_hollow_purple_impact.bind(main))
+	var speed_control := (main.get("_run_zone_hud") as RunZoneHUD).speed_button
+	var joystick := main.get("_joystick") as Joystick
+	if not orbit.exclusions.has(speed_control):
+		orbit.exclusions.append(speed_control)
+	if not joystick.input_exclusions.has(speed_control):
+		joystick.input_exclusions.append(speed_control)
 
 	(main.get("_grass") as Node).call("set_ground", run_zone.ground)
 	(main.get("_footsteps") as Node).set("field", run_zone.ground)
@@ -125,6 +141,11 @@ func return_home(main: Node3D, home_spawn: Vector2) -> void:
 	main.set("_run_zone_camera_tween", null)
 	main.set("_active_mode", "hub")
 	main.set("_survival_auto_fire_left", 0.0)
+	var orbit := main.get("_orbit") as Orbit
+	var joystick := main.get("_joystick") as Joystick
+	var speed_control := (main.get("_run_zone_hud") as RunZoneHUD).speed_button
+	orbit.exclusions.erase(speed_control)
+	joystick.input_exclusions.erase(speed_control)
 	var fire_button := main.get("_fire_button") as Control
 	fire_button.set("auto_repeat_interval", 0.0)
 	fire_button.call("reset_touch")
@@ -136,6 +157,7 @@ func return_home(main: Node3D, home_spawn: Vector2) -> void:
 	if is_instance_valid(run_zone):
 		run_zone.finish_run()
 		run_zone.queue_free()
+	_restore_environment_state(main)
 	main.set("_run_zone", null)
 	var panel := main.get("_panel") as Control
 	if panel.visible:
@@ -144,9 +166,10 @@ func return_home(main: Node3D, home_spawn: Vector2) -> void:
 	(main.get("_layout_editor") as Control).hide()
 	(main.get("_mode_selector") as Control).hide()
 
-	var orbit := main.get("_orbit") as Orbit
 	var camera_state: Dictionary = Dictionary(main.get("_home_camera_state"))
 	orbit.restore_state(camera_state)
+	if orbit.camera != null:
+		orbit.camera.fov = _home_camera_fov
 	var player := main.get("_player") as Player
 	player.end_endless_run()
 	player.world_bounds_enabled = true
@@ -204,11 +227,81 @@ func _on_run_started(main: Node3D) -> void:
 	main.set("_run_zone_intro_active", false)
 	var run_zone := main.get("_run_zone") as RunZoneWorld
 	(main.get("_run_zone_hud") as RunZoneHUD).show_running(
-		run_zone.elapsed_seconds, run_zone.current_speed)
+		run_zone.elapsed_seconds, run_zone.current_speed, run_zone.speed_level,
+		run_zone.distance_m)
 	main.call("_apply_input_state")
 	print("[main] Run Zone dimulai; auto-run dan akselerasi bertahap aktif")
 
 
-func _on_progress(elapsed_seconds: float, speed: float, main: Node3D) -> void:
+func _on_progress(elapsed_seconds: float, speed: float, speed_level: int,
+		distance_m: float, main: Node3D) -> void:
 	if str(main.get("_active_mode")) == "run_zone":
-		(main.get("_run_zone_hud") as RunZoneHUD).show_running(elapsed_seconds, speed)
+		(main.get("_run_zone_hud") as RunZoneHUD).show_running(
+			elapsed_seconds, speed, speed_level, distance_m)
+
+
+func _on_speed_pressed(main: Node3D) -> void:
+	if str(main.get("_active_mode")) != "run_zone":
+		return
+	var run_zone := main.get("_run_zone") as RunZoneWorld
+	if is_instance_valid(run_zone):
+		run_zone.add_speed_level()
+
+
+func _on_speed_level_changed(speed_level: int, speed: float, main: Node3D) -> void:
+	if str(main.get("_active_mode")) != "run_zone":
+		return
+	var run_zone := main.get("_run_zone") as RunZoneWorld
+	(main.get("_run_zone_hud") as RunZoneHUD).show_running(
+		run_zone.elapsed_seconds, speed, speed_level, run_zone.distance_m)
+	var orbit := main.get("_orbit") as Orbit
+	if orbit.camera != null:
+		orbit.camera.fov = lerpf(_home_camera_fov, 88.0,
+			float(speed_level) / float(RunZoneWorld.SPEED_LEVEL_LIMIT))
+
+
+func _on_black_flash_reached(main: Node3D) -> void:
+	if str(main.get("_active_mode")) != "run_zone":
+		return
+	var world_environment := main.get_node_or_null("DuskEnvironment") as WorldEnvironment
+	if world_environment != null and world_environment.environment != null:
+		world_environment.environment.adjustment_enabled = true
+		world_environment.environment.adjustment_saturation = 0.0
+		world_environment.environment.adjustment_contrast = 1.22
+	(main.get("_run_zone_hud") as RunZoneHUD).play_black_flash()
+	var orbit := main.get("_orbit") as Orbit
+	orbit.combat_shake(0.15, 0.22)
+
+
+func _on_hollow_purple_impact(position: Vector3, main: Node3D) -> void:
+	if str(main.get("_active_mode")) != "run_zone":
+		return
+	(main.get("_run_zone_hud") as RunZoneHUD).play_hollow_purple_flash()
+	var orbit := main.get("_orbit") as Orbit
+	orbit.combat_shake(0.18, 0.42)
+	print("[main] Hollow Purple menghantam jalur di ", position)
+
+
+func _save_environment_state(main: Node3D) -> void:
+	_environment_state.clear()
+	var world_environment := main.get_node_or_null("DuskEnvironment") as WorldEnvironment
+	if world_environment == null or world_environment.environment == null:
+		return
+	var environment := world_environment.environment
+	_environment_state = {
+		"adjustment_enabled": environment.adjustment_enabled,
+		"saturation": environment.adjustment_saturation,
+		"contrast": environment.adjustment_contrast,
+	}
+
+
+func _restore_environment_state(main: Node3D) -> void:
+	if _environment_state.is_empty():
+		return
+	var world_environment := main.get_node_or_null("DuskEnvironment") as WorldEnvironment
+	if world_environment != null and world_environment.environment != null:
+		var environment := world_environment.environment
+		environment.adjustment_enabled = bool(_environment_state.get("adjustment_enabled", true))
+		environment.adjustment_saturation = float(_environment_state.get("saturation", 1.0))
+		environment.adjustment_contrast = float(_environment_state.get("contrast", 1.0))
+	_environment_state.clear()

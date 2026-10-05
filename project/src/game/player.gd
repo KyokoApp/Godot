@@ -74,8 +74,9 @@ const CROUCH_SPEED := 1.2
 const SCALE_MIN := 0.62
 const SCALE_MAX := 1.5
 const SCALE_MAX_BOOST := 2.05
-## Auto-run tetap di batas kecepatan main lokomosi supaya kaki tidak meluncur.
-const RUN_ZONE_MAX_SCALE := SCALE_MAX
+## Run Zone menyetarakan laju badan dengan playback Sprint hingga 2,8x; pada
+## batas ini klip masih bergerak seirama, sementara mode biasa tetap 1,5x.
+const RUN_ZONE_MAX_SCALE := 2.8
 const HYSTERESIS := 0.35
 ## Jarak aman dari bibir pulau 100 m; pemain berhenti di darat, bukan di laut.
 const SHORE_MARGIN := 1.4

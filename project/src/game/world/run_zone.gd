@@ -1,12 +1,16 @@
 extends Node3D
-## Satu mode endless-run: intro singkat penyihir terbang, lalu auto-run maju.
-## Lajunya naik bertahap sampai batas playback Sprint agar gait tetap rapat.
+## Endless run di jalur batu tiga petak, dengan satu set-piece mantra raksasa.
 
 signal intro_finished
 signal run_started
-signal progress_changed(elapsed_seconds: float, speed: float)
+signal progress_changed(elapsed_seconds: float, speed: float, speed_level: int, distance_m: float)
+signal speed_level_changed(speed_level: int, speed: float)
+signal black_flash_reached
+signal hollow_purple_impact(position: Vector3)
 
 const SurvivalField = preload("res://src/game/world/survival_field.gd")
+const RunZoneTrack = preload("res://src/game/world/run_zone_track.gd")
+const RunZoneFX = preload("res://src/game/world/run_zone_fx.gd")
 const Player = preload("res://src/game/player.gd")
 const Character = preload("res://src/game/mannequin.gd")
 
@@ -15,11 +19,16 @@ const SPELL_LAUNCH_TIME := 0.52
 const SPELL_TRAVEL_TIME := 0.58
 const BASE_RUN_SPEED := 3.8
 const RUN_ACCELERATION := 0.12
-const RUN_SPEED_EXTRA := 0.9
+const RUN_SPEED_EXTRA := 1.2
+const SPEED_LEVEL_LIMIT := 20
+const SPEED_PER_TAP := 0.20
+const HOLLOW_PURPLE_DISTANCE := 45.0
 const FORWARD := Vector3(0.0, 0.0, -1.0)
 
 var player: Player
 var ground: SurvivalField
+var track: RunZoneTrack
+var effects: RunZoneFX
 var caster: Node3D
 var caster_visual: Character
 var spell_orb: MeshInstance3D
@@ -28,12 +37,17 @@ var elapsed_seconds := 0.0
 var current_speed := 0.0
 var starting_speed := BASE_RUN_SPEED
 var maximum_speed := BASE_RUN_SPEED + RUN_SPEED_EXTRA
+var speed_level := 0
+var distance_m := 0.0
+var hollow_purple_started := false
+var black_flash_triggered := false
 var _intro_elapsed := 0.0
 var _publish_left := 0.0
 var _clock := 0.0
 var _spell_launched := false
 var _intro_signal_sent := false
 var _spell_tween: Tween
+var _animation_speed_limit := 0.0
 
 
 func _ready() -> void:
@@ -42,13 +56,22 @@ func _ready() -> void:
 	ground.name = "RunZoneGround"
 	ground.player = player
 	add_child(ground)
+	track = RunZoneTrack.new()
+	add_child(track)
+	effects = RunZoneFX.new()
+	effects.player = player
+	effects.track = track
+	effects.hollow_purple_impact.connect(_on_hollow_purple_impact)
+	add_child(effects)
 	if player != null and player.visual != null:
 		var sprint_speed := player.visual.natural_speed("Sprint_Loop")
-		var animation_limit := sprint_speed * Player.RUN_ZONE_MAX_SCALE
+		_animation_speed_limit = sprint_speed * Player.RUN_ZONE_MAX_SCALE
 		starting_speed = minf(maxf(BASE_RUN_SPEED, sprint_speed * 1.12),
-			animation_limit)
-		maximum_speed = minf(starting_speed + RUN_SPEED_EXTRA, animation_limit)
+			_animation_speed_limit)
+		maximum_speed = minf(starting_speed + RUN_SPEED_EXTRA
+			+ float(SPEED_LEVEL_LIMIT) * SPEED_PER_TAP, _animation_speed_limit)
 	current_speed = starting_speed
+	effects.set_speed_level(speed_level)
 	_build_spellcaster()
 
 
@@ -70,14 +93,18 @@ func _process(delta: float) -> void:
 		return
 	if phase != "running":
 		return
+
 	elapsed_seconds += delta
-	current_speed = minf(maximum_speed,
-		starting_speed + elapsed_seconds * RUN_ACCELERATION)
-	player.set_endless_run_speed(current_speed)
+	distance_m = maxf(distance_m, -player.global_position.z)
+	track.follow_player(player.global_position.z)
+	_update_speed()
+	if not hollow_purple_started and distance_m >= HOLLOW_PURPLE_DISTANCE:
+		hollow_purple_started = true
+		effects.start_hollow_purple()
 	_publish_left -= delta
 	if _publish_left <= 0.0:
 		_publish_left = 0.12
-		progress_changed.emit(elapsed_seconds, current_speed)
+		progress_changed.emit(elapsed_seconds, current_speed, speed_level, distance_m)
 
 
 func start_run() -> void:
@@ -85,20 +112,46 @@ func start_run() -> void:
 		return
 	phase = "running"
 	elapsed_seconds = 0.0
+	distance_m = 0.0
+	speed_level = 0
 	current_speed = starting_speed
 	player.begin_endless_run(FORWARD, current_speed)
-	progress_changed.emit(elapsed_seconds, current_speed)
+	effects.set_speed_level(speed_level)
+	progress_changed.emit(elapsed_seconds, current_speed, speed_level, distance_m)
 	run_started.emit()
+
+
+func add_speed_level() -> void:
+	if phase != "running" or speed_level >= SPEED_LEVEL_LIMIT:
+		return
+	speed_level += 1
+	_update_speed()
+	effects.set_speed_level(speed_level)
+	speed_level_changed.emit(speed_level, current_speed)
+	progress_changed.emit(elapsed_seconds, current_speed, speed_level, distance_m)
+	if speed_level == SPEED_LEVEL_LIMIT and not black_flash_triggered:
+		black_flash_triggered = true
+		black_flash_reached.emit()
 
 
 func finish_run() -> void:
 	phase = "finished"
 	if is_instance_valid(player):
 		player.end_endless_run()
+	if is_instance_valid(effects):
+		effects.finish()
 	if _spell_tween != null and _spell_tween.is_running():
 		_spell_tween.kill()
 	if is_instance_valid(caster_visual) and caster_visual.cast_layer != null:
 		caster_visual.cast_layer.cancel()
+
+
+func _update_speed() -> void:
+	var timed_bonus := minf(RUN_SPEED_EXTRA, elapsed_seconds * RUN_ACCELERATION)
+	current_speed = minf(maximum_speed,
+		starting_speed + timed_bonus + float(speed_level) * SPEED_PER_TAP)
+	if is_instance_valid(player):
+		player.set_endless_run_speed(current_speed)
 
 
 func _build_spellcaster() -> void:
@@ -146,3 +199,7 @@ func _launch_spell() -> void:
 	_spell_tween.parallel().tween_property(spell_orb, "scale", Vector3.ONE * 0.025,
 		SPELL_TRAVEL_TIME)
 	_spell_tween.tween_callback(spell_orb.hide)
+
+
+func _on_hollow_purple_impact(position: Vector3) -> void:
+	hollow_purple_impact.emit(position)

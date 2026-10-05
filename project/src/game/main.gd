@@ -257,7 +257,7 @@ func _build_hud() -> void:
 	_banner.offset_left = 20
 	_banner.offset_top = 20
 	_build_survival_hud(layer)
-	_run_zone_hud = _run_zone_flow.build_hud(layer)
+	_run_zone_hud = _run_zone_flow.build_hud(layer, self)
 	# --- sudut kanan atas: dua tombol kecil bulat ---------------------------
 	_settings = _rune("GRAFIK", RUNE_DIAMETER, SETTINGS_ICON)
 	_settings.name = "GraphicsRune"

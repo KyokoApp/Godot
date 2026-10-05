@@ -93,6 +93,10 @@ jobs:
                 project/src/game/world/survival_ground.gdshader \
                 project/src/game/run_zone_flow.gd \
                 project/src/game/world/run_zone.gd \
+                project/src/game/world/run_zone_track.gd \
+                project/src/game/world/run_zone_fx.gd \
+                project/src/game/world/run_zone_path.gdshader \
+                project/src/game/world/run_zone_slash.gdshader \
                 project/src/game/world/zombie.gd \
                 project/src/game/world/city_horizon.gd \
                 project/src/game/world/horizon_haze.gdshader \
@@ -283,7 +287,7 @@ jobs:
           fi
           grep -F '[survival-test] HASIL: OK' survival-test.log
 
-      - name: "Tes Run Zone: intro, third-person, dan auto-run (headless)"
+      - name: "Tes Run Zone: jalur, Speed 20, Black Flash, Hollow Purple (headless)"
         run: |
           set +e
           timeout 240 ./godot --headless --path project \
@@ -757,7 +761,7 @@ jobs:
           fi
           grep -F '[survival-render-test] HASIL: OK' survival-render.log
 
-      - name: Render intro dan kamera third-person Run Zone (Mobile Vulkan software)
+      - name: Render efek Speed 20 dan Hollow Purple Run Zone (Mobile Vulkan software)
         run: |
           set +e
           timeout 300 xvfb-run -a env \

@@ -1,5 +1,7 @@
 extends SceneTree
-## Render cinematic penyihir + kamera lari third-person untuk regresi Run Zone.
+## Render regression Run Zone: intro, speed level 20, Black Flash, Hollow Purple.
+
+const RunZone = preload("res://src/game/world/run_zone.gd")
 
 var _failures := 0
 
@@ -27,6 +29,7 @@ func _run() -> void:
 	var selector := game.get("_mode_selector") as Control
 	_check(selector != null, "Selector mode tidak ditemukan")
 	if selector == null:
+		game.queue_free()
 		quit(1)
 		return
 	selector.call("open")
@@ -47,7 +50,7 @@ func _run() -> void:
 	_check(float(orbit.get("pitch")) < 0.6,
 		"Shot intro tidak memakai kamera third-person")
 	_check(absf(wrapf(float(orbit.get("yaw")), -PI, PI)) < 0.1,
-		"Kamera intro tidak menghadap penyihir di belakang pemain")
+		"Kamera intro tidak menghadap penyihir di belakang")
 	for node_name in ["_pet", "_speed_aura", "_foot_fire"]:
 		var effect: Node = game.get(node_name)
 		if effect != null:
@@ -66,8 +69,44 @@ func _run() -> void:
 	_check(absf(wrapf(float(orbit.get("yaw")) - PI, -PI, PI)) < 0.10,
 		"Kamera gameplay belum berada di belakang pemain")
 	await _capture("run-zone-third-person")
+
+	var hud := game.get("_run_zone_hud") as Control
+	var speed_button := hud.get("speed_button") as Button if hud != null else null
+	_check(speed_button != null and speed_button.visible,
+		"Tombol Speed Run Zone tidak terlihat")
+	if speed_button != null:
+		for _tap in range(RunZone.SPEED_LEVEL_LIMIT):
+			speed_button.emit_signal("pressed")
+			await physics_frame
+	_check(int(world.get("speed_level")) == RunZone.SPEED_LEVEL_LIMIT,
+		"Tes render gagal menaikkan speed ke level 20")
+	var environment := (game.get_node("DuskEnvironment") as WorldEnvironment).environment
+	_check(environment.adjustment_saturation < 0.01,
+		"Grayscale tidak aktif pada Speed 20")
+	var camera := orbit.get("camera") as Camera3D
+	_check(camera != null and camera.fov > 86.0,
+		"FOV tidak memberi kesan speed tinggi")
+	await _capture("run-zone-speed-20-black-flash")
+
+	player.global_position.z = -RunZone.HOLLOW_PURPLE_DISTANCE
+	for _frame in range(2):
+		await physics_frame
+	_check(bool(world.get("hollow_purple_started")),
+		"Hollow Purple tidak mulai pada jarak pemicu")
+	for _frame in range(70):
+		await physics_frame
+	await _capture("run-zone-hollow-purple-charge")
+	for _frame in range(135):
+		await physics_frame
+	var effects := world.get("effects") as Node3D
+	_check(int(effects.get("impact_count")) == 1,
+		"Hollow Purple tidak menghasilkan impact dalam render")
+	_check(int(effects.get("slash_count")) >= 4,
+		"Slash tebal tidak muncul saat impact Hollow Purple")
+	await _capture("run-zone-hollow-purple-impact")
 	print("[run-zone-render-test] phase=", world.get("phase"),
 		" speed=", world.get("current_speed"),
+		" speed_level=", world.get("speed_level"),
 		" camera_pitch=", orbit.get("pitch"))
 	print("[run-zone-render-test] HASIL: ", "OK" if _failures == 0 else "GAGAL")
 	game.queue_free()
