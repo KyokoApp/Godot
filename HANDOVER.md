@@ -16,20 +16,18 @@
     persisten; opsi INVENTARIS NPC diganti panel 13 upgrade atribut bertingkat.
   - Kamera Survival pitch 1,28 radian, arah cahaya bulan sekitar 20° di atas
     horizon, dan jarak shadow map 96 m.
-  - Validasi lokal statis lulus: `gdparse`, `gdlint project tools`,
+  - Validasi statis lokal lulus: `gdparse`, `gdlint project tools`,
     `tools/check_scripts.py .`, cek lisensi, chunk, katalog animasi, workflow
-    YAML, dan `git diff --check`. CI pertama [`37347651748`](https://github.com/KyokoApp/Godot/actions/runs/37347651748)
-    sempat gagal compile karena `pop_front()` memberi `Variant` (`buff_system.gd:356`);
-    cast `Node3D` sudah diperbaiki di `5c2f09a`.
-  - CI kedua [`37348220019`](https://github.com/KyokoApp/Godot/actions/runs/37348220019)
-    lulus compile, semua render Mobile Vulkan (render-a/b/c), serta tes headless
-    scenery, NPC, meta-progression, dan Survival. Gate berhenti di `test_fire_pet.gd:79`:
-    tes membaca proyektil yang sudah dihapus. Tes kini menyimpan status `finished`
-    sebelum cleanup; perubahan dan CI ketiga masih menunggu push. Package/APK belum
-    berjalan, jadi jangan klaim build keseluruhan lulus.
-  - Render CI sudah lulus, tetapi seluruh runtime gate belum selesai dan APK belum
-    dibuat. Godot lokal tidak tersedia; unduhan release asset gagal TLS.
-  - Commit/push di branch `arena/01a0fc4a-godot`: `3fa0b62`, `5c2f09a`.
+    YAML, dan `git diff --check`. Dua temuan CI awal sudah dibereskan: tipe
+    `Node3D` untuk hasil `pop_front()` (`5c2f09a`) dan tes projectile agar tidak
+    mengakses objek sesudah terhapus (`2b0f13a`).
+  - CI final [`37349150872`](https://github.com/KyokoApp/Godot/actions/runs/37349150872)
+    hijau penuh: compile, semua tes headless, render Mobile Vulkan render-a/b/c
+    termasuk Survival, ekspor PCK/APK, audit APK, dan boot launcher.
+  - APK dirilis sebagai [`build-2b0f13a`](https://github.com/KyokoApp/Godot/releases/tag/build-2b0f13a).
+    Render CI terverifikasi; tes di perangkat Android fisik tetap belum dilakukan.
+  - Commit fitur/perbaikan di branch `arena/01a0fc4a-godot`: `3fa0b62`,
+    `5c2f09a`, `2b0f13a`.
 
 - 2026-10-05 (cicilan 28) — **ANALOG-ONLY, GAIT MUNDUR, +11 KARTU BUFF SURVIVAL**
   - Sembunyikan/nonaktifkan semua tombol aksi HUD (`SERANG`, `TEMBAK`, `LOMPAT`,
