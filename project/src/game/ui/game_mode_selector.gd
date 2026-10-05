@@ -8,10 +8,11 @@ const INK := Color("201d29")
 const PAPER := Color("f4f0e7")
 const GOLD := Color("f2bd35")
 const ACTIVE := Color("557f46")
-const MODE_TITLES: Array[String] = ["SURVIVAL", "MODE 02", "MODE 03"]
+const MODE_IDS: Array[String] = ["survival", "run_zone", "coming_soon"]
+const MODE_TITLES: Array[String] = ["SURVIVAL", "RUN ZONE", "MODE 03"]
 const MODE_HINTS: Array[String] = [
 	"Hadapi zombie dan bertahan selama mungkin.",
-	"COMING SOON",
+	"Lari tanpa akhir; kecepatan terus meningkat.",
 	"COMING SOON",
 ]
 
@@ -41,7 +42,7 @@ func open() -> void:
 		return
 	_closing = false
 	visible = true
-	_status.text = "SURVIVAL SIAP DIMAINKAN"
+	_status.text = "PILIH MODE YANG INGIN DIMAINKAN"
 	_layout()
 	_backdrop.color = Color(0.018, 0.022, 0.034, 0.0)
 	_panel.modulate = Color(1, 1, 1, 0)
@@ -108,7 +109,7 @@ func _build() -> void:
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override("separation", 12)
 	content.add_child(footer)
-	_status = _label("SURVIVAL SIAP DIMAINKAN", 12, GOLD)
+	_status = _label("PILIH MODE YANG INGIN DIMAINKAN", 12, GOLD)
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	footer.add_child(_status)
@@ -130,14 +131,16 @@ func _build() -> void:
 func _make_card(index: int) -> Button:
 	var card := Button.new()
 	card.name = "Mode_%02d" % index
+	card.set_meta("mode_id", MODE_IDS[index])
 	card.focus_mode = Control.FOCUS_NONE
 	card.mouse_filter = Control.MOUSE_FILTER_STOP
 	card.custom_minimum_size = Vector2(154, 144)
-	var fill := Color(0.14, 0.19, 0.14, 0.98) if index == 0 else Color(0.09, 0.09, 0.12, 0.84)
-	var border := Color(ACTIVE.r, ACTIVE.g, ACTIVE.b, 0.95) if index == 0 else Color(1, 1, 1, 0.18)
+	var available := index < 2
+	var fill := Color(0.14, 0.19, 0.14, 0.98) if available else Color(0.09, 0.09, 0.12, 0.84)
+	var border := Color(ACTIVE.r, ACTIVE.g, ACTIVE.b, 0.95) if available else Color(1, 1, 1, 0.18)
 	card.add_theme_stylebox_override("normal", _button_style(fill, border))
 	card.add_theme_stylebox_override("hover", _button_style(
-		Color(0.22, 0.30, 0.20, 0.98) if index == 0 else Color(0.18, 0.17, 0.21, 0.96), GOLD))
+		Color(0.22, 0.30, 0.20, 0.98) if available else Color(0.18, 0.17, 0.21, 0.96), GOLD))
 	card.add_theme_stylebox_override("pressed", _button_style(Color(0.27, 0.35, 0.23, 1.0), GOLD))
 	var content := VBoxContainer.new()
 	content.name = "CardContent"
@@ -153,7 +156,7 @@ func _make_card(index: int) -> Button:
 	var index_label := _label("01" if index == 0 else "%02d" % (index + 1), 12, GOLD)
 	index_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(index_label)
-	var title := _label(MODE_TITLES[index], 17, PAPER if index == 0 else Color("b7b2be"))
+	var title := _label(MODE_TITLES[index], 17, PAPER if available else Color("b7b2be"))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(title)
 	var hint := _label(MODE_HINTS[index], 11, Color("d2ccd8"))
@@ -184,8 +187,8 @@ func _layout() -> void:
 func _select_mode(index: int) -> void:
 	if _closing:
 		return
-	if index == 0:
-		mode_selected.emit("survival")
+	if index >= 0 and index < 2:
+		mode_selected.emit(MODE_IDS[index])
 		close()
 		return
 	_status.text = "MODE INI MASIH COMING SOON"

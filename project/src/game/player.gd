@@ -74,6 +74,8 @@ const CROUCH_SPEED := 1.2
 const SCALE_MIN := 0.62
 const SCALE_MAX := 1.5
 const SCALE_MAX_BOOST := 2.05
+## Auto-run tetap di batas kecepatan main lokomosi supaya kaki tidak meluncur.
+const RUN_ZONE_MAX_SCALE := SCALE_MAX
 const HYSTERESIS := 0.35
 ## Jarak aman dari bibir pulau 100 m; pemain berhenti di darat, bukan di laut.
 const SHORE_MARGIN := 1.4
@@ -98,6 +100,9 @@ var visual: Character
 var crouching := false
 var boosted := false
 var sword_mode := false
+var endless_run_active := false
+var endless_run_speed := 0.0
+var endless_run_direction := Vector3(0.0, 0.0, -1.0)
 var world_bounds_enabled := true
 var max_health := MAX_HEALTH
 var health := MAX_HEALTH
@@ -145,6 +150,9 @@ func spawn(point: Vector2) -> void:
 	global_position = Vector3(point.x, ground + HEIGHT * 0.5 + 0.05, point.y)
 	velocity = Vector3.ZERO
 	move_speed = 0.0
+	endless_run_active = false
+	endless_run_speed = 0.0
+	endless_run_direction = Vector3(0.0, 0.0, -1.0)
 	gait = IDLE
 	grounded = true
 	_airborne = false
@@ -156,6 +164,37 @@ func spawn(point: Vector2) -> void:
 	if visual != null:
 		visual.return_to_locomotion()
 		visual.set_locomotion("Sword_Idle" if sword_mode else IDLE, 1.0)
+
+
+func begin_endless_run(direction: Vector3, speed: float) -> void:
+	if health <= 0:
+		return
+	var flat_direction := Vector3(direction.x, 0.0, direction.z)
+	if flat_direction.length_squared() < 0.001:
+		flat_direction = Vector3(0.0, 0.0, -1.0)
+	endless_run_direction = flat_direction.normalized()
+	endless_run_active = true
+	set_endless_run_speed(speed)
+	boosted = false
+	crouching = false
+	dashing = false
+	_dash_left = 0.0
+	velocity.x = 0.0
+	velocity.z = 0.0
+	if visual != null:
+		visual.return_to_locomotion()
+
+
+func set_endless_run_speed(speed: float) -> void:
+	endless_run_speed = maxf(0.0, speed)
+
+
+func end_endless_run() -> void:
+	endless_run_active = false
+	endless_run_speed = 0.0
+	velocity.x = 0.0
+	velocity.z = 0.0
+	move_speed = 0.0
 
 
 func request_jump() -> void:
@@ -332,12 +371,17 @@ func _physics_process(delta: float) -> void:
 	if joystick != null and joystick.input_enabled:
 		stick = joystick.direction
 	var desired := 0.0 if _dash_left > 0.0 else _desired_speed(stick)
-	# Gait ikut laju badan yang sebenarnya, bukan cuma input: begitu analog
-	# dilepas, badan yang masih meluncur tidak boleh langsung berpose Idle —
-	# itulah "berhenti sekejap" yang terlihat. Badan melambat lewat klip
-	# Sprint -> Jog -> Walk -> Idle, sama seperti kakinya.
-	gait = select_gait(maxf(desired, move_speed), gait, stick, velocity)
+	if endless_run_active and _dash_left <= 0.0:
+		desired = endless_run_speed
+	# Auto-run menjaga gait Sprint terus aktif. Mode biasa tetap menurunkan gait
+	# seiring laju badan melambat agar langkah dan gerak tetap sinkron.
+	if endless_run_active and _dash_left <= 0.0:
+		gait = str(GAIT_CLIPS[GAIT_CLIPS.size() - 1])
+	else:
+		gait = select_gait(maxf(desired, move_speed), gait, stick, velocity)
 	var target := _target_velocity(stick, desired)
+	if endless_run_active and _dash_left <= 0.0:
+		target = _endless_run_velocity(desired, stick)
 	var flat := Vector2(velocity.x, velocity.z)
 	var blended := flat
 	if _dash_left > 0.0:
@@ -398,6 +442,16 @@ func _desired_speed(stick: Vector2) -> float:
 	return speed
 
 
+func _endless_run_velocity(speed: float, stick: Vector2) -> Vector3:
+	var forward := Vector3(endless_run_direction.x, 0.0, endless_run_direction.z).normalized()
+	if forward.length_squared() < 0.5:
+		forward = Vector3(0.0, 0.0, -1.0)
+	# Analog kiri/kanan mengarahkan lari; dorongan maju tetap otomatis.
+	var right := forward.cross(Vector3.UP).normalized()
+	var steer := clampf(stick.x, -1.0, 1.0) * 0.34
+	return (forward + right * steer).normalized() * speed
+
+
 func _target_velocity(stick: Vector2, desired: float) -> Vector3:
 	# Badan bergerak secepat yang diminta analog. Dulu laju badan dipaksa ikut
 	# kecepatan alami klip (natural x skala yang dipotong di 1,5), jadi klip jalan
@@ -435,8 +489,9 @@ func _apply_animation(desired: float) -> void:
 		scale = DASH_PLAYBACK
 	elif reference > 0.05:
 		var natural: float = visual.natural_speed(gait)
-		scale = clampf(reference / natural, SCALE_MIN,
-			SCALE_MAX_BOOST if boosted else SCALE_MAX)
+		var scale_max := RUN_ZONE_MAX_SCALE if endless_run_active else \
+			SCALE_MAX_BOOST if boosted else SCALE_MAX
+		scale = clampf(reference / natural, SCALE_MIN, scale_max)
 	speed_scale = scale
 	var animation_gait := "Sword_Idle" if sword_mode and gait == IDLE else gait
 	visual.set_locomotion(animation_gait, scale)

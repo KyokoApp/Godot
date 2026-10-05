@@ -9,6 +9,9 @@ const NPCInteraction = preload("res://src/game/ui/npc_interaction.gd")
 const ModeSelector = preload("res://src/game/ui/game_mode_selector.gd")
 const SurvivalWorld = preload("res://src/game/world/survival_world.gd")
 const SurvivalHUD = preload("res://src/game/ui/survival_hud.gd")
+const RunZoneWorld = preload("res://src/game/world/run_zone.gd")
+const RunZoneHUD = preload("res://src/game/ui/run_zone_hud.gd")
+const RunZoneFlow = preload("res://src/game/run_zone_flow.gd")
 const MetaProgress = preload("res://src/game/survival/meta_progress.gd")
 const Grass = preload("res://src/game/grass_field.gd")
 const Player = preload("res://src/game/player.gd")
@@ -65,13 +68,17 @@ var _npc_interaction: NPCInteraction
 var _mode_selector: ModeSelector
 var _survival_world: SurvivalWorld
 var _survival_hud: SurvivalHUD
+var _run_zone: RunZoneWorld
+var _run_zone_hud: RunZoneHUD
+var _run_zone_intro_active := false
+var _run_zone_camera_tween: Tween
+var _run_zone_flow: RunZoneFlow
 var _meta_progress: Object
 var _active_mode := "hub"
 var _home_camera_state: Dictionary = {}
 var _death_return_pending := false
 var _survival_auto_fire_left := 0.0
 var _visual: Character
-var _bloom_level := 0.0
 var _orbit: Orbit
 var _sun: DirectionalLight3D
 var _audio: WorldAudio
@@ -110,6 +117,7 @@ var _layout_suppress := false
 
 func _ready() -> void:
 	_meta_progress = MetaProgress.new()
+	_run_zone_flow = RunZoneFlow.new()
 	_previous_occlusion = get_viewport().use_occlusion_culling
 	get_viewport().use_occlusion_culling = true
 	_build_environment()
@@ -249,6 +257,7 @@ func _build_hud() -> void:
 	_banner.offset_left = 20
 	_banner.offset_top = 20
 	_build_survival_hud(layer)
+	_run_zone_hud = _run_zone_flow.build_hud(layer)
 	# --- sudut kanan atas: dua tombol kecil bulat ---------------------------
 	_settings = _rune("GRAFIK", RUNE_DIAMETER, SETTINGS_ICON)
 	_settings.name = "GraphicsRune"
@@ -655,6 +664,8 @@ func _show_mode_selector() -> void:
 func _on_mode_selected(mode: String) -> void:
 	if mode == "survival":
 		_enter_survival()
+	elif mode == "run_zone":
+		_run_zone_flow.enter(self)
 
 
 func _on_mode_selector_closed() -> void:
@@ -877,24 +888,29 @@ func _apply_input_state() -> void:
 	var selector_open := _mode_selector != null and _mode_selector.visible
 	var layout_open := _layout_editor != null and _layout_editor.visible
 	var hide_actions := _panel.visible or _graphics_drawer.visible or selector_open \
-		or _death_return_pending
+		or _death_return_pending or _run_zone_intro_active
 	var overlay := hide_actions or layout_open
 	_joystick.reset()
 	_joystick.input_enabled = not overlay
 	_orbit.reset_touches()
 	_orbit.input_enabled = not overlay
-	_settings.visible = not selector_open and not _death_return_pending
+	_settings.visible = not selector_open and not _death_return_pending \
+		and not _run_zone_intro_active
 	# HUD analog-only; tembakan otomatis Survival berjalan mandiri.
 	_layout_button.hide()
 	for control: Control in [_attack, _fire_button, _jump, _crouch, _speed_button, _dash]:
 		control.hide()
 		control.set("disabled", true)
 	_catalog_button.visible = not _graphics_drawer.visible and not layout_open \
-		and not selector_open and not _death_return_pending
-	_banner.visible = not overlay
+		and not selector_open and not _death_return_pending \
+		and _active_mode != "run_zone"
+	_banner.visible = not overlay and _active_mode != "run_zone"
 
 
 func _input(event: InputEvent) -> void:
+	if _run_zone_flow.handle_back_event(self, event, SPAWN):
+		get_viewport().set_input_as_handled()
+		return
 	if not _graphics_drawer.visible and not _layout_editor.visible:
 		return
 	var point := Vector2.ZERO
@@ -924,24 +940,8 @@ func _physics_process(delta: float) -> void:
 	# Trail dan bloom diperkuat selama dash.
 	_speed_aura.update_motion(delta, _player.move_speed,
 		_player.boosted and _player.grounded)
-	_update_dash_bloom(delta)
-
-
-## Glow karakter memudar lembut setelah dash selesai.
-func _update_dash_bloom(delta: float) -> void:
-	if _visual == null or _visual.skin == null:
-		return
-	var wanted := 0.0
-	if _player != null and _player.dashing:
-		wanted = 1.0
-	elif _player != null and _player.boosted and _player.grounded and _player.move_speed > 0.3:
-		# Saat boost biasa bloom-nya tipis saja — dash yang harus terasa jelas.
-		wanted = 0.25
-	var speed := 14.0 if wanted > _bloom_level else 5.0
-	_bloom_level = lerpf(_bloom_level, wanted, 1.0 - exp(-delta * speed))
-	if _bloom_level < 0.004 and wanted == 0.0:
-		_bloom_level = 0.0
-	_visual.skin.set_bloom(_bloom_level)
+	_speed_aura.update_character_bloom(delta, _player.dashing,
+		_player.boosted, _player.grounded, _player.move_speed)
 
 
 func _process(delta: float) -> void:

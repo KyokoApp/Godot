@@ -19,6 +19,10 @@ const SURVIVAL_TOP_DOWN_MIN_PITCH := 1.18
 const SURVIVAL_TOP_DOWN_PITCH := 1.28
 const SURVIVAL_TOP_DOWN_MAX_PITCH := 1.38
 const SURVIVAL_TOP_DOWN_DISTANCE := 17.0
+const RUN_ZONE_MIN_PITCH := 0.12
+const RUN_ZONE_PITCH := 0.24
+const RUN_ZONE_MAX_PITCH := 0.46
+const RUN_ZONE_DISTANCE := 5.8
 
 var input_enabled := true
 ## Kontrol yang menangkap sentuhan lebih dulu (panel, tombol); sentuhan di
@@ -99,6 +103,14 @@ func set_top_down_mode() -> void:
 	pitch_max = SURVIVAL_TOP_DOWN_MAX_PITCH
 	pitch = SURVIVAL_TOP_DOWN_PITCH
 	distance = SURVIVAL_TOP_DOWN_DISTANCE
+	zoom_enabled = false
+
+
+func set_run_zone_mode() -> void:
+	pitch_min = RUN_ZONE_MIN_PITCH
+	pitch = RUN_ZONE_PITCH
+	pitch_max = RUN_ZONE_MAX_PITCH
+	distance = RUN_ZONE_DISTANCE
 	zoom_enabled = false
 
 

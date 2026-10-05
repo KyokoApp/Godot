@@ -184,9 +184,12 @@ func _run() -> void:
 			"Gameplay tidak membuka selector mode beranimasi")
 		if mode_selector != null:
 			var cards: Array = mode_selector.get("_cards")
-			_check(cards.size() == 3, "Selector tidak menampilkan Survival dan placeholder")
+			_check(cards.size() == 3, "Selector tidak menampilkan Survival, Run Zone, dan placeholder")
+			if cards.size() >= 2:
+				_check(str(cards[1].get_meta("mode_id", "")) == "run_zone",
+					"Pilihan mode kedua tidak terdaftar sebagai Run Zone")
 			var mode_status: Label = mode_selector.get("_status")
-			mode_selector.call("_select_mode", 1)
+			mode_selector.call("_select_mode", 2)
 			_check(mode_status.text.contains("COMING SOON"),
 				"Mode yang belum tersedia tidak menampilkan Coming Soon")
 			mode_selector.call("close")
