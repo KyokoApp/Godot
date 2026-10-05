@@ -59,7 +59,7 @@ func start_hollow_purple() -> void:
 	phase = "charging"
 	_elapsed = 0.0
 	_orb.scale = Vector3.ONE * 0.18
-	_orb.global_position = player.global_position + Vector3(0.0, 8.0, -26.0)
+	_orb.global_position = player.global_position + Vector3(0.0, 5.0, -24.0)
 
 
 func finish() -> void:
@@ -208,10 +208,10 @@ func _build_orb() -> void:
 	_shell_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_shell_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_shell_material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	_shell_material.albedo_color = Color(0.62, 0.20, 0.95, 0.82)
+	_shell_material.albedo_color = Color(0.82, 0.36, 1.0, 1.0)
 	_shell_material.emission_enabled = true
-	_shell_material.emission = Color(0.80, 0.48, 1.0)
-	_shell_material.emission_energy_multiplier = 5.5
+	_shell_material.emission = Color(1.0, 0.76, 1.0)
+	_shell_material.emission_energy_multiplier = 6.0
 	shell.material_override = _shell_material
 	_orb.add_child(shell)
 
@@ -260,7 +260,7 @@ func _update_charge(delta: float) -> void:
 	var pulse := 1.0 + 0.045 * sin(_elapsed * 9.0)
 	_orb.scale = Vector3.ONE * lerpf(0.18, ORB_RADIUS, smoothstep(0.0, 1.0, growth)) * pulse
 	_orb.global_position = player.global_position + Vector3(0.0,
-		8.0 + 0.22 * sin(_elapsed * 3.6), -26.0)
+		5.0 + 0.22 * sin(_elapsed * 3.6), -24.0)
 	_orb.rotation.y += delta * 0.75
 	_orb.rotation.z += delta * 0.31
 	for index in range(_rings.size()):
@@ -323,7 +323,7 @@ func _update_aftermath(delta: float) -> void:
 		_slashes[index].scale.x = lerpf(0.12, 1.0, minf(_elapsed / 0.11, 1.0))
 		_slash_materials[index].set_shader_parameter("opacity", slash_fade)
 	var orb_fade := 1.0 - clampf(_elapsed / 0.45, 0.0, 1.0)
-	_shell_material.albedo_color.a = 0.52 * orb_fade
+	_shell_material.albedo_color.a = orb_fade
 	_core_material.albedo_color = Color(0.012, 0.004, 0.03, orb_fade)
 	for material in _ring_materials:
 		material.albedo_color.a = 0.94 * orb_fade

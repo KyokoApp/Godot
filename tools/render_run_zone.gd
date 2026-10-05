@@ -107,12 +107,18 @@ func _run() -> void:
 	_check(triggered, "Hollow Purple tidak mulai pada jarak pemicu (" + trigger_detail + ")")
 	print("[run-zone-render-test] pemicu Hollow Purple: ", trigger_detail,
 		" mulai=", triggered)
-	for _frame in range(70):
-		await physics_frame
-	await _capture("run-zone-hollow-purple-charge")
-	for _frame in range(135):
-		await physics_frame
 	var effects := world.get("effects") as Node3D
+	for _frame in range(55):
+		await physics_frame
+	var purple_orb := effects.get("_orb") as Node3D
+	_check(str(effects.get("phase")) == "charging",
+		"Bola Hollow Purple tidak berada pada fase charge saat render")
+	_check(purple_orb != null and purple_orb.is_visible_in_tree()
+		and purple_orb.scale.x >= 6.0,
+		"Bola Hollow Purple raksasa tidak tampak pada render charge")
+	await _capture("run-zone-hollow-purple-charge")
+	for _frame in range(150):
+		await physics_frame
 	_check(int(effects.get("impact_count")) == 1,
 		"Hollow Purple tidak menghasilkan impact dalam render")
 	_check(int(effects.get("slash_count")) >= 4,
