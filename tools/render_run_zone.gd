@@ -124,6 +124,8 @@ func _run() -> void:
 		"Hollow Purple tidak menghasilkan impact dalam render")
 	_check(int(effects.get("slash_count")) >= 4,
 		"Slash tebal tidak muncul saat impact Hollow Purple")
+	_check(_visible_slash_centers(effects, camera) >= 3,
+		"Slash Hollow Purple tidak terbaca di viewport saat impact")
 	_check_orb_on_screen(purple_orb, camera, "impact")
 	await _capture("run-zone-hollow-purple-impact")
 	print("[run-zone-render-test] phase=", world.get("phase"),
@@ -135,6 +137,23 @@ func _run() -> void:
 	for _frame in range(4):
 		await process_frame
 	quit(0 if _failures == 0 else 1)
+
+
+func _visible_slash_centers(effects: Node3D, camera: Camera3D) -> int:
+	if effects == null or camera == null:
+		return 0
+	var viewport_rect := camera.get_viewport().get_visible_rect()
+	var visible_count := 0
+	var slash_nodes := effects.get("_slashes") as Array
+	for value in slash_nodes:
+		var slash := value as MeshInstance3D
+		if slash == null or not slash.is_visible_in_tree():
+			continue
+		var center := slash.global_position
+		if not camera.is_position_behind(center) \
+				and viewport_rect.has_point(camera.unproject_position(center)):
+			visible_count += 1
+	return visible_count
 
 
 func _check_orb_on_screen(orb: Node3D, camera: Camera3D, label: String) -> void:

@@ -147,7 +147,7 @@ func _build_impact_burst() -> void:
 	material.scale_max = 1.65
 	material.color_ramp = _impact_gradient()
 	_burst.process_material = material
-	_burst.draw_pass_1 = _streak_quad()
+	_burst.draw_pass_1 = _streak_quad(0.18)
 	add_child(_burst)
 
 
@@ -171,7 +171,7 @@ func _build_impact_shapes() -> void:
 
 	for index in range(5):
 		var quad := QuadMesh.new()
-		quad.size = Vector2(13.0 - float(index % 2) * 2.0, 0.24)
+		quad.size = Vector2(18.0 - float(index % 2) * 3.0, 1.0)
 		var slash := MeshInstance3D.new()
 		slash.name = "HollowPurpleSlash_%02d" % index
 		slash.mesh = quad
@@ -304,9 +304,12 @@ func _start_impact() -> void:
 		_wave_materials[index].albedo_color = Color(0.68, 0.24, 1.0, 0.95)
 	for index in range(_slashes.size()):
 		var slash := _slashes[index]
-		slash.global_position = _impact_position + Vector3(0.0, 1.0 + float(index % 3) * 0.85, 0.0)
-		slash.rotation = Vector3(0.0, float(index) * 0.62, -0.42 + float(index % 3) * 0.42)
-		slash.scale = Vector3(0.12, 0.75, 1.0)
+		var slash_height := 1.8 + float(index % 3) * 1.35
+		var slash_offset := float(index - 2) * 0.55
+		slash.global_position = _impact_position + Vector3(
+			slash_offset, slash_height, 1.0 + float(index % 2) * 0.4)
+		slash.rotation = Vector3(0.0, 0.0, -0.65 + float(index) * 0.32)
+		slash.scale = Vector3(0.12, 1.0, 1.0)
 		slash.show()
 		_slash_materials[index].set_shader_parameter("opacity", 1.0)
 	slash_count = _slashes.size()
@@ -324,7 +327,7 @@ func _update_aftermath(delta: float) -> void:
 	for index in range(_slashes.size()):
 		_slashes[index].scale.x = lerpf(0.12, 1.0, minf(_elapsed / 0.11, 1.0))
 		_slash_materials[index].set_shader_parameter("opacity", slash_fade)
-	var orb_fade := 1.0 - clampf(_elapsed / 0.45, 0.0, 1.0)
+	var orb_fade := 1.0 - clampf((_elapsed - 0.25) / 0.95, 0.0, 1.0)
 	_shell_material.albedo_color.a = orb_fade
 	_core_material.albedo_color = Color(0.012, 0.004, 0.03, orb_fade)
 	for material in _ring_materials:
@@ -350,9 +353,9 @@ func _energy_material(color: Color, glow: float) -> StandardMaterial3D:
 	return material
 
 
-func _streak_quad() -> QuadMesh:
+func _streak_quad(width: float = 0.075) -> QuadMesh:
 	var quad := QuadMesh.new()
-	quad.size = Vector2(0.075, 1.45)
+	quad.size = Vector2(width, 1.45)
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
