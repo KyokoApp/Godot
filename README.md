@@ -1672,3 +1672,28 @@ sihir yang sudah tersedia dan kunci otomatis ke zombie.
   lulus compile, semua tes headless, seluruh render Mobile Vulkan (termasuk
   Survival), ekspor PCK/APK, audit isi APK, dan boot launcher. APK: **[`build-2b0f13a`](https://github.com/KyokoApp/Godot/releases/tag/build-2b0f13a)**.
   Render/runtime terverifikasi di CI; tes di perangkat Android fisik belum dilakukan.
+
+## Ronde 30 — Run Zone endless: intro mantra dan auto-run third-person
+
+- Kartu kedua pada selector kini membuka Run Zone; kartu ketiga tetap berstatus
+  Coming Soon. Dunia memakai bidang tanpa batas yang sudah ada.
+- Intro singkat menampilkan perapal UAL2 melayang di belakang pemain, pose cast
+  ditahan, dan bola mantra ungu. Kamera mulai mengarah ke perapal lalu mengorbit
+  ke belakang pemain untuk gameplay third-person; auto-run baru aktif setelah
+  transisi selesai.
+- Pemain terus berlari maju dalam gait `Sprint_Loop`. Laju bertambah 0,12 m/s
+  per detik sampai batas yang masih sinkron dengan playback Sprint, agar kaki
+  tidak meluncur. HUD hanya menampilkan durasi dan kecepatan; tombol aksi tetap
+  tersembunyi dan auto-fire Survival tidak ikut aktif.
+- Escape/Back mengakhiri sesi dan memulihkan home, NPC, serta state kamera.
+  `tools/test_run_zone.gd` menguji intro/cast, arah transisi kamera, auto-run,
+  kenaikan laju, pijakan, HUD, dan pulang ke hub. `tools/render_run_zone.gd`
+  mengambil screenshot intro dan gameplay third-person.
+- Validasi lokal lulus: `gdparse`, `gdlint project tools`, `tools/check_scripts.py .`,
+  katalog animasi, tes chunk, bundle lisensi, parse YAML workflow, dan
+  `git diff --check`. Run awal menemukan ekspektasi tes nama node tanah yang
+  keliru; setelah tes diperbaiki, CI Godot 4.5.2 **[`37354604990`](https://github.com/KyokoApp/Godot/actions/runs/37354604990)**
+  lulus compile, semua tes headless, render Mobile Vulkan Run Zone, ekspor PCK/APK,
+  audit APK, dan boot launcher. APK: **[`build-ed4e865`](https://github.com/KyokoApp/Godot/releases/tag/build-ed4e865)**.
+  Tes pada perangkat Android fisik belum dilakukan. Commit: `a8ee9cd` fitur,
+  `ed4e865` koreksi tes; branch `arena/01a0fc4a-godot`.

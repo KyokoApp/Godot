@@ -1,5 +1,31 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-06 (cicilan 30) — **RUN ZONE: ENDLESS RUN, INTRO PERAPAL, KAMERA THIRD-PERSON**
+  - Mode kedua pada selector membuka Run Zone; kartu ketiga tetap Coming Soon.
+    Area memakai ground tanpa batas yang ada. Intro menampilkan perapal UAL2
+    melayang di belakang pemain, pose cast tertahan, dan bola mantra ungu; kamera
+    mulai menghadap perapal lalu mengorbit ke belakang pemain.
+  - Setelah transisi kamera, pemain auto-run dengan gait `Sprint_Loop`; kecepatan
+    naik 0,12 m/s tiap detik hingga batas yang menjaga playback Sprint maksimal
+    1,5x agar kaki tetap sinkron. HUD hanya menunjukkan durasi/laju. Tidak ada
+    auto-fire Survival atau tombol aksi baru. Escape/Back memulihkan hub, NPC,
+    dan state kamera.
+  - Tes baru `tools/test_run_zone.gd` memeriksa intro/cast, kamera, auto-run,
+    pijakan, laju naik, HUD, dan pulang ke hub. `tools/render_run_zone.gd`
+    merender shot intro serta gameplay third-person dan menyimpan screenshot.
+  - Pemeriksaan lokal lulus: `gdparse`, `gdlint project tools`, cek tipe, katalog
+    animasi, tes chunk, bundle lisensi, YAML workflow, dan `git diff --check`.
+    Run awal [`37353631910`](https://github.com/KyokoApp/Godot/actions/runs/37353631910)
+    hanya gagal pada ekspektasi tes nama node tanah (kelas bidang mengatur ulang
+    nama saat `_ready`); tes diganti memeriksa API `surface_height()`.
+  - CI final [`37354604990`](https://github.com/KyokoApp/Godot/actions/runs/37354604990)
+    pada commit fitur `ed4e865` hijau penuh: compile, semua tes headless,
+    render Mobile Vulkan Run Zone, ekspor PCK/APK, audit APK, dan boot launcher.
+    APK: [`build-ed4e865`](https://github.com/KyokoApp/Godot/releases/tag/build-ed4e865).
+    Tes langsung di perangkat Android fisik belum dilakukan.
+  - Branch tetap `arena/01a0fc4a-godot`; commit fitur `a8ee9cd`, koreksi tes
+    `ed4e865`.
+
 - 2026-10-06 (cicilan 29) — **SURVIVAL: BOSS/TOWER, KOIN/UPGRADE, HORIZON BERKABUT, EFEK SIHIR RINGAN**
   - `CityHorizon` menambah 56 gedung dalam satu MultiMesh, dua lapis bukit jauh,
     dan haze shader tebal; hanya dibuat lewat `Scenery` home/hub. `SurvivalWorld`
