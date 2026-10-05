@@ -18,11 +18,15 @@
     horizon, dan jarak shadow map 96 m.
   - Validasi lokal statis lulus: `gdparse`, `gdlint project tools`,
     `tools/check_scripts.py .`, cek lisensi, chunk, katalog animasi, workflow
-    YAML, dan `git diff --check`. Tes Godot headless, compile engine 4.5.2, dan
-    render Mobile Vulkan **belum dijalankan**; visual/runtime belum dikonfirmasi.
-    Binary Godot tidak tersedia lokal dan unduhan release asset terhenti pada
-    kegagalan koneksi TLS. Skrip tes baru/diubah ada di `tools/`, belum dieksekusi.
-  - Belum ada commit atau push; branch tetap `arena/01a0fc4a-godot`.
+    YAML, dan `git diff --check`. CI Godot 4.5.2 pertama [`37347651748`](https://github.com/KyokoApp/Godot/actions/runs/37347651748)
+    gagal pada compile: `pop_front()` memberi `Variant` di `buff_system.gd:356`
+    (warning dianggap error). Render-a lulus; tes HUD/render-b dan render-c
+    terhenti akibat compile, package tidak berjalan. Cast eksplisit ke `Node3D`
+    sudah ditambahkan; commit perbaikan dan CI ulang masih perlu dipush.
+  - Visual/runtime belum terkonfirmasi sampai CI ulang hijau. Binary Godot lokal
+    tidak tersedia; unduhan release asset terhenti pada kegagalan koneksi TLS.
+    Tes headless baru belum berhasil dieksekusi karena compile gate tersebut.
+  - Commit/push fitur pertama `3fa0b62`; branch tetap `arena/01a0fc4a-godot`.
 
 - 2026-10-05 (cicilan 28) — **ANALOG-ONLY, GAIT MUNDUR, +11 KARTU BUFF SURVIVAL**
   - Sembunyikan/nonaktifkan semua tombol aksi HUD (`SERANG`, `TEMBAK`, `LOMPAT`,

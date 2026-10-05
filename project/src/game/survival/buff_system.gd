@@ -353,7 +353,7 @@ func _spawn_skill_wave(position: Vector3, radius: float, color: Color,
 		if not is_instance_valid(_skill_waves[index]):
 			_skill_waves.remove_at(index)
 	while _skill_waves.size() >= MAX_SKILL_WAVES:
-		var oldest := _skill_waves.pop_front()
+		var oldest := _skill_waves.pop_front() as Node3D
 		if is_instance_valid(oldest):
 			oldest.queue_free()
 	var wave := SkillWave.new()
