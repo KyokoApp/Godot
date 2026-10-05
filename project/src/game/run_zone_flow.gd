@@ -108,7 +108,9 @@ func enter(main: Node3D) -> void:
 	(main.get("_run_zone_hud") as RunZoneHUD).show_intro()
 
 	orbit.set_run_zone_mode()
-	orbit.yaw = 0.0
+	# Mulai dari sisi depan agar perapal di belakang pemain masuk shot,
+	# lalu putar melewati pemain ke kamera lari yang membidik arah jalur.
+	orbit.yaw = PI
 	orbit.pitch = Orbit.RUN_ZONE_MIN_PITCH
 	orbit.distance = 6.4
 	orbit.focus_offset = Vector3(0.0, 0.95, 0.0)
@@ -120,7 +122,7 @@ func enter(main: Node3D) -> void:
 	var tween: Tween = main.create_tween()
 	tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tween.tween_interval(0.30)
-	tween.tween_property(orbit, "yaw", PI, 1.25)
+	tween.tween_property(orbit, "yaw", 0.0, 1.25)
 	tween.parallel().tween_property(orbit, "distance", 5.4, 1.25)
 	tween.parallel().tween_property(orbit, "pitch", 0.27, 1.25)
 	tween.parallel().tween_property(orbit, "focus_offset", Vector3(0.0, 0.58, 0.0), 1.25)

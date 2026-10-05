@@ -275,7 +275,9 @@ func _update_flight(delta: float) -> void:
 	_elapsed += delta
 	var progress := clampf(_elapsed / FLIGHT_TIME, 0.0, 1.0)
 	var eased := progress * progress * (3.0 - 2.0 * progress)
-	var target := player.global_position + Vector3(0.0, 6.0, -8.0)
+	# Jangan tarik bola kembali ke dekat kamera: bola harus tetap melaju
+	# di depan pelari supaya charge dan impact sama-sama masuk frame.
+	var target := player.global_position + Vector3(0.0, 6.0, -30.0)
 	_orb.global_position = _flight_start.lerp(target, eased)
 	_orb.rotation.y += delta * 3.8
 	_orb.scale = Vector3.ONE * ORB_RADIUS * (1.0 + 0.055 * sin(_elapsed * 18.0))

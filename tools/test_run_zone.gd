@@ -57,7 +57,7 @@ func _run() -> void:
 		"Intro kamera tidak mengunci input sementara")
 	_check(orbit != null and float(orbit.get("pitch")) < 0.6,
 		"Kamera Run Zone memakai sudut top-down, bukan third-person")
-	_check(absf(wrapf(float(orbit.get("yaw")), -PI, PI)) < 0.1,
+	_check(absf(wrapf(float(orbit.get("yaw")) - PI, -PI, PI)) < 0.1,
 		"Shot intro tidak mulai menghadap penyihir di belakang pemain")
 	_check(not bool(player.get("endless_run_active")),
 		"Pemain mulai berlari sebelum intro mantra selesai")
@@ -101,8 +101,8 @@ func _run() -> void:
 	_check(bool(player.get("endless_run_active")), "Auto-run pemain belum aktif")
 	_check(float(orbit.get("pitch")) < 0.6,
 		"Kamera third-person tidak dipertahankan setelah intro")
-	_check(absf(wrapf(float(orbit.get("yaw")) - PI, -PI, PI)) < 0.10,
-		"Kamera tidak menyapu ke belakang pemain untuk third-person")
+	_check(absf(wrapf(float(orbit.get("yaw")), -PI, PI)) < 0.10,
+		"Kamera tidak berakhir di belakang pemain menghadap jalur lari")
 	_check(speed_button != null and speed_button.is_visible_in_tree() and not speed_button.disabled,
 		"Tombol SPEED +1 tidak aktif setelah intro")
 	var previous_speed := float(world.get("current_speed"))

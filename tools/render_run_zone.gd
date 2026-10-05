@@ -49,7 +49,7 @@ func _run() -> void:
 	_check(orb != null and orb.visible, "Bola mantra tidak tampak pada shot intro")
 	_check(float(orbit.get("pitch")) < 0.6,
 		"Shot intro tidak memakai kamera third-person")
-	_check(absf(wrapf(float(orbit.get("yaw")), -PI, PI)) < 0.1,
+	_check(absf(wrapf(float(orbit.get("yaw")) - PI, -PI, PI)) < 0.1,
 		"Kamera intro tidak menghadap penyihir di belakang")
 	for node_name in ["_pet", "_speed_aura", "_foot_fire"]:
 		var effect: Node = game.get(node_name)
@@ -66,8 +66,8 @@ func _run() -> void:
 	_check(bool(player.get("endless_run_active")), "Auto-run tidak aktif saat render gameplay")
 	_check(float(orbit.get("pitch")) < 0.6,
 		"Shot lari menggunakan sudut top-down")
-	_check(absf(wrapf(float(orbit.get("yaw")) - PI, -PI, PI)) < 0.10,
-		"Kamera gameplay belum berada di belakang pemain")
+	_check(absf(wrapf(float(orbit.get("yaw")), -PI, PI)) < 0.10,
+		"Kamera gameplay belum berada di belakang pemain dan menghadap jalur")
 	await _capture("run-zone-third-person")
 
 	var hud := game.get("_run_zone_hud") as Control
@@ -116,6 +116,7 @@ func _run() -> void:
 	_check(purple_orb != null and purple_orb.is_visible_in_tree()
 		and purple_orb.scale.x >= 6.0,
 		"Bola Hollow Purple raksasa tidak tampak pada render charge")
+	_check_orb_on_screen(purple_orb, camera, "charge")
 	await _capture("run-zone-hollow-purple-charge")
 	for _frame in range(150):
 		await physics_frame
@@ -123,6 +124,7 @@ func _run() -> void:
 		"Hollow Purple tidak menghasilkan impact dalam render")
 	_check(int(effects.get("slash_count")) >= 4,
 		"Slash tebal tidak muncul saat impact Hollow Purple")
+	_check_orb_on_screen(purple_orb, camera, "impact")
 	await _capture("run-zone-hollow-purple-impact")
 	print("[run-zone-render-test] phase=", world.get("phase"),
 		" speed=", world.get("current_speed"),
@@ -133,6 +135,26 @@ func _run() -> void:
 	for _frame in range(4):
 		await process_frame
 	quit(0 if _failures == 0 else 1)
+
+
+func _check_orb_on_screen(orb: Node3D, camera: Camera3D, label: String) -> void:
+	if orb == null or camera == null:
+		_check(false, "Kamera atau bola Hollow Purple hilang saat " + label)
+		return
+	var center := orb.global_position
+	var screen_center := camera.unproject_position(center)
+	var viewport_rect := camera.get_viewport().get_visible_rect()
+	var edge := camera.unproject_position(
+		center + camera.global_basis.x * orb.scale.x)
+	var projected_width := absf(edge.x - screen_center.x) * 2.0
+	_check(not camera.is_position_behind(center),
+		"Bola Hollow Purple berada di belakang kamera saat " + label)
+	_check(viewport_rect.has_point(screen_center),
+		"Pusat bola Hollow Purple di luar frame saat " + label)
+	_check(projected_width >= 30.0 and projected_width <= viewport_rect.size.x * 0.75,
+		"Ukuran bola Hollow Purple di layar tidak terbaca saat " + label)
+	print("[run-zone-render-test] orb ", label, " screen=", screen_center,
+		" diameter=", projected_width)
 
 
 func _capture(name: String) -> void:
