@@ -77,8 +77,8 @@ func _run() -> void:
 			"Penyihir tidak menahan pose mantra")
 	_check(orb != null and orb.visible, "Efek bola mantra tidak tampak saat intro")
 	var ground: Node3D = world.get("ground")
-	_check(ground != null and str(ground.name) == "RunZoneGround",
-		"Dunia endless tidak membuat bidang tanah Run Zone")
+	_check(ground != null and ground.has_method("surface_height"),
+		"Dunia endless tidak memakai bidang tanah Run Zone")
 
 	for _frame in range(150):
 		await physics_frame
