@@ -88,11 +88,17 @@ func _run() -> void:
 		"FOV tidak memberi kesan speed tinggi")
 	await _capture("run-zone-speed-20-black-flash")
 
-	player.global_position.z = -RunZone.HOLLOW_PURPLE_DISTANCE
-	for _frame in range(2):
+	player.global_position.z = -RunZone.HOLLOW_PURPLE_DISTANCE - 1.0
+	for _frame in range(3):
 		await physics_frame
-	_check(bool(world.get("hollow_purple_started")),
-		"Hollow Purple tidak mulai pada jarak pemicu")
+	var triggered := bool(world.get("hollow_purple_started"))
+	var trigger_detail := "phase=%s jarak=%.2fm z=%.2fm run=%s" % [
+		str(world.get("phase")), float(world.get("distance_m")),
+		player.global_position.z, str(game.get("_active_mode")),
+	]
+	_check(triggered, "Hollow Purple tidak mulai pada jarak pemicu (" + trigger_detail + ")")
+	print("[run-zone-render-test] pemicu Hollow Purple: ", trigger_detail,
+		" mulai=", triggered)
 	for _frame in range(70):
 		await physics_frame
 	await _capture("run-zone-hollow-purple-charge")
