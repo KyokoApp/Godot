@@ -104,6 +104,7 @@ var health := MAX_HEALTH
 var shield_points := 0
 var shield_capacity := 0
 var damage_reduction := 0.0
+var survival_move_speed_multiplier := 1.0
 var move_speed := 0.0
 var speed_scale := 1.0
 var gait := IDLE
@@ -222,7 +223,7 @@ func heal(amount: int) -> void:
 
 
 func set_survival_bonuses(health_bonus: int, shield_capacity_value: int,
-		shield_refill: int, reduction: float) -> void:
+		shield_refill: int, reduction: float, speed_multiplier: float = 1.0) -> void:
 	var previous_maximum := max_health
 	max_health = MAX_HEALTH + maxi(0, health_bonus)
 	if max_health > previous_maximum and health > 0:
@@ -235,12 +236,13 @@ func set_survival_bonuses(health_bonus: int, shield_capacity_value: int,
 	else:
 		shield_points = mini(shield_points, shield_capacity)
 	damage_reduction = clampf(reduction, 0.0, 0.6)
+	survival_move_speed_multiplier = clampf(speed_multiplier, 1.0, 1.35)
 	health_changed.emit(health)
 	survival_stats_changed.emit()
 
 
 func clear_survival_bonuses() -> void:
-	set_survival_bonuses(0, 0, 0, 0.0)
+	set_survival_bonuses(0, 0, 0, 0.0, 1.0)
 
 
 func grant_shield(amount: int) -> void:
@@ -388,7 +390,7 @@ func _desired_speed(stick: Vector2) -> float:
 	var strength := minf(stick.length(), 1.0)
 	if strength < 0.02:
 		return 0.0
-	var speed := max_speed() * strength
+	var speed := max_speed() * strength * survival_move_speed_multiplier
 	if boosted:
 		speed *= BOOST_MULTIPLIER
 	if crouching:

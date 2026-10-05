@@ -19,6 +19,7 @@ extends SceneTree
 
 const Field = preload("res://src/game/world/field.gd")
 const Scenery = preload("res://src/game/world/scenery.gd")
+const CityHorizon = preload("res://src/game/world/city_horizon.gd")
 var _failures := 0
 var _notes := PackedStringArray()
 var _reported := {}
@@ -55,12 +56,32 @@ func _run() -> void:
 
 
 func _test_parts(scenery: Scenery) -> void:
-	for part in ["Floaters", "Sea", "Cliffs", "Island", "Ruins", "LightMotes"]:
+	for part in ["Floaters", "Sea", "Cliffs", "Island", "Ruins", "LightMotes",
+			"CityHorizon"]:
 		var node := scenery.get_node_or_null(part)
 		_check(node != null, "Bagian pemandangan hilang: " + part)
 	if scenery.floaters == null or scenery.sea == null or scenery.ruins == null \
 			or scenery.motes == null:
 		return
+	var horizon := scenery.city_horizon
+	_check(horizon != null, "Skyline/bukit berkabut tidak dibuat di home")
+	if horizon != null:
+		var skyline := horizon.get_node_or_null("DistantSkyline") as MultiMeshInstance3D
+		var hills := horizon.get_node_or_null("FogboundHills")
+		var haze := horizon.get("_haze_material") as ShaderMaterial
+		_check(int(horizon.get("building_count")) >= 48,
+			"Kota jauh bukan MultiMesh ringan")
+		_check(skyline != null and skyline.multimesh != null
+			and skyline.multimesh.instance_count >= 48,
+			"Skyline tidak memakai satu MultiMesh")
+		_check(hills != null and hills.get_child_count() == 2,
+			"Dua lapis bukit jauh tidak dibuat")
+		_check(haze != null and haze.shader.code.contains("haze_strength")
+			and float(haze.get_shader_parameter("haze_strength")) >= 0.94
+			and float(haze.get_shader_parameter("haze_end")) <= 320.0,
+			"Fog horizon tidak cukup tebal atau shader tidak aktif")
+		_check(CityHorizon.CITY_RADIUS > Field.HALF + 100.0,
+			"Kota jauh terlalu dekat dan masuk ke gameplay pulau")
 	var floater_meshes := 0
 	var floater_top := -INF
 	var floater_low := INF

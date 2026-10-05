@@ -7,14 +7,13 @@ signal impact_landed(target: Node3D, damage: int, critical: bool)
 const CastLayer = preload("res://src/game/animation/cast_layer.gd")
 const Spirit = preload("res://src/game/legacy_spirit/spirit_visual.gd")
 const Projectile = preload("res://src/game/fire_projectile.gd")
-const Burst = preload("res://src/game/fire_burst.gd")
 const COOLDOWN := 0.85
 const AUTO_FIRE_INTERVAL := 0.18
 const RAPID_FIRE_COOLDOWN := 0.14
 const MAGIC_DAMAGE := 48
 const MAX_PROJECTILES := 3
-const RAPID_FIRE_MAX_PROJECTILES := 16
-const MAX_BURSTS := 2
+## Batasi proyektil aktif agar volley/auto-fire tidak menumpuk node di perangkat.
+const RAPID_FIRE_MAX_PROJECTILES := 10
 
 var player: Node3D
 var facing: Node3D
@@ -28,11 +27,12 @@ var critical_chance := 0.0
 var critical_multiplier := 2.0
 var extra_shot_chance := 0.0
 var homing_turn_rate_multiplier := 1.0
+var single_target_multiplier := 1.0
+var projectile_speed_multiplier := 1.0
 var rapid_fire_enabled := false
 var casting := false
 var shots_fired := 0
 var projectiles: Array[CharacterBody3D] = []
-var bursts: Array[Node3D] = []
 var _windup := 0.0
 var _locked_target: Node3D
 var _body: Spirit
@@ -96,6 +96,8 @@ func set_survival_modifiers(modifiers: Dictionary) -> void:
 	critical_multiplier = maxf(1.25, float(modifiers.get("critical_multiplier", 2.0)))
 	extra_shot_chance = clampf(float(modifiers.get("extra_shot_chance", 0.0)), 0.0, 0.75)
 	homing_turn_rate_multiplier = maxf(1.0, float(modifiers.get("homing_turn_rate_multiplier", 1.0)))
+	single_target_multiplier = maxf(1.0, float(modifiers.get("single_target_multiplier", 1.0)))
+	projectile_speed_multiplier = maxf(1.0, float(modifiers.get("projectile_speed_multiplier", 1.0)))
 	set_rapid_fire(rapid_fire_enabled)
 
 
@@ -149,7 +151,8 @@ func _spawn_projectile(lock_target: Node3D, has_target: bool, aim: Vector3,
 		shot_index: int, projectile_count: int) -> void:
 	var shot := Projectile.new()
 	shot.homing_target = lock_target if has_target else null
-	shot.homing_speed = Projectile.HOMING_SPEED * homing_turn_rate_multiplier
+	shot.homing_speed = Projectile.HOMING_SPEED * homing_turn_rate_multiplier \
+		* projectile_speed_multiplier
 	shot.homing_turn_rate = Projectile.HOMING_TURN_RATE * homing_turn_rate_multiplier
 	get_parent().add_child(shot)
 	shot.global_position = global_position
@@ -169,35 +172,27 @@ func _spawn_projectile(lock_target: Node3D, has_target: bool, aim: Vector3,
 		audio.follow_fire(shot, true)
 
 
-func _on_impact(point: Vector3, normal: Vector3,
+func _on_impact(_point: Vector3, _normal: Vector3,
 		projectile: CharacterBody3D = null) -> void:
 	if projectile != null:
 		var collider := projectile.get("impact_collider") as Node
 		if collider != null and collider.has_method("take_damage"):
 			var critical := randf() < critical_chance
 			var damage := maxi(1, roundi(MAGIC_DAMAGE * damage_multiplier))
+			var locked_target := projectile.get("homing_target") as Node3D
+			if locked_target == collider:
+				damage = maxi(1, roundi(damage * single_target_multiplier))
 			if critical:
 				damage = maxi(1, roundi(damage * critical_multiplier))
 			collider.call("take_damage", damage)
 			if collider is Node3D:
 				impact_landed.emit(collider as Node3D, damage, critical)
+	# Hit dasar sengaja tidak membuat ledakan, partikel, atau lampu baru.
+	# Efek AoE tetap dipicu terpisah oleh kartu skill di SurvivalBuffSystem.
 	_prune()
-	if bursts.size() >= MAX_BURSTS:
-		bursts.pop_front().queue_free()
-	var burst := Burst.new()
-	burst.surface_normal = normal
-	burst.position = (get_parent() as Node3D).to_local(point + normal * 0.02)
-	get_parent().add_child(burst)
-	bursts.append(burst)
-	var audio := get_tree().get_first_node_in_group("world_audio")
-	if audio != null:
-		audio.explode(point + normal * 0.15)
 
 
 func _prune() -> void:
 	for index in range(projectiles.size() - 1, -1, -1):
 		if not is_instance_valid(projectiles[index]):
 			projectiles.remove_at(index)
-	for index in range(bursts.size() - 1, -1, -1):
-		if not is_instance_valid(bursts[index]):
-			bursts.remove_at(index)

@@ -2,6 +2,7 @@ extends CharacterBody3D
 ## Zombie mannequin UAL: mengejar pemain, mencakar dari dekat, lalu tumbang kena sihir.
 
 signal died(zombie: Node3D)
+signal health_changed(current: int, maximum: int)
 
 const Character = preload("res://src/game/mannequin.gd")
 const Catalog = preload("res://src/game/animation/catalog.gd")
@@ -16,6 +17,9 @@ const ATTACK_DAMAGE := 12
 const START_HEALTH := 96
 const STAGE_HEALTH_GAIN := 24
 const DEATH_LIFETIME := 3.2
+const BOSS_NAMES: Array[String] = [
+	"GOLIAT ABU", "RAJA KELAM", "PENGHANCUR SENJA", "TITAN BARA",
+]
 
 var player: CharacterBody3D
 var field: Node3D
@@ -23,7 +27,11 @@ var visual: Character
 var stage := 1
 var max_health := START_HEALTH
 var health := START_HEALTH
+var is_boss := false
+var boss_name := ""
 var dead := false
+var _arcane_mark_left := 0.0
+var _arcane_mark_bonus := 0.0
 var _burn_left := 0.0
 var _burn_tick_left := 0.0
 var _burn_damage := 0
@@ -33,10 +41,24 @@ var _attack_cooldown := 0.8
 var _death_left := 0.0
 
 
-func set_stage_difficulty(stage_value: int) -> void:
+func set_stage_difficulty(stage_value: int, boss_value: bool = false) -> void:
 	stage = maxi(1, stage_value)
-	max_health = START_HEALTH + (stage - 1) * STAGE_HEALTH_GAIN
+	is_boss = boss_value
+	if is_boss:
+		var milestone := maxi(1, int(stage / 5))
+		max_health = 900 + (milestone - 1) * 260
+		boss_name = BOSS_NAMES[posmod(milestone - 1, BOSS_NAMES.size())]
+	else:
+		max_health = START_HEALTH + (stage - 1) * STAGE_HEALTH_GAIN
+		boss_name = ""
 	health = max_health
+
+
+func apply_arcane_mark(damage_bonus: float, duration: float) -> void:
+	if dead or damage_bonus <= 0.0 or duration <= 0.0:
+		return
+	_arcane_mark_bonus = maxf(_arcane_mark_bonus, clampf(damage_bonus, 0.0, 0.20))
+	_arcane_mark_left = maxf(_arcane_mark_left, duration)
 
 
 func apply_burn(damage_per_tick: int, duration: float) -> void:
@@ -61,8 +83,8 @@ func _ready() -> void:
 	floor_snap_length = 0.25
 	var shape := CollisionShape3D.new()
 	var capsule := CapsuleShape3D.new()
-	capsule.radius = RADIUS
-	capsule.height = HEIGHT
+	capsule.radius = 0.52 if is_boss else RADIUS
+	capsule.height = 3.05 if is_boss else HEIGHT
 	shape.shape = capsule
 	add_child(shape)
 	visual = Character.new()
@@ -84,6 +106,8 @@ func _ready() -> void:
 		0.0, Metrics.MAX_OFFSET)
 	visual.metrics[idle_name] = idle_metrics
 	visual.metrics[walk_name] = walk_metrics
+	if is_boss:
+		visual.scale = Vector3.ONE * 1.62
 	_apply_zombie_palette()
 	visual.set_locomotion("Zombie_Idle_Loop", 1.0)
 	_update_ground_height()
@@ -98,6 +122,9 @@ func _physics_process(delta: float) -> void:
 	_update_burn(delta)
 	if dead:
 		return
+	_arcane_mark_left = maxf(0.0, _arcane_mark_left - delta)
+	if _arcane_mark_left <= 0.0:
+		_arcane_mark_bonus = 0.0
 	_slow_left = maxf(0.0, _slow_left - delta)
 	if _slow_left <= 0.0:
 		_slow_multiplier = 1.0
@@ -114,7 +141,8 @@ func _physics_process(delta: float) -> void:
 		velocity.z = 0.0
 		move_and_slide()
 		return
-	if distance <= ATTACK_RANGE:
+	var attack_range := ATTACK_RANGE * (1.35 if is_boss else 1.0)
+	if distance <= attack_range:
 		velocity.x = 0.0
 		velocity.z = 0.0
 		move_and_slide()
@@ -156,7 +184,11 @@ func can_be_targeted() -> bool:
 func take_damage(amount: int) -> void:
 	if dead or amount <= 0:
 		return
-	health = maxi(0, health - amount)
+	var applied := amount
+	if _arcane_mark_left > 0.0 and _arcane_mark_bonus > 0.0:
+		applied = maxi(1, roundi(float(amount) * (1.0 + _arcane_mark_bonus)))
+	health = maxi(0, health - applied)
+	health_changed.emit(health, max_health)
 	if health > 0:
 		visual.play_action("Hit_Chest")
 		return
@@ -179,10 +211,22 @@ func _update_ground_height() -> void:
 func _apply_zombie_palette() -> void:
 	if visual.skin == null:
 		return
+	var dark := Color("1d3025")
+	var light := Color("5e9360")
+	if is_boss:
+		var palettes: Array[Dictionary] = [
+			{"dark": Color("281737"), "light": Color("b46bdd")},
+			{"dark": Color("321a25"), "light": Color("dd6b87")},
+			{"dark": Color("1a2639"), "light": Color("68b6db")},
+			{"dark": Color("382515"), "light": Color("dfaa45")},
+		]
+		var palette: Dictionary = palettes[posmod(int(stage / 5) - 1, palettes.size())]
+		dark = palette["dark"]
+		light = palette["light"]
 	var materials: Array[ShaderMaterial] = [visual.skin.skin]
 	var inner := visual.get("_skin_material") as ShaderMaterial
 	if inner != null:
 		materials.append(inner)
 	for material in materials:
-		material.set_shader_parameter("skin_dark", Color("1d3025"))
-		material.set_shader_parameter("skin_light", Color("5e9360"))
+		material.set_shader_parameter("skin_dark", dark)
+		material.set_shader_parameter("skin_light", light)

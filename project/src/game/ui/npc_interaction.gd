@@ -5,6 +5,7 @@ extends Node
 signal gameplay_requested
 
 const Dialogue = preload("res://src/game/ui/npc_dialogue.gd")
+const UpgradeMenu = preload("res://src/game/ui/attribute_upgrade_menu.gd")
 
 const INTERACT_DISTANCE := 2.8
 
@@ -13,10 +14,12 @@ var npc: Node3D
 var joystick: Control
 var orbit: Node
 var canvas_layer: CanvasLayer
+var meta_progress: Object
 var controls_to_hide: Array[Control] = []
 
 var _prompt: Button
 var _dialogue: Dialogue
+var _upgrade_menu: Control
 var _modal_open := false
 var _saved_visibility: Dictionary = {}
 var _saved_joystick_input := true
@@ -34,6 +37,7 @@ var _pending_gameplay := false
 func _ready() -> void:
 	_build_prompt()
 	_build_dialogue()
+	_build_upgrade_menu()
 	_add_input_exclusions()
 	get_viewport().size_changed.connect(_place_prompt)
 	_place_prompt()
@@ -52,14 +56,19 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not key.pressed or key.echo:
 		return
 	if _modal_open:
-		if key.keycode == KEY_ESCAPE or key.keycode == KEY_E:
-			_dialogue.call("close_dialogue")
-		elif key.keycode == KEY_UP:
-			_dialogue.call("move_selection", -1)
-		elif key.keycode == KEY_DOWN:
-			_dialogue.call("move_selection", 1)
-		elif key.keycode == KEY_ENTER or key.keycode == KEY_KP_ENTER or key.keycode == KEY_SPACE:
-			_dialogue.call("activate_selected")
+		if _upgrade_menu != null and _upgrade_menu.visible:
+			if key.keycode == KEY_ESCAPE or key.keycode == KEY_E:
+				_upgrade_menu.call("close")
+		else:
+			if key.keycode == KEY_ESCAPE or key.keycode == KEY_E:
+				_dialogue.call("close_dialogue")
+			elif key.keycode == KEY_UP:
+				_dialogue.call("move_selection", -1)
+			elif key.keycode == KEY_DOWN:
+				_dialogue.call("move_selection", 1)
+			elif key.keycode == KEY_ENTER or key.keycode == KEY_KP_ENTER \
+					or key.keycode == KEY_SPACE:
+				_dialogue.call("activate_selected")
 		get_viewport().set_input_as_handled()
 	elif key.keycode == KEY_E and _prompt.visible:
 		_begin_interaction()
@@ -95,7 +104,21 @@ func _build_dialogue() -> void:
 	_dialogue.closing.connect(_on_dialogue_closing)
 	_dialogue.closed.connect(_on_dialogue_closed)
 	_dialogue.gameplay_requested.connect(_on_gameplay_requested)
+	_dialogue.upgrade_requested.connect(_open_upgrade_menu)
 	canvas_layer.add_child(_dialogue)
+
+
+func _build_upgrade_menu() -> void:
+	_upgrade_menu = UpgradeMenu.new()
+	_upgrade_menu.meta_progress = meta_progress
+	canvas_layer.add_child(_upgrade_menu)
+
+
+func _open_upgrade_menu() -> void:
+	if not _modal_open or _upgrade_menu == null:
+		return
+	_upgrade_menu.set("meta_progress", meta_progress)
+	_upgrade_menu.call("open")
 
 
 func _add_input_exclusions() -> void:
@@ -103,11 +126,13 @@ func _add_input_exclusions() -> void:
 		var joystick_exclusions: Array = joystick.get("input_exclusions")
 		joystick_exclusions.append(_prompt)
 		joystick_exclusions.append(_dialogue)
+		joystick_exclusions.append(_upgrade_menu)
 		joystick.set("input_exclusions", joystick_exclusions)
 	if orbit != null:
 		var orbit_exclusions: Array = orbit.get("exclusions")
 		orbit_exclusions.append(_prompt)
 		orbit_exclusions.append(_dialogue)
+		orbit_exclusions.append(_upgrade_menu)
 		orbit.set("exclusions", orbit_exclusions)
 
 

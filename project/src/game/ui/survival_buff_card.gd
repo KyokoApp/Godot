@@ -47,13 +47,13 @@ func configure(card: Dictionary, stack_count: int) -> void:
 func reveal(delay: float) -> void:
 	modulate.a = 0.0
 	pivot_offset = custom_minimum_size * 0.5
-	scale = Vector2(0.88, 0.88)
+	scale = Vector2(0.95, 0.95)
 	var tween := create_tween()
 	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tween.tween_interval(delay)
-	tween.parallel().tween_property(self, "modulate:a", 1.0, 0.24)
-	tween.parallel().tween_property(self, "scale", Vector2.ONE, 0.32)
+	tween.parallel().tween_property(self, "modulate:a", 1.0, 0.28)
+	tween.parallel().tween_property(self, "scale", Vector2.ONE, 0.30)
 
 
 func _build_content() -> void:
@@ -165,8 +165,8 @@ func _on_mouse_entered() -> void:
 		_hover_tween.kill()
 	_hover_tween = create_tween()
 	_hover_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	_hover_tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_hover_tween.tween_property(self, "scale", Vector2(1.035, 1.035), 0.15)
+	_hover_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_hover_tween.tween_property(self, "scale", Vector2(1.025, 1.025), 0.18)
 
 
 func _on_mouse_exited() -> void:

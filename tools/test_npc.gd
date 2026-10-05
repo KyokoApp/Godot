@@ -134,12 +134,25 @@ func _run() -> void:
 			)
 			dialogue.call("move_selection", 1)
 			_check(int(dialogue.get("_selected")) == 1, "Navigasi pilihan tidak berpindah")
+			_check(option_labels[1].text.contains("UPGRADE ATRIBUT"),
+				"Opsi INVENTARIS tidak diganti menjadi upgrade atribut")
 			dialogue.call("activate_selected")
 			var notice: Label = dialogue.get("_notice")
-			_check(
-				notice != null and notice.text.contains("COMING SOON"),
-				"Pilihan gameplay tidak memberi status Coming Soon"
-			)
+			var upgrade_menu: Control = interaction.get("_upgrade_menu")
+			var upgrade_grid: GridContainer = upgrade_menu.get("_grid") if upgrade_menu != null else null
+			_check(upgrade_menu != null and upgrade_menu.visible,
+				"Opsi upgrade atribut tidak membuka panel peningkatan")
+			_check(upgrade_grid != null and upgrade_grid.get_child_count() >= 12,
+				"Upgrade atribut belum menyediakan banyak pilihan")
+			_check(notice != null and not notice.text.contains("COMING SOON"),
+				"Upgrade atribut salah ditandai Coming Soon")
+			if upgrade_menu != null:
+				upgrade_menu.call("close")
+				await create_timer(0.35).timeout
+				dialogue.call("move_selection", 1)
+				dialogue.call("activate_selected")
+				_check(notice != null and notice.text.contains("COMING SOON"),
+					"Status karakter yang belum tersedia harus tetap Coming Soon")
 		_check(not bool(joystick.get("input_enabled")), "Joystick aktif saat dialog terbuka")
 		_check(not bool(orbit.get("input_enabled")), "Kamera aktif saat dialog terbuka")
 		dialogue.call("close_dialogue")

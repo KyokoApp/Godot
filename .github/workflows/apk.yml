@@ -85,14 +85,21 @@ jobs:
           for wajib in tools/fetch_assets.sh tools/render_mannequin.gd \
                 tools/test_skin_shell.gd tools/test_camera_zoom.gd \
                 tools/test_scenery.gd tools/test_island.gd tools/test_survival.gd \
+                tools/test_meta_progress.gd \
                 tools/render_world.gd tools/render_survival.gd \
                 project/src/game/world/scenery.gd \
                 project/src/game/world/survival_world.gd \
                 project/src/game/world/survival_field.gd \
                 project/src/game/world/survival_ground.gdshader \
                 project/src/game/world/zombie.gd \
+                project/src/game/world/city_horizon.gd \
+                project/src/game/world/horizon_haze.gdshader \
+                project/src/game/survival/boss_tower.gd \
+                project/src/game/survival/skill_wave.gd \
+                project/src/game/survival/meta_progress.gd \
                 project/src/game/survival/buff_catalog.gd \
                 project/src/game/survival/buff_system.gd \
+                project/src/game/ui/attribute_upgrade_menu.gd \
                 project/src/game/survival/aegis_shell.gdshader \
                 project/src/game/loading/warmup_samples.gd \
                 project/src/game/ui/game_mode_selector.gd \
@@ -246,6 +253,19 @@ jobs:
             exit 1
           fi
           grep -F '[npc-test] HASIL: OK' npc-test.log
+
+      - name: Tes koin persisten dan panel upgrade atribut (headless)
+        run: |
+          set +e
+          timeout 180 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_meta_progress.gd" 2>&1 | tee meta-progress-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' meta-progress-test.log; then
+            tail -60 meta-progress-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[meta-progress-test]' meta-progress-test.log
 
       - name: Tes mode Survival, sihir auto-lock, dan zombie (headless)
         run: |

@@ -8,6 +8,8 @@ const Zombie = preload("res://src/game/world/zombie.gd")
 const Player = preload("res://src/game/player.gd")
 const BuffCatalog = preload("res://src/game/survival/buff_catalog.gd")
 const BuffSystem = preload("res://src/game/survival/buff_system.gd")
+const MetaProgress = preload("res://src/game/survival/meta_progress.gd")
+const TEST_META_SAVE_PATH := "user://survival_run_test_meta.cfg"
 
 var _failures := 0
 
@@ -27,7 +29,7 @@ func _check(condition: bool, message: String) -> void:
 
 func _test_repeatable_buff_pool() -> void:
 	var catalog_cards := BuffCatalog.all_cards()
-	_check(catalog_cards.size() >= 25,
+	_check(catalog_cards.size() >= 29,
 		"Katalog Survival belum memuat banyak pilihan skill buff")
 	var catalog_ids: Dictionary = {}
 	for card_data: Dictionary in catalog_cards:
@@ -64,16 +66,24 @@ func _test_repeatable_buff_pool() -> void:
 		"Tidak semua kartu baru masuk ke pilihan stack Survival")
 	for buff_id in ["arcane_focus", "frost_rune", "storm_chain", "vampiric_flame",
 			"executioner", "critical_bloom", "soul_ward", "kill_haste", "wildfire",
-			"soul_spring", "prismatic_echo"]:
+			"soul_spring", "prismatic_echo", "cinder_pulse", "firestorm_aura",
+			"soul_lance", "hunter_brand"]:
 		_check(bool(skill_manager.call("apply_buff", buff_id)),
 			"Skill kartu baru tidak bisa dipilih: " + buff_id)
 	skill_manager.free()
 
 
 func _run() -> void:
+	_remove_test_meta_save()
 	_test_repeatable_buff_pool()
 	var game := load("res://src/game/main.tscn").instantiate() as Node3D
 	root.add_child(game)
+	var test_meta := MetaProgress.new(TEST_META_SAVE_PATH)
+	game.set("_meta_progress", test_meta)
+	var npc_interaction: Node = game.get("_npc_interaction")
+	npc_interaction.set("meta_progress", test_meta)
+	var upgrade_menu: Control = npc_interaction.get("_upgrade_menu")
+	upgrade_menu.set("meta_progress", test_meta)
 	# Bekukan loop main sampai target uji diposisikan, lalu panggil eksplisit
 	# untuk membuktikan auto-fire tetap berjalan tanpa event tombol.
 	game.set_process(false)
@@ -97,6 +107,8 @@ func _run() -> void:
 	var selector: Control = game.get("_mode_selector")
 	_check(str(game.get("_active_mode")) == "survival", "Mode Survival tidak aktif")
 	_check(world != null, "Dunia Survival tidak dibuat")
+	_check(game.get("_scenery") == null and world.get_node_or_null("CityHorizon") == null,
+		"Skyline/bukit home ikut dimuat ke gameplay Survival")
 	_check(selector != null and not selector.visible, "Selector mode menutupi gameplay")
 	if world == null or player == null or visual == null:
 		game.queue_free()
@@ -132,10 +144,10 @@ func _run() -> void:
 	_check(fire_button != null and not fire_button.is_visible_in_tree()
 		and fire_button.disabled,
 		"Tombol aksi TEMBAK masih terlihat/aktif di Survival")
-	_check(float(orbit.get("pitch")) >= 1.28
-		and float(orbit.get("pitch")) <= 1.50,
-		"Kamera Survival tidak berada di sudut top-down")
-	_check(float(orbit.get("pitch_min")) >= 1.2,
+	_check(float(orbit.get("pitch")) >= 1.25
+		and float(orbit.get("pitch")) <= 1.30,
+		"Kamera Survival tidak top-down dengan kemiringan ringan")
+	_check(float(orbit.get("pitch_min")) >= 1.15,
 		"Kamera Survival bisa ditarik keluar dari sudut top-down")
 	var initial_stage_time := float(world.get("stage_time_left"))
 	_check(initial_stage_time <= SurvivalWorld.STAGE_DURATION
@@ -150,6 +162,10 @@ func _run() -> void:
 	_check(survival_hud != null
 		and survival_hud.get_node_or_null("BuffChoiceBackdrop") != null,
 		"Overlay kartu buff tidak dibuat")
+	_check(survival_hud != null
+		and survival_hud.get_node_or_null("BossHealthPanel") != null
+		and survival_hud.get_node_or_null("TowerPrompt") != null,
+		"HUD boss/tower tidak dibuat")
 	var buffs: Node = world.get("buff_system")
 	_check(buffs != null, "Manager buff run tidak dibuat")
 	_check(float(orbit.get("distance")) == 17.0,
@@ -309,7 +325,9 @@ func _run() -> void:
 			zombie.set_physics_process(false)
 
 	# Level lima membuka tiga kartu, memberi satu pilihan, lalu mengubah statistik/VFX run.
-	var stage_two_reward := SurvivalWorld.BASE_KILL_EXPERIENCE + 2
+	var stage_two_base_reward := SurvivalWorld.BASE_KILL_EXPERIENCE + 2
+	var stage_two_reward := roundi(stage_two_base_reward * float(buffs.get("xp_multiplier")))
+	var coins_before_kill := int(game.get("_meta_progress").get("coins"))
 	world.set("run_level", 4)
 	world.set("experience", int(world.call("_experience_required", 4)) - stage_two_reward)
 	var xp_test_zombie: Node3D
@@ -318,6 +336,10 @@ func _run() -> void:
 			xp_test_zombie = zombie
 			break
 	world.call("_on_zombie_died", xp_test_zombie)
+	_check(int(game.get("_meta_progress").get("coins")) > coins_before_kill,
+		"Kill zombie tidak memberi koin persisten")
+	_check(bool(survival_hud.get("kill_label").text.contains("KOIN")),
+		"HUD Survival tidak menampilkan saldo koin")
 	_check(int(world.get("run_level")) == 5,
 		"EXP tidak menaikkan level sampai level 5")
 	_check(bool(world.get("_awaiting_buff_choice")) and paused,
@@ -347,8 +369,24 @@ func _run() -> void:
 	_check(bool(buffs.call("apply_buff", "cinder_orbit")),
 		"Buff api orbit tidak dapat diambil")
 	var orbit_nodes: Array = buffs.get("_orbit_nodes")
-	_check(orbit_nodes.size() >= 3,
-		"Buff api orbit tidak memunculkan efek mengelilingi karakter")
+	_check(orbit_nodes.size() == 2,
+		"Stack pertama orbit bara harus memunculkan dua api orbit")
+	if orbit_nodes.size() == 2:
+		var orbit_radius := Vector2(orbit_nodes[0].position.x, orbit_nodes[0].position.z).length()
+		_check(orbit_radius >= 1.45,
+			"Api orbit terlalu rapat ke pemain: %.2f m" % orbit_radius)
+	_check(bool(buffs.call("apply_buff", "cinder_orbit")),
+		"Stack kedua Orbit Bara gagal")
+	var two_stack_orbit: Array = buffs.get("_orbit_nodes")
+	_check(two_stack_orbit.size() == 3,
+		"Stack kedua Orbit Bara tidak menambah api orbit")
+	_check(bool(buffs.call("apply_buff", "cinder_orbit")),
+		"Stack ketiga Orbit Bara gagal")
+	var three_stack_orbit: Array = buffs.get("_orbit_nodes")
+	_check(three_stack_orbit.size() == 4,
+		"Stack ketiga Orbit Bara tidak menambah api orbit")
+	_check(not bool(buffs.call("apply_buff", "cinder_orbit")),
+		"Orbit Bara melewati batas stack")
 	_check(bool(buffs.call("apply_buff", "arcane_aegis")),
 		"Buff shield arcana tidak dapat diambil")
 	var aegis_mesh: MeshInstance3D = buffs.get("_aegis_mesh")
@@ -372,6 +410,12 @@ func _run() -> void:
 		"Buff echo prismatik tidak dapat diambil")
 	_check(float(pet.get("extra_shot_chance")) > base_echo_chance,
 		"Echo prismatik tidak menaikkan peluang tembakan ganda")
+	_check(bool(buffs.call("apply_buff", "soul_lance")),
+		"Skill single-target Tombak Jiwa tidak dapat dipilih")
+	_check(float(pet.get("single_target_multiplier")) >= 1.08,
+		"Tombak Jiwa tidak memperkuat proyektil terkunci")
+	_check(bool(buffs.call("apply_buff", "hunter_brand")),
+		"Skill tanda single-target tidak dapat dipilih")
 	var capacity_before_ward := int(player.get("shield_capacity"))
 	_check(bool(buffs.call("apply_buff", "soul_ward")),
 		"Buff perisai jiwa tidak dapat diambil")
@@ -418,6 +462,9 @@ func _run() -> void:
 		_check(float(live_burn_target.get("_slow_left")) > 0.0
 			and float(live_burn_target.get("_slow_multiplier")) < 1.0,
 			"Runa embun tidak memperlambat zombie")
+		_check(float(live_burn_target.get("_arcane_mark_left")) > 0.0
+			and float(live_burn_target.get("_arcane_mark_bonus")) > 0.0,
+			"Cap Pemburu tidak menandai target tunggal")
 		if chain_target != null:
 			_check(int(chain_target.get("health")) < chain_health_before,
 				"Rantai petir tidak memberi damage ke zombie lain")
@@ -465,11 +512,92 @@ func _run() -> void:
 			"Kill tidak mengisi shield Perisai Jiwa")
 		_check(float(pet.get("cooldown")) < cooldown_before_kill,
 			"Kill tidak memangkas cooldown dengan Ritme Penuai")
+	var skill_target: Node3D
+	for zombie in zombies:
+		if is_instance_valid(zombie) and zombie.can_be_targeted():
+			skill_target = zombie
+			break
+	if skill_target != null:
+		var pulse_probe := BuffSystem.new()
+		pulse_probe.player = player
+		pulse_probe.world = world
+		pulse_probe.stacks = {"cinder_pulse": 1}
+		for _hit in 5:
+			pulse_probe.call("_on_magic_impact", skill_target, FirePet.MAGIC_DAMAGE, false)
+		var pulse_waves: Array = pulse_probe.get("_skill_waves")
+		_check(pulse_waves.size() == 1,
+			"Denyut Bara tidak memicu gelombang AoE berkala")
+		pulse_probe.free()
+	var storm_probe := BuffSystem.new()
+	storm_probe.player = player
+	storm_probe.world = world
+	storm_probe.stacks = {"firestorm_aura": 1}
+	storm_probe.call("_process", 5.3)
+	var storm_waves: Array = storm_probe.get("_skill_waves")
+	_check(storm_waves.size() == 1,
+		"Badai Api tidak memicu gelombang AoE otomatis")
+	storm_probe.free()
 	for _frame in range(50):
 		await physics_frame
 	_check(int(world.get("experience")) >= 0
 		and int(world.get("run_level")) == 5,
 		"Level/EXP berubah tidak semestinya setelah memilih buff")
+
+	# Boss muncul di awal stage kelipatan lima; tower baru hadir setelah timer stage selesai.
+	world.set("run_level", 1)
+	world.set("experience", 0)
+	world.set("stage", 4)
+	world.set("_stage_elapsed", SurvivalWorld.STAGE_DURATION - 0.2)
+	world.set("_spawn_cooldown", 100.0)
+	world.call("_process", 0.3)
+	_check(int(world.get("stage")) == 5, "Stage 5 tidak dimulai")
+	var boss: Node3D = world.get("boss")
+	_check(boss != null and bool(boss.get("is_boss")),
+		"Boss raksasa tidak muncul pada stage 5")
+	if boss != null:
+		_check(float(boss.get("max_health")) >= 900.0
+			and str(boss.get("boss_name")) == "GOLIAT ABU",
+			"Boss stage 5 tidak punya nama/HP khusus")
+		var boss_visual: Node3D = boss.get("visual")
+		_check(boss_visual != null and float(boss_visual.scale.x) >= 1.6,
+			"Model boss tidak terlihat raksasa")
+		var character_skin: Object = boss_visual.get("skin")
+		var boss_skin := character_skin.get("skin") as ShaderMaterial
+		var boss_light: Color = boss_skin.get_shader_parameter("skin_light")
+		_check(boss_light.b > boss_light.r,
+			"Skin boss stage 5 tidak berbeda dari zombie biasa")
+	var later_boss := Zombie.new()
+	later_boss.call("set_stage_difficulty", 10, true)
+	var stage_five_name := str(boss.get("boss_name")) if boss != null else ""
+	_check(str(later_boss.get("boss_name")) != stage_five_name,
+		"Boss stage 10 tidak mendapat identitas skin berbeda")
+	later_boss.free()
+	_check(survival_hud.boss_panel.visible,
+		"Bar HP boss tidak tampil saat boss muncul")
+	world.set("_stage_elapsed", SurvivalWorld.STAGE_DURATION - 0.1)
+	world.call("_process", 0.2)
+	var tower: Node3D = world.get("tower")
+	_check(tower != null and bool(world.get("_tower_active"))
+		and int(world.get("stage")) == 5,
+		"Tower pilihan tidak muncul setelah stage 5 selesai")
+	if tower != null:
+		player.global_position += Vector3(24.0, 0.0, 0.0)
+		world.call("_process", 0.1)
+		_check(not bool(world.get("_awaiting_tower_choice")),
+			"Pilihan tower muncul sebelum pemain mendekat")
+		player.global_position = tower.global_position + Vector3(0.0, Player.HEIGHT * 0.5, 2.0)
+		world.call("_process", 0.1)
+		_check(bool(world.get("_awaiting_tower_choice")) and paused,
+			"Masuk area tower tidak membuka pilihan lanjut/keluar")
+		_check(int(world.call("living_zombie_count")) == 0,
+			"Gelombang tower tidak membersihkan semua zombie")
+		_check(survival_hud.get_node("TowerChoiceBackdrop").visible,
+			"Dialog pilihan tower tidak tampil")
+		survival_hud.call("_finish_tower_choice", "continue")
+		_check(not paused and int(world.get("stage")) == 6,
+			"Pilihan lanjut tidak memulai stage berikutnya")
+	_check(int(game.get("_meta_progress").get("coins")) > coins_before_kill,
+		"Hadiah koin tower/boss tidak tersimpan")
 
 	# Mati di Survival harus membangun kembali hub, bukan meninggalkan arena kosong.
 	player.call("take_damage", 1000)
@@ -486,6 +614,9 @@ func _run() -> void:
 	var survival_panel: Control = game.get("_survival_panel")
 	_check(survival_panel != null and not survival_panel.visible,
 		"Panel Survival masih tampil di home")
+	_check(not survival_hud.get_node("BossHealthPanel").visible
+		and not survival_hud.get_node("TowerPrompt").visible,
+		"Panel boss/prompt tower tertinggal setelah kembali ke home")
 	_check(int(player.get("health")) == 100, "HP tidak pulih setelah kembali ke home")
 	_check(is_equal_approx(float(orbit.get("pitch")), home_pitch),
 		"Kamera tidak kembali ke sudut home")
@@ -516,9 +647,21 @@ func _run() -> void:
 		"Buff/bonus HP tersimpan saat mulai run baru")
 	_check(not bool(orbit.get("zoom_enabled")) and is_equal_approx(float(orbit.get("distance")), 17.0),
 		"Kamera top-down tidak terkunci permanen pada run baru")
+	fresh_world.set("_awaiting_tower_choice", true)
+	fresh_world.call("choose_tower_action", "exit")
+	_check(str(game.get("_active_mode")) == "hub"
+		and game.get("_survival_world") == null,
+		"Pilihan keluar di tower tidak kembali ke home")
 	print("[survival-test] top-down=OK autofire=%d stage=2 level=5 reset-run=%s gagal=%d" % [
 		shots_after - shots_before, str(returned_home), _failures])
 	game.queue_free()
 	await process_frame
+	_remove_test_meta_save()
 	print("[survival-test] HASIL: ", "OK" if _failures == 0 else "GAGAL")
 	quit(0 if _failures == 0 else 1)
+
+
+func _remove_test_meta_save() -> void:
+	var path := ProjectSettings.globalize_path(TEST_META_SAVE_PATH)
+	if FileAccess.file_exists(path):
+		DirAccess.remove_absolute(path)

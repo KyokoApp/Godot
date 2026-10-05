@@ -1,6 +1,5 @@
 extends Node3D
-## Pulau 100 m × 100 m dengan bukit bergulir, garis pantai berlekuk, pemain
-## beranimasi, dan seorang NPC. Karakter memakai katalog 85 klip UAL1 + UAL2.
+## Pulau 100 m × 100 m, pemain beranimasi UAL1/UAL2, dan seorang NPC.
 
 const Field = preload("res://src/game/world/field.gd")
 const Scenery = preload("res://src/game/world/scenery.gd")
@@ -10,6 +9,7 @@ const NPCInteraction = preload("res://src/game/ui/npc_interaction.gd")
 const ModeSelector = preload("res://src/game/ui/game_mode_selector.gd")
 const SurvivalWorld = preload("res://src/game/world/survival_world.gd")
 const SurvivalHUD = preload("res://src/game/ui/survival_hud.gd")
+const MetaProgress = preload("res://src/game/survival/meta_progress.gd")
 const Grass = preload("res://src/game/grass_field.gd")
 const Player = preload("res://src/game/player.gd")
 const Character = preload("res://src/game/mannequin.gd")
@@ -28,9 +28,8 @@ const ClipBanner = preload("res://src/game/ui/clip_banner.gd")
 const Catalog = preload("res://src/game/animation/catalog.gd")
 const PerformancePanel = preload("res://src/game/performance_panel.gd")
 const ShaderWarmup = preload("res://src/game/loading/shader_warmup.gd")
-## Jejak boot ditulis langsung ke berkas yang sama dengan launcher (lihat
-## project/launcher/boot_trace.gd). Tidak boleh preload skrip launcher di sini:
-## main.gd ikut ke PCK sedangkan launcher/* justru dikecualikan dari PCK.
+## Jangan preload skrip launcher: launcher/* dikecualikan dari PCK game.
+## Penanda boot memakai berkas yang sama dengan project/launcher/boot_trace.gd.
 const BOOT_TRACE := "user://boot_trace.txt"
 const BOOT_READY := "game ready"
 const FIRE_ICON = preload("res://src/game/ui/flame.svg")
@@ -66,6 +65,7 @@ var _npc_interaction: NPCInteraction
 var _mode_selector: ModeSelector
 var _survival_world: SurvivalWorld
 var _survival_hud: SurvivalHUD
+var _meta_progress: Object
 var _active_mode := "hub"
 var _home_camera_state: Dictionary = {}
 var _death_return_pending := false
@@ -109,6 +109,7 @@ var _layout_suppress := false
 
 
 func _ready() -> void:
+	_meta_progress = MetaProgress.new()
 	_previous_occlusion = get_viewport().use_occlusion_culling
 	get_viewport().use_occlusion_culling = true
 	_build_environment()
@@ -138,13 +139,10 @@ func _build_environment() -> void:
 func _build_world() -> void:
 	_field = Field.new()
 	add_child(_field)
-	# Pemandangan di luar pulau: bukit jauh, tebing batu, laut, reruntuhan batu,
-	# titik cahaya — disusun seperti ilustrasi layar muat. Tanpa collision, jadi
-	# gameplay di pulau tidak berubah.
+	# Scenery hub tanpa collision; haze horizon khusus home, bukan Survival.
 	_scenery = Scenery.new()
 	add_child(_scenery)
-	# Dedaunan Quaternius (pohon, semak, batu, pakis, bunga) di dalam pulau.
-	# MultiMesh: satu panggilan gambar per model, tidak ada collision.
+	# Dedaunan pulau memakai MultiMesh tanpa collision.
 	_forest = Forest.new()
 	add_child(_forest)
 
@@ -152,8 +150,7 @@ func _build_world() -> void:
 func _build_player() -> void:
 	_player = Player.new()
 	_player.field = _field
-	# Chunk tanah mengikuti pemain; tanpa ini pulau tidak pernah memuat chunk
-	# baru dan tanahnya berlubang di belakang pemain.
+	# Chunk tanah mengikuti pemain supaya pulau tetap terisi di belakangnya.
 	_field.player = _player
 	add_child(_player)
 	_visual = Character.new()
@@ -278,14 +275,8 @@ func _build_hud() -> void:
 	_attack.name = "AttackRune"
 	_attack.tooltip_text = "Ayunan pedang; tap lagi setelah serangan selesai"
 	layer.add_child(_attack)
-	# Serang sengaja TIDAK di pojok: dulu pas di sudut layar dan susah ditekan
-	# dengan ibu jari. Sekarang tombolnya berhenti ±130-200 px dari tepi
-	# kanan/bawah (zona nyaman ibu jari), dan tombol lain disebar melengkung di
-	# sekitarnya dengan jarak lega supaya tidak salah pencet.
-	# BATASAN: posisi ditulis sebagai offset piksel dari pojok kanan-bawah, dan
-	# CI menguji HUD di 640x360 sementara HP memakai 1280x720. Jadi offset
-	# vertikal dibatasi ±300 px supaya TENGAH setiap tombol tetap masuk layar di
-	# kedua ukuran (tes menyentuh tombol pada titik tengahnya).
+	# Letakkan tombol serang jauh dari tepi untuk jangkauan ibu jari yang nyaman.
+	# Offset diuji pada 640×360 dan 1280×720 agar setiap tombol tetap terlihat.
 	_place(_attack, Control.PRESET_BOTTOM_RIGHT, -200, -200)
 	_register_hud_control("Serang", _attack, ATTACK_DIAMETER, -200, -200)
 	_attack.pressed.connect(_attack_action)
@@ -312,15 +303,13 @@ func _build_hud() -> void:
 	_speed_button.name = "SpeedBoost"
 	_speed_button.caption = "LARI"
 	_speed_button.tooltip_text = "Lari kencang ×1,35 / normal"
-	# Ukuran WAJIB diisi: tanpa custom_minimum_size, _place() menghitung diameter
-	# 0 dan tombol ini jadi nol piksel (tidak bisa ditekan sama sekali).
+	# Wajib punya ukuran minimum agar tombol tidak menjadi nol piksel.
 	_speed_button.custom_minimum_size = Vector2(SPEED_DIAMETER, SPEED_DIAMETER)
 	layer.add_child(_speed_button)
 	_place(_speed_button, Control.PRESET_BOTTOM_RIGHT, -460, -300)
 	_register_hud_control("Lari", _speed_button, SPEED_DIAMETER, -460, -300)
 	_speed_button.pressed.connect(_toggle_speed)
-	# Dash: dorongan lurus 12 m/s dengan animasi lari diperlambat satu langkah.
-	# Ditaruh di atas tombol serang, mudah dijangkau.
+	# Dash ditempatkan di atas tombol serang agar mudah dijangkau.
 	_dash = _rune("DASH", DASH_DIAMETER, DASH_ICON)
 	_dash.name = "DashRune"
 	_dash.tooltip_text = "Dash: menerjang lurus sebentar"
@@ -335,7 +324,6 @@ func _build_hud() -> void:
 	_panel.character = _visual
 	layer.add_child(_panel)
 	_panel.closed.connect(_close_panel)
-	# Analog tidak boleh ikut aktif saat tombol HUD ditekan.
 	_joystick.input_exclusions = [_survival_panel, _panel, _graphics_drawer, _layout_editor, _settings,
 		_layout_button, _catalog_button, _attack, _fire_button, _jump, _crouch,
 		_speed_button, _dash]
@@ -348,6 +336,7 @@ func _build_hud() -> void:
 	_npc_interaction.joystick = _joystick
 	_npc_interaction.orbit = _orbit
 	_npc_interaction.canvas_layer = layer
+	_npc_interaction.meta_progress = _meta_progress
 	_npc_interaction.controls_to_hide = [
 		_joystick, _banner, _settings, _layout_button, _catalog_button, _attack,
 		_fire_button, _jump, _crouch, _speed_button, _dash, _panel,
@@ -708,6 +697,7 @@ func _enter_survival() -> void:
 	_survival_world = SurvivalWorld.new()
 	_survival_world.player = _player
 	_survival_world.fire_pet = _pet
+	_survival_world.meta_progress = _meta_progress
 	add_child(_survival_world)
 	_player.field = _survival_world.ground
 	_player.world_bounds_enabled = false
@@ -719,7 +709,10 @@ func _enter_survival() -> void:
 	_player.set_sword_mode(false)
 	_survival_world.status_changed.connect(_survival_status.set_text)
 	_survival_world.progression_changed.connect(_survival_hud.update_progress)
+	_survival_world.boss_health_changed.connect(_survival_hud.update_boss)
 	_survival_world.buff_choice_requested.connect(_on_survival_buff_choice_requested)
+	_survival_world.tower_choice_requested.connect(_on_survival_tower_choice_requested)
+	_survival_world.leave_requested.connect(_return_home_from_survival.bind(true))
 	_survival_world.publish_progress()
 	_footsteps.field = _survival_world.ground
 	_foot_fire.field = _survival_world.ground
@@ -761,8 +754,15 @@ func _on_survival_buff_choice_requested(choices: Array, level: int) -> void:
 	_survival_hud.show_buff_choices(_survival_world, choices, level)
 
 
-func _return_home_from_survival() -> void:
-	if _active_mode != "survival" or not _death_return_pending or _player.health > 0:
+func _on_survival_tower_choice_requested() -> void:
+	if _active_mode != "survival" or _survival_hud == null \
+			or not is_instance_valid(_survival_world):
+		return
+	_survival_hud.show_tower_choice(_survival_world)
+
+
+func _return_home_from_survival(force: bool = false) -> void:
+	if _active_mode != "survival" or (not force and (not _death_return_pending or _player.health > 0)):
 		return
 	_death_return_pending = false
 	_active_mode = "hub"
@@ -773,6 +773,7 @@ func _return_home_from_survival() -> void:
 	_pet.set_rapid_fire(false)
 	if _panel.visible:
 		_panel.close_panel()
+	_survival_hud.call("hide_tower_choice")
 	_graphics_drawer.hide()
 	_layout_editor.hide()
 	_mode_selector.hide()
@@ -806,7 +807,7 @@ func _return_home_from_survival() -> void:
 	_survival_panel.hide()
 	_on_health_changed(_player.health)
 	_apply_input_state()
-	print("[main] mati di Survival; kembali ke home hub")
+	print("[main] run Survival selesai; kembali ke home hub")
 
 
 # --------------------------------------------------------------- aksi HUD --
@@ -883,8 +884,7 @@ func _apply_input_state() -> void:
 	_orbit.reset_touches()
 	_orbit.input_enabled = not overlay
 	_settings.visible = not selector_open and not _death_return_pending
-	# HUD analog-only: semua aksi tombol disembunyikan dan tidak bisa dipicu.
-	# Tembakan otomatis Survival berjalan mandiri dari loop utama, bukan tombol.
+	# HUD analog-only; tembakan otomatis Survival berjalan mandiri.
 	_layout_button.hide()
 	for control: Control in [_attack, _fire_button, _jump, _crouch, _speed_button, _dash]:
 		control.hide()
@@ -921,17 +921,13 @@ func _physics_process(delta: float) -> void:
 		return
 	_orbit.follow(_player.global_position + _orbit.focus_offset, delta)
 	_footsteps.update_motion(delta, _player.move_speed)
-	# Efek kecepatan: pita jejak + asap + bloom layar. `_player.dashing` membuat
-	# efeknya jauh lebih kuat saat dash daripada saat sekadar boost.
+	# Trail dan bloom diperkuat selama dash.
 	_speed_aura.update_motion(delta, _player.move_speed,
 		_player.boosted and _player.grounded)
 	_update_dash_bloom(delta)
 
 
-## Pancaran bloom pada KARAKTER saat dash (permintaan ronde 18: "efek blur/glow
-## di karakter, bukan hanya setelah gambar"). Kulit menyala di pinggir siluet
-## dengan warna yang melewati ambang glow, jadi benar-benar mekar, lalu memudar
-## perlahan sesudah dash selesai.
+## Glow karakter memudar lembut setelah dash selesai.
 func _update_dash_bloom(delta: float) -> void:
 	if _visual == null or _visual.skin == null:
 		return
@@ -949,6 +945,8 @@ func _update_dash_bloom(delta: float) -> void:
 
 
 func _process(delta: float) -> void:
+	if _meta_progress != null:
+		_meta_progress.call("tick_save", delta)
 	_fire_button.cooldown_fraction = clampf(
 		_pet.cooldown / maxf(_pet.cooldown_duration, 0.001), 0, 1)
 	_fire_button.queue_redraw()
@@ -997,4 +995,6 @@ func _write_boot_marker() -> void:
 
 
 func _exit_tree() -> void:
+	if _meta_progress != null:
+		_meta_progress.call("save")
 	get_viewport().use_occlusion_culling = _previous_occlusion

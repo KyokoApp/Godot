@@ -1646,3 +1646,26 @@ sihir yang sudah tersedia dan kunci otomatis ke zombie.
   Vulkan (termasuk pose casting tertahan dan pemulihannya), ekspor PCK/APK, audit
   APK, dan boot launcher. APK: **[`build-c0aa56b`](https://github.com/KyokoApp/Godot/releases/tag/build-c0aa56b)**.
   Render regresi CI lolos; tes langsung di perangkat Android fisik belum dilakukan.
+
+## Ronde 29 — boss/tower Survival, koin-upgrade, dan horizon berkabut
+
+- Source `CityHorizon` menambah skyline MultiMesh, dua lapis bukit jauh, dan
+  shader haze tebal melalui scenery home/hub; `SurvivalWorld` tidak membuat
+  scenery tersebut.
+- Impact tembakan dasar tidak lagi membuat burst/percikan/ledakan. Ekor proyektil
+  diperingan, batas proyektil rapid-fire diturunkan, sementara AoE skill tetap
+  terpisah dan dibatasi node aktifnya. Tambahan skill mencakup AoE berkala/aura
+  serta bonus single-target. Orbit Bara dimulai dengan dua api dan setiap stack
+  menambah proyektil serta memperlebar orbit; tween kartu dibuat lebih lembut.
+- Source stage milestone menambah boss raksasa berskin khusus, HUD HP boss, tower
+  setelah timer selesai, gelombang pembersih saat pemain mendekat, dan pilihan
+  lanjut/pulang. Kill memberi koin persisten; opsi INVENTARIS NPC diarahkan ke
+  panel 13 upgrade atribut dengan harga/level bertahap.
+- Kamera Survival disetel ke pitch 1,28 radian; arah cahaya bulan menjadi sekitar
+  20° di atas horizon dan jarak shadow map dibatasi 96 m.
+- `tools/test_survival.gd`, `tools/test_fire_pet.gd`, `tools/test_npc.gd`,
+  `tools/test_scenery.gd`, dan tes baru `tools/test_meta_progress.gd` diperbarui.
+  Pemeriksaan lokal statis lulus (`gdparse`, `gdlint`, cek tipe, lisensi, chunk,
+  katalog animasi, YAML workflow, dan `git diff --check`). Godot 4.5.2 compile,
+  tes headless, dan render Mobile Vulkan belum dijalankan, jadi tampilan/runtime
+  belum dikonfirmasi dan belum boleh dianggap lulus CI.

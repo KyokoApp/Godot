@@ -13,6 +13,10 @@ var level_label: Label
 var kill_label: Label
 var xp_bar: ProgressBar
 var xp_text: Label
+var boss_panel: PanelContainer
+var boss_name_label: Label
+var boss_bar: ProgressBar
+var _tower_prompt: Label
 
 var _choice_layer: ColorRect
 var _choice_panel: PanelContainer
@@ -24,6 +28,12 @@ var _health_tween: Tween
 var _xp_tween: Tween
 var _feedback_tween: Tween
 var _xp_feedback: Label
+var _tower_choice_layer: ColorRect
+var _tower_choice_panel: PanelContainer
+var _tower_choice_world: Node
+var _tower_choice_locked := false
+var _boss_tween: Tween
+var _tower_tween: Tween
 
 
 func _ready() -> void:
@@ -32,7 +42,10 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	z_index = 100
 	_build_profile()
+	_build_boss_profile()
+	_build_tower_prompt()
 	_build_choice_layer()
+	_build_tower_choice_layer()
 	get_viewport().size_changed.connect(_layout_for_viewport)
 	_layout_for_viewport()
 
@@ -70,8 +83,9 @@ func update_progress(data: Dictionary) -> void:
 	var current_xp := int(data.get("xp", 0))
 	var required_xp := maxi(1, int(data.get("xp_to_next", 80)))
 	var kills := int(data.get("kills", 0))
+	var coins := int(data.get("coins", 0))
 	level_label.text = "LEVEL %02d" % current_level
-	kill_label.text = "KILL %03d" % kills
+	kill_label.text = "KILL %03d  ·  KOIN %d" % [kills, coins]
 	xp_bar.max_value = required_xp
 	if _xp_tween != null and _xp_tween.is_running():
 		_xp_tween.kill()
@@ -81,11 +95,31 @@ func update_progress(data: Dictionary) -> void:
 	_xp_tween.tween_property(xp_bar, "value", clampi(current_xp, 0, required_xp), 0.35)
 	var award := int(data.get("xp_awarded", 0))
 	xp_text.text = "EXP %d / %d" % [current_xp, required_xp]
+	if is_instance_valid(_tower_prompt):
+		_tower_prompt.visible = bool(data.get("tower_active", false)) \
+			and not bool(data.get("tower_choice", false))
 	if award > 0:
 		_show_xp_feedback(award)
 	if data.has("health"):
 		update_health(int(data.get("health", 0)), int(data.get("max_health", 100)),
 			int(data.get("shield", 0)), int(data.get("shield_capacity", 0)))
+
+
+func update_boss(current: int, maximum: int, boss_name: String, active: bool) -> void:
+	if not is_instance_valid(boss_panel):
+		return
+	boss_panel.visible = active
+	if not active:
+		return
+	var safe_maximum := maxi(1, maximum)
+	boss_name_label.text = "%s  ·  %d / %d" % [boss_name, current, safe_maximum]
+	boss_bar.max_value = safe_maximum
+	if _boss_tween != null and _boss_tween.is_running():
+		_boss_tween.kill()
+	_boss_tween = create_tween()
+	_boss_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	_boss_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_boss_tween.tween_property(boss_bar, "value", clampi(current, 0, safe_maximum), 0.22)
 
 
 func show_buff_choices(world: Node, choices: Array, level: int) -> void:
@@ -96,7 +130,7 @@ func show_buff_choices(world: Node, choices: Array, level: int) -> void:
 	_choice_layer.visible = true
 	_choice_layer.color = Color(0.018, 0.018, 0.035, 0.0)
 	_choice_panel.modulate.a = 0.0
-	_choice_panel.scale = Vector2(0.94, 0.94)
+	_choice_panel.scale = Vector2(0.975, 0.975)
 	_choice_panel.pivot_offset = _choice_panel.size * 0.5
 	_clear_choice_cards()
 	var chosen_count := 0
@@ -105,17 +139,61 @@ func show_buff_choices(world: Node, choices: Array, level: int) -> void:
 		_choice_row.add_child(card)
 		card.configure(card_data, int(card_data.get("stack_count", 0)))
 		card.pressed.connect(_on_buff_card_pressed.bind(str(card_data.get("id", ""))))
-		card.reveal(float(chosen_count) * 0.09)
+		card.reveal(float(chosen_count) * 0.10)
 		chosen_count += 1
 	_choice_title.text = "LEVEL %02d  ·  PILIH SATU BERKAH" % level
 	_layout_for_viewport()
 	var tween := create_tween()
 	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	tween.parallel().tween_property(_choice_layer, "color:a", 0.76, 0.28)
-	tween.parallel().tween_property(_choice_panel, "modulate:a", 1.0, 0.24)
-	tween.parallel().tween_property(_choice_panel, "scale", Vector2.ONE, 0.3)
+	tween.parallel().tween_property(_choice_layer, "color:a", 0.74, 0.32)
+	tween.parallel().tween_property(_choice_panel, "modulate:a", 1.0, 0.30)
+	tween.parallel().tween_property(_choice_panel, "scale", Vector2.ONE, 0.34)
 	get_tree().paused = true
+
+
+func show_tower_choice(world: Node) -> void:
+	if _tower_choice_locked or not is_instance_valid(world):
+		return
+	_tower_choice_world = world
+	_tower_choice_locked = true
+	_tower_prompt.hide()
+	_tower_choice_layer.visible = true
+	_tower_choice_layer.color = Color(0.018, 0.012, 0.035, 0.0)
+	_tower_choice_panel.modulate.a = 0.0
+	_tower_choice_panel.scale = Vector2(0.97, 0.97)
+	_tower_choice_panel.pivot_offset = _tower_choice_panel.size * 0.5
+	var tween := create_tween()
+	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tween.set_parallel(true)
+	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_tower_choice_layer, "color:a", 0.78, 0.24)
+	tween.tween_property(_tower_choice_panel, "modulate:a", 1.0, 0.28)
+	tween.tween_property(_tower_choice_panel, "scale", Vector2.ONE, 0.32)
+	get_tree().paused = true
+
+
+func _finish_tower_choice(action: String) -> void:
+	if not _tower_choice_locked:
+		return
+	_tower_choice_locked = false
+	var world := _tower_choice_world
+	_tower_choice_world = null
+	if is_instance_valid(world):
+		world.call("choose_tower_action", action)
+	_tower_choice_layer.visible = false
+	get_tree().paused = false
+
+
+func hide_tower_choice() -> void:
+	_tower_choice_locked = false
+	_tower_choice_world = null
+	_tower_choice_layer.visible = false
+	_tower_prompt.hide()
+	boss_panel.hide()
+	_xp_feedback.hide()
+	if get_tree().paused:
+		get_tree().paused = false
 
 
 func _build_profile() -> void:
@@ -231,6 +309,53 @@ func _build_profile() -> void:
 	add_child(_xp_feedback)
 
 
+func _build_boss_profile() -> void:
+	boss_panel = PanelContainer.new()
+	boss_panel.name = "BossHealthPanel"
+	boss_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	boss_panel.visible = false
+	boss_panel.add_theme_stylebox_override("panel", _make_panel_style(
+		Color(0.05, 0.025, 0.07, 0.94), Color(0.88, 0.46, 0.94, 0.86), 10))
+	add_child(boss_panel)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_top", 6)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_bottom", 6)
+	boss_panel.add_child(margin)
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 3)
+	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	margin.add_child(content)
+	boss_name_label = Label.new()
+	boss_name_label.text = "GOLIAT ABU"
+	boss_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	boss_name_label.add_theme_font_size_override("font_size", 11)
+	boss_name_label.add_theme_color_override("font_color", Color("#f0d8ff"))
+	boss_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_child(boss_name_label)
+	boss_bar = _make_progress_bar(Color("#d483ed"), 9)
+	boss_bar.max_value = 100
+	boss_bar.value = 100
+	boss_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_child(boss_bar)
+
+
+func _build_tower_prompt() -> void:
+	_tower_prompt = Label.new()
+	_tower_prompt.name = "TowerPrompt"
+	_tower_prompt.text = "DEKATI MENARA UNTUK MEMBUKA GERBANG"
+	_tower_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_tower_prompt.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_tower_prompt.add_theme_font_size_override("font_size", 14)
+	_tower_prompt.add_theme_color_override("font_color", Color("#f1d9ff"))
+	_tower_prompt.add_theme_constant_override("outline_size", 3)
+	_tower_prompt.add_theme_color_override("font_outline_color", Color(0.06, 0.035, 0.10, 0.95))
+	_tower_prompt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tower_prompt.visible = false
+	add_child(_tower_prompt)
+
+
 func _build_choice_layer() -> void:
 	_choice_layer = ColorRect.new()
 	_choice_layer.name = "BuffChoiceBackdrop"
@@ -297,6 +422,73 @@ func _build_choice_layer() -> void:
 	content.add_child(footer)
 
 
+func _build_tower_choice_layer() -> void:
+	_tower_choice_layer = ColorRect.new()
+	_tower_choice_layer.name = "TowerChoiceBackdrop"
+	_tower_choice_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_tower_choice_layer.color = Color(0.018, 0.012, 0.035, 0.0)
+	_tower_choice_layer.visible = false
+	_tower_choice_layer.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_tower_choice_layer)
+	_tower_choice_panel = PanelContainer.new()
+	_tower_choice_panel.name = "TowerChoicePanel"
+	_tower_choice_panel.add_theme_stylebox_override("panel", _make_panel_style(
+		Color(0.04, 0.035, 0.075, 0.98), Color(0.80, 0.61, 0.96, 0.9), 16))
+	_tower_choice_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_tower_choice_layer.add_child(_tower_choice_panel)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 18)
+	margin.add_theme_constant_override("margin_top", 18)
+	margin.add_theme_constant_override("margin_right", 18)
+	margin.add_theme_constant_override("margin_bottom", 16)
+	_tower_choice_panel.add_child(margin)
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 12)
+	margin.add_child(content)
+	var title := Label.new()
+	title.text = "GERBANG STAGE TERBUKA"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 19)
+	title.add_theme_color_override("font_color", Color("#f4dfac"))
+	content.add_child(title)
+	var hint := Label.new()
+	hint.text = "Gelombang tower membersihkan arena. Mau lanjut atau pulang?"
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 11)
+	hint.add_theme_color_override("font_color", Color("#c6bfd4"))
+	content.add_child(hint)
+	var actions := HBoxContainer.new()
+	actions.add_theme_constant_override("separation", 10)
+	actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	content.add_child(actions)
+	var continue_button := _tower_action_button("LANJUT STAGE", Color("#4a365f"))
+	continue_button.name = "ContinueStage"
+	continue_button.pressed.connect(_finish_tower_choice.bind("continue"))
+	actions.add_child(continue_button)
+	var exit_button := _tower_action_button("KEMBALI HOME", Color("#393341"))
+	exit_button.name = "ExitToHome"
+	exit_button.pressed.connect(_finish_tower_choice.bind("exit"))
+	actions.add_child(exit_button)
+
+
+func _tower_action_button(caption: String, fill: Color) -> Button:
+	var button := Button.new()
+	button.text = caption
+	button.custom_minimum_size = Vector2(142, 52)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_font_size_override("font_size", 12)
+	button.add_theme_color_override("font_color", Color("#f2edf8"))
+	button.add_theme_stylebox_override("normal", _make_panel_style(fill,
+		Color(0.78, 0.67, 0.91, 0.72), 9))
+	button.add_theme_stylebox_override("hover", _make_panel_style(
+		Color(0.32, 0.24, 0.45), Color("#f0d18a"), 9))
+	button.add_theme_stylebox_override("pressed", _make_panel_style(
+		Color(0.39, 0.28, 0.52), Color("#f0d18a"), 9))
+	return button
+
+
 func _layout_for_viewport() -> void:
 	if not is_instance_valid(profile_panel) or not is_instance_valid(_choice_panel):
 		return
@@ -314,6 +506,20 @@ func _layout_for_viewport() -> void:
 	for card in _choice_row.get_children():
 		if card is Control:
 			card.custom_minimum_size = Vector2(card_width, card_height)
+	if is_instance_valid(boss_panel):
+		var boss_width := minf(420.0, maxf(250.0, viewport.x - 32.0))
+		var boss_y := 16.0 if viewport.x >= 900.0 else 150.0
+		boss_panel.position = Vector2((viewport.x - boss_width) * 0.5, boss_y)
+		boss_panel.size = Vector2(boss_width, 56.0)
+	if is_instance_valid(_tower_prompt):
+		var prompt_width := minf(500.0, maxf(240.0, viewport.x - 24.0))
+		_tower_prompt.position = Vector2((viewport.x - prompt_width) * 0.5, viewport.y - 84.0)
+		_tower_prompt.size = Vector2(prompt_width, 48.0)
+	if is_instance_valid(_tower_choice_panel):
+		var tower_width := minf(560.0, maxf(280.0, viewport.x - 24.0))
+		_tower_choice_panel.size = Vector2(tower_width, 230.0)
+		_tower_choice_panel.position = (viewport - _tower_choice_panel.size) * 0.5
+		_tower_choice_panel.pivot_offset = _tower_choice_panel.size * 0.5
 
 
 func _on_buff_card_pressed(buff_id: String) -> void:

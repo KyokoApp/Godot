@@ -1,5 +1,29 @@
 # STATUS TERBARU — prioritas dari pengguna
 
+- 2026-10-06 (cicilan 29) — **SURVIVAL: BOSS/TOWER, KOIN/UPGRADE, HORIZON BERKABUT, EFEK SIHIR RINGAN**
+  - `CityHorizon` menambah 56 gedung dalam satu MultiMesh, dua lapis bukit jauh,
+    dan haze shader tebal; hanya dibuat lewat `Scenery` home/hub. `SurvivalWorld`
+    tetap tidak memuat scenery tersebut.
+  - Tembakan dasar tidak lagi membuat ledakan, percikan, atau lampu impact;
+    ekor api 4 partikel dan batas auto-fire 10 proyektil. AoE skill memakai
+    `SkillWave` terpisah (maksimum 3 gelombang aktif per manager). Kartu baru:
+    Denyut Bara, Badai Api, Tombak Jiwa, dan Cap Pemburu. Orbit Bara mulai dengan
+    dua api, bertambah satu per stack, serta orbitnya melebar; transisi kartu
+    dibuat lebih halus.
+  - Boss raksasa berskin/nama khusus hadir pada stage kelipatan lima. Setelah
+    timer stage milestone habis, tower muncul; masuk radiusnya membersihkan
+    gelombang musuh lalu membuka pilihan lanjut atau pulang. Kill memberi koin
+    persisten; opsi INVENTARIS NPC diganti panel 13 upgrade atribut bertingkat.
+  - Kamera Survival pitch 1,28 radian, arah cahaya bulan sekitar 20° di atas
+    horizon, dan jarak shadow map 96 m.
+  - Validasi lokal statis lulus: `gdparse`, `gdlint project tools`,
+    `tools/check_scripts.py .`, cek lisensi, chunk, katalog animasi, workflow
+    YAML, dan `git diff --check`. Tes Godot headless, compile engine 4.5.2, dan
+    render Mobile Vulkan **belum dijalankan**; visual/runtime belum dikonfirmasi.
+    Binary Godot tidak tersedia lokal dan unduhan release asset terhenti pada
+    kegagalan koneksi TLS. Skrip tes baru/diubah ada di `tools/`, belum dieksekusi.
+  - Belum ada commit atau push; branch tetap `arena/01a0fc4a-godot`.
+
 - 2026-10-05 (cicilan 28) — **ANALOG-ONLY, GAIT MUNDUR, +11 KARTU BUFF SURVIVAL**
   - Sembunyikan/nonaktifkan semua tombol aksi HUD (`SERANG`, `TEMBAK`, `LOMPAT`,
     `JONGKOK`, `LARI`, `DASH`) dan tombol editor layout; analog tetap satu-satunya

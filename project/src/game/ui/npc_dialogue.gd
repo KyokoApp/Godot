@@ -4,6 +4,7 @@ extends Control
 signal closing
 signal closed
 signal gameplay_requested
+signal upgrade_requested
 
 const INK := Color("201d29")
 const PAPER := Color("f4f0e7")
@@ -11,7 +12,7 @@ const GOLD := Color("f2bd35")
 const RED := Color("d94a42")
 const OPTION_NAMES: Array[String] = [
 	"GAMEPLAY",
-	"INVENTARIS",
+	"UPGRADE ATRIBUT",
 	"STATUS KARAKTER",
 	"KEMBALI",
 ]
@@ -107,6 +108,10 @@ func activate_selected() -> void:
 	if _selected == 0:
 		gameplay_requested.emit()
 		close_dialogue()
+		return
+	if _selected == 1:
+		upgrade_requested.emit()
+		_notice.text = "UPGRADE PERMANEN  ·  KOIN DARI ZOMBIE"
 		return
 	if _selected == OPTION_NAMES.size() - 1:
 		close_dialogue()
@@ -206,7 +211,7 @@ func _add_option(index: int) -> void:
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	contents.add_child(label)
 	var hint_text := "KELUAR" if index == OPTION_NAMES.size() - 1 \
-		else ("PILIH" if index == 0 else "COMING SOON")
+		else ("PILIH" if index == 0 else ("UPGRADE" if index == 1 else "COMING SOON"))
 	var hint := _label(hint_text, 10, GOLD)
 	contents.add_child(hint)
 	button.pressed.connect(_on_option_pressed.bind(index))

@@ -6,16 +6,18 @@ signal buffs_changed(stacks: Dictionary)
 
 const Catalog = preload("res://src/game/survival/buff_catalog.gd")
 const FX = preload("res://src/game/attack_fx/fx_resources.gd")
-const FireBurst = preload("res://src/game/fire_burst.gd")
+const SkillWave = preload("res://src/game/survival/skill_wave.gd")
 const AEGIS_SHADER = preload("res://src/game/survival/aegis_shell.gdshader")
 
 const XP_BASE := 80
 const XP_GROWTH := 18
-const ORBIT_LIMIT := 5
+const ORBIT_LIMIT := 4
+const MAX_SKILL_WAVES := 3
 
 var player: Node3D
 var fire_pet: Node3D
 var world: Node3D
+var meta_progress: Object
 var stacks: Dictionary = {}
 var magic_lock_range_bonus := 0.0
 var xp_multiplier := 1.0
@@ -26,12 +28,15 @@ var _aegis_light: OmniLight3D
 var _orbit_nodes: Array[Node3D] = []
 var _orbit_clock := 0.0
 var _orbit_damage_clock := 0.0
+var _firestorm_clock := 0.0
+var _ember_pulse_hits := 0
 var _shield_flash := 0.0
 var _regen_clock := 0.0
 var _nova_active := false
 var _nova_damage := 0
 var _nova_radius := 0.0
 var _burn_stacks := 0
+var _skill_waves: Array[Node3D] = []
 
 
 func _ready() -> void:
@@ -41,6 +46,9 @@ func _ready() -> void:
 	if fire_pet != null and fire_pet.has_signal("impact_landed"):
 		fire_pet.connect("impact_landed", _on_magic_impact)
 	_apply_modifiers("")
+	var starting_shield := int(_meta_modifiers().get("shield_capacity_bonus", 0))
+	if starting_shield > 0 and is_instance_valid(player):
+		player.call("grant_shield", starting_shield)
 
 
 func _process(delta: float) -> void:
@@ -58,6 +66,20 @@ func _process(delta: float) -> void:
 				break
 	else:
 		_regen_clock = 0.0
+	var firestorm := get_stacks("firestorm_aura")
+	if firestorm > 0:
+		_firestorm_clock += delta
+		var firestorm_interval := maxf(2.8, 5.2 - 0.55 * firestorm)
+		if _firestorm_clock >= firestorm_interval:
+			_firestorm_clock = 0.0
+			var storm_position := player.global_position
+			storm_position.y = 0.0
+			_spawn_skill_wave(storm_position, 4.4 + 0.35 * firestorm,
+				Color("#ff765e"), 0.55)
+			_damage_area_targets(storm_position, 4.4 + 0.35 * firestorm,
+				12 + 6 * firestorm)
+	else:
+		_firestorm_clock = 0.0
 	_orbit_clock += delta
 	_orbit_damage_clock += delta
 	if _aegis_mesh != null:
@@ -112,7 +134,7 @@ func apply_buff(buff_id: String) -> bool:
 func set_orbit_stacks(count: int) -> void:
 	var desired := 0
 	if count > 0:
-		desired = mini(ORBIT_LIMIT, 2 + count)
+		desired = mini(ORBIT_LIMIT, 1 + count)
 	while _orbit_nodes.size() < desired:
 		_add_orbit_flame(_orbit_nodes.size())
 	while _orbit_nodes.size() > desired:
@@ -121,6 +143,7 @@ func set_orbit_stacks(count: int) -> void:
 			orb.queue_free()
 	if count > 0:
 		_ensure_aegis_light()
+		_update_orbit_positions()
 
 
 func on_zombie_killed(zombie: Node3D) -> void:
@@ -134,6 +157,9 @@ func on_zombie_killed(zombie: Node3D) -> void:
 	if kill_haste > 0 and is_instance_valid(fire_pet):
 		var remaining := float(fire_pet.get("cooldown"))
 		fire_pet.set("cooldown", maxf(0.0, remaining - 0.08 * kill_haste))
+	var persistent_heal := int(_meta_modifiers().get("heal_on_kill", 0))
+	if persistent_heal > 0 and is_instance_valid(player):
+		player.call("heal", persistent_heal)
 	var nova := get_stacks("volatile_nova")
 	if nova <= 0 or _nova_active or not is_instance_valid(zombie):
 		return
@@ -154,7 +180,13 @@ func clear_run() -> void:
 	xp_multiplier = 1.0
 	_nova_active = false
 	_regen_clock = 0.0
+	_firestorm_clock = 0.0
+	_ember_pulse_hits = 0
 	_burn_stacks = 0
+	for wave in _skill_waves:
+		if is_instance_valid(wave):
+			wave.queue_free()
+	_skill_waves.clear()
 	for orb in _orbit_nodes:
 		if is_instance_valid(orb):
 			orb.queue_free()
@@ -169,6 +201,7 @@ func clear_run() -> void:
 
 
 func _apply_modifiers(last_buff_id: String) -> void:
+	var meta := _meta_modifiers()
 	var ember := get_stacks("ember_core") + get_stacks("ascendant_sigil") * 0.17
 	var rapid := get_stacks("rapid_cast")
 	var aegis := get_stacks("arcane_aegis")
@@ -186,25 +219,41 @@ func _apply_modifiers(last_buff_id: String) -> void:
 	elif last_buff_id == "soul_ward":
 		shield_refill = 20
 	if is_instance_valid(player):
-		player.call("set_survival_bonuses", vitality * 25,
-			aegis * 70 + ward * 20, shield_refill,
-			aegis * 0.07 + ward * 0.015)
+		player.call("set_survival_bonuses",
+			vitality * 25 + int(meta.get("health_bonus", 0)),
+			aegis * 70 + ward * 20 + int(meta.get("shield_capacity_bonus", 0)),
+			shield_refill,
+			aegis * 0.07 + ward * 0.015 + float(meta.get("damage_reduction", 0.0)),
+			float(meta.get("movement_speed_multiplier", 1.0)))
 	if is_instance_valid(fire_pet):
+		var run_cooldown := maxf(0.54, 1.0 - 0.10 * rapid)
 		fire_pet.call("set_survival_modifiers", {
-			"damage_multiplier": 1.0 + 0.18 * ember + 0.08 * focus,
-			"cooldown_multiplier": maxf(0.54, 1.0 - 0.10 * rapid),
-			"critical_chance": overcharge * 0.08,
-			"critical_multiplier": 2.0 + 0.12 * overcharge,
+			"damage_multiplier": (1.0 + 0.18 * ember + 0.08 * focus)
+				* float(meta.get("damage_multiplier", 1.0)),
+			"cooldown_multiplier": maxf(0.54,
+				run_cooldown * float(meta.get("cooldown_multiplier", 1.0))),
+			"critical_chance": overcharge * 0.08 + float(meta.get("critical_chance", 0.0)),
+			"critical_multiplier": 2.0 + 0.12 * overcharge
+				+ float(meta.get("critical_multiplier_bonus", 0.0)),
 			"extra_shot_chance": volley * 0.12 + prism * 0.08,
 			"homing_turn_rate_multiplier": 1.0 + seeker * 0.18,
+			"single_target_multiplier": 1.0 + 0.08 * get_stacks("soul_lance"),
+			"projectile_speed_multiplier": float(meta.get("projectile_speed_multiplier", 1.0)),
 		})
-	magic_lock_range_bonus = get_stacks("long_reach") * 7.0
-	xp_multiplier = 1.0 + 0.20 * harvest
+	magic_lock_range_bonus = get_stacks("long_reach") * 7.0 \
+		+ float(meta.get("magic_lock_range_bonus", 0.0))
+	xp_multiplier = (1.0 + 0.20 * harvest) * float(meta.get("xp_multiplier", 1.0))
 	_nova_damage = 30 + 22 * (get_stacks("volatile_nova") - 1)
 	_nova_radius = 3.4 + 0.3 * get_stacks("volatile_nova")
 	_burn_stacks = get_stacks("burning_brand") + get_stacks("wildfire")
 	set_orbit_stacks(get_stacks("cinder_orbit"))
 	_refresh_aegis()
+
+
+func _meta_modifiers() -> Dictionary:
+	if meta_progress == null or not is_instance_valid(meta_progress):
+		return {}
+	return meta_progress.call("get_modifiers")
 
 
 func _on_player_stats_changed() -> void:
@@ -221,6 +270,20 @@ func _on_magic_impact(target: Node3D, damage: int, critical: bool) -> void:
 	var live_target := target.has_method("can_be_targeted") \
 		and bool(target.call("can_be_targeted"))
 	if live_target:
+		var hunter_brand := get_stacks("hunter_brand")
+		if hunter_brand > 0 and target.has_method("apply_arcane_mark"):
+			target.call("apply_arcane_mark", 0.035 * hunter_brand, 3.2)
+		var pulse_stacks := get_stacks("cinder_pulse")
+		if pulse_stacks > 0:
+			_ember_pulse_hits += 1
+			var pulse_interval := maxi(3, 6 - pulse_stacks)
+			if _ember_pulse_hits >= pulse_interval:
+				_ember_pulse_hits = 0
+				var pulse_radius := 2.5 + 0.18 * pulse_stacks
+				_spawn_skill_wave(target.global_position, pulse_radius,
+					Color("#ff9b67"), 0.46)
+				_damage_area_targets(target.global_position, pulse_radius,
+					12 + 5 * pulse_stacks, target)
 		var brand := get_stacks("burning_brand")
 		var wildfire := get_stacks("wildfire")
 		var total_burn := brand + wildfire
@@ -245,7 +308,7 @@ func _on_magic_impact(target: Node3D, damage: int, critical: bool) -> void:
 		_nova_active = true
 		var radius := 2.2 + 0.22 * bloom
 		var splash_damage := 14 + 10 * bloom
-		_spawn_burst(target.global_position)
+		_spawn_skill_wave(target.global_position, radius, Color("#ff9b67"), 0.46)
 		_damage_area_targets(target.global_position, radius, splash_damage, target)
 		_nova_active = false
 
@@ -282,15 +345,26 @@ func _chain_lightning(origin: Node3D, stacks_value: int) -> void:
 				1.6 + frost * 0.3)
 
 
-func _spawn_burst(position: Vector3) -> void:
+func _spawn_skill_wave(position: Vector3, radius: float, color: Color,
+		duration: float = 0.48) -> void:
 	if world == null or not is_instance_valid(world):
 		return
-	var burst_position := position
-	burst_position.y = 0.0
-	var burst := FireBurst.new()
-	burst.surface_normal = Vector3.UP
-	burst.position = world.to_local(burst_position + Vector3(0, 0.04, 0))
-	world.add_child(burst)
+	for index in range(_skill_waves.size() - 1, -1, -1):
+		if not is_instance_valid(_skill_waves[index]):
+			_skill_waves.remove_at(index)
+	while _skill_waves.size() >= MAX_SKILL_WAVES:
+		var oldest := _skill_waves.pop_front()
+		if is_instance_valid(oldest):
+			oldest.queue_free()
+	var wave := SkillWave.new()
+	wave.radius = maxf(0.1, radius)
+	wave.tint = color
+	wave.duration = maxf(0.12, duration)
+	var wave_position := position
+	wave_position.y = 0.025
+	wave.position = world.to_local(wave_position)
+	world.add_child(wave)
+	_skill_waves.append(wave)
 
 
 func _damage_area_targets(position: Vector3, radius: float,
@@ -353,16 +427,18 @@ func _ensure_aegis_light() -> void:
 func _add_orbit_flame(index: int) -> void:
 	var orb := Node3D.new()
 	orb.name = "OrbitingFlame%02d" % (index + 1)
-	var core := FX.sphere(0.085, FX.CORE, 2.8)
+	var core := FX.sphere(0.075, FX.CORE, 2.3, 12, 7)
 	core.name = "ArcaneFlameCore"
-	core.material_override.set_shader_parameter("turbulence", 0.8)
+	core.material_override.set_shader_parameter("turbulence", 0.72)
 	orb.add_child(core)
-	var shell := FX.sphere(0.15, FX.SHELL, 1.75)
+	var shell := FX.sphere(0.13, FX.SHELL, 1.25, 12, 7)
 	shell.name = "ArcaneFlameShell"
 	shell.material_override.set_shader_parameter("rise", 0.06)
 	orb.add_child(shell)
-	var particles := FX.particles("OrbitFlameTrail", 9, 0.62, false, true)
+	var particles := FX.particles("OrbitFlameTrail", 4, 0.40, false, true)
 	particles.position = Vector3.ZERO
+	var flame_quad := particles.draw_pass_1 as QuadMesh
+	flame_quad.size = Vector2(0.25, 0.38)
 	particles.emitting = true
 	orb.add_child(particles)
 	add_child(orb)
@@ -371,15 +447,16 @@ func _add_orbit_flame(index: int) -> void:
 
 func _update_orbit_positions() -> void:
 	var count := _orbit_nodes.size()
-	var radius := 1.13 + float(count - 3) * 0.12
+	var stack_count := get_stacks("cinder_orbit")
+	var radius := 1.50 + float(maxi(0, stack_count - 1)) * 0.28
 	for index in count:
-		var angle := _orbit_clock * (2.0 + float(count) * 0.14) \
+		var angle := _orbit_clock * (1.95 + float(count) * 0.12) \
 			+ TAU * float(index) / float(count)
 		var orb := _orbit_nodes[index]
 		if not is_instance_valid(orb):
 			continue
 		orb.position = Vector3(cos(angle) * radius,
-			0.74 + sin(angle * 2.0 + float(index)) * 0.17,
+			0.74 + sin(angle * 2.0 + float(index)) * 0.11,
 			sin(angle) * radius)
 		orb.rotation.y = -angle
 
@@ -389,7 +466,7 @@ func _damage_nearby_zombies() -> void:
 		return
 	var orbit_stacks := get_stacks("cinder_orbit")
 	var damage := 9 + (orbit_stacks - 1) * 6
-	var radius := 2.65 + orbit_stacks * 0.16
+	var radius := 2.30 + orbit_stacks * 0.35
 	var zombie_list: Array = world.get("zombies")
 	for zombie in zombie_list:
 		if not is_instance_valid(zombie) or not zombie.has_method("can_be_targeted") \
@@ -402,5 +479,5 @@ func _damage_nearby_zombies() -> void:
 
 
 func _spawn_nova(position: Vector3) -> void:
-	_spawn_burst(position)
+	_spawn_skill_wave(position, _nova_radius, Color("#ffba55"), 0.54)
 	_damage_area_targets(position, _nova_radius, _nova_damage)

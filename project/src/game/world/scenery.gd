@@ -20,6 +20,7 @@ extends Node3D
 const Field = preload("res://src/game/world/field.gd")
 const WATER_SHADER = preload("res://src/game/world/water.gdshader")
 const Dusk = preload("res://src/game/environment/dusk_environment.gd")
+const CityHorizon = preload("res://src/game/world/city_horizon.gd")
 
 ## Laut: permukaan air sedikit di bawah nol (sedikit di bawah garis pantai pulau,
 ## yang memang berada di tinggi 0) supaya bidang air tidak z-fighting dengan
@@ -64,6 +65,7 @@ var ruins: Node3D
 var motes: Node3D
 var island: MeshInstance3D
 var cliff_count := 0
+var city_horizon: Node3D
 var _floaters: Array[Node3D]
 var _time: float
 
@@ -76,6 +78,13 @@ func _ready() -> void:
 	_build_cliffs()
 	_build_ruins()
 	_build_motes()
+	_build_city_horizon()
+
+
+func _build_city_horizon() -> void:
+	city_horizon = CityHorizon.new()
+	city_horizon.name = "CityHorizon"
+	add_child(city_horizon)
 
 
 # ------------------------------------------------------------------ laut ----

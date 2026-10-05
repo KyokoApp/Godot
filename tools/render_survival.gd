@@ -59,7 +59,7 @@ func _run() -> void:
 			and bool(action_button.get("disabled")),
 			"HUD Survival masih menampilkan tombol gameplay: " + node_name)
 	var orbit: Node3D = game.get("_orbit")
-	_check(float(orbit.get("pitch")) >= 1.28,
+	_check(float(orbit.get("pitch")) >= 1.25,
 		"Render Survival tidak memakai sudut kamera top-down")
 	_check(int(world.get("stage")) == 1,
 		"Gameplay Survival render tidak mulai dari stage 1")

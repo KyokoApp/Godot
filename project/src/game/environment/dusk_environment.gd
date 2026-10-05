@@ -7,14 +7,11 @@ extends RefCounted
 ## warna di layar dan warna di gambar tes tidak pernah berbeda.
 
 const SKY_SHADER = preload("res://src/game/environment/dusk_sky.gdshader")
-## Arah BULAN: 15 derajat di atas ufuk barat daya (sisi laut). Sengaja RENDAH,
-## di dekat garis langit: pengguna tidak ingin mengarahkan kamera ke atas terus
-## ("bulannya jangan diatas soalnya aku gk mungkin trus trusan arah kamera di
-## atas"), jadi bulan harus terlihat dari posisi bermain biasa. Arah ini dipakai
-## bersama langit, kilau air, dan arah bayangan.
-## Vektornya sudah panjang 1 (diuji `test_dusk`): kalau tidak, hasil dot dengan
-## basis lampu selalu < 1 dan gerbang arah cahaya gagal tanpa sebab nyata.
-const SUN_DIRECTION := Vector3(-0.9144, 0.2588, -0.3114)
+## Arah BULAN: sekitar 20 derajat di atas ufuk barat daya (sisi laut). Tetap
+## dekat horizon, namun sedikit lebih tinggi agar bayangan tidak memanjang
+## berlebihan dan arah cahayanya terbaca jelas. Kamera tidak perlu menengadah.
+## Arah ini dipakai bersama langit, kilau air, dan bayangan; panjangnya 1.
+const SUN_DIRECTION := Vector3(-0.8895, 0.3420, -0.3032)
 
 
 static func make_environment() -> Environment:
@@ -87,11 +84,10 @@ static func make_environment() -> Environment:
 static func make_sunlight() -> DirectionalLight3D:
 	var light := DirectionalLight3D.new()
 	light.name = "Moonlight"
-	# Cahaya bulan: biru dingin dan redup (bukan jingga senja lagi). Sudutnya 15
-	# derajat, jadi bayangan panjang sekali. Karena cos-nya jauh lebih kecil dari
-	# sudut senja dulu, energi dinaikkan supaya tanah tetap terbaca (gerbang
-	# test_dusk: tanah tidak jadi hitam).
+	# Cahaya bulan dingin dengan bayangan diagonal yang lebih lembut. Jarak
+	# shadow map dibatasi; skyline/hills jauh tidak ikut menghitung bayangan.
 	light.light_color = Color(0.68, 0.76, 0.95)
 	light.light_energy = 0.50
 	light.shadow_enabled = true
+	light.directional_shadow_max_distance = 96.0
 	return light

@@ -23,7 +23,6 @@ var _flow := Vector3.ZERO
 var _core: MeshInstance3D
 var _shell: MeshInstance3D
 var _flames: GPUParticles3D
-var _sparks: GPUParticles3D
 
 
 func _ready() -> void:
@@ -33,21 +32,24 @@ func _ready() -> void:
 	collision_mask = 1 | 4
 	var collision := CollisionShape3D.new()
 	var sphere := SphereShape3D.new()
-	sphere.radius = 0.11
+	sphere.radius = 0.085
 	collision.shape = sphere
 	add_child(collision)
-	_core = FX.sphere(0.065, FX.CORE, 2.6)
+	_core = FX.sphere(0.040, FX.CORE, 1.7, 10, 6)
 	_core.name = "BoltCore"
-	_core.material_override.set_shader_parameter("turbulence", 0.9)
+	_core.material_override.set_shader_parameter("turbulence", 0.65)
 	add_child(_core)
-	_shell = FX.sphere(0.11, FX.SHELL, 1.5)
+	_shell = FX.sphere(0.075, FX.SHELL, 0.95, 10, 6)
 	_shell.name = "BoltFlameTail"
 	_shell.material_override.set_shader_parameter("rise", 0.04)
 	add_child(_shell)
-	_flames = FX.particles("FireWake", 10, 0.55, false, true)
-	_sparks = FX.particles("BoltSparks", 16, 0.32, false, false)
+	_flames = FX.particles("FireWake", 4, 0.34, false, true)
+	var flame_shape := _flames.process_material as ParticleProcessMaterial
+	flame_shape.scale_min = 0.30
+	flame_shape.scale_max = 0.48
+	var flame_quad := _flames.draw_pass_1 as QuadMesh
+	flame_quad.size = Vector2(0.22, 0.36)
 	add_child(_flames)
-	add_child(_sparks)
 
 
 func _process(delta: float) -> void:
@@ -112,4 +114,3 @@ func _finish() -> void:
 	_core.hide()
 	_shell.hide()
 	_flames.emitting = false
-	_sparks.emitting = false
