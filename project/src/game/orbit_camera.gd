@@ -6,11 +6,23 @@ const DEFAULT_DISTANCE := 4.0
 ## Titik pandang ada di setinggi kepala, jadi pada jarak ini yang tampak hanya
 ## sebagian wajah/rambut — bukan lagi seluruh badan seperti batas 2,4 m dulu.
 const MIN_DISTANCE := 0.35
-const MAX_DISTANCE := 8.0
+## Dunia kembali 100 m: 62 m cukup untuk melihat sebagian besar pulau tanpa
+## menjauh berlebihan dari karakter.
+const MAX_DISTANCE := 62.0
+## Cukup panjang untuk zoom keluar di pulau kecil tanpa menembus bukit jauh.
+const ARM_COLLISION_LIMIT := 30.0
 ## Zoom roda tetikus untuk main di desktop/editor (di HP tetap cubit dua jari).
 const WHEEL_STEP := 1.15
 const MIN_PITCH := 0.10
 const MAX_PITCH := 1.15
+const SURVIVAL_TOP_DOWN_MIN_PITCH := 1.18
+const SURVIVAL_TOP_DOWN_PITCH := 1.28
+const SURVIVAL_TOP_DOWN_MAX_PITCH := 1.38
+const SURVIVAL_TOP_DOWN_DISTANCE := 17.0
+const RUN_ZONE_MIN_PITCH := 0.12
+const RUN_ZONE_PITCH := 0.24
+const RUN_ZONE_MAX_PITCH := 0.46
+const RUN_ZONE_DISTANCE := 5.8
 
 var input_enabled := true
 ## Kontrol yang menangkap sentuhan lebih dulu (panel, tombol); sentuhan di
@@ -18,7 +30,10 @@ var input_enabled := true
 var exclusions: Array[Control] = []
 var yaw := 0.0
 var pitch := 0.30
+var pitch_min := MIN_PITCH
+var pitch_max := MAX_PITCH
 var distance := DEFAULT_DISTANCE
+var zoom_enabled := true
 ## Titik bidik kamera relatif ke pemain. Dulu angka 0,55 ini ditulis di main.gd;
 ## sekarang jadi properti supaya tes render bisa membidik leher atau kain tanpa
 ## mengubah perilaku permainan (nilainya tidak pernah diubah selain tes).
@@ -56,6 +71,47 @@ func _notification(what: int) -> void:
 
 func reset_touches() -> void:
 	_touches.clear()
+
+
+func capture_state() -> Dictionary:
+	return {
+		"yaw": yaw,
+		"pitch": pitch,
+		"pitch_min": pitch_min,
+		"pitch_max": pitch_max,
+		"distance": distance,
+		"zoom_enabled": zoom_enabled,
+		"focus_offset": focus_offset,
+	}
+
+
+func restore_state(state: Dictionary) -> void:
+	pitch_min = float(state.get("pitch_min", MIN_PITCH))
+	pitch_max = float(state.get("pitch_max", MAX_PITCH))
+	yaw = float(state.get("yaw", 0.0))
+	pitch = float(state.get("pitch", 0.30))
+	distance = float(state.get("distance", DEFAULT_DISTANCE))
+	zoom_enabled = bool(state.get("zoom_enabled", true))
+	var restored_focus: Vector3 = state.get(
+		"focus_offset", Vector3(0.0, 0.55, 0.0))
+	focus_offset = restored_focus
+	reset_touches()
+
+
+func set_top_down_mode() -> void:
+	pitch_min = SURVIVAL_TOP_DOWN_MIN_PITCH
+	pitch_max = SURVIVAL_TOP_DOWN_MAX_PITCH
+	pitch = SURVIVAL_TOP_DOWN_PITCH
+	distance = SURVIVAL_TOP_DOWN_DISTANCE
+	zoom_enabled = false
+
+
+func set_run_zone_mode() -> void:
+	pitch_min = RUN_ZONE_MIN_PITCH
+	pitch = RUN_ZONE_PITCH
+	pitch_max = RUN_ZONE_MAX_PITCH
+	distance = RUN_ZONE_DISTANCE
+	zoom_enabled = false
 
 
 func _input(event: InputEvent) -> void:
@@ -97,12 +153,14 @@ func _input(event: InputEvent) -> void:
 			# Sensitivitas mengikuti lebar viewport, bukan kepadatan pixel perangkat.
 			var sensitivity := TAU / get_viewport().get_visible_rect().size.x
 			yaw = wrapf(yaw - motion.x * sensitivity, -PI, PI)
-			pitch = clampf(pitch + motion.y * sensitivity, MIN_PITCH, MAX_PITCH)
+			pitch = clampf(pitch + motion.y * sensitivity, pitch_min, pitch_max)
 
 
 ## Ubah jarak kamera dengan faktor: < 1 mendekat, > 1 menjauh. Satu tempat
 ## untuk semua masukan (cubit, roda tetikus, dan tes) supaya batasnya konsisten.
 func zoom_by(factor: float) -> void:
+	if not zoom_enabled:
+		return
 	distance = clampf(distance * factor, MIN_DISTANCE, MAX_DISTANCE)
 
 
@@ -144,6 +202,10 @@ func _apply_orbit() -> void:
 	rotation.y = yaw
 	arm.rotation.x = -pitch
 	arm.spring_length = distance
+	# Zoom dekat: jangan tembus tanah/wajah. Zoom jauh: tabrakan dimatikan lewat
+	# mask 0 (SpringArm3D tidak punya sakelar collide_with_bodies), kalau tidak
+	# kamera terjepit di bukit pertama dan pulau tak pernah terlihat.
+	arm.collision_mask = 1 if distance < ARM_COLLISION_LIMIT else 0
 	if camera != null:
 		# Bidang dekat mengikuti jarak: pada 0,1 m jarak tetap, kamera yang sudah
 		# menempel masih memotong wajah/rambut. Saat menjauh, angka kecil justru
@@ -153,3 +215,11 @@ func _apply_orbit() -> void:
 
 func movement_direction(stick: Vector2) -> Vector3:
 	return Vector3(stick.x, 0.0, stick.y).rotated(Vector3.UP, yaw)
+
+
+## Arah hadap kamera diratakan ke tanah (tanpa komponen y). Kamera berdiri di
+## (sin yaw, 0, cos yaw) dari fokus dan melihat ke arah sebaliknya, jadi hadap
+## kamera = -(sin yaw, 0, cos yaw). Dipakai pemain untuk membedakan jalan depan
+## dan jalan mundur.
+func camera_forward() -> Vector3:
+	return Vector3(-sin(yaw), 0.0, -cos(yaw))

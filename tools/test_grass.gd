@@ -1,5 +1,5 @@
 extends SceneTree
-## Rumput di padang 100 m: anggaran LOD, penempatan di tanah, LOD turun saat jauh.
+## Rumput di pulau 100 m: anggaran LOD, penempatan di tanah, LOD turun saat jauh.
 
 const Field = preload("res://src/game/world/field.gd")
 const FirePet = preload("res://src/game/fire_pet.gd")
@@ -25,7 +25,8 @@ func _run() -> void:
 	var ground := Field.new()
 	world.add_child(ground)
 	var player := Node3D.new()
-	player.position = Vector3(12, ground.surface_height(12, 4) + 0.9, 4)
+	# Titik muncul pemain (0, 7): tile awal harus berisi rumput.
+	player.position = Vector3(0, ground.surface_height(0, 7) + 0.9, 7)
 	world.add_child(player)
 	var character := Character.new()
 	character.position = player.position - Vector3(0, 0.9, 0)
@@ -38,8 +39,12 @@ func _run() -> void:
 	var arrays := blade_mesh.surface_get_arrays(0)
 	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 	_check(indices.size() == 18, "Budget 6 segitiga per rumpun berubah")
-	_check(Grass.MAX_TRIANGLES <= 112000, "Kepadatan baru melampaui budget LOD")
+	_check(Grass.MAX_TRIANGLES <= 336864, "Kepadatan baru melampaui budget LOD")
 	_check(Grass.BLADE_WIDTH < 0.1, "Helai rumput masih terlalu lebar")
+	# Helai rapat harus sampai 24 m (5x5 tile), bukan berhenti di 12 m.
+	_check(Grass.NEAR_SPAN * 2 + 1 == 5, "Cakupan helai rapat menyusut")
+	# Helai harus KECIL: tinggi di bawah setengah tinggi lama (0,55 m).
+	_check(Grass.BLADE_HEIGHT < 0.4, "Helai rumput masih setinggi semak")
 	var camera := Camera3D.new()
 	world.add_child(camera)
 	camera.position = player.position + Vector3(0, 3, 6)
@@ -54,19 +59,26 @@ func _run() -> void:
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-50, 20, 0)
 	world.add_child(sun)
-	# Rumput hanya di dalam padang, tidak menembus pagar.
-	_check(field.can_grow(0, 0), "Rumput tidak tumbuh di tengah padang")
-	_check(field.can_grow(-40, 30), "Rumput tidak tumbuh di sudut dalam")
-	_check(not field.can_grow(56, 0), "Rumput tumbuh di luar pagar")
-	_check(not field.can_grow(0, -52), "Rumput tumbuh di luar batas selatan")
-	_check(not field.can_grow(-49.6, -49.6), "Rumput tumbuh menembus pagar")
+	# Rumput mengikuti bukit; hanya pantai, lereng curam, dan jalan yang kosong.
+	_check(field.can_grow(0, 0), "Rumput tidak tumbuh di bukit tengah")
+	_check(field.can_grow(8, 10), "Rumput tidak tumbuh di pedalaman timur")
+	_check(not field.can_grow(0, Field.path_centre(0)), "Rumput menutupi jalan tanah")
+	for angle in [0.0, 1.1, 2.2, 3.3, 4.4, 5.5]:
+		var coast := Field.island_radius(angle) + 25.0
+		_check(not field.can_grow(cos(angle) * coast, sin(angle) * coast),
+			"Rumput tumbuh di laut pada sudut %.1f" % angle)
+	var shore_angle := 0.7
+	var shore_radius := Field.island_radius(shore_angle) - 2.0
+	_check(not field.can_grow(cos(shore_angle) * shore_radius,
+		sin(shore_angle) * shore_radius),
+		"Rumput tumbuh menempel garis pantai (pasir harus polos)")
 	for _sample in range(40):
-		var x := randf_range(-52, 52)
-		var z := randf_range(-52, 52)
+		var x := randf_range(-Field.HALF, Field.HALF)
+		var z := randf_range(-Field.HALF, Field.HALF)
 		if ground.can_grow(x, z):
-			_check(absf(x) < Field.HALF and absf(z) < Field.HALF,
-				"Penempatan lolos di luar padang")
-	for frame in range(35):
+			_check(Field.is_inside(x, z, 0.0), "Penempatan rumput di luar pulau")
+	# 49 tile dibangun satu per frame, jadi butuh 49 frame (bukan 35).
+	for frame in range(60):
 		await process_frame
 	_check(field.tiles.size() == Grass.MAX_TILES, "Jumlah tile tidak sesuai batas")
 	var total := 0
@@ -85,7 +97,7 @@ func _run() -> void:
 			_check(field.can_grow(point.x, point.z), "Penempatan di area terlarang")
 			_check(absf(point.y + 0.03 - ground.surface_height(point.x, point.z)) < 0.01,
 				"Akar rumput mengambang")
-	_test_lod_subset(field)
+	_test_lod_subset(field, Vector2i(0, 0))
 	_check(total > 100, "Tidak ada padang rumput yang cukup untuk dirender")
 	_check(total <= Grass.MAX_CLUMPS, "Budget rumput terlampaui")
 	if "--render" in OS.get_cmdline_user_args():
@@ -95,7 +107,7 @@ func _run() -> void:
 		image.save_png("user://grass-render-test.png")
 		await _test_two_sided_lighting()
 	# Tile jauh dilepas saat pemain berpindah ke sisi lain padang.
-	player.position = Vector3(-38, ground.surface_height(-38, 38) + 0.9, 38)
+	player.position = Vector3(-12, ground.surface_height(-12, -14) + 0.9, -14)
 	for frame in range(35):
 		await process_frame
 	_check(field.tiles.size() <= Grass.MAX_TILES, "Tile lama bocor setelah berpindah")
@@ -114,8 +126,9 @@ func _run() -> void:
 	quit(0 if _failures == 0 else 1)
 
 
-func _test_lod_subset(field: Grass) -> void:
-	var near := field.placements_for(Vector2i(0, 0))
+func _test_lod_subset(field: Grass, tile: Vector2i) -> void:
+	# Tile yang dipakai adalah tile PEMAIN (0, 0), yang harus berisi rumput.
+	var near := field.placements_for(tile)
 	_check(not near.is_empty(), "Tile dekat kosong")
 	# Grid jauh adalah subset grid dekat supaya akar tidak melompat saat LOD turun.
 	var far_count := 0

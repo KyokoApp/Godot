@@ -4,14 +4,18 @@ render_mode cull_disabled, world_vertex_coords, diffuse_burley, specular_disable
 // Sumber, atribusi, lisensi, dan perubahan: project/licenses/LICENSES.txt.
 // Mesh buatan proyek: UV.y = 1 di akar dan 0 di ujung.
 
-uniform vec3 top_color : source_color = vec3(0.38, 0.65, 0.24);
-uniform vec3 bottom_color : source_color = vec3(0.29, 0.53, 0.19);
+// Warna helai = warna tanah (field.gd GRASS_COLOR / GRASS_DARK) supaya rumput
+// dan tanah terbaca sebagai SATU warna, bukan dua hijau yang berselisih.
+// Ujung sedikit lebih terang dari akar: itu yang masih membuat helai terbaca
+// sebagai benda 3D setelah warnanya disamakan.
+uniform vec3 top_color : source_color = vec3(0.247, 0.420, 0.204);
+uniform vec3 bottom_color : source_color = vec3(0.176, 0.310, 0.153);
 uniform sampler2D wind_noise : repeat_enable, filter_linear;
 uniform vec3 player_position = vec3(0.0);
 uniform vec2 wind_direction = vec2(0.8, 0.4);
 uniform float wind_strength = 0.20;
 uniform float fade_start = 16.0;
-uniform float fade_end = 23.0;
+uniform float fade_end = 32.0;
 
 varying vec3 grass_world_position;
 
@@ -20,9 +24,11 @@ void vertex() {
 	float tip = UV.x > 1.5 ? 0.0 : 1.0 - UV.y;
 	float distance_xz = length(root.xz - player_position.xz);
 	float visibility = 1.0 - smoothstep(fade_start, fade_end, distance_xz);
-	// Detail dan lapisan bawah lenyap sebelum batas tile LOD terdekat (12 m).
+	// Detail dan lapisan bawah menipis lebih dulu (18-25 m) supaya permukaan
+	// tanah tetap tertutup sampai jauh — dulu keduanya hilang sudah di 8-11 m,
+	// jadi rumput tampak berhenti tak jauh dari pemain.
 	if (INSTANCE_CUSTOM.r > 0.5 || UV.x > 1.5) {
-		visibility *= 1.0 - smoothstep(8.0, 11.0, distance_xz);
+		visibility *= 1.0 - smoothstep(18.0, 25.0, distance_xz);
 	}
 	// Menyusut ke akar secara halus; tetap opaque, tanpa overdraw alpha.
 	VERTEX = mix(root, VERTEX, visibility);

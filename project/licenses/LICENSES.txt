@@ -52,6 +52,21 @@ been cleared for public redistribution, commercial use, or app-store release.
   `Mediavel/`). Belum dipakai di project ini — akan masuk saat milestone
   "Build mode grid".
 
+#### Pedang Survival — Medieval Weapons
+- **Pembuat aset asli:** Quaternius — https://quaternius.com/packs/medievalweapons.html
+- **Lisensi:** CC0 1.0 Universal; berkas lisensi ikut paket asli.
+  https://creativecommons.org/publicdomain/zero/1.0/
+- **Model yang dibundel:** `project/assets/weapons/Sword.glb`, mesh GLB
+  42.368 byte, grip di pangkal dan bilah sepanjang sumbu +Y. Geometri sumber
+  sama; kompresi `EXT_meshopt_compression` dan kuantisasi dibuka losslessly agar
+  importer Godot dapat membacanya.
+- **Provenance:** konversi GLB CC0 yang dibagikan di
+  `Vizboom/tome-of-heroes`, `models/weapons/Sword.glb`, commit
+  `afd3af369b648d520e2a7d0a5e1bc05f9eaddf3b` (asal: paket Medieval Weapons
+  Quaternius). Konversi mempertahankan model sumber dan menata unit/grip untuk
+  pemakaian game. File ini dipakai sebagai model 3D yang dipegang pemain;
+  animasi ayunan berasal dari UAL2 Quaternius (lihat bagian mannequin).
+
 ### Kode
 
 Kode orisinal mengikuti bagian “Pemberitahuan hak karya orisinal A-Sekai” di awal file ini (all rights reserved).
@@ -179,22 +194,31 @@ created for A-Sekai, not copied from an icon pack or third-party image.
   `tools/prepare_pet_fire.py` rebuilds the 8-second crossfaded companion loop.
 
 #### Night environment
-`environment/dusk_sky.gdshader`: original procedural dusk sky for A-Sekai,
-seeded sparse stars, small moon with analytic crater marks and subtle halo.
-No downloaded sky image, shader-site code, or third-party celestial artwork.
+`environment/dusk_sky.gdshader` (nama berkas masih "dusk" sejak cicilan 8):
+original procedural NIGHT sky for A-Sekai - deep blue gradient, a starfield
+built from a wrapped hash grid on the celestial sphere with slow twinkle, a
+full moon with six analytic craters, limb darkening and a two-part halo, plus
+dark moonlit clouds. `environment/dusk_environment.gd` supplies the matching
+cool moonlight, dark blue fog and glow. No downloaded sky image, no noise
+texture, no shader-site code, and no third-party celestial artwork; every star,
+crater and cloud is generated in code.
 
-#### Archived nature and stone footpath — riwayat, sudah dihapus
-Eleven actual glTF models from the user's `KyokoApp/Unity` archive
-`bca3e575fc26311ef5a43c0263e772a6d9fced20`,
-`project/packs/build_mode/objects/nature/`: trees, bushes, fern, flowers,
-rocks, pebble and RockPath_Round_Wide. The archive credits identify these as
+#### Nature props — AKTIF, dikirim di APK/PCK
+Eleven glTF models taken from the user's own archive `KyokoApp/Unity`
+(`Assets/WorldSrc/`, commit `bca3e575fc26311ef5a43c0263e772a6d9fced20`):
+CommonTree_1, CommonTree_3, Pine_1, Bush_Common, Bush_Common_Flowers,
+Fern_1, Flower_3_Group, Rock_Medium_1, Rock_Medium_2, Pebble_Round_1 and
+RockPath_Round_Wide, plus their textures. The archive credits identify these as
 **Quaternius Stylized Nature MegaKit, CC0**:
 https://quaternius.com/packs/stylizednaturemegakit.html .
-Full list/provenance: the Quaternius Nature notice below.
-Status: the eleven glTF/bin models, their model textures and
-`tools/fetch_nature_assets.py` were REMOVED from the repository in the
-100 m x 100 m grass-field milestone; they are no longer shipped in APK/PCK.
-The two files that remain in `project/assets/nature/` — `grass_cards.png`
+They are stored in `project/assets/nature/models/` and scattered over the
+island by `project/src/game/world/forest.gd` (MultiMesh, no collision).
+Riwayat: model ini dulu ada di project ini, lalu DIHAPUS pada milestone padang
+rumput 100 m (bersama `tools/fetch_nature_assets.py`). Pada 2026-10-03 pengguna
+memintanya kembali ("carikan aku asset ini ... ada di project ku tapi aku
+lupa"); asetnya ternyata masih ada di repo `KyokoApp/Unity` dan sekarang
+dikirim lagi bersama permainan.
+The two other files in `project/assets/nature/` — `grass_cards.png`
 and `meadow_cover.png` — are original deterministic textures created for
 this project; regenerate with `tools/make_meadow_textures.py` (Pillow).
 
@@ -297,13 +321,32 @@ Status: arena, aurora dan fog lokal DIHAPUS pada milestone padang rumput;
 yang tersisa hanya styling HUD orisinal dan pagar batas padang.
 
 
-#### Screen-space moon rays
-- Method reference: Qtan1, Screen Space God Rays (Godot 4.3),
-- User supplied page: https://godotshaders.com/shader/screen-space-god-rays-godot-4-3/
-- Page declares code CC0. No preview images/assets copied. Our implementation uses
-  an original reverse-Z depth-mask shader with 16 radial samples instead of the
-  article's second scene-render SubViewport. Credit identifies method inspiration,
-  not a verbatim copy or performance guarantee.
+#### Sinar matahari gaya pend00 (god rays) — riwayat, sudah dihapus
+- Sumber shader: **pend00**, "God rays", Godot Shaders — CC0 1.0.
+- Halaman asli: https://godotshaders.com/shader/god-rays/
+  Versi Godot 4.5 yang diminta pengguna:
+  https://godotshaders.com/shader/god-rays-shader-inspired-by-pend00-godot-4-5/
+- Halaman menyatakan kode shader berlisensi **CC0 1.0**:
+  https://creativecommons.org/publicdomain/zero/1.0/ . Gambar/video pada halaman
+  tidak termasuk lisensi tersebut dan tidak pernah disalin ke proyek ini.
+- Status: **DIHAPUS** atas permintaan pengguna. Tidak ada kode pend00 yang
+  tersisa di proyek ini; bagian ini hanya mencatat riwayat pemakaian.
+- Riwayat sebelumnya: dua implementasi sinar matahari lain (shader depth-march
+  layar-penuh) juga sudah dihapus atas permintaan pengguna.
+
+
+#### Screen-space contact shadows — riwayat, sudah dihapus
+- Method reference: forum Godot, "Screen Space Shadows" — ray march dari setiap
+  piksel ke arah cahaya lalu bandingkan dengan buffer kedalaman,
+  https://forum.godotengine.org/t/screen-space-shadows/70197
+- Implementasi proyek (sudah dihapus): shader Godot 4 orisinal untuk renderer
+  MOBILE (SSAO, SSR, SSIL, dan volumetric fog hanya ada di Forward+), dengan
+  perbandingan depth reverse-Z, 14 sampel sepanjang 21 m, pemudaran tepi layar,
+  dan batas jarak kamera. Postingan forum hanya menyuplai potongan GLSL untuk
+  mesin/versi lain; tidak ada kode yang disalin apa adanya. Kredit menandai
+  inspirasi metode, bukan salinan verbatim atau jaminan performa.
+- Status: **DIHAPUS** atas permintaan pengguna (bagian dari efek "ray tracing"
+  yang tidak disukai). Bagian ini hanya mencatat riwayat.
 
 
 #### Universal Animation Library 2 Standard — combat

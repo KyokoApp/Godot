@@ -1,63 +1,90 @@
 extends Node3D
-## Pemandangan di luar padang latihan, disusun supaya dunia terlihat seperti
-## ilustrasi layar muat (`launcher/art/loading.jpg`): bukit hijau bergelombang,
-## tebing batu di satu sisi, laut di sisi lain, jalan tanah berliku, reruntuhan
-## batu, dan titik cahaya melayang.
+## Pemandangan di sekitar pulau 100 m. Bukit tajam tiga segitiga sudah DIHAPUS
+## (permintaan: "hapus itu pemandangan di depan ... kayak bantuk gunung tajam
+## sama gelombang") dan diganti PULAU TERBANG: bongkahan batu rendah-poli yang
+## melayang di seberang air, terbaca sebagai bentuk pipih bergaya ilustrasi tapi
+## tetap terasa 3D karena miring dan berpindar naik-turun.
 ##
-## Semuanya di LUAR pagar 100 m (atau di dalam tapi tanpa collision) supaya
-## gameplay, fisika, dan gerbang yang sudah ada tidak berubah: pemain tetap
-## berjalan di padang yang sama. Bentuknya prosedural (tanpa aset baru), jadi
-## ringan untuk HP dan tidak menambah berkas biner.
+## Sisanya (laut, tebing, reruntuhan, titik cahaya) tetap seperti sebelumnya —
+## semuanya di LUAR garis pantai atau tanpa collision, jadi gameplay, fisika,
+## dan gerbang yang sudah ada tidak berubah.
 ##
-## Susunannya sengaja mengikuti ilustrasi:
-##   * laut  : sisi -x (barat), tempat matahari terbenam
-##   * tebing: sisi +x, memanjang mengikuti padang
-##   * bukit : cincin di belakang tebing dan di seberang laut
-##   * jalan : tanah di padang, dari tepi timur ke barat daya (lihat ground.gdshader)
-##   * reruntuhan: dua gapura + tiga tiang di dekat jalan, di dalam padang
+## Susunannya:
+##   * laut        : mengelilingi SELURUH pulau (permukaan y = 0)
+##   * pulau terbang: enam bongkahan melayang jauh di seberang air
+##   * tebing      : sisi +x, dinding batu jauh
+##   * jalan       : tanah di pulau, berliku (lihat ground.gdshader)
+##   * reruntuhan  : dua gapura + tiga tiang di dekat jalan, di dalam pulau
+##   * partikel    : titik cahaya ungu melayang di atas jalan
 
 const Field = preload("res://src/game/world/field.gd")
 const WATER_SHADER = preload("res://src/game/world/water.gdshader")
 const Dusk = preload("res://src/game/environment/dusk_environment.gd")
+const CityHorizon = preload("res://src/game/world/city_horizon.gd")
 
-## Radius cincin bukit pertama dan kedua (di luar pagar 50 m).
-const HILL_RADIUS := 96.0
-const HILL_REACH := 240.0
-const FAR_RADIUS := 300.0
-const FAR_REACH := 620.0
-## Laut: bidang besar di sisi barat, turun 6 m di bawah padang.
-const SEA_LEVEL := -6.0
-const SEA_SIZE := 1600.0
-## Tinggi puncak bukit terdekat (di luar pagar) dan bukit jauh.
-const HILL_HEIGHT := 26.0
-const FAR_HEIGHT := 62.0
+## Laut: permukaan air sedikit di bawah nol (sedikit di bawah garis pantai pulau,
+## yang memang berada di tinggi 0) supaya bidang air tidak z-fighting dengan
+## tanah yang persis menyentuh y = 0. Bidangnya 900 m — jauh melampaui pulau
+## terbang terjauh supaya ujungnya tidak terlihat sebelum ditutup kabut.
+const SEA_LEVEL := -0.15
+const SEA_SIZE := 900.0
+## Pulau terbang: setiap entri [jarak dari pusat, sudut, tinggi melayang, skala].
+## Jaraknya jauh di luar garis pantai 100 m dan pulau batu supaya tetap menjadi
+## latar, bukan menutupi jalan pemain. Kabut menjaga siluetnya tetap lembut.
+const FLOATERS := [
+	Vector4(150.0, -0.62, 22.0, 1.00),
+	Vector4(186.0, 2.31, 30.0, 1.35),
+	Vector4(213.0, 1.12, 18.0, 0.80),
+	Vector4(238.0, 3.66, 36.0, 1.60),
+	Vector4(265.0, -2.72, 27.0, 1.10),
+	Vector4(288.0, 0.35, 40.0, 1.45),
+]
+## Amplitudo & kecepatan mengapung (detik satu siklus) — bergoyang pelan saja,
+## ini latar belakang, jangan sampai menarik perhatian dari pemain.
+const FLOAT_BOB := 1.6
+const FLOAT_PERIOD := 7.0
+## Warna pulau terbang: tanah cokelat, rumput hijau, batu kebiruan.
+const FLOAT_GRASS := Color("6fae4f")
+const FLOAT_GRASS_LIGHT := Color("9ed37a")
+const FLOAT_ROCK := Color("7d8fa0")
+const FLOAT_ROCK_DARK := Color("55697a")
 ## Warnanya sama dengan ilustrasi: hijau pastel, batu biru keabuan, tanah hangat.
-const HILL_COLOR := Color("6fae4f")
-const HILL_LIGHT := Color("9ed37a")
-const HILL_SHADE := Color("4c9a3d")
 const ROCK_COLOR := Color("8fa6b8")
 const ROCK_SHADE := Color("65808f")
 const STONE_COLOR := Color("c8c3b4")
 const MOSS_COLOR := Color("7fae63")
-const DIRT_COLOR := Color("c9a873")
-const MOTE_COLOR := Color("ffe9b0")
+const DIRT_COLOR := Color("9a8260")
+## Titik cahaya melayang: UNGU (permintaan "partikel ungu"), bukan krem lagi.
+## Sebelumnya ini satu-satunya partikel berwarna hangat — efek lain (jejak api
+## kaki, aura kecepatan, roh, serangan) sudah ungu semua.
+const MOTE_COLOR := Color("c9a6ff")
 
-var hills: Node3D
 var sea: MeshInstance3D
+var floaters: Node3D
 var ruins: Node3D
 var motes: Node3D
 var island: MeshInstance3D
 var cliff_count := 0
+var city_horizon: Node3D
+var _floaters: Array[Node3D]
+var _time: float
 
 
 func _ready() -> void:
 	name = "Scenery"
 	_build_sea()
 	_build_island()
-	_build_hills()
+	_build_floaters()
 	_build_cliffs()
 	_build_ruins()
 	_build_motes()
+	_build_city_horizon()
+
+
+func _build_city_horizon() -> void:
+	city_horizon = CityHorizon.new()
+	city_horizon.name = "CityHorizon"
+	add_child(city_horizon)
 
 
 # ------------------------------------------------------------------ laut ----
@@ -65,8 +92,12 @@ func _ready() -> void:
 func _build_sea() -> void:
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(SEA_SIZE, SEA_SIZE)
-	plane.subdivide_width = 24
-	plane.subdivide_depth = 24
+	# Sel air ± 7 m (128 x 128 = 33 ribu segitiga). Ini yang membuat gelombang
+	# MUNCUL di dekat pemain: air.gdshader menghitung riaknya per piksel, tapi
+	# permukaannya sendiri tetap digerakkan di vertex, dan 24 sel (37 m) dulu
+	# terlalu kasar untuk terlihat.
+	plane.subdivide_width = 128
+	plane.subdivide_depth = 128
 	var material := ShaderMaterial.new()
 	material.shader = WATER_SHADER
 	# Kilau di air harus searah dengan matahari senja, bukan arah bawaan shader.
@@ -76,9 +107,9 @@ func _build_sea() -> void:
 	sea.mesh = plane
 	sea.material_override = material
 	sea.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# Bidang diletakkan di barat: pusatnya jauh di luar pagar supaya sisi
-	# terdekatnya (pantai) berada tepat di tepi barat padang.
-	sea.position = Vector3(-SEA_SIZE * 0.5 + 2.0, SEA_LEVEL, 0.0)
+	# Laut mengelilingi SELURUH pulau: satu bidang besar di y = 0 (garis pantai
+	# pulau) yang menutup sampai jauh di luar pulau terbang terjauh (± 300 m).
+	sea.position = Vector3(0.0, SEA_LEVEL, 0.0)
 	add_child(sea)
 
 
@@ -91,83 +122,127 @@ func _build_island() -> void:
 	var indices := PackedInt32Array()
 	# Dua blok: yang utama panjang dan rendah, yang kedua lebih kecil di
 	# belakangnya supaya siluetnya tidak terlihat seperti satu balok.
-	_add_rock_block(vertices, colors, indices, Vector3(-430.0, SEA_LEVEL - 10.0, 46.0),
-		Vector3(74.0, 26.0, 34.0), 3)
-	_add_rock_block(vertices, colors, indices, Vector3(-512.0, SEA_LEVEL - 12.0, 84.0),
-		Vector3(48.0, 20.0, 26.0), 7)
+	_add_rock_block(vertices, colors, indices, Vector3(-147.0, SEA_LEVEL - 12.0, 0.0),
+		Vector3(9.0, 16.0, 4.5), 3)
+	_add_rock_block(vertices, colors, indices, Vector3(-159.0, SEA_LEVEL - 14.0, 2.0),
+		Vector3(6.0, 15.0, 3.5), 7)
 	_commit(vertices, colors, indices, "Island", self)
 	island = get_node("Island") as MeshInstance3D
 
 
-# ----------------------------------------------------------------- bukit ----
-
-func _build_hills() -> void:
-	hills = Node3D.new()
-	hills.name = "Hills"
-	add_child(hills)
-	# Cincin bukit terdekat: tinggi bergelombang mengelilingi padang, dengan
-	# celah di sisi barat supaya lautnya terlihat.
-	_add_ridge(HILL_RADIUS, HILL_REACH, HILL_HEIGHT, 0.0, 96, 1.0)
-	# Bukit jauh: lebih tinggi dan lebih pucat (kabut), menutup garis horizon.
-	_add_ridge(FAR_RADIUS, FAR_REACH, FAR_HEIGHT, 0.45, 72, 0.55)
+# ------------------------------------------------- pulau terbang (2D→3D) ----
 
 
-## Satu sabuk bukit: cincin vertex yang tingginya dari gelombang sinus, dengan
-## warna yang makin pucat makin jauh (kabut) — sama seperti ilustrasi.
-func _add_ridge(inner: float, outer: float, height: float, phase: float,
-		segments: int, gap: float) -> void:
+## Pulau-pulau kecil yang melayang di seberang air: bongkahan batu yang puncaknya
+## ditutupi rumput, bagian bawah meruncing ke satu titik. Bentuk pipih + warna
+## rata bikin terbaca seperti gambar 2D, tapi karena miring, berbayang, dan
+## mengapung naik-turun, tetap terasa sebagai objek 3D.
+func _build_floaters() -> void:
+	floaters = Node3D.new()
+	floaters.name = "Floaters"
+	add_child(floaters)
+	for entry: Vector4 in FLOATERS:
+		# Tipe harus ditulis eksplisit: `entry` dari Array tak bertipe adalah
+		# Variant, dan `:=` tidak bisa menyimpulkan tipe darinya (Parse Error).
+		var distance: float = entry.x
+		var angle: float = entry.y
+		var height: float = entry.z
+		var scale: float = entry.w
+		var holder := Node3D.new()
+		holder.position = Vector3(cos(angle) * distance, height, sin(angle) * distance)
+		holder.rotation.y = angle + PI * 0.5
+		# Miring sedikit: satu sisi lebih tinggi, jadi siluetnya tidak simetris
+		# (siluet simetris justru terbaca sebagai gambar 2D).
+		holder.rotation.z = sin(angle * 2.3) * 0.09
+		var mesh := _floater_mesh(11.0 * scale, 15.0 * scale)
+		var block := MeshInstance3D.new()
+		block.mesh = mesh
+		block.name = "Floater"
+		floaters.add_child(holder)
+		holder.add_child(block)
+		# Rumput/partikel kecil di puncak biar puncaknya tidak kosong melompong.
+		var motes := _mote_emitter(Vector3(0.0, 2.2 * scale, 0.0), 3)
+		holder.add_child(motes)
+		_floaters.append(holder)
+
+
+## Satu bongkahan pulau terbang: cakram rumput di puncak, lalu kerucut batu yang
+## meruncing ke satu titik di bawah. Setiap segitiga memakai satu warna rata,
+## jadi bidangnya terbaca datar seperti ilustrasi.
+func _floater_mesh(radius: float, depth: float) -> ArrayMesh:
 	var vertices := PackedVector3Array()
 	var colors := PackedColorArray()
 	var indices := PackedInt32Array()
-	var sea_side := -PI * 0.5
-	for index in range(segments + 1):
-		var angle := TAU * float(index) / float(segments)
-		var ridge := 0.55 + 0.45 * sin(angle * 3.0 + phase)
-		ridge *= 0.6 + 0.4 * sin(angle * 7.0 - phase * 2.0)
-		# Celah laut: sisi barat dibuat rendah/hilang.
-		var openness := 1.0 - gap * exp(-pow(angle_difference(angle, sea_side) * 2.2, 2.0))
-		var top := height * maxf(0.0, ridge) * openness
-		var direction := Vector3(cos(angle), 0.0, sin(angle))
-		var outer_point := direction * outer
-		var inner_point := direction * inner
-		vertices.append(Vector3(inner_point.x, -4.0, inner_point.z))
-		colors.append(HILL_SHADE)
-		vertices.append(Vector3(inner_point.x * 0.92, top * 0.45, inner_point.z * 0.92))
-		colors.append(HILL_COLOR)
-		vertices.append(Vector3(outer_point.x * 0.6 + inner_point.x * 0.4,
-			top, outer_point.z * 0.6 + inner_point.z * 0.4))
-		colors.append(HILL_LIGHT)
-	for index in range(segments):
-		var base := index * 3
-		var next := (index + 1) * 3
-		# Dua quad per segmen: lereng dalam dan punggung bukit.
-		indices.append_array(PackedInt32Array([base, next, base + 1,
-			next, next + 1, base + 1,
-			base + 1, next + 1, base + 2,
-			next + 1, next + 2, base + 2]))
-	_commit(vertices, colors, indices, "Hills_%d" % segments, hills)
+	var segments := 10
+	# Jari-jari puncak (rumput). Sisanya kerucut batu yang meruncing ke bawah.
+	var rim := radius * 0.55
+	# --- puncak rumput: cakram diisi segitiga dari pusat ---
+	var centre := vertices.size()
+	vertices.append(Vector3.ZERO)
+	colors.append(FLOAT_GRASS)
+	var ring: Array[Vector3] = []
+	for step in range(segments):
+		var a := TAU * float(step) / float(segments)
+		# Gobangan kecil supaya siluetnya tidak bulat sempurna — lingkaran
+		# sempurna justru terbaca sebagai gambar 2D.
+		var wobble := 1.0 + 0.09 * sin(a * 3.0) + 0.05 * cos(a * 5.0)
+		var edge := Vector3(cos(a) * rim * wobble, 0.0, sin(a) * rim * wobble)
+		ring.append(edge)
+		vertices.append(edge)
+		colors.append(FLOAT_GRASS_LIGHT if step % 2 == 0 else FLOAT_GRASS)
+	for step in range(segments):
+		# Urutan (centre, next, here): normalnya menghadap ATAS. Dibalik, seluruh
+		# puncak rumput tidak terlihat sama sekali (cull_back).
+		indices.append(centre)
+		indices.append(centre + 1 + (step + 1) % segments)
+		indices.append(centre + 1 + step)
+	# --- kerucut batu: dari tepi puncak turun ke satu titik terbawah ---
+	var tip := vertices.size()
+	vertices.append(Vector3(0.0, -depth, 0.0))
+	colors.append(FLOAT_ROCK_DARK)
+	for step in range(segments):
+		var here := centre + 1 + step
+		var next := centre + 1 + (step + 1) % segments
+		# Urutan (here, next, tip): normalnya menghadap KELUAR. Kalau terbalik,
+		# seluruh bongkahan jadi tidak terlihat (cull_back).
+		indices.append(here)
+		indices.append(next)
+		indices.append(tip)
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_COLOR] = colors
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return mesh
 
 
-func angle_difference(a: float, b: float) -> float:
-	var diff := fmod(a - b + PI, TAU)
-	if diff < 0.0:
-		diff += TAU
-	return diff - PI
+func _process(delta: float) -> void:
+	# Mengapung pelan; `_time` juga dipakai partikel supaya keduanya selaras.
+	_time += delta
+	for index in range(_floaters.size()):
+		var holder := _floaters[index] as Node3D
+		var entry: Vector4 = FLOATERS[index]
+		if holder == null:
+			continue
+		holder.position.y = entry.z + FLOAT_BOB * sin(
+			_time * TAU / FLOAT_PERIOD + float(index) * 1.7)
 
 
 # ---------------------------------------------------------------- tebing -----
 
 func _build_cliffs() -> void:
-	# Dinding batu di sisi +x (timur), tepat di luar pagar, memanjang seperti di
-	# ilustrasi; dibelah beberapa blok supaya terlihat seperti formasi batu.
+	# Dinding batu di sisi +x (timur), di SEBERANG air (tepat di luar garis
+	# pantai), memanjang seperti di ilustrasi; dibelah beberapa blok supaya
+	# terlihat seperti formasi batu.
 	var vertices := PackedVector3Array()
 	var colors := PackedColorArray()
 	var indices := PackedInt32Array()
 	var blocks := 9
 	# Blok dibuat saling menimpa (lebar 15 m, jarak titik 12,5 m) supaya terbaca
-	# sebagai satu dinding batu, bukan deretan menara. Muka terdekat blok =
-	# base_x - depth/2; depth maksimum 17 m, jadi base_x = Field.HALF + 13 masih
-	# menyisakan 4,5 m dari pagar.
+	# sebagai satu dinding batu. Muka terdekat blok sekitar x=54 m, di luar garis
+	# pantai pulau 100 m, sehingga tetap menjadi latar tanpa collision.
 	var base_x := Field.HALF + 13.0
 	for block in range(blocks):
 		var center_z := -Field.HALF + 12.0 + float(block) * 12.5
@@ -272,14 +347,25 @@ func _build_motes() -> void:
 	motes = Node3D.new()
 	motes.name = "LightMotes"
 	add_child(motes)
-	# Tiga titik: dua di sepanjang jalan, satu di dekat reruntuhan.
-	var spots: Array[Vector3] = [Vector3(-6.0, 1.4, -14.0), Vector3(-13.0, 1.6, -27.0),
-		Vector3(4.0, 1.3, -8.0)]
+	# Titik cahaya menyebar di sepanjang jalan skala pulau 100 m. Tingginya
+	# tetap dihitung dari terrain supaya partikel mengikuti bukit.
+	var spots: Array[Vector3] = [Vector3(-18.0, 1.4, -8.0), Vector3(-23.0, 1.6, -16.0),
+		Vector3(19.0, 1.3, -5.0)]
+	for step in range(-4, 5):
+		var along := step * 6.0
+		# Geser 3 m ke samping jalan supaya partikel melayang di atas rumput.
+		spots.append(Vector3(along, 1.4, _path_centre(along) + 3.0))
 	for spot in spots:
-		motes.add_child(_mote_emitter(spot))
+		var ground: float = Field.terrain_height(spot.x, spot.z)
+		motes.add_child(_mote_emitter(spot + Vector3(0.0, ground, 0.0)))
 
 
-func _mote_emitter(position: Vector3) -> GPUParticles3D:
+## Garis tengah yang sama dengan shader tanah dan aturan pertumbuhan rumput.
+func _path_centre(x: float) -> float:
+	return Field.path_centre(x)
+
+
+func _mote_emitter(position: Vector3, amount: int = 22) -> GPUParticles3D:
 	var material := ParticleProcessMaterial.new()
 	material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
 	material.emission_box_extents = Vector3(3.5, 1.2, 3.5)
@@ -301,7 +387,7 @@ func _mote_emitter(position: Vector3) -> GPUParticles3D:
 	glow.disable_receive_shadows = true
 	var emitter := GPUParticles3D.new()
 	emitter.name = "Motes"
-	emitter.amount = 22
+	emitter.amount = amount
 	emitter.lifetime = 6.0
 	emitter.preprocess = 4.0
 	emitter.explosiveness = 0.0

@@ -147,6 +147,17 @@ func set_charge(value: float) -> void:
 		material.set_shader_parameter("charge", level)
 
 
+## Pancaran bloom saat dash/lari (0..1). Ditulis ke SEMUA bahan kulit —
+## termasuk bahan mesh mannequin yang dipakai bersama lewat `materials()` —
+## supaya lapisan dalam dan luar menyala bersamaan, bukan setengah-setengah.
+func set_bloom(value: float) -> void:
+	var level := clampf(value, 0.0, 1.0)
+	for material in _materials:
+		material.set_shader_parameter("bloom", level)
+	if skin != null:
+		skin.set_shader_parameter("bloom", level)
+
+
 ## Pusat + ukuran kulit, dipakai tes untuk membuktikan ia MENUTUPI mannequin.
 func shell_bounds() -> AABB:
 	var bounds := AABB()
@@ -193,6 +204,8 @@ func _make_outline() -> ShaderMaterial:
 	var outline := ShaderMaterial.new()
 	outline.shader = OUTLINE
 	outline.set_shader_parameter("outline_width", 0.005)
+	# Putih: badan mannequin hitam gelap butuh tepi terang supaya tidak larut.
+	outline.set_shader_parameter("outline_color", Color.WHITE)
 	return outline
 
 

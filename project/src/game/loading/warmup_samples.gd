@@ -1,6 +1,6 @@
 extends RefCounted
 ## Render resource asli: material tanah, rumput MultiMesh, avatar ber-skinning,
-## lapisan tubuh atas, tapak api, aura cepat, dan sinar matahari.
+## lapisan tubuh atas, tapak api, dan aura cepat.
 
 const Field = preload("res://src/game/world/field.gd")
 const Character = preload("res://src/game/mannequin.gd")
@@ -9,7 +9,7 @@ const Projectile = preload("res://src/game/fire_projectile.gd")
 const Burst = preload("res://src/game/fire_burst.gd")
 const FootFire = preload("res://src/game/foot_fire/foot_fire_trail.gd")
 const SpeedAura = preload("res://src/game/speed/speed_aura.gd")
-const SunRays = preload("res://src/game/god_rays/sun_rays.gd")
+const AEGIS_SHADER = preload("res://src/game/survival/aegis_shell.gdshader")
 const STAGES := 14
 
 
@@ -29,8 +29,8 @@ static func populate(stage: int, world: Node3D, game: Node3D) -> void:
 		_foot_fire(world)
 	elif stage == 10 or stage == 11:
 		_speed(world, game, stage == 11)
-	elif stage == 12:
-		_rays(world)
+	elif stage == 13:
+		_survival_aegis(world)
 	else:
 		_field_ground(world, game)
 
@@ -124,13 +124,21 @@ static func _speed(world: Node3D, game: Node3D, with_ghosts: bool) -> void:
 	character.hide()
 
 
-static func _rays(world: Node3D) -> void:
-	var rays := SunRays.new()
-	world.add_child(rays)
-	rays.set_process(false)
-	rays.visible = true
-	rays.material_override.set_shader_parameter("source_uv", Vector2(0.5, 0.5))
-	rays.material_override.set_shader_parameter("strength", 0.16)
+static func _survival_aegis(world: Node3D) -> void:
+	var shell := MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius = 1.0
+	sphere.height = 2.0
+	sphere.radial_segments = 28
+	sphere.rings = 14
+	shell.mesh = sphere
+	shell.position.y = 0.9
+	var material := ShaderMaterial.new()
+	material.shader = AEGIS_SHADER
+	material.set_shader_parameter("strength", 0.75)
+	material.set_shader_parameter("tint", Color(0.47, 0.34, 1.0, 1.0))
+	shell.material_override = material
+	world.add_child(shell)
 
 
 static func _add_grass(world: Node3D, mesh: Mesh, source: ShaderMaterial,

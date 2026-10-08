@@ -2,19 +2,24 @@ extends SceneTree
 ## Gerbang pemandangan dunia (permintaan: "world nya kayak di loading screen").
 ##
 ## Yang diuji adalah JANJI ke pemain, bukan sekadar "tidak ada error":
-##   1. ada bukit, tebing, laut, reruntuhan batu, dan titik cahaya melayang,
-##   2. susunannya seperti ilustrasi: laut di barat (-x) dan di bawah kaki,
-##      tebing di timur (+x) di luar pagar,
-##   3. TIDAK ADA satu pun yang menambah collision atau masuk ke dalam padang,
-##      jadi fisika/gerak pemain tidak berubah (gerbang lama tetap sah),
+##   1. ada pulau terbang, tebing, laut, reruntuhan batu, dan titik cahaya
+##      melayang (bukit tajam tiga segitiga sudah DIHAPUS atas permintaan),
+##   2. susunannya mengelilingi PULAU 100 m: laut di segala arah pada permukaan
+##      y = 0, sedangkan pulau terbang, tebing, dan pulau batu berdiri di LUAR
+##      garis pantai (di seberang air) supaya tidak menutupi medan pemain,
+##   3. TIDAK ADA satu pun yang menambah collision atau masuk ke dalam pulau,
+##      jadi fisika/gerak pemain tidak berubah,
 ##   4. jalan tanah benar-benar digambar oleh bahan tanah (parameter shader ada
-##      dan menyala), dan varying world_position benar-benar diisi — dulu tidak,
-##      sehingga seluruh pola tanah (termasuk jalan) membaca satu titik nol.
+##      dan menyala), varying world_position benar-benar diisi — dulu tidak,
+##      sehingga seluruh pola tanah (termasuk jalan) membaca satu titik nol,
+##      dan pita pasir pantai memakai ketinggian tanah supaya mengikuti garis
+##      air yang berliku.
 ##
 ## Angka bentuknya juga dicatat supaya bisa dibaca dari komentar commit.
 
 const Field = preload("res://src/game/world/field.gd")
 const Scenery = preload("res://src/game/world/scenery.gd")
+const CityHorizon = preload("res://src/game/world/city_horizon.gd")
 var _failures := 0
 var _notes := PackedStringArray()
 var _reported := {}
@@ -51,60 +56,134 @@ func _run() -> void:
 
 
 func _test_parts(scenery: Scenery) -> void:
-	for part in ["Hills", "Sea", "Cliffs", "Island", "Ruins", "LightMotes"]:
+	for part in ["Floaters", "Sea", "Cliffs", "Island", "Ruins", "LightMotes",
+			"CityHorizon"]:
 		var node := scenery.get_node_or_null(part)
 		_check(node != null, "Bagian pemandangan hilang: " + part)
-	if scenery.hills == null or scenery.sea == null or scenery.ruins == null \
+	if scenery.floaters == null or scenery.sea == null or scenery.ruins == null \
 			or scenery.motes == null:
 		return
-	var hill_meshes := 0
-	var hill_top := -INF
-	for node in scenery.hills.find_children("*", "MeshInstance3D", true, false):
-		var mesh := node as MeshInstance3D
-		hill_meshes += 1
+	var horizon := scenery.city_horizon
+	_check(horizon != null, "Skyline/bukit berkabut tidak dibuat di home")
+	if horizon != null:
+		var skyline := horizon.get_node_or_null("DistantSkyline") as MultiMeshInstance3D
+		var hills := horizon.get_node_or_null("FogboundHills")
+		var haze := horizon.get("_haze_material") as ShaderMaterial
+		_check(int(horizon.get("building_count")) >= 48,
+			"Kota jauh bukan MultiMesh ringan")
+		_check(skyline != null and skyline.multimesh != null
+			and skyline.multimesh.instance_count >= 48,
+			"Skyline tidak memakai satu MultiMesh")
+		_check(hills != null and hills.get_child_count() == 2,
+			"Dua lapis bukit jauh tidak dibuat")
+		_check(haze != null and haze.shader.code.contains("haze_strength")
+			and float(haze.get_shader_parameter("haze_strength")) >= 0.94
+			and float(haze.get_shader_parameter("haze_end")) <= 320.0,
+			"Fog horizon tidak cukup tebal atau shader tidak aktif")
+		_check(CityHorizon.CITY_RADIUS > Field.HALF + 100.0,
+			"Kota jauh terlalu dekat dan masuk ke gameplay pulau")
+	var floater_meshes := 0
+	var floater_top := -INF
+	var floater_low := INF
+	for holder in scenery.floaters.get_children():
+		var mesh := holder.get_node_or_null("Floater") as MeshInstance3D
+		if mesh == null:
+			continue
+		floater_meshes += 1
 		var bounds := mesh.get_aabb()
-		hill_top = maxf(hill_top, bounds.position.y + bounds.size.y)
-	_check(hill_meshes >= 2, "Bukit kurang dari dua sabuk: %d" % hill_meshes)
-	_check(hill_top > 12.0, "Bukit terlalu rendah untuk terlihat dari padang: %.1f m"
-		% hill_top)
+		# get_aabb() lokal; posisi holder memberi tinggi melayang sebenarnya.
+		floater_top = maxf(floater_top, holder.position.y + bounds.position.y + bounds.size.y)
+		floater_low = minf(floater_low, holder.position.y + bounds.position.y)
+	# Pemandangan pengganti bukit: harus ADA, harus melayang tinggi supaya
+	# terlihat dari padang, dan harus berada di ATAS permukaan laut.
+	_check(floater_meshes >= 4, "Pulau terbang kurang dari empat: %d" % floater_meshes)
+	_check(floater_top > 12.0,
+		"Pulau terbang terlalu rendah untuk terlihat dari padang: %.1f m" % floater_top)
+	_check(floater_low > -1.0, "Pulau terbang tenggelam di bawah air: %.1f m" % floater_low)
 	var pillars := scenery.ruins.get_child_count()
 	_check(pillars >= 5, "Reruntuhan kurang lengkap: %d bagian" % pillars)
 	var emitters := 0
+	var mote_color := Color.WHITE
 	for node in scenery.motes.find_children("*", "GPUParticles3D", true, false):
 		var emitter := node as GPUParticles3D
 		if emitter.amount > 0:
 			emitters += 1
+			var glow: StandardMaterial3D = emitter.material_override
+			mote_color = glow.albedo_color
 	_check(emitters >= 1, "Tidak ada titik cahaya melayang")
-	_notes.append(("pemandangan: %d sabuk bukit (puncak %.0f m), %d blok tebing, "
-		+ "%d bagian reruntuhan, %d titik cahaya") % [hill_meshes, hill_top,
-		scenery.cliff_count, pillars, emitters])
+	# Partikel harus UNGU (permintaan pengguna), bukan krem/kuning seperti dulu.
+	_check(mote_color.b > mote_color.r and mote_color.b > mote_color.g,
+		"Partikel melayang bukan ungu: %s" % mote_color)
+	_notes.append(("pemandangan: %d pulau terbang (puncak %.0f m, dasar %.0f m), "
+		+ "%d blok tebing, %d bagian reruntuhan, %d titik cahaya %s")
+		% [floater_meshes, floater_top, floater_low,
+			scenery.cliff_count, pillars, emitters, mote_color])
 
 
-## Susunan seperti ilustrasi: laut barat + lebih rendah dari padang, tebing timur.
+## Susunan pulau 100 m: laut mengelilingi SEMUA arah pada permukaan y = 0,
+## pulau terbang dan tebing di luar garis pantai, pulau batu jauh di barat.
 func _test_layout(scenery: Scenery) -> void:
 	var sea_position := scenery.sea.position
-	_check(sea_position.x < -Field.HALF, "Laut tidak di sisi barat: x=%.1f" % sea_position.x)
-	_check(sea_position.y < -3.0, "Laut tidak lebih rendah dari padang: y=%.1f"
-		% sea_position.y)
+	var sea_mesh := scenery.sea.mesh as PlaneMesh
+	_check(sea_mesh != null, "Laut bukan bidang")
+	if sea_mesh != null:
+		# Laut harus menutup SELURUH pulau 100 m, bukan hanya menyamping.
+		_check(sea_mesh.size.x >= Field.SIZE * 2.0,
+			"Laut terlalu kecil untuk mengelilingi pulau: %.0f m" % sea_mesh.size.x)
+	_check(sea_position.x == 0.0 and sea_position.z == 0.0,
+		"Laut tidak mengelilingi pulau: posisi (%.0f, %.0f)"
+		% [sea_position.x, sea_position.z])
+	_check(sea_position.y < Field.terrain_height(0.0, 0.0),
+		"Air tidak lebih rendah dari dataran pulau: y=%.1f" % sea_position.y)
+	for holder in scenery.floaters.get_children():
+		var mesh := holder.get_node_or_null("Floater") as MeshInstance3D
+		if mesh != null:
+			_outside_island(mesh, "Pulau terbang")
 	var cliffs := scenery.get_node_or_null("Cliffs") as MeshInstance3D
 	_check(cliffs != null, "Tebing tidak ditemukan")
 	if cliffs != null:
-		var bounds := cliffs.get_aabb()
-		_check(bounds.position.x > Field.HALF,
-			"Tebing masuk ke dalam padang: x=%.1f" % bounds.position.x)
-		if scenery.island != null:
-			# Pulau harus jauh di laut barat, dan puncaknya di atas permukaan air.
-			var island_bounds := scenery.island.get_aabb()
-			_check(island_bounds.position.x + island_bounds.size.x
-				< -Field.HALF * 4.0,
-				"Pulau terlalu dekat: x=%.1f" % (island_bounds.position.x
-					+ island_bounds.size.x))
-			_check(island_bounds.position.y + island_bounds.size.y
-				> scenery.sea.position.y,
-				"Puncak pulau tenggelam")
-		_notes.append("tata letak: laut y=%.1f x=%.1f, tebing x=%.1f..%.1f"
-			% [sea_position.y, sea_position.x, bounds.position.x,
-			bounds.position.x + bounds.size.x])
+		_outside_island(cliffs, "Tebing")
+	if scenery.island != null:
+		# Pulau batu berdiri di laut barat, jauh dari garis pantai.
+		_outside_island(scenery.island, "Pulau batu")
+		var island_bounds := scenery.island.get_aabb()
+		_check(island_bounds.position.y + island_bounds.size.y > sea_position.y,
+			"Puncak pulau batu tenggelam")
+		var west_coast := -Field.island_radius(PI)
+		# Jarak minimum pulau batu dari garis pantai: 5% dari ukuran dunia. Pulau
+		# batunya sengaja ditaruh jauh (pulau kini 100 m, batunya di x ± 150 m) —
+		# cukup terbaca sebagai pulau terpisah di laut tanpa menutupi garis pantai.
+		var clearance := Field.SIZE * 0.05
+		_check(island_bounds.position.x + island_bounds.size.x < west_coast - clearance,
+			"Pulau batu terlalu dekat pantai: x=%.1f (pantai barat %.1f, minimal %.1f m)"
+				% [island_bounds.position.x + island_bounds.size.x, west_coast, clearance])
+	var sea_width := sea_mesh.size.x if sea_mesh != null else 0.0
+	# Tanda kurung WAJIB: tanpa itu % hanya menempel pada potongan terakhir yang
+	# tidak punya placeholder, dan GDScript melaporkan "not all arguments
+	# converted" sementara catatannya keluar tanpa angka.
+	_notes.append(("tata letak: laut %.0f x %.0f m di y=%.2f mengelilingi pulau 100 m, "
+		+ "pulau terbang & tebing di luar garis pantai")
+		% [sea_width, sea_width, sea_position.y])
+
+
+## Setiap titik pemandangan besar harus berada di LUAR garis pantai (di laut).
+## Pulau terbang, tebing, atau pulau batu yang tumbuh di pulau akan menutupi
+## medan tempat pemain berjalan, dan itu tidak kelihatan dari pemeriksaan lain.
+func _outside_island(mesh: MeshInstance3D, label: String) -> void:
+	if mesh == null or mesh.mesh == null:
+		return
+	var arrays := mesh.mesh.surface_get_arrays(0)
+	var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var inside := 0
+	for point in points:
+		# Posisi DUNIA: pulau terbang digambar relatif terhadap holder-nya yang
+		# melayang jauh dari pusat, jadi titik lokalnya (dekat nol) tidak bisa
+		# dipakai langsung — harus lewat transform global dulu.
+		var world: Vector3 = mesh.to_global(point)
+		if Field.is_inside(world.x, world.z, 0.0):
+			inside += 1
+	_check(inside == 0, "%s punya %d titik di dalam pulau (harus di laut)"
+		% [label, inside])
 
 
 ## Pemandangan tidak boleh menambah collision apa pun: pemain tetap bermain di
@@ -138,6 +217,7 @@ func _test_ground_path() -> void:
 	_check(shader.contains("world_position = (MODEL_MATRIX"),
 		"world_position tidak diisi di vertex(): pola tanah & jalan akan rata")
 	_check(shader.contains("path_enabled"), "Shader tanah tidak punya jalan")
+	_check(shader.contains("shore_low"), "Shader tanah tidak punya pita pasir pantai")
 	var width := _number(material, "path_width")
 	var curve := _number(material, "path_curve")
 	var frequency := _number(material, "path_frequency")

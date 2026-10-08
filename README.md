@@ -696,3 +696,1004 @@ mengikuti dependensi *scene*, bukan dependensi *skrip*.
   sendiri sehingga drag bisa dimulai di baris mana pun (dulu hanya dari pojok),
   ketukan pendek memilih klip, dan ketukan di luar jendela menutup panel.
 - Tombol HUD tidak lagi ikut memulai analog (`input_exclusions`).
+
+### 2026-10-02 — kulit mannequin: hitam gelap + outline putih tipis
+
+Permintaan pengguna: skin mannequin diganti jadi **hitam gelap** dengan
+**garis tepi putih tipis**. Hanya warna yang berubah — struktur kulit (salinan
+mesh + `grow` 22 mm), mirror pose, denyut mengikuti kecepatan, dan gerbang tes
+`tools/test_skin_shell.gd` tetap sama.
+
+- `character/skin_shell.gdshader`: `skin_dark` 0,150/0,195/0,300 → 0,010 (nyaris
+  hitam), `skin_light` 0,330/0,420/0,575 → 0,050 — gradasi gelap kaki→kepala
+  dipertahankan supaya bentuk badan masih terbaca dari jauh. Garis energi
+  `vein_color` dan rim `rim_color` jadi abu gelap: tubuh tetap terbaca hitam,
+  tidak rata seperti plastik. Rim sekarang benar-benar memakai `rim_color`
+  (sebelumnya uniform itu tidak terpakai).
+- `character_outline.gdshader`: warna bawaan gelap → **PUTIH**, lebar bawaan
+  6 mm → 5 mm (tipis). Putih dipasang eksplisit di `mannequin.gd`
+  (`_apply_material`) dan `character/skin_shell.gd` (`_make_outline`) supaya
+  outline mesh dalam dan salinan kulit tidak mungkin berbeda warna.
+- Belum diuji di HP; gerbang CI (parse, compile, tes kulit/animasi) tidak
+  mengunci warna lama, jadi tidak ada tes yang perlu diubah.
+
+### 2026-10-02 — build CI diparalelkan: 12 menit jadi 4 menit
+
+Update project ini nyicil (satu perubahan kecil = satu push), tapi build lama ± 8 menit
+dan hampir seluruhnya di render Mobile Vulkan software (lavapipe, runner 2 core).
+Dari data run `36999636319`: render = 302 s dari total 467 s, sisanya lint 32 s,
+apt 29 s, tes headless 34 s, ekspor 27 s.
+
+- Workflow `apk` dipecah jadi 6 pekerjaan: **gate** (lint + compile + semua tes
+  headless, ± 2 menit), **render-a/b/c** (render Mobile Vulkan dibagi berimbang
+  ± 100 s masing-masing, jalan bersamaan), **package** (PCK + APK + audit + rilis,
+  TUNGGU gate hijau), **ringkasan** (komentar angka/pratinjau/log gagal, selalu
+  jalan), dan **build** (gerbang agregat).
+- Aturan lama **"compile lolos dulu, baru ekspor APK"** tetap dijaga: `package`
+  menunggu `gate`. Render sengaja tidak menunggu gate supaya push kecil tidak
+  menunggu dua kali.
+- Setiap gerbang/periksa yang lama TIDAK dihapus — hanya dipindah; audit otomatis
+  membandingkan 60 blok perintah lama vs baru (0 langkah hilang, 0 beda isi).
+- Komentar commit pindah ke pekerjaan `ringkasan` yang `if: always()`: dulu kalau
+  tes gagal di tengah, angka diagnostik ikut hilang. Log tiap pekerjaan kini
+  diunggah sebagai artefak `logs-*`, pratinjau JPEG dibuat di pekerjaan render.
+- Job `build` agregat mempertahankan nama status check lama (`apk / build`)
+  supaya required check di Settings tidak perlu diubah.
+- Verifikasi lokal: YAML valid, 60/60 blok `run:` lolos `bash -n`.
+
+Hasil ukur setelah dipecah (run `37002663347`, semuanya hijau):
+
+| Pekerjaan | Durasi | Isi |
+|---|---|---|
+| render-c | 3,6 menit | avatar dekat + pemandangan dunia |
+| render-b | 3,1 menit | HUD + warmup GPU |
+| render-a | 2,1 menit | rumput, api, casting, tapak, sinar, senja |
+| gate | 1,8 menit | lint + compile + tes headless |
+| package | 1,1 menit | PCK + APK + audit + rilis (jalan setelah gate) |
+| ringkasan | 0,3 menit | komentar angka/pratinjau/log |
+
+**Waktu yang dirasakan pengguna (push → run selesai): 11 menit 59 s → 4 menit 6 s.**
+Bottleneck sekarang render-c (render avatar); kalau nanti mau lebih cepat lagi,
+langkah termurah adalah memindah "Render pemandangan dunia" ke render-a yang
+masih punya ruang, atau memecah render-c jadi dua pekerjaan.
+
+### 2026-10-02 — kulit mannequin: hitam POLOS (garis energi dibuang)
+
+Lanjutan permintaan "hitam gelap + outline putih tipis": kali ini garis energi
+yang mengalir dan percikan kecil DIHAPUS, jadi tubuh benar-benar hitam polos.
+
+- `character/skin_shell.gdshader`: perhitungan `band`/`vein`/`sparkle` dan
+  `vein_speed` dibuang. Yang tersisa: gradasi sangat gelap kaki→kepala
+  (`skin_dark` 0,010 → `skin_light` 0,050), satu bercak hash halus supaya tidak
+  seperti plastik, dan rim abu tipis di pinggir siluet yang menguat saat lari
+  (`pulse`) atau menyerang (`charge`) — tanpa gelombang yang berjalan, jadi
+  tubuhnya tetap polos.
+- Uniform `vein_color`/`vein_scale`/`vein_width` sengaja MASIH dideklarasikan
+  supaya `set_light_cloth()` (mode grafis Ringan) tidak menyetel parameter yang
+  tidak ada; nilainya sudah tidak dipakai shader.
+- `set_light_cloth()` di `mannequin.gd` tetap ada (dipakai `performance_panel.gd`)
+  tapi tidak lagi mengubah tampilan — mode Ringan kini hanya memengaruhi
+  resolusi/bayangan/rumput seperti sebelumnya.
+- Outline putih tipis (5 mm) tidak berubah. Belum diuji di HP.
+
+### 2026-10-02 — dunia jadi PULAU 1 km × 1 km, garis pantai bergelombang
+
+Permintaan pengguna: "world nya 1km, pinggirannya jangan bulat atau kotak tapi
+kayak pulau gitu bergelombang". Cicilan ini HANYA ukuran dunia + bentuk garis
+pantai (palet gelap, rumput rapat, partikel ungu, sinar senja, dan shader air
+adalah cicilan berikutnya — belum dikerjakan).
+
+- `src/game/world/field.gd` ditulis ulang: dunia 1000 × 1000 m (dulu 100 m).
+  Bentuk pulau dari **satu fungsi tinggi** (`terrain_height`) yang dipakai mesh,
+  collider, karakter, rumput, tapak api, dan langkah kaki — itu sebabnya fungsi
+  itu `static` dan murni (tidak boleh bergantung node/frame/urutan build).
+- Garis pantai TIDAK bulat dan TIDAK kotak: radius pulau per sudut dihitung dari
+  noise rendah di sepanjang lingkaran plus dua lekukan sinus. Hasil terukur
+  radius **285-368 m** (berubah **22%** antar arah), luas daratan ± 0,35 km².
+- Medan: dataran ± 6 m di pedalaman, tanjakan pantai 6 m / 70 m (± 8,5% — bisa
+  dilalui), dasar laut turun sampai -9 m supaya pantai tidak terlihat seperti
+  potongan. Perbukitan halus ± 4 m yang melemah mendekati garis air.
+- **Chunk streaming** (bukan satu mesh 1 km): chunk 128 m × 128 m (32 × 32 sel
+  4 m) dibangun SATU per frame mengelilingi pemain, maksimal 7 × 7 = 49 chunk
+  (± 448 m). Grid chunk dipusatkan di (0,0) supaya jangkauannya simetris; chunk
+  yang seluruhnya di laut tidak pernah dibangun (hemat draw call). Terukur
+  ± 36 chunk hidup, selisih tinggi grid vs fungsi analitik 0,014 m.
+- `ground.gdshader`: cincin "tepi padang" (yang butuh jarak ke pusat) dibuang,
+  diganti **pita pasir berbasis ketinggian** (`shore_low` 0,35 → `shore_high`
+  2,6 m). Karena memakai tinggi, pasir mengikuti garis air yang berliku tanpa
+  perlu tahu bentuk pulau. Jalan tanah dilebarkan (lebar 3 m, lekuk 55 m) dan
+  fasanya diganti supaya melintas tepat di titik spawn pemain (0, 7).
+- `world/scenery.gd`: laut jadi SATU bidang 4200 × 4200 m di y = -0,15 yang
+  mengelilingi seluruh pulau (dulu di sisi barat saja). Bukit dipindah ke
+  520-780 m dan 820-1250 m, tebing ke x = 513 m, pulau batu ke x = -760/-905 —
+  semuanya di LUAR garis pantai supaya tidak tumbuh di tanah pemain.
+- `orbit_camera.gd`: zoom terjauh 8 m → **620 m** (pemain harus bisa melihat
+  pulau yang mereka minta). `ARM_COLLISION_LIMIT` 30 m: di atas itu SpringArm
+  berhenti menabrak tanah, kalau tidak kamera terjepit di bukit pertama.
+- `environment/dusk_environment.gd`: kabut 60-420 m → **200-1400 m**. Bukit di
+  kaki langit kini berdiri 520-1250 m dari pemain; dengan kabut lama bukit itu
+  lenyap seluruhnya. Garis horizon air (`horizon_fade`) ikut jadi 1400 m.
+- **Pagar kayu (`world/boundary_fence.gd`) DIHAPUS** — batas dunia sekarang
+  garis pantai. `player.gd`: `_keep_inside()` memakai `Field.clamp_inside()`
+  dengan `SHORE_MARGIN` 14 m (proyeksi radial balik ke darat), bukan lagi
+  klamping kotak. `audio/footsteps.gd`: suara "tanah" bukan lagi cincin di tepi
+  pagar melainkan pita pasir (tinggi tanah < 2,6 m), sama dengan shader.
+- Gerbang baru `tools/test_island.gd` (7 janji): ukuran 1 km, garis pantai
+  bergelombang (bukan bulat/kotak), darat di dalam & air di luar, tinggi mesh =
+  tinggi collider = tinggi pemain, `clamp_inside` selalu balik ke darat, chunk
+  streaming hidup & chunk laut tidak dibuang, rumput tidak menempel pantai.
+  Gerbang lama diperbarui (test_scenery/test_grass/test_audio/render_world) dan
+  satu langkah CI baru menambahkan tes pulau ke `gate`.
+
+Hasil CI (run `37011157491`, 7/7 pekerjaan hijau, push → selesai 4 menit 30 s):
+gate 104 s (termasuk tes pulau baru `[island-test] gagal=0`), render-c 209 s,
+render-a 189 s, render-b 175 s, package 90 s. Belum diuji di HP — sandbox tidak
+bisa menjalankan Godot, jadi bentuk pulau dinilai dari gambar render CI
+(`world-pulau/pantai/pemandangan/jalan/laut`) dan dari HP pengguna.
+
+### 2026-10-02 — palet senja: tanah & rumput gelap tapi tetap terbaca
+
+Lanjutan permintaan "tanah dan rumput jadi gelap tapi tetap kelihatan, dan
+rumput satu warna dengan tanah". Cicilan ini HANYA warna (rumput rapat, partikel
+ungu, sinar cahaya, dan shader air menyusul).
+
+- `world/field.gd` — satu sumber warna untuk shader tanah: `GRASS_COLOR`
+  `8fce63 → 3f6b34`, `GRASS_DARK` `6aa845 → 2d4f27` (± 45% lebih gelap),
+  `SAND_COLOR` `c9a873 → 9a8260` (± 25%, senja bukan siang). Angkanya dipilih
+  supaya kanal hijau tanah tetap di atas 0,22 setelah dicahaya senja — batas
+  gerbang `test_dusk`.
+- `grass.gdshader` dan `world/grass_distance.gdshader` — warna helai
+  (`top_color`/`bottom_color`) diambil dari warna tanah yang sama, jadi rumput
+  dan tanah terbaca sebagai SATU warna. Ujung helai sedikit lebih terang dari
+  akarnya; itu yang masih membuat helai terbaca sebagai benda 3D setelah
+  warnanya disamakan.
+- `tools/test_dusk.gd` — gerbang "tanah hijau terbaca" dulu memakai hijau muda
+  `8fce63` yang ditulis ulang di dalam tes, padangkan dunianya sudah berubah:
+  tesnya menguji warna yang tidak dipakai lagi. Sekarang warnanya diambil dari
+  `Field.GRASS_COLOR`, jadi janjinya jadi "tanah GELAP pun masih terbaca".
+- `world/scenery.gd` — konstanta `DIRT_COLOR` yang tidak terpakai ikut meredup
+  supaya tidak menyesatkan.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-02 — rumput rapat: helai kecil, menutupi sampai 32 m, kartu LOD sampai 128 m
+
+Lanjutan permintaan "rumput jadi kecil, rapat, benar-benar terlihat helainya,
+menutupi semua yang terlihat di jangkauan kamera". Cicilan ini hanya rumput.
+
+- `grass_field.gd` — helai mengecil supaya terbaca sebagai helai, bukan semak:
+  tinggi 0,55 → 0,34 m, lebar 0,085 → 0,055 m, lapisan bawah 0,25 → 0,22 m.
+  Kerapatan naik: `GRID` 40 → 44 (13,4 rumpun/m², 54 helai/m²) dan `FAR_GRID`
+  20 → 22.
+- Cakupan helai rapat + lapisan bawah naik dari 12 m ke 24 m (`NEAR_SPAN`
+  1 → 2, jadi 5×5 tile), lalu makin renggang sampai 36 m (`RADIUS` 2 → 3).
+  Sebelumnya lapisan bawah tanah hilang sudah di 8–11 m dari pemain, jadi
+  rumput tampak berhenti tak jauh dari pemain.
+- `grass.gdshader` — fade helai 23 → 32 m; fade detail/lapisan bawah 8–11 →
+  18–25 m.
+- `world/distant_grass.gd` — kartu LOD mengambil alih dari 27 m sampai 128 m
+  (`RADIUS` 3 → 4, `GRID` 12 → 14, dua tile per frame supaya 81 tile tetap
+  cepat terisi saat spawn); `world/grass_distance.gdshader` fade masuk 19–27 m,
+  fade keluar 100–130 m.
+- Anggaran gambar: helai asli 336.864 tris + kartu 63.504 tris = 400.368 tris
+  (sebelumnya 140.224). Batas ini dijaga `tools/test_grass.gd`, dan tile penuh
+  sekarang 49 (tes menunggu 60 frame, bukan 35).
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-02 — partikel ungu
+
+Lanjutan permintaan "partikel ungu". Cicilan ini hanya partikel.
+
+- `world/scenery.gd` — `MOTE_COLOR` `ffe9b0` (krem) → `c9a6ff` (ungu). Ini
+  satu-satunya partikel yang masih hangat: jejak api kaki, aura kecepatan, roh,
+  dan efek serangan sudah ungu semua.
+- Titik cahaya melayang sekarang menyebar di sepanjang jalan (10 titik, 220
+  partikel) — dulu hanya 3 titik dekat spawn, jadi partikelnya hampir tidak
+  pernah terlihat saat pemain berjalan. Posisi mengikuti lik jalan yang sama
+  dengan `ground.gdshader`, digeser 6 m ke samping supaya melayang di atas
+  rumput, dan tingginya dihitung dari terrain pulau.
+- `tools/test_scenery.gd` — gerbang baru: partikel harus ungu (kanal biru >
+  merah dan > hijau), dan jumlah titik ikut tercetak di diagnostik.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-02 — suasana senja: glow, matahari lebih jingga, contact shadow ala ray tracing
+
+Lanjutan permintaan "suasana senja dengan sinar cahaya dan kesan seperti ray
+tracing". Cicilan ini hanya suasana/pencahayaan.
+
+- `environment/dusk_environment.gd` — glow (bloom) dinyalakan: satu-satunya efek
+  "sinema" yang didukung renderer Mobile. Yang mekar hanya bagian terang (pendar
+  matahari, kunang-kunang ungu, tepi bercahaya). Tiga penyetel penting supaya pendar
+  ufuk TIDAK jadi putih (1,1,1) — kalau putih, gerbang `test_dusk` "ufuk harus hangat
+  (merah > biru)" gagal: `glow_normalized = true` (dengan false, 7 level bloom menambah
+  penuh jadi ~7x terlalu terang), ambang 1,15 (hanya inti matahari mekar), intensitas
+  0,25. Matahari jadi lebih jingga dan
+  sedikit lebih kuat (1,0 / 0,83 / 0,64, energi 1,05), cahaya sekitar lebih
+  dingin dan redup supaya terbaca senja — tapi tidak turun jauh, karena janji
+  `test_dusk` adalah "bukan malam pekat". Kabut ikut menghangat.
+- `environment/dusk_sky.gdshader` — zenith lavender lebih dalam, ufuk lebih
+  persik. Warna sengaja tidak dibuat gelap sekali.
+- `god_rays/sun_rays.gd(+shader)` — sinar matahari sedikit lebih kuat
+  (0,16 → 0,22) dan lebih hangat.
+- `god_rays/contact_shadows.gd(+shader)` (BARU) — sinar ditembakkan dari setiap
+  piksel ke arah matahari lalu dibandingkan dengan buffer kedalaman: bayangan
+  KONTAK di kaki objek yang selalu hilang dari shadow map. Inilah "kesan ray
+  tracing"-nya, karena SSAO/SSR/SSIL/volumetric fog di Godot hanya ada di
+  Forward+, sementara proyek ini memakai renderer Mobile. 14 sampel sepanjang
+  21 m, hanya untuk piksel di depan kamera (hemat ± setengah layar), memudar di
+  tepi layar, memakai `blend_mix` ke warna bayangan ungu kebiruan (0,06/0,05/0,11)
+  dengan kekuatan 0,55 — bukan `blend_mul`, karena di proyek ini yang terbukti tampil
+  di renderer Mobile hanya blend_add dan blend_mix. Adaptasi teknik Screen Space
+  Shadows dari forum Godot (kreditnya di LICENSES.txt).
+- Tombol baru di panel grafis: **Contact shadow: Nyala/Mati (tes FPS)** —
+  kalau HP terasa berat, matikan dulu yang ini.
+- `tools/test_contact_shadows.gd` (gerbang baru) — render A/B (efek nyala vs
+  mati) memastikan bayangan jatuh di sisi BERLAWANAN dari matahari, bukan
+  terbalik. Ini menangkap bug flip NDC Y dan salah baca reverse-Z.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-03 — perbaikan bayangan karakter, sinar matahari shaft panjang, pohon raksasa
+
+Lanjutan umpan balik di HP: "bayangan karakter ada banyak amat", minta god rays
+mengikuti shader [Screen Space God Rays](https://godotshaders.com/shader/screen-space-god-rays-godot-4-3/),
+dan minta pohon raksasa realistis di tengah world.
+
+- `god_rays/contact_shadows.gdshader` — **batas dekat `min_distance = 8 m`**.
+  Kamera orbit default 4 m dan bisa dizoom sampai 0,35 m, jadi karakter (dan tanah
+  tepat di kakinya) ada di zona dekat. Tanpa batas ini setiap piksel badan
+  karakter menembakkan sinar ke arah matahari yang kena BADANNYA SENDIRI —
+  hasilnya karakter penuh tambalan bayangan kecil, dan bayangan tanahnya jadi
+  dobel (shadow map + contact shadow). Keduanya sudah dikerjakan shadow map, jadi
+  lapisan ini sekarang sengaja hanya mengisi jarak menengah (8–55 m).
+- `god_rays/sun_rays.gdshader` — shaft radial lembut, 40 sampel (dulu 16) dan
+  cakram matahari diperbesar (`light_scale 0,55`, `light_feather 0,45`) supaya
+  sinar memanjang ke seluruh langit, bukan cuma bercak di dekat matahari. Parameternya
+  diberi nama sama seperti shader yang diminta (Ray Length / Light Source Scale /
+  Light Source Feather).
+  **Tidak memakai SubViewport**: shader aslinya me-render scene KEDUA kali hanya
+  untuk occlusion mask dan memakai ~200 sampel (penulisnya sendiri memperingatkan
+  soal FPS). Proyek ini punya 400 ribu segitiga rumput, jadi mask dibaca dari
+  buffer kedalaman yang SUDAH ada dan cukup 40 sampel.
+- `world/world_tree.gd` (BARU) — pohon raksasa 28 m di (0, tanah, −95): batang
+  runcing + 5 cabang bercabang + 11 bola tajuk, semua dalam SATU ArrayMesh dengan
+  warna per vertex (gaya `scenery.gd`), ± 3 ribu segitiga. Dibangun **prosedural
+  karena di repo tidak ada aset model pohon sama sekali** — `project/assets` hanya
+  berisi dua GLB mannequin (UAL1/UAL2) dan dua tekstur nature. Kalau nanti ada GLB
+  pohon, node ini bisa diganti tanpa mengubah apa pun yang lain.
+- `tools/test_world_tree.gd` (gerbang baru) — pohon harus menempel tanah, berdiri
+  di darat, > 20 m, < 20 ribu segitiga, dan tajuknya harus terbaca HIJAU serta
+  tidak hitam pekat (winding segitiga terbalik = cahaya datang dari dalam = pohon
+  hitam, dan itu gampang terjadi saat menulis bola tangan pertama).
+
+### 2026-10-03 — sinar matahari diganti total dengan god rays gaya pend00
+
+Umpan balik: "jelek ah itu ray nya hapus total trus ganti pake ini" +
+tautan [God Rays shader — inspired by pend00 (Godot 4.5)](https://godotshaders.com/shader/god-rays-shader-inspired-by-pend00-godot-4-5/).
+
+- `god_rays/sun_rays.gd` + `sun_rays.gdshader` **DIHAPUS TOTAL** (bukan disimpan di
+  samping) — dua versi depth-march sebelumnya sudah ditolak dua kali.
+- `god_rays/light_shafts.gd` + `light_shafts.gdshader` (BARU) — shader
+  `canvas_item` pend00 (CC0) yang bekerja di ColorRect layar penuh: value noise
+  dua lapisan membentuk sinar, lalu dicampur dengan layar pakai mode "screen".
+  Tidak ada tekstur noise, tidak ada render scene kedua, tidak ada ray marching —
+  jadi murah di HP.
+- Dipasang sebagai **anak pertama CanvasLayer HUD**, jadi digambar paling bawah:
+  tombol dan panel tetap di atas sinar, dan sinar tidak ikut ter-zoom kamera.
+- Setiap frame `light_shafts.gd` menghitung posisi matahari di layar
+  (`camera.unproject_position`) lalu mengisi dua parameter shader:
+  - `ray_origin` (vec2) — pusat pantulan sinar. Aslinya hanya `position` (satu
+    skalar = geser vertikal), jadi sinar selalu memantul dari tengah layar;
+    diubah menjadi vec2 supaya sinar bisa memantul TEPAT dari matahari.
+  - `ray_angle` — arah sinar, dihitung dari arah matahari ke pusat layar.
+- Efek memudar saat matahari keluar layar dan hilang total saat matahari ada di
+  belakang kamera, jadi tidak ada "sinar nyangkut" saat menoleh.
+- Tombol panel grafis tetap ada: **Sinar matahari: Nyala/Mati (tes FPS)**.
+- `tools/test_light_shafts.gd` (gerbang baru, menggantikan `test_sun_rays.gd`) —
+  render A/B: sinar harus menambah cahaya, harus hilang saat dimatikan, harus
+  hilang saat matahari di belakang kamera, dan tombol grafis harus mengubah efek.
+  Pemeriksaan "sinar menembus geometri" DIHAPUS karena efek ini memang overlay
+  layar penuh di atas scene, bukan depth-march lagi.
+- `warmup_samples.gd` memanaskan shader baru; `render_world.gd` /
+  `render_mannequin.gd` menyembunyikannya biar gambar world tidak kena sinar.
+- Kredit pend00 + CC0 tercatat di `project/licenses/LICENSES.txt`.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-03 — sinar matahari, contact shadow, dan pohon raksasa DIHAPUS
+
+Umpan balik: "ternyata jelek ih hapus total ajh lah trus yang ray tracing awal aku
+request juga hapus ajh trus lanjut pohon hilangin ajh".
+
+- `god_rays/light_shafts.gd` + `.gdshader` (sinar pend00) **DIHAPUS** — efeknya
+  sendiri tidak disukai.
+- `god_rays/contact_shadows.gd` + `.gdshader` **DIHAPUS** — ini efek "kesan ray
+  tracing" yang diminta di cicilan 8. Seluruh folder `god_rays/` kini kosong dan
+  hilang dari repo.
+- `world/world_tree.gd` **DIHAPUS** — pohon raksasa prosedural 31 m di
+  (0, tanah, −95) beserta pemasangannya di `main.gd`. Pulau sekarang kembali
+  bersih: hanya tanah, rumput, pemandangan, air, dan karakter.
+- `performance_panel.gd` — dua tombol hilang (**Sinar matahari** dan **Contact
+  shadow**), kunci config `sun_rays` dan `contact_shadow` juga dibuang. Sisa
+  tombol: Resolusi 3D, Rumput, Bayangan, Batas FPS.
+- `loading/warmup_samples.gd` — STAGES 14 → 13 (tahap pemanasan sinar + contact
+  shadow dibuang), jadi layar muat sedikit lebih cepat.
+- Gerbang CI yang dihapus: `test_light_shafts.gd`, `test_contact_shadows.gd`,
+  `test_world_tree.gd`, beserta langkah render, artefak screenshot, daftar berkas
+  wajib, dan grep ringkasan commit di `apk.yml`.
+- `render_world.gd` / `render_mannequin.gd` — `_shafts` dikeluarkan dari daftar
+  efek yang disembunyikan.
+- Catatan riwayat + kredit pend00 (CC0) tetap ada di `LICENSES.txt`, ditandai
+  "sudah dihapus".
+
+Yang TIDAK berubah: pulau 1 km berbentuk bergelombang, palet gelap senja, rumput
+padat, partikel ungu, langit senja + glow, dan bayangan shadow map biasa.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-03 — langit jadi MALAM: bintang, bulan bercratere, cahaya bulan
+
+Permintaan: "sky nya juga buat malam hari tapi visual indah bintang langin dan bulan".
+
+- `environment/dusk_sky.gdshader` (nama berkas dibiarkan, isinya sudah malam):
+  - **Bintang** — grid hash di koordinat bola langit (azimut/polar), satu
+    bintang per sel di posisi acak yang tetap, kelip pelan ±15%. Tanpa tekstur.
+    Koordinat hash dibungkus `mod(...,128)` karena `sin()` float 32-bit kehilangan
+    presisi di angka ratusan dan hasilnya belang. Bintang memudar dekat ufuk
+    supaya tidak "menempel" di garis pantai.
+  - **Bulan purnama** — 2,6° jari-jari (± 24 px di render CI), warnanya HDR 1,8
+    supaya mekar di glow engine (2,4 memotong jadi putih dan kawahnya hilang). Ada **6 kawah analitik** di basis lokal
+    piringan bulan (posisi dari hash, jadi bentuknya tetap tapi tidak seperti
+    lingkaran susun), **limb darkening** di tepi, dan **dua lapis halo**
+    (cincin rapat ±1 jari-jari + lembar lebar ±30°).
+  - Gradien malam: zenith (0,022/0,038/0,095) → ufuk (0,085/0,110/0,190). Sengaja
+    gelap tapi bukan hitam pekat (tonemap filmik menekan nilai kecil sekali).
+- `environment/dusk_environment.gd`: arah cahaya utama pindah ke **bulan** —
+  `SUN_DIRECTION` jadi arah bulan (awalnya 40° di atas ufuk barat daya, sisi laut,
+  lalu diturunkan ke 15° — lihat entri di bawah), jadi jalur kilau bulan membentang di air sampai ke pemain. Cahaya
+  bulan biru dingin (0,68/0,76/0,95), ambient biru tua (0,24/0,32/0,55), kabut biru gelap (0,09/0,13/0,24), saturasi turun ke 1,02 (cahaya
+  bulan memang memucat warna), glow intensity 0,30 dengan ambang HDR 1,15 supaya
+  yang mekar hanya bulan + bintang terang.
+- `world/water.gdshader`: kilau air jadi **jalur bulan** biru dingin, warna laut
+  digelapkan (tosca senja → biru malam) supaya tidak menyengat di bawah langit
+  gelap.
+- `tools/test_dusk.gd` — gerbang baru: bulan terang di tengah layar, bulan hilang
+  saat dimatikan, bintang terlihat, halo terlihat, zenith biru TUA (bukan biru
+  senja terang), arah cahaya = arah bulan, dan tanah tetap terbaca (hijau > 0,10,
+  bukan hitam).
+
+Catatan aset: **tidak ada model pohon atau batu di repo ini** — lihat HANDOVER.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-03 — malam direvisi: awan dibuang, bintang dikurangi, bulan diturunkan, jalan bersih dari rumput
+
+Permintaan: "terlalu rame banget itu awannya ilangin trus bintang nya buat lebih
+sedikit jangan terlalu rame dan juga bulannya jangan diatas soalnya aku gk mungkin
+trus trusan arah kamera di atas dan juga optimalisasi fps dan juga jalanan malah
+ketutupun rumput pas di deketin".
+
+- `environment/dusk_sky.gdshader`:
+  - **Awan dibuang total** — bukan cuma dimatikan. Fungsi `fbm4`/`fbm2`/
+    `value_noise` dan semua uniform `cloud_*` dihapus, bersama gerbang awan di
+    `tools/test_dusk.gd`. Ini juga hemat FPS terbesar: awan dulu memakai ± 24-36
+    pemanggilan `sin()` per piksel di layar penuh, dan itu yang membuat langit
+    berat di HP.
+  - **Bintang dikurangi** — `star_amount` 0,045 → 0,016 (± 4,4x lebih sedikit,
+    dari ± 1.600 bintang terlihat menjadi ± 360) dan `star_density` 42 → 34.
+  - **Hemat bintang**: empat pemanggilan `wrapped_hash` per piksel jadi **satu**
+    — offset dan kecerahan bintang diturunkan dari hash yang sama
+    (`fract(roll*73.17)`, `fract(roll*191.31)`, `fract(roll*331.79)`).
+  - **Hemat lain**: bintang hanya dihitung kalau `elevation > 0.03` (setengah
+    bawah layar = tanah/pantai langsung dilewati), kawah bulan hanya dihitung
+    kalau sudut < 1,7x jari-jari bulan (menghemat 6 hash + `smoothstep`), dan
+    cincin halo rapat hanya kalau sudut < 0,25 rad.
+- `environment/dusk_environment.gd`: bulan diturunkan dari **40° ke 15°** di atas
+  ufuk barat daya (`SUN_DIRECTION` → `(-0.914, 0.259, -0.311)`) supaya terlihat
+  dari posisi bermain biasa tanpa mengarahkan kamera ke atas terus. Karena cos
+  sudut bulan jauh lebih kecil, energi cahaya bulan dinaikkan 0,35 → 0,50 dan
+  ambient 0,35 → 0,40 supaya tanah tetap terbaca (gerbang tanah dilonggarkan ke
+  hijau > 0,10).
+- `world/water.gdshader`: default `sun_direction` disamakan dengan arah bulan baru.
+- `world/field.gd`: **jalan tanah tidak lagi ditutupi rumput**. `can_grow()` kini
+  menolak klumpe rumput yang jaraknya ke garis tengah jalan < 5 m
+  (`GRASS_PATH_MARGIN`), memakai `path_centre()` yang memakai rumus yang sama
+  persis dengan shader tanah (karena jalan itu digambar shader, bukan mesh).
+  Berlaku untuk rumput dekat maupun rumput jauh, karena keduanya memakai
+  `can_grow()`.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-03 — langit malam diperbaiki (bintang oval + pola garis) dan HUD gaya game aksi
+
+Permintaan: "masih kurang realistis langit nya kalo bulan dah cakep banget tapi
+bintang dan langit kayak png ada garis garis gitu dan juga rapih kan ui kamu bisa
+tiru ui attack,lompat dan lain lain kayak genshin atau wuwa".
+
+- `environment/dusk_sky.gdshader`:
+  - **Penyebab bintang kayak garis/oval ditemukan**: sel grid azimut selebar 2x
+    sel polar DALAM SUDUT (azimut keliling = 2π, polar = π), tapi jarak ke pusat
+    bintang tidak dikoreksi. Akibatnya setiap bintang jadi oval horizontal —
+    persis "garis garis" yang terlihat. Diperbaiki dengan
+    `length((local - offset) * vec2(2.0, 1.0))`.
+  - **Pola grid hilang**: versi hemat (1 hash untuk offset + kecerahan) membuat
+    posisi bintang terkurung di satu kurva `fract(roll*K)`. Kembali ke 3 hash
+    terpisah. Tiga `sin()` per piksel masih jauh lebih murah daripada awan yang
+    sudah dihapus (24-36 `sin()`).
+  - **Bintang tidak lagi seperti sprite PNG**: distribusi magnitudo
+    (`pow(bright, 2.6)` — kebanyakan redup, sedikit terang), bintang terang lebih
+    besar, inti tajam + halo lembut, dan sedikit variasi warna (biru dingin →
+    kuning hangat).
+  - **Banding gradasi hilang**: dither ± setengah level 8-bit ditambahkan, jadi
+    gradasi biru tua tidak lagi pecah jadi garis-garis horizontal.
+- HUD (`main.gd`, `ui/rune_button.gd`, `ui/speed_button.gd`) jadi gaya game aksi:
+  - tombol aksi pakai **ikon besar di tengah + label kecil di bawah** (bukan
+    huruf besar menempati tombol). Ikon baru: `ui/sword.svg` (serang),
+    `ui/jump.svg` (lompat), `ui/crouch.svg` (jongkok); ikon lama flame/speed/
+    settings tetap dipakai.
+  - gambar tombol dirapikan: cakram gelap lembut + kilau atas + cincin tepi
+    tipis + cincin dalam detail + sapuan cooldown.
+  - tata letak tombol kanan bawah disusun melengkung mengelilingi tombol serang
+    (serang besar di ujung, tembak/jongkok/lari di sekitarnya) dan tidak saling
+    tumpang tindih.
+  - **bug sekalian diperbaiki**: tombol LARI (`SpeedButton`) tidak pernah
+    diberi `custom_minimum_size`, jadi `_place()` menghitung diameter 0 dan
+    tombolnya berukuran nol piksel — tidak bisa ditekan sama sekali.
+  - petunjuk debug di banner kiri atas ("geser kiri = jalan/lari · ...")
+    dihapus; banner cukup menampilkan nama klip + progres.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-03 — gerak diperbaiki (lambat & kaki meluncur), dash Melee_Hook, posisi UI, kaki tidak tenggelam
+
+Permintaan: "animasi jalan tolong diperbaikin lagi gk sesuai jalan dan jaraknya
+jadi masa jalan gerak nya lambat banget ... ada animasi jalan kanan kiri depan
+belakang ,miring juga ada ... rapihin posisi ui ... masa attack pojok bawah
+susah nekennya ... animasi melee hook ... bisa di modif buat dash ... fix juga
+kaki jalan atau jongkok kaki nya masih ada yang tenggelam sedikit ketanah".
+
+- **Kenapa jalan terasa lambat** (`player.gd`): kecepatan badan dulu DIPOTONG ikut
+  kecepatan alami klip (`natural x skala` dengan skala maksimal 1,5). Kalau klip
+  jalannya lambat, badan ikut lambat — dan karena gait dipilih dari kecepatan
+  badan, band gait tidak pernah naik ke lari (lingkaran setan yang membuat analog
+  terasa lemas). Sekarang badan bergerak secepat yang diminta analog, dan
+  kecepatan main animasi yang menyesuaikan.
+- **Band gait tidak lagi angka tebak** (`player.gd`): batas band dihitung dari
+  kecepatan alami tiap klip yang diukur dari tulang kaki (batas atas = 1,5x
+  kecepatan alaminya). Kecepatan tertinggi pun ikut klip lari tercepat
+  (`max_speed()`), jadi badan tidak pernah lebih cepat dari yang bisa ditandingi
+  klip tercepat — kaki tidak meluncur.
+- **Dash** (`player.gd` + `main.gd`): tombol DASH baru memakai klip
+  **Melee_Hook** (0,47 s, gerakannya memang seperti dash game aksi): dorongan
+  12 m/s selama 0,22 s, cooldown 0,85 s dengan sapuan busur di tombol, tidak bisa
+  di udara. Combo serang jadi dua pukulan (Punch_Jab -> Punch_Cross) karena
+  Melee_Hook dipindah ke dash.
+- **Jalan mundur** memakai klip berbeda (`Walk_Formal_Loop`) supaya arah gerak
+  terbaca; deteksi "mundur" dibaca dari arah analog relatif hadapan kamera
+  (`orbit.camera_forward()`).
+- **Animasi strafe kiri/kanan/depan/belakang TIDAK ADA di UAL** — sudah diperiksa
+  langsung dari isi GLB: UAL1 (43 klip) dan UAL2 (43 klip) sama-sama tidak punya
+  klip strafe (tidak ada `Walk_Left/Right/Back`). Yang paling mendekati: jalan
+  depan (`Walk/Jog/Sprint`), jalan formal (dipakai untuk mundur), `Sword_Dash`,
+  `Shield_Dash`, dan `Slide_*`.
+- **Kaki tidak tenggelam lagi** (`anim_metrics.gd`): tiga sebab diperbaiki —
+  (1) tulang `foot_l/foot_r` ada di ATAS sol, jadi ditambah margin sol 3,5 cm;
+  (2) sampling klip gait dinaikkan 30 -> 60 Hz supaya titik terendah sesungguhnya
+  tidak terlewat di antara sampel; (3) batas koreksi naik dinaikkan 25 -> 45 cm
+  (klip jongkok menurunkan kaki jauh lebih dari 25 cm).
+- **Posisi UI** (`main.gd`): tombol SERANG tidak lagi nempel pojok — berhenti
+  ±130 px dari tepi kanan/bawah (zona nyaman ibu jari), tombol lain disebar
+  melengkung di sekitarnya dengan jarak lega supaya tidak salah pencet. Ikon
+  baru `ui/dash.svg`.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-03 — dunia dikecilkan ke 500 × 500 m, transisi animasi tanpa jeda
+
+Permintaan: "ukuran map ubah jadi 500m x 500m ajh" dan "perbaikin setiap animasi
+pergantian ke animasi lain jangan ada jeda ... biar gk ada patah patahan per
+animasi" (setelah dash kadang ada jeda sebelum kaki lanjut ke animasi lari).
+
+- **Dunia 500 m × 500 m** (`world/field.gd` + semua yang bergantung padanya):
+  setiap PANJANG ditulis setengahnya supaya bentuk dunianya tetap sama — radius
+  pulau 292-380 → 146-190 m, lekukan pantai 20/10 → 10/5 m, tanjakan pantai
+  70 → 35 m, jarak rumput dari pantai 5 → 2,5 m. Ikut mengecil: jarak pandang
+  kabut 200-1400 → 100-700 m, laut 4200 → 2100 m, cincin bukit 520-1250 →
+  260-625 m, pulau batu di laut, batas rumput pantai pemain 14 → 7 m, zoom
+  kamera terjauh 620 → 310 m, dan panjang gelombang jalan tanah (biar jalannya
+  masih berliku ± 2 kali, bukan lurus).
+- **Perbukitan disetel ulang**: panjang gelombang diperpendek 1,5× dan amplitudo
+  diturunkan 4,2 → 3,4 m. Ini penting — kalau bukit dibuat lebih curam, garis
+  pantainya melewati batas kemiringan `MAX_SLOPE` dan rumput TIDAK tumbuh di
+  puncak bukit (pulau jadi botak bergaris). Diukur: amplitudo lama dengan
+  gelombang pendek = 3,8% daratan terlalu curam; sekarang 2,1% (sama seperti
+  dunia 1 km dulu).
+- **Jalan tanah**: lekukan 42 → 24 m, panjang gelombang 524 → 300 m. Fasa
+  lekukan kedua digeser supaya jalan tetap melintas TEPAT di titik muncul
+  pemain (0, 7) — kalau bergeser, pemain muncul di tengah rumput atau di luar
+  jalan, dan tes `test_island` gagal.
+- **Transisi animasi tanpa jeda** (`mannequin.gd` + `player.gd`), tiga sebab:
+  1. serah-terima aksi → lokomosi dulu 0,24 s cross-fade; sekarang **0,08 s**.
+     Selama cross-fade badan masih memakai pose akhir klip aksi — itu "jeda"-nya.
+  2. klip aksi kini boleh dibatasi durasinya (`play_action(name, max_time)`).
+     Dash memakainya: klip Melee_Hook 0,47 s tapi dorongannya cuma 0,22 s, jadi
+     dulu kakinya berdiam 0,25 s di sisa pose pukulan sebelum kembali lari.
+  3. gait tidak lagi berhenti dilacak saat menyerang/dash. Dulu `_apply_animation`
+     langsung `return` ketika `is_busy()`, sehingga saat dash selesai badan
+     memakai gait SEBELUM dash (mis. jalan pelan) selama satu frame selagi masih
+     12 m/s — kaki meluncur sesaat, terbaca patah. Skala kecepatan lokomosi
+     terakhir juga diingat supaya tidak ada frame dengan kecepatan main 1×.
+- **Catatan jujur soal animasi dash dari Mixamo**: akun/layanan Mixamo butuh
+  login dan jaringan sandbox ini tertutup (mixamo.com pun tidak bisa dihubungi),
+  jadi aku TIDAK bisa mengunduh klip dash dari sana. Aku periksa isi UAL1 + UAL2
+  (43 + 43 klip) dan ukur gerak pelvis tiap klip: satu-satunya klip dengan
+  dorongan MAJU yang cepat adalah `Melee_Hook` (jongkok + luncur maju 0,33 m
+  dalam 0,27 s). `NinjaJump_Start` melompat ke ATAS, `Shield_Dash` melompat,
+  `Slide_Start` justru menjatuhkan badan ke tanah — tidak cocok untuk dash.
+  Kalau kamu bisa mengunduh sendiri dari Mixamo (FBX, Without Skin, 30 fps),
+  taruh di `project/assets/combat/` dan bilang aku — aku sambungkan ke katalog,
+  mannequin, dan tombol DASH.
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+### 2026-10-03 — dash dari Mixamo (dash.fbx) + occlusion culling biar ringan
+
+Dua permintaan: memakai teknik culling/LOD bawaan Godot biar game ringan, dan
+memasang animasi dash dari Mixamo (`Female Locomotion Pose.fbx` yang diunggah ke
+repo).
+
+- **Occlusion culling dinyalakan** (`project.godot`:
+  `occlusion_culling/use_occlusion_culling=true`). Dokumentasi Godot menyebut
+  backend **Mobile** justru yang paling diuntungkan karena tidak punya depth
+  prepass — dan project ini memang memakai renderer Mobile.
+- **Penutup occlusion** (`world/scenery.gd`): kedua cincin bukit jauh diberi
+  kotak `BoxOccluder3D` (24 per cincin). Bukit dipilih karena besar, statis, dan
+  berdiri minimal 70 m dari pemain — kalau ukurannya meleset sedikit pun tidak
+  mungkin menyembunyikan apa pun di dekat pemain. Tinggi kotak memakai puncak
+  **terendah** di sepanjang lebarnya (bukan tertinggi): kotak tidak boleh lebih
+  tinggi dari puncak bukit, kalau tidak rumput di balik bukit ikut hilang
+  padahal sebenarnya terlihat. Sudah diuji angka: 0 dari 1518 pemeriksaan kotak
+  melebihi mesh bukit.
+- **Klip dash dari Mixamo** (`assets/combat/dash.fbx`, 16 MB): nama tulang
+  `mixamorig:*` **diterjemahkan** ke tulang UAL mannequin saat pustakanya
+  digabung (`mannequin.gd` → `_merge_dash_library`, 55 tulang + jari). Tanpa
+  terjemahan ini klip Mixamo tidak akan pernah terlihat: kerangka Mixamo dan
+  kerangka UAL berbeda nama. Animasi diberi nama tetap `dash/Dash`, jadi kode
+  tidak bergantung pada nama stack di dalam berkas Mixamo.
+- **PENTING — berkas itu isinya POSE, bukan animasi.** Semua 327 kurva animasi
+  di dalamnya bernilai KONSTAN (tidak ada satu pun yang berubah), jadi
+  karakternya akan diam dalam satu pose selama dash. Kalau mau kakinya gerak,
+  unduh **animasinya**: di Mixamo buka tab *Animations*, cari "dash", pilih
+  salah satu, baru tekan DOWNLOAD (FBX → *Without Skin*, 30 fps), lalu timpa
+  `project/assets/combat/dash.fbx`. Tidak perlu ubah kode — nama klip tetap sama.
+- Yang dari saran AI **sudah terpasang sebelumnya**: frustum culling (otomatis di
+  Godot), dan rumput memakai `MultiMeshInstance3D` (helai rapat + kartu LOD
+  jauh). Yang **tidak berlaku** di project ini: `VisibleOnScreenNotifier2D`
+  (itu 2D, game ini 3D) dan Auto Mesh LOD (medan/rumput dibuat prosedural, bukan
+  model impor).
+
+### 2026-10-03 — dash pakai animasi lari (satu langkah diperlambat), bloom, dunia 100 m, dedaunan Quaternius kembali
+
+Empat permintaan sekaligus: hapus FBX dash Mixamo, tambah bloom, map jadi
+100 m × 100 m, dan carikan aset Quaternius Stylized Nature MegaKit.
+
+- **FBX dash Mixamo DIHAPUS.** Alasannya dua: isinya pose statis (semua 327 kurva
+  animasinya bernilai konstan — sudah diperiksa), dan sekarang ada cara yang jauh
+  lebih murah.
+- **Dash = animasi LARI, satu langkah diperlambat.** Badan tetap didorong
+  12 m/s, tapi kecepatan main animasi turun ke 0,8× selama 0,40 s — pas satu
+  langkah siklus Sprint_Loop (0,335 s / 0,8 ≈ 0,42 s). Jadi kaki melakukan satu
+  langkah besar yang pelan sambil badan melesat, menapak lagi tepat saat
+  dorongan habis, lalu kecepatan main kembali normal. **Klipnya tidak diganti
+  sama sekali** (tetap gait lari), jadi tidak ada jeda/perpindahan animasi —
+  sekalian memperbaiki keluhan "patah-patah" dari ronde sebelumnya.
+- **Bloom diperbesar**: `glow_intensity` 0,30 → 0,50 dan `glow_bloom` 0,08 →
+  0,18. Ambang (1,15) dan blend mode (SOFTLIGHT) sengaja TIDAK diubah: bulan
+  harus tetap berwarna, bukan gepeng putih, dan langit malam tidak ikut mekar.
+- **Dunia 100 m × 100 m.** Semua panjang ditulis sepersepuluh: radius pulau
+  146-190 → 29-38 m, lekukan pantai 10/5 → 2/1 m, tanjakan pantai 35 → 7 m,
+  kabut 100-700 → 20-140 m, laut 2100 → 420 m, cincin bukit 260-625 → 52-125 m,
+  bukit batu di laut ikut mendekat, batas pantai pemain 7 → 1,4 m, zoom kamera
+  terjauh 310 → 62 m, chunk tanah 128 → 32 m. Dua angka TIDAK ikut mengecil
+  karena harus menjaga kemiringan: dataran 6 → 1,8 m dan tanjakan pantai
+  35 → 7 m (1,8/7 = 0,26, masih di bawah batas rumput 0,30 — kalau lebih curam,
+  pantainya botak), serta amplitudo bukit 3,4 → 0,7 m.
+- **Aset Quaternius DITEMUKAN dan DIPASANG.** Yang kamu lupa itu ada di repo
+  lamamu: **`KyokoApp/Unity` → `Assets/WorldSrc/`** (11 model glTF: pohon, pinus,
+  semak, pakis, bunga, batu + teksturnya, CC0). Dulu sempat ada di project ini
+  lalu dihapus; sekarang kembali di `project/assets/nature/models/` dan
+  disebarkan oleh `world/forest.gd` — 16 pohon, 26 semak, 18 batu, 44
+  pakis/bunga, semuanya `MultiMeshInstance3D` (satu panggilan gambar per model),
+  tanpa collision. Skala pohon diturunkan (model aslinya 7-9 m; di pulau 100 m
+  itu terbaca seperti menara).
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+## Ronde 18 — pulau 300 m, kolam berpintu, pulau terbang, air bergelombang, jejak dash
+
+- **Bukit tajam tiga segitiga DIHAPUS.** Permintaan: *"hapus itu pemandangan di
+  depan apaan dah kayak bantuk gunung tajam sama gelombang"*. Seluruh
+  `_build_hills()`/`_add_ridge()`/`_build_occluders()` beserta konstanta
+  `HILL_*`/`FAR_*` dibuang dari `world/scenery.gd`.
+- **Gantinya: PULAU TERBANG yang terbaca 2D tapi terasa 3D.** Enam bongkahan
+  batu rendah-poli (`_floater_mesh()`: cakram rumput + kerucut batu yang
+  meruncing ke satu titik) melayang 150-290 m dari pusat, tinggi 18-44 m.
+  Bentuk pipih + warna rata bikin terbaca seperti ilustrasi; miring
+  (`rotation.z`), berbayang, dan mengapung naik-turun (`FLOAT_BOB` 1,6 m,
+  periode 7 s) bikin tetap terasa 3D. Semuanya di luar garis pantai, tanpa
+  collision.
+- **Air diganti total** memakai shader **"Simple Water"** (dairycultist,
+  godotshaders.com, CC0) yang diminta: tiga gelombang sinus berjalan
+  (vertex), normal dari **turunan analitik per piksel** (fragment) supaya riak
+  tetap terlihat walau sel mesh air selebar 7 m, transparansi menurut
+  kedalaman layar (`DEPTH_TEXTURE` + `INV_PROJECTION_MATRIX`) supaya air cetek
+  tembus pandang, `METALLIC`/`ROUGHNESS` untuk pantulan langit+bulan, dan kilau
+  bulan mengikuti riak. Laut ikut diperhalus: sel 24 → 128 (33 ribu segitiga).
+- **Kolam besar di tengah dengan pintu + air CETek** (`world/pond.gd`, baru):
+  mangkuk ber-dasar datar — dasar rata sampai 16 m dari pusat (tinggi 3,4 m),
+  lalu dinding naik LURUS sampai 36 m tempat dataran (5 m) mengambil alih.
+  Permukaan air 4,3 m → **dalam 0,9 m** (dasar kolam terlihat), garis air tepat
+  di r = 27,3 m sehingga bidang airnya 27 m (kolam 54 m lebar). Di tengah
+  berdiri **pintu ala Suzume no Tojimari** (bingkai, ambang, dua daun sedikit
+  terbuka, celah cahaya emissif yang mekar) plus **pantulan tiruan** di bawah
+  air — salinan terbalik yang dimampatkan, karena renderer Mobile tidak punya
+  SSR. Ramp-nya sengaja LINEAR (bukan smoothstep): lekukan smoothstep membuat
+  grid tanah 4 m tidak bisa mengikutinya (selisih 0,17 m → 0,027 m dengan
+  linear), dan perbukitan dimatikan total di dalam kolam supaya garis airnya
+  bulat bersih, bukan berlekuk-lekuk.
+- **Efek dash = JEJAK + BLOOM, bukan afterimage.** Permintaan: *"kalo pas lari
+  nari bakal ada efek ny di character seperti blur/glow ... bkan hanya setelah
+  gambar doank"* dan *"jangan polos polos banget"*. Bekas pose beku
+  (`speed/afterimage_trail.gd` + shader-nya) **DIHAPUS** dan diganti
+  `speed/speed_trail.gd`: pita aditif 22 ruas yang mengikuti jejak posisi
+  karakter — lebar dan hampir putih di dekat karakter, menyempit dan memudar ke
+  belakang, selalu tegak lurus arah pandang kamera. Ditambah pancaran bloom di
+  pinggir siluet karakter (`skin_shell.gdshader`: uniform `bloom` baru yang
+  nilainya sengaja melewati ambang glow 1,15), menyala 1,0 saat dash dan 0,25
+  saat boost biasa, memudar pelan sesudahnya.
+- **Dunia 300 m × 300 m.** Semua panjang ×3 dari versi 100 m: `SIZE` 300,
+  radius pulau 87-114 m, lekukan pantai 9/4,5 m, tanjakan pantai 30 m, dataran
+  5 m, dasar laut -8 m, chunk 96 m (sel tetap 4 m), jalan ± 14,4 m dengan
+  lebar 2,5 m. Ikut naik: batas pantai pemain 1,4 → 3 m, zoom kamera terjauh
+  62 → 190 m, laut 420 → 900 m, kabut 20-140 → 45-420 m (harus berakhir JAUH di
+  belakang pulau terbang supaya bentuknya terlihat utuh), pulau batu di laut
+  ×3.
+- **Titik spawn pindah** dari (0, 7) — yang kini tepat di tengah kolam — ke
+  (-26, 16): pinggir barat daya kolam, daratan kering dan rata. `forest.gd`
+  memakai titik yang sama dan sekarang juga menolak area kolam lewat
+  `can_grow()`.
+
+## Ronde 19 — danau bener-bener cetek: pintu DI ATAS air + jalan di atas air + riak
+
+Permintaan pemain atas lingkaran tengah ronde 18: *"airnya itu gk dalem bener
+bener pendek"*, *"pintunya harus ada di tengah dan di ATAS air danau"*, dan
+*"efek air nya berasa kalo kita jalan di atas nya"*.
+
+- **Airnya jadi danau cetek, bukan kolam 0,9 m.** `BASIN_DEPTH` 1,6 → 1,15 m
+  jadi dasar kolam 3,85 m; dengan permukaan air tetap 4,3 m dalamnya **0,45 m**
+  — lutut orang dewasa. Dasar kolam jelas terlihat lewat air (alpha kedalaman
+  `mix(0,30, 1,0, 0,45/2,6)` = 0,42). Karena garis air ikut turun ke
+  r = 23,8 m, `POND_RADIUS` 27 → 23,5 m (danau 47 m lebar) supaya bidang air
+  tetap tidak menjorok ke daratan kering.
+- **Pintunya berdiri DI ATAS air.** `pond.gd` menambah **pulau batu kecil** di
+  tengah: kerucut pendek (`CylinderMesh`, puncak rata r = 2,8 m setinggi
+  4,8 m, lereng turun sampai menyentuh garis air di r = 5,2 m — lereng 23%,
+  bisa didaki). Pintunya pindah dari dasar kolam ke puncak batu itu, jadi
+  kakinya 0,5 m di atas permukaan air dan tidak tenggelam lagi.
+- **Permukaan air BISA DIAKI.** Pijakannya collider terrain itu sendiri:
+  `field.gd _build_chunk()` menaikkan setiap sel yang jatuh di dalam danau
+  (`Field.is_water`) ke `Field.POND_LEVEL` lalu memakai mesh itu sebagai collider
+  chunk tersebut. Pemain benar-benar berjalan DI ATAS air (bukan menyelam ke
+  dasar kolam) — kakinya menapak tepat di garis air, loncat dan mendarat jalan
+  seperti biasa. Sel yang menyeberangi tepi jadi tanjakan halus, jadi masuk/keluar
+  danau tidak ada langkah tegas.
+- **Catatan perbaikan**: rancangan awal memakai cakram trimesh DATAR terpisah
+  setinggi air (`WaterBody` di `pond.gd`). Itu DIBUANG setelah render-b gagal:
+  bidang nol-ketebalan menyangkut badan pemain — `is_on_floor()` true tapi
+  `velocity.y > 0`, animasi terkunci di klip lompat dan pemain berhenti di
+  tempat. Pijakan yang sama dengan daratan (collider terrain) tidak punya masalah
+  itu.
+- **Riak setiap langkah terasa.** `world/water_ripple.gd` + `water_ripple.gdshader`
+  (baru): pool 8 cincin aditif (satu quad masing-masing, tanpa tekstur, tanpa
+  bayangan) yang lahir di titik kontak kaki, melebar 1,2–2,4 m dan meredam
+  dalam 1 detik. Kekuatannya mengikuti keras langkah (jalan pelan kecil, lari
+  besar, mendarat paling besar) dan posisinya dikunci ke garis air. Dipanggil
+  `footsteps.gd` setiap kali kaki menapak air; kalau tidak ada yang berjalan di
+  air semua cincin tidur (0 panggilan gambar).
+- **Suara ikut basah.** `footsteps.gd` memakai permukaan baru `"water"` di dalam
+  danau (puncak batu tetap `"stone"`); air tidak punya bank suara sendiri jadi
+  dipakai sampel tanah sebagai langkah basah.
+- `player.gd spawn()` ikut: kalau muncul di dalam danau, pijakannya permukaan
+  air, bukan dasar kolam.
+- Pantulan tiruan pintu ikut menyesuaikan: air sekarang cuma 0,45 m, jadi
+  faktor penampasannya dihitung dari tinggi pintu di atas garis air
+  (squash 0,098) supaya pantulannya tetap muat di antara dasar kolam dan
+  permukaan air.
+- Gerbang: `test_scenery.gd` (`_test_pond()` menuntut dalam < 0,7 m, pintu di
+  atas air, seluruh bidang air ada di dalam kolam; `_test_ripple()` baru),
+  `test_audio.gd` (titik tengah danau = "water", puncak batu = "stone").
+- **Koreksi gate gerak** (`37113303786`): tes pijakan gagal karena kaki
+  pemain terkunci di `POND_LEVEL` saat di daratan. Loop collider keliru memakai
+  `is_inside()` (cek pulau), sehingga vertex daratan pada chunk sekitar danau
+  ikut diratakan ke 4,3 m. Kini hanya `is_water()` yang menaikkan vertex di
+  dalam `POND_RADIUS`. Pemeriksaan lokal lulus; run `37124361906` hijau 7/7 (gate,
+  render-a/b/c, package).
+
+Belum diuji di HP — sandbox tidak bisa menjalankan Godot.
+
+## Ronde 20 — padang 100 m bergulir, Mira, dan layar interaksi pop-art
+
+Permintaan terbaru membatalkan lake/door dan efek berjalan di atas air dari ronde 18–19.
+
+- **Dunia kembali 100 × 100 m.** `Field.SIZE` kembali ke 100 m dengan pulau
+  bertepi berlekuk. Bukit di pedalaman memakai beberapa frekuensi gelombang
+  (relief sampel sekitar 1,9 m di area tengah), melandai ke pantai, dan berbagi
+  satu fungsi tinggi untuk mesh, collider, rumput, serta pemain. Grid collider
+  dirapatkan ke sel 2 m agar bukit tetap halus.
+- **Danau, pintu danau, serta umpan balik khusus air dihapus.** Sistem
+  `pond.gd`, riak langkah (`water_ripple.gd` dan shader-nya), cekungan, dan
+  pijakan air sudah tidak dipakai. Laut luar tetap ada; langkah kini hanya
+  memakai permukaan rumput, pasir, atau batu.
+- **NPC Mira ditambahkan.** Pose diam utamanya berbeda dari pemain
+  (`Idle_FoldArms_Loop`), lalu ia kadang berjalan beberapa meter dengan
+  `Walk_Formal_Loop`. Area sekitar titik muncul dan rumah Mira dibiarkan kosong
+  dari dedaunan.
+- **Interaksi dan menu bergaya Persona 4.** Tombol bicara muncul saat dekat;
+  transisi modal menggeser layar pilihan, menampilkan potret 3D Mira di kiri,
+  dan menu aktivitas di kanan. Aktivitas yang belum tersedia menampilkan
+  **COMING SOON**; `E`/`Esc` dan tombol kembali menutup layar, lalu kontrol
+  permainan dipulihkan.
+- Regresi diperbarui untuk ukuran dan relief pulau, surface langkah, serta
+  interaksi/wander NPC (`tools/test_npc.gd` dan gerbang CI baru).
+
+Validasi statis lokal: `gdlint project tools`, `python3 tools/check_scripts.py .`,
+dan `git diff --check` lulus. Godot 4.5.2 CI run **37126825496** hijau **7/7**:
+compile, seluruh tes headless (termasuk NPC), tiga render regresi, dan packaging.
+
+## Ronde 21 — Mira berjalan lurus + menu bersudut dengan karakter bergeser
+
+- **Arah jalan Mira diperbaiki.** Ia kini memakai `Walk_Loop` (bukan `Walk_Formal_Loop`, yang dipakai pemain untuk berjalan mundur), menghadap sasaran dulu sambil berputar di tempat, baru mulai melangkah. Ini mencegah animasi jalan tampak menyamping/miring.
+- **UI interaksi mengikuti referensi gambar.** Kartu dua kolom diganti halaman asimetris: panel hitam bertepi diagonal di kiri, pilihan tersusun vertikal, aksen merah/emas, dan area terang di kanan.
+- **Mira bergeser ke sisi kanan saat menu masuk.** Potret 3D bergerak dari tengah ke samping seiring panel menu dan footer masuk; saat ditutup, gerakannya kembali dengan transisi halus. Pilihan yang belum tersedia tetap menampilkan **COMING SOON**.
+- Tes NPC kini memeriksa klip jalan depan, keselarasan arah badan dengan sasaran, dan animasi geser potret.
+
+Validasi statis lokal: `gdlint project tools`, `python3 tools/check_scripts.py .`, dan
+`git diff --check` lulus. Godot 4.5.2 CI run **37128597905** hijau **7/7**,
+termasuk tes compile, wander/arah NPC, UI interaksi, render regresi, dan packaging.
+
+## Ronde 22 — dunia terlihat di menu interaksi, kamera fokus ke Mira
+
+Koreksi pengguna: layar harus benar-benar penuh, bidang putih di sisi kanan
+harus hilang agar dunia permainan tetap terlihat, dan karakter diperbesar di
+area kanan. Panel/menu kiri yang sebelumnya disetujui dipertahankan.
+
+- **Menu memenuhi viewport tanpa margin.** Latar kertas dan panggung `SubViewport`
+  dihapus. Bidang dunia sekarang tetap terlihat di belakang UI dengan dimmer
+  gelap transparan; panel diagonal kiri dan pilihan vertikal tetap seperti
+  rancangan yang disetujui.
+- **Karakter berasal dari dunia aktif.** Saat interaksi dimulai, kamera berputar
+  ke sisi yang menempatkan Mira di kanan pemain, mendekat, dan menggeser titik
+  fokus ke arah percakapan. Ini juga menghindari panggung kosong yang sebelumnya
+  tampak seperti bidang krem/putih.
+- **Kamera dipulihkan saat menu ditutup.** Yaw, pitch, jarak, dan titik fokus
+  awal disimpan lalu dianimasikan kembali bersamaan dengan transisi keluar.
+- Tes NPC diperluas untuk memeriksa halaman tanpa margin, dimmer yang transparan,
+  kamera zoom/komposisi, dan pemulihan state kamera; pilihan yang belum tersedia
+  tetap menampilkan **COMING SOON**.
+
+`gdlint project tools`, `python3 tools/check_scripts.py .`, dan
+`git diff --check` lulus. Sandbox ini tidak menyediakan Godot runtime; uji
+headless/render dilakukan oleh workflow CI.
+
+## Ronde 23 — Gameplay, Survival tanpa batas, pedang, dan tata letak HUD
+
+- Opsi pertama dialog Mira sekarang **Gameplay**. Selector mode beranimasi
+  menempatkan **Survival** sebagai pilihan pertama yang dapat dimainkan; mode
+  berikutnya tetap diberi label **COMING SOON**.
+- Dunia Survival berupa bidang datar tanpa batas pulau. Zombie muncul berkala
+  (maksimal lima zombie hidup bersamaan) dan memakai klip idle, jalan, serang,
+  reaksi kena pukul, serta mati dari animasi UAL yang tersedia.
+- Serangan memakai `Sword.glb` Quaternius CC0 yang ditemukan di sumber GitHub,
+  terpasang pada tangan kanan. Tebasan A/B/C bervariasi per input dan tidak
+  otomatis menjadi kombo; lapisan animasi upper-body membiarkan langkah kaki
+  tetap mengikuti gerak pemain.
+- Editor HUD dapat mengubah ukuran dan posisi tombol Serang, Tembak, Lompat,
+  Jongkok, Lari, serta Dash. Pengaturan disimpan di perangkat; saat editor aktif,
+  tombol gameplay tetap terlihat sebagai pratinjau tetapi tidak bisa dipicu.
+- Ditambah tes Survival, selector mode, editor HUD, dan render Mobile Vulkan yang
+  menyimpan screenshot selector serta gameplay untuk pemeriksaan CI.
+
+Validasi statis lokal lulus: `gdlint project tools`, parse seluruh GDScript,
+`tools/check_scripts.py`, katalog animasi, tes chunk, bundle lisensi, parse YAML
+workflow, dan `git diff --check`. Selama validasi, CI membantu menemukan dan
+memperbaiki format GLB meshopt, collider bidang, serta timing tes layer pedang
+& pencarian mesh Forest. Run Godot 4.5.2 **`37135467746` hijau penuh**: semua
+tes headless, render-a/b/c (screenshot selector dan Survival), ekspor PCK/APK,
+audit isi APK, serta tes boot launcher. Hasil visual, runtime, dan build kini
+terverifikasi di CI. APK dan content pack tersedia di [rilis
+`build-5060147`](https://github.com/KyokoApp/Godot/releases/tag/build-5060147).
+
+## Ronde 25 — Survival top-down, sihir otomatis, stage satu menit, dan balik ke home
+
+- Kamera top-down hanya diterapkan saat masuk Survival: pitch awal 1,40 radian,
+  rentang 1,28–1,50, jarak 17 m. State kamera home disimpan dan dipulihkan;
+  kamera mode hub tidak diubah.
+- Tombol `TEMBAK` menembak berulang ketika ditahan (interval 0,18 detik), dengan
+  cooldown sihir cepat 0,14 detik. Auto-repeat dan batas proyektil cepat hanya
+  aktif di Survival; tap/cooldown normal tetap dipakai di home.
+- Stage berlangsung 60 detik. HUD menampilkan stage, timer, zombie hidup, dan
+  jumlah kalah. Wave bertambah sebesar nomor stage; batas zombie hidup naik
+  dua per stage dari lima, hingga maksimum 18.
+- Saat HP habis, input serang dihentikan lalu hub dibangun kembali setelah
+  0,9 detik. Pemain, HP, NPC, kontrol, serta state kamera home dipulihkan.
+- Tes Survival kini memeriksa sudut kamera, tembakan beruntun beserta damage,
+  kenaikan stage/wave, respawn ke home, dan pemulihan konfigurasi mode normal.
+  Tes render Mobile Vulkan juga mengunci sudut Survival top-down.
+
+Validasi lokal lulus: parse/lint seluruh GDScript, `tools/check_scripts.py`,
+bundle lisensi, tes chunk, katalog animasi, dan `git diff --check`. Godot 4.5.2
+CI run **[`37163130779`](https://github.com/KyokoApp/Godot/actions/runs/37163130779)**
+lulus penuh: compile, seluruh tes headless, render Mobile Vulkan, ekspor PCK/APK,
+audit APK, dan boot launcher. Build tersedia di [rilis
+`build-4c132ec`](https://github.com/KyokoApp/Godot/releases/tag/build-4c132ec).
+
+## Ronde 24 — Survival memakai sihir auto-lock, bukan melee
+
+Koreksi pengguna: jangan gunakan serangan pedang di Survival; pakai tembakan
+sihir yang sudah tersedia dan kunci otomatis ke zombie.
+
+- Kontrol `SERANG` dan model pedang tidak ditampilkan di Survival. Tombol sihir
+  `TEMBAK` yang sudah ada menjadi kontrol serangan; mode hub tidak berubah.
+- FirePet memakai projectile, ekor api, dan efek impact yang sudah ada. Saat
+  Survival, tembakan mengunci zombie hidup terdekat (jangkauan 32 m), terus
+  mengikuti geraknya, mengenai collision zombie, lalu memberi 48 damage dari
+  96 HP. Kematian memperbarui hitungan `KALAH` dan HUD.
+- Tes headless memverifikasi tombol tanpa melee, pemilihan target, homing setelah
+  target bergeser, collision, damage, kematian, dan hitungan HUD. Tes render
+  Mobile Vulkan juga memeriksa tombol sihir tampil dan pedang tidak terlihat.
+- Validasi lokal lulus: seluruh GDScript lolos `gdparse`/`gdlint`, pemeriksaan
+  tipe, katalog animasi, tes chunk, bundle lisensi, dan `git diff --check`.
+  Godot 4.5.2 CI run **`37157092349` hijau penuh**: semua tes headless, render
+  Mobile Vulkan, ekspor PCK/APK, audit APK, dan boot launcher. Build Android
+  tersedia di [rilis `build-c5562f0`](https://github.com/KyokoApp/Godot/releases/tag/build-c5562f0).
+
+## Ronde 26 — EXP per run, buff tiap 5 level, api orbit, dan shield arcana
+
+- Setiap kill memberi EXP. Level, EXP, dan stack buff hanya hidup di
+  `SurvivalWorld` untuk run itu; keluar lalu memulai Survival lagi mengembalikan
+  level 1, EXP 0, serta buff/statistik ke kondisi awal. Tidak ada penyimpanan
+  progress Survival ke disk.
+- HUD pojok kiri atas menampilkan avatar, bar HP tipis, dan bar EXP di bawahnya.
+  Angka level/kill dan stage ikut tampil; perubahan bar dianimasikan halus dan
+  EXP kill memberi feedback singkat.
+- Saat level mencapai 5, 10, 15, dan seterusnya, permainan pause dan membuka
+  tepat tiga kartu buff untuk dipilih satu. Overlay/kartu masuk dengan tween.
+  Katalog mencakup damage/cooldown/critical/tembakan ganda, jangkauan auto-lock,
+  burn, nova area, healing, vitality, harvest EXP, api orbit, dan shield. Tiga
+  berkah tanpa batas memastikan pool tetap memberi tiga opsi unik setelah stack
+  buff lain mencapai batas.
+- **ORBIT BARA** menambahkan api berpartikel yang mengelilingi pemain dan
+  melukai zombie dekat. **AEGIS ARCANA** menambah kapasitas shield dan
+  pengurangan damage dengan shell ungu berdenyut.
+- Stage tetap berdurasi 60 detik; jumlah gelombang, kapasitas zombie, dan tempo
+  spawn meningkat mengikuti stage, sementara HP zombie bertambah 24 per stage.
+  Kamera top-down Survival terkunci pada jarak tetap dan zoom dinonaktifkan;
+  state kamera hub dipulihkan saat keluar.
+- `tools/test_survival.gd` menguji XP/level, tepat tiga pilihan di level 5,
+  pilihan unik tetap tersedia setelah semua buff terbatas mencapai stack maksimum,
+  penerapan buff orbit/shield, reset saat run baru, stage, dan penolakan zoom.
+  `tools/render_survival.gd` menghasilkan render selector, dunia Survival, dan
+  layar kartu buff untuk pemeriksaan CI.
+- Pemeriksaan lokal `gdlint`, `tools/check_scripts.py`, dan `git diff --check`
+  lulus. Godot 4.5.2 CI run **[`37207879922`](https://github.com/KyokoApp/Godot/actions/runs/37207879922)**
+  hijau penuh: compile, seluruh tes headless, render HUD/Survival, ekspor PCK
+  dan APK, audit APK, serta boot launcher. Build tersedia di [rilis
+  `build-5ac52e5`](https://github.com/KyokoApp/Godot/releases/tag/build-5ac52e5).
+  Render CI lolos; belum ada uji langsung di perangkat Android fisik.
+
+## Ronde 27 — Survival menembak otomatis tanpa menahan tombol
+
+- Saat Survival aktif, loop gameplay menembakkan sihir otomatis tiap 0,18 detik
+  ke zombie hidup terdekat dalam jangkauan auto-lock (termasuk bonus jangkauan
+  buff). Pemain tidak perlu menekan atau menahan `TEMBAK`.
+- Tidak ada target berarti tidak ada tembakan membabi buta. Auto-fire berhenti
+  saat run berakhir atau pemain kembali ke hub. Survival tetap menerima tap
+  manual; di hub, `TEMBAK` hanya menembak saat ditap dengan cooldown normal,
+  tanpa auto-fire. Repeat saat ditahan tidak diperlukan lagi.
+- `tools/test_survival.gd` menguji casting, auto-lock, tembakan berulang, dan
+  damage tanpa mengirim input tombol, lalu memastikan tembakan otomatis berhenti
+  di hub.
+- Validasi lokal lulus: `gdparse`, `gdlint` pada file yang berubah,
+  `tools/check_scripts.py .`, dan `git diff --check`. Setelah dua run menemukan
+  regression tap manual TEMBAK di hub pada tes multitouch HUD dan jalur hub
+  manual dipulihkan, CI Godot 4.5.2 run **[`37211533068`](https://github.com/KyokoApp/Godot/actions/runs/37211533068)**
+  hijau penuh: compile, semua tes headless (termasuk auto-fire Survival dan
+  multitouch HUD), render Mobile Vulkan, ekspor PCK/APK, audit APK, serta boot
+  launcher. Rilis: [`build-3b7bf29`](https://github.com/KyokoApp/Godot/releases/tag/build-3b7bf29).
+  Render CI lolos; belum ada uji langsung di perangkat Android fisik.
+
+## Ronde 28 — analog-only, gait mundur, dan 11 kartu skill Survival
+
+- Semua tombol aksi gameplay (`SERANG`, `TEMBAK`, `LOMPAT`, `JONGKOK`, `LARI`,
+  `DASH`) kini tersembunyi dan dinonaktifkan. Analog tetap satu-satunya input
+  aksi; pengaturan, katalog animasi, dan HUD status tetap tersedia. Tombol editor
+  tata letak HUD ikut disembunyikan. Auto-fire tetap khusus Survival; hub tidak
+  mendapat auto-fire.
+- Perbaikan gait mundur: `Walk_Formal_Loop` hanya dipilih pada band jalan.
+  Analog penuh ke bawah yang mencapai kecepatan lari tetap memakai gait Jog/Sprint,
+  bukan turun kembali ke animasi jalan.
+- Katalog Survival bertambah 11 kartu yang ikut pilihan/stack: Fokus Arkana
+  (damage sihir), Runa Embun (slow), Rantai Petir (damage berantai), Api Penghisap
+  (lifesteal), Tanda Penuai (bonus damage ke target sekarat), Bunga Kritikal
+  (ledakan area saat critical), Perisai Jiwa (kapasitas + isi shield saat kill),
+  Ritme Penuai (cooldown turun saat kill), Kebakaran Liar (burn lebih kuat),
+  Mata Air Jiwa (regenerasi HP), dan Echo Prismatik (peluang tembakan ganda).
+  Efek stack dan batas stack ditangani `SurvivalBuffSystem`.
+- Tes HUD dan Survival diperbarui untuk memastikan tombol gameplay tak bisa
+  dipicu, analog bergerak, Sprint bertahan saat analog penuh ke bawah, buff baru
+  tersedia/berstack/berdampak, serta auto-fire Survival tetap bekerja. Tes render
+  Survival kini mengharapkan HUD analog-only.
+- Pose sihir kini menaikkan tangan sekali saat auto-fire mulai, menahannya selama
+  jeda antartembakan, lalu melanjutkan klip untuk menurunkan tangan setelah tidak
+  ada tembakan selama 0,42 detik. Render test memeriksa pose tetap stabil dan
+  pulih setelah tembakan berhenti; casting satu kali di hub tetap memakai alur biasa.
+- Validasi statis lokal lulus: `gdparse`, `gdlint project tools`, pemeriksaan
+  tipe, katalog animasi, tes chunk, bundle lisensi, dan `git diff --check`.
+  CI Godot 4.5.2 run **[`37241849407`](https://github.com/KyokoApp/Godot/actions/runs/37241849407)**
+  pada commit `c0aa56b` hijau penuh: compile, semua tes headless, render Mobile
+  Vulkan (termasuk pose casting tertahan dan pemulihannya), ekspor PCK/APK, audit
+  APK, dan boot launcher. APK: **[`build-c0aa56b`](https://github.com/KyokoApp/Godot/releases/tag/build-c0aa56b)**.
+  Render regresi CI lolos; tes langsung di perangkat Android fisik belum dilakukan.
+
+## Ronde 29 — boss/tower Survival, koin-upgrade, dan horizon berkabut
+
+- Source `CityHorizon` menambah skyline MultiMesh, dua lapis bukit jauh, dan
+  shader haze tebal melalui scenery home/hub; `SurvivalWorld` tidak membuat
+  scenery tersebut.
+- Impact tembakan dasar tidak lagi membuat burst/percikan/ledakan. Ekor proyektil
+  diperingan, batas proyektil rapid-fire diturunkan, sementara AoE skill tetap
+  terpisah dan dibatasi node aktifnya. Tambahan skill mencakup AoE berkala/aura
+  serta bonus single-target. Orbit Bara dimulai dengan dua api dan setiap stack
+  menambah proyektil serta memperlebar orbit; tween kartu dibuat lebih lembut.
+- Source stage milestone menambah boss raksasa berskin khusus, HUD HP boss, tower
+  setelah timer selesai, gelombang pembersih saat pemain mendekat, dan pilihan
+  lanjut/pulang. Kill memberi koin persisten; opsi INVENTARIS NPC diarahkan ke
+  panel 13 upgrade atribut dengan harga/level bertahap.
+- Kamera Survival disetel ke pitch 1,28 radian; arah cahaya bulan menjadi sekitar
+  20° di atas horizon dan jarak shadow map dibatasi 96 m.
+- `tools/test_survival.gd`, `tools/test_fire_pet.gd`, `tools/test_npc.gd`,
+  `tools/test_scenery.gd`, dan tes baru `tools/test_meta_progress.gd` diperbarui.
+  Pemeriksaan lokal statis lulus (`gdparse`, `gdlint`, cek tipe, lisensi, chunk,
+  katalog animasi, YAML workflow, dan `git diff --check`). Dua temuan CI awal—tipe
+  hasil `pop_front()` yang ambigu dan akses tes ke proyektil yang sudah terhapus—
+  sudah diperbaiki. CI final [`37349150872`](https://github.com/KyokoApp/Godot/actions/runs/37349150872)
+  lulus compile, semua tes headless, seluruh render Mobile Vulkan (termasuk
+  Survival), ekspor PCK/APK, audit isi APK, dan boot launcher. APK: **[`build-2b0f13a`](https://github.com/KyokoApp/Godot/releases/tag/build-2b0f13a)**.
+  Render/runtime terverifikasi di CI; tes di perangkat Android fisik belum dilakukan.
+
+## Ronde 30 — Run Zone endless: intro mantra dan auto-run third-person
+
+- Kartu kedua pada selector kini membuka Run Zone; kartu ketiga tetap berstatus
+  Coming Soon. Dunia memakai bidang tanpa batas yang sudah ada.
+- Intro singkat menampilkan perapal UAL2 melayang di belakang pemain, pose cast
+  ditahan, dan bola mantra ungu. Kamera mulai mengarah ke perapal lalu mengorbit
+  ke belakang pemain untuk gameplay third-person; auto-run baru aktif setelah
+  transisi selesai.
+- Pemain terus berlari maju dalam gait `Sprint_Loop`. Laju bertambah 0,12 m/s
+  per detik sampai batas yang masih sinkron dengan playback Sprint, agar kaki
+  tidak meluncur. HUD hanya menampilkan durasi dan kecepatan; tombol aksi tetap
+  tersembunyi dan auto-fire Survival tidak ikut aktif.
+- Escape/Back mengakhiri sesi dan memulihkan home, NPC, serta state kamera.
+  `tools/test_run_zone.gd` menguji intro/cast, arah transisi kamera, auto-run,
+  kenaikan laju, pijakan, HUD, dan pulang ke hub. `tools/render_run_zone.gd`
+  mengambil screenshot intro dan gameplay third-person.
+- Validasi lokal lulus: `gdparse`, `gdlint project tools`, `tools/check_scripts.py .`,
+  katalog animasi, tes chunk, bundle lisensi, parse YAML workflow, dan
+  `git diff --check`. Run awal menemukan ekspektasi tes nama node tanah yang
+  keliru; setelah tes diperbaiki, CI Godot 4.5.2 **[`37354604990`](https://github.com/KyokoApp/Godot/actions/runs/37354604990)**
+  lulus compile, semua tes headless, render Mobile Vulkan Run Zone, ekspor PCK/APK,
+  audit APK, dan boot launcher. APK: **[`build-ed4e865`](https://github.com/KyokoApp/Godot/releases/tag/build-ed4e865)**.
+  Tes pada perangkat Android fisik belum dilakukan. Commit: `a8ee9cd` fitur,
+  `ed4e865` koreksi tes; branch `arena/01a0fc4a-godot`.

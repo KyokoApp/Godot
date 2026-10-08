@@ -46,13 +46,13 @@ func _run() -> void:
 		await physics_frame
 	_check(pet.global_position.distance_to(start) > 0.005, "Pet tidak beranimasi melayang")
 	var orbit: Node3D = game.get("_orbit")
-	var attack: Button = game.get("_attack")
+	var catalog: Button = game.get("_catalog_button")
 	var touch := InputEventScreenTouch.new()
 	touch.index = 9
 	touch.pressed = true
-	touch.position = attack.get_global_rect().get_center()
+	touch.position = catalog.get_global_rect().get_center()
 	orbit._input(touch)
-	_check(orbit.get("_touches").is_empty(), "Attack ikut memutar kamera")
+	_check(orbit.get("_touches").is_empty(), "Katalog ikut memutar kamera")
 	_check(pet.attack(), "Serangan pertama gagal")
 	_check(not pet.attack(), "Cooldown tidak mencegah spam")
 	_check(pet.casting and pet.projectiles.is_empty(), "Windup casting dilewati")
@@ -62,7 +62,9 @@ func _run() -> void:
 	var shot: CharacterBody3D = pet.projectiles[0]
 	var wake := shot.get_node("FireWake") as GPUParticles3D
 	_check(not wake.local_coords, "Ekor api harus tertinggal di dunia")
-	_check(wake.amount == 10, "Budget ekor api berubah")
+	_check(wake.amount == 4, "Budget ekor api ringan berubah")
+	_check(shot.get_node_or_null("BoltSparks") == null,
+		"Percikan berat masih menempel pada proyektil dasar")
 	shot._process(0.05)
 	var bolt_trail: Vector3 = shot.get("_trail")
 	_check(bolt_trail.dot(shot.velocity) < 0 and bolt_trail.length() <= 0.901,
@@ -71,46 +73,36 @@ func _run() -> void:
 	await physics_frame
 	await physics_frame
 	_check(shot.velocity.y < vertical, "Proyektil tidak dipengaruhi gravitasi")
-	var exploded := false
+	var saw_finished := false
 	for frame in range(240):
 		await physics_frame
+		if is_instance_valid(shot):
+			saw_finished = saw_finished or shot.finished
 		pet._prune()
-		exploded = exploded or not pet.bursts.is_empty()
-	_check(exploded, "Proyektil tidak meledak saat menabrak terrain")
+		if saw_finished and pet.projectiles.is_empty():
+			break
+	_check(saw_finished, "Proyektil tidak berakhir setelah lintasannya")
 	_check(pet.projectiles.is_empty(), "Proyektil tidak dibersihkan")
-	_check(pet.bursts.is_empty(), "Ledakan tidak dibersihkan")
+	_check(Pet.RAPID_FIRE_MAX_PROJECTILES == 10,
+		"Batas auto-fire/volley tidak dijaga tetap ringan")
 	for index in range(4):
 		pet.cooldown = 0
 		pet.attack()
 		for frame in range(12):
 			await physics_frame
 	_check(pet.projectiles.size() <= Pet.MAX_PROJECTILES, "Batas proyektil terlampaui")
-	for index in range(5):
-		pet._on_impact(pet.global_position + Vector3(0, 0, -3), Vector3.UP)
-	_check(pet.bursts.size() <= Pet.MAX_BURSTS, "Batas ledakan terlampaui")
 	await _test_fx_lifecycle(game, pet)
 	print("[fire-pet-test] HASIL: ", "OK" if _failures == 0 else "GAGAL")
 	quit(0 if _failures == 0 else 1)
 
 
 func _test_fx_lifecycle(game: Node3D, pet: Pet) -> void:
-	# Hentikan peluru tes cap agar tidak melahirkan impact baru saat cek cleanup.
-	for shot in pet.projectiles:
-		shot.queue_free()
-	var burst: Node3D = pet.bursts.back()
-	var flame := burst.get_node("FlamePetals") as GPUParticles3D
-	var sparks := burst.get_node("ImpactSparks") as GPUParticles3D
-	var embers := burst.get_node("CoolingEmbers") as GPUParticles3D
-	_check(flame.amount + sparks.amount + embers.amount == 50, "Budget impact berubah")
-	_check(flame.one_shot and not flame.local_coords, "Impact bukan burst world-space")
-	_check(burst.get_node_or_null("OuterFlame") != null, "Selubung api impact hilang")
-	var flash := burst.get_node("ImpactFlash") as OmniLight3D
-	_check(not flash.shadow_enabled, "Flash tidak boleh menghitung shadow")
-	var wall_normal := Vector3(0, 0, 1)
-	pet._on_impact(pet.global_position, wall_normal)
-	var wall_burst: Node3D = pet.bursts.back()
-	var ring := wall_burst.get_node("SurfaceShockwave") as MeshInstance3D
-	_check(ring.basis.y.is_equal_approx(wall_normal), "Shockwave tidak mengikuti normal tembok")
+	# Hit biasa tidak menambah ledakan/partikel/lampu; AoE skill punya jalur VFX
+	# sendiri di SurvivalBuffSystem dan tidak lewat handler impact projectile.
+	var children_before := game.get_child_count()
+	pet._on_impact(pet.global_position, Vector3.UP)
+	_check(game.get_child_count() == children_before,
+		"Impact tembakan dasar masih membuat node ledakan")
 	var expired := Pet.Projectile.new()
 	expired.position = Vector3(0, 500, 0)
 	game.add_child(expired)
@@ -120,10 +112,12 @@ func _test_fx_lifecycle(game: Node3D, pet: Pet) -> void:
 	_check(expired.finished and expired.collision_layer == 0, "Peluru tamat masih aktif")
 	_check(not expired.get_node("BoltCore").visible, "Inti tidak hilang saat impact")
 	_check(not expired.get_node("FireWake").emitting, "Emitter tidak berhenti setelah tamat")
+	_check(expired.get_node_or_null("BoltSparks") == null,
+		"Emitter percikan dasar belum dihapus")
 	_check(not expired.is_queued_for_deletion(), "Ekor api dipotong langsung")
 	expired._physics_process(Pet.Projectile.TAIL_LIFETIME + 0.01)
 	_check(expired.is_queued_for_deletion(), "Ekor api bocor setelah TTL")
 	for frame in range(140):
 		await physics_frame
 	pet._prune()
-	_check(pet.bursts.is_empty(), "Partikel impact tidak dibersihkan setelah 1.9 detik")
+	_check(pet.projectiles.is_empty(), "Peluru lama tertahan di daftar projectile")

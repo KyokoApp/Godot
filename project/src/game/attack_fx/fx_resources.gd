@@ -10,13 +10,14 @@ static var _flame: ShaderMaterial
 static var _spark: StandardMaterial3D
 
 
-static func sphere(radius: float, shader: Shader, intensity: float) -> MeshInstance3D:
+static func sphere(radius: float, shader: Shader, intensity: float,
+		radial_segments: int = 22, rings: int = 11) -> MeshInstance3D:
 	var visual := MeshInstance3D.new()
 	var mesh := SphereMesh.new()
 	mesh.radius = radius
 	mesh.height = radius * 2
-	mesh.radial_segments = 22
-	mesh.rings = 11
+	mesh.radial_segments = maxi(6, radial_segments)
+	mesh.rings = maxi(4, rings)
 	visual.mesh = mesh
 	var material := ShaderMaterial.new()
 	material.shader = shader

@@ -1,6 +1,7 @@
 extends SceneTree
 
 const WorldAudio = preload("res://src/game/audio/world_audio.gd")
+const Field = preload("res://src/game/world/field.gd")
 var _failures := 0
 var _audio: WorldAudio
 var _capture: AudioEffectCapture
@@ -132,14 +133,30 @@ func _test_steps() -> void:
 	for frame in range(20):
 		await physics_frame
 	_check(footsteps.get("emitted") == stopped, "Langkah tidak berhenti")
-	# Padang 100 m: tengah = rumput, tepi pagar = tanah, lereng curam = batu.
-	_check(footsteps.surface_at(Vector3(0, 5, 0), Vector3.UP) == "grass",
-		"Tengah padang bukan rumput")
-	_check(footsteps.surface_at(Vector3(4, 5, 0), Vector3.UP) == "grass",
-		"Dekat tengah sudah berubah jadi tanah")
-	_check(footsteps.surface_at(Vector3(48, 5, 0), Vector3.UP) == "dirt",
-		"Tepi pagar bukan tanah")
-	_check(footsteps.surface_at(Vector3(0, 5, 0), Vector3(0, 0.3, 1)) == "stone",
+	# Pulau 100 m: rumput di pedalaman, pasir di pesisir rendah, batu di lereng.
+	_check(footsteps.surface_at(Vector3(0, 5, 8), Vector3.UP) == "grass",
+		"Pedalaman pulau bukan rumput")
+	_check(footsteps.surface_at(Vector3(8, 5, 10), Vector3.UP) == "grass",
+		"Pedalaman berbukit sudah berubah jadi tanah")
+	# Titik pesisir dicari dari bentuk pulau: tanah di bawah 2,6 m di atas air
+	# (batas yang sama dengan pita pasir di ground.gdshader) harus berbunyi tanah.
+	var shore := Vector3.ZERO
+	var found := false
+	for step in range(64):
+		var angle := TAU * float(step) / 64.0
+		var radius := Field.island_radius(angle) - 1.0
+		var x := cos(angle) * radius
+		var z := sin(angle) * radius
+		if Field.terrain_height(x, z) < 2.6 and Field.terrain_height(x, z) > -1.0:
+			shore = Vector3(x, 5, z)
+			found = true
+			break
+	_check(found, "Tidak ada titik pesisir rendah untuk diuji")
+	if found:
+		_check(footsteps.surface_at(shore, Vector3.UP) == "dirt",
+			"Pesisir rendah bukan tanah (pasir)")
+	# Lereng curam = batu; normal sengaja dimiringkan supaya jadi sampel tegas.
+	_check(footsteps.surface_at(Vector3(8, 5, 10), Vector3(0, 0.3, 1)) == "stone",
 		"Lereng curam bukan batu")
 	game.queue_free()
 	await process_frame

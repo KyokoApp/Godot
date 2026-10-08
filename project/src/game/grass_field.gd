@@ -1,24 +1,32 @@
 extends Node3D
-## Rumput berlapis di padang 100 m: 9 tile dekat rapat, sisanya lebih ringan.
-## Jarak tile mengikuti pemain seperti sebelumnya, tetapi batas padang sekarang
-## 100 m (bukan pulau 1 km), jadi kepadatan tetap dan biaya gambar sama.
+## Rumput berlapis di pulau 100 m: helai rapat + lapisan bawah sampai 24 m,
+## lalu makin renggang sampai 36 m, lalu kartu LOD (distant_grass.gd) sampai 128 m.
+## Jarak tile tetap mengikuti pemain (radius 3 tile = 36 m), jadi kepadatan dan
+## biaya gambar TIDAK berubah walau dunianya kini 100 m — yang menentukan adalah
+## `Field.can_grow()`, bukan ukuran dunia.
 
 const DistantGrass = preload("res://src/game/world/distant_grass.gd")
-const Field = preload("res://src/game/world/field.gd")
 const SHADER = preload("res://src/game/grass.gdshader")
 const TILE_SIZE := 12.0
-const GRID := 40
-const FAR_GRID := 20
-const RADIUS := 2
-const MAX_TILES := 25
-const MAX_CLUMPS := 9 * GRID * GRID + 16 * FAR_GRID * FAR_GRID
-const MAX_TRIANGLES := 9 * GRID * GRID * 6 + 16 * FAR_GRID * FAR_GRID * 4
-const COVER_HALF_SIZE := 0.25
-const BLADE_WIDTH := 0.085
-const BLADE_HEIGHT := 0.55
+const GRID := 44
+const FAR_GRID := 22
+const RADIUS := 3
+## Tile dengan helai rapat + lapisan bawah: cakupan 24 m dari pemain (5x5 tile).
+## Di luar itu rumpunnya menipis (FAR_GRID) supaya transisi ke kartu LOD halus.
+const NEAR_SPAN := 2
+const MAX_TILES := (RADIUS * 2 + 1) ** 2
+const NEAR_TILES := (NEAR_SPAN * 2 + 1) ** 2
+const MAX_CLUMPS := NEAR_TILES * GRID * GRID + (MAX_TILES - NEAR_TILES) * FAR_GRID * FAR_GRID
+const MAX_TRIANGLES := (NEAR_TILES * GRID * GRID * 6
+	+ (MAX_TILES - NEAR_TILES) * FAR_GRID * FAR_GRID * 4)
+## Helai KECIL supaya terbaca sebagai helai, bukan semak: tinggi 0,55 -> 0,34 m
+## dan lebar 0,085 -> 0,055 m. Lapisan bawah ikut mengecil mengikuti helai.
+const COVER_HALF_SIZE := 0.22
+const BLADE_WIDTH := 0.055
+const BLADE_HEIGHT := 0.34
 
 var distant: DistantGrass
-var ground: Field
+var ground: Node3D
 var player: Node3D
 var tiles: Dictionary[Vector2i, MultiMeshInstance3D] = {}
 var _pending: Array[Vector2i] = []
@@ -40,6 +48,18 @@ func _ready() -> void:
 	add_child(distant)
 
 
+func set_ground(new_ground: Node3D) -> void:
+	ground = new_ground
+	for tile: MultiMeshInstance3D in tiles.values():
+		if is_instance_valid(tile):
+			tile.queue_free()
+	tiles.clear()
+	_tile_grids.clear()
+	_center = Vector2i(99999, 99999)
+	if distant != null:
+		distant.clear_tiles()
+
+
 func _process(_delta: float) -> void:
 	if ground == null or player == null:
 		return
@@ -49,7 +69,7 @@ func _process(_delta: float) -> void:
 	var center := Vector2i(floori(position_3d.x / TILE_SIZE), floori(position_3d.z / TILE_SIZE))
 	if center != _center:
 		_recenter(center)
-	# Batasi lonjakan CPU: paling banyak satu tile (maksimal 1.600 kandidat) tiap frame.
+	# Batasi lonjakan CPU: paling banyak satu tile (maksimal 1.936 kandidat) tiap frame.
 	if not _pending.is_empty():
 		_build_tile(_pending.pop_front())
 
@@ -78,11 +98,19 @@ func _tile_priority(key: Vector2i) -> float:
 
 
 func can_grow(x: float, z: float) -> bool:
-	return ground != null and ground.can_grow(x, z)
+	return ground != null and ground.has_method("can_grow") \
+		and bool(ground.call("can_grow", x, z))
+
+
+func _surface_height(x: float, z: float) -> float:
+	if ground == null or not ground.has_method("surface_height"):
+		return 0.0
+	return float(ground.call("surface_height", x, z))
 
 
 func grid_for(key: Vector2i) -> int:
-	return GRID if maxi(absi(key.x - _center.x), absi(key.y - _center.y)) <= 1 else FAR_GRID
+	var span := maxi(absi(key.x - _center.x), absi(key.y - _center.y))
+	return GRID if span <= NEAR_SPAN else FAR_GRID
 
 
 func placements_for(key: Vector2i) -> Array[Transform3D]:
@@ -104,14 +132,14 @@ func placements_for(key: Vector2i) -> Array[Transform3D]:
 			var world_z := origin.z + local_z
 			if not can_grow(world_x, world_z):
 				continue
-			var height := ground.surface_height(world_x, world_z) - 0.03
+			var height := _surface_height(world_x, world_z) - 0.03
 			var basis := Basis(Vector3.UP, angle)
 			basis = basis.scaled(Vector3.ONE * scale_factor)
 			# Lapisan bawah mengikuti kemiringan, bukan melayang di atas lereng.
-			var dx := (ground.surface_height(world_x + 0.5, world_z)
-				- ground.surface_height(world_x - 0.5, world_z))
-			var dz := (ground.surface_height(world_x, world_z + 0.5)
-				- ground.surface_height(world_x, world_z - 0.5))
+			var dx := (_surface_height(world_x + 0.5, world_z)
+				- _surface_height(world_x - 0.5, world_z))
+			var dz := (_surface_height(world_x, world_z + 0.5)
+				- _surface_height(world_x, world_z - 0.5))
 			basis.x.y = dx * basis.x.x + dz * basis.x.z
 			basis.z.y = dx * basis.z.x + dz * basis.z.z
 			placements.append(Transform3D(basis, Vector3(local_x, height, local_z)))
@@ -211,5 +239,6 @@ func _make_mesh(with_cover: bool) -> ArrayMesh:
 
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_VISIBILITY_CHANGED and is_instance_valid(ground):
-		ground.set_grass_cover(is_visible_in_tree())
+	if what == NOTIFICATION_VISIBILITY_CHANGED and is_instance_valid(ground) \
+			and ground.has_method("set_grass_cover"):
+		ground.call("set_grass_cover", is_visible_in_tree())

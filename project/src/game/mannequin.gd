@@ -24,12 +24,18 @@ const SKIN_SHADER = preload("res://src/game/character/skin_shell.gdshader")
 const COMBAT_MODEL = preload("res://assets/combat/UAL2_Standard.glb")
 const OUTLINE = preload("res://src/game/character_outline.gdshader")
 const CastLayer = preload("res://src/game/animation/cast_layer.gd")
+const SwordLayer = preload("res://src/game/animation/sword_layer.gd")
+const SwordModel = preload("res://assets/weapons/Sword.glb")
 const Catalog = preload("res://src/game/animation/catalog.gd")
 const Metrics = preload("res://src/game/animation/anim_metrics.gd")
 const IDLE := "Idle_Loop"
 const AIR_CLIP := "Jump_Loop"
 const COMBAT_LIBRARY := "ual2"
-const FADE := 0.18
+const FADE := 0.10
+## Serah-terima aksi → lokomosi. Sekecil mungkin: dulu 0,24 s, dan selama
+## cross-fade itu badan masih memakai pose akhir klip aksi — itulah "jeda"
+## yang terlihat setelah dash/serangan sebelum kakinya jalan lagi.
+const HANDOFF := 0.08
 ## Pemulihan setelah mendarat: klip mendarat hanya dipakai sesaat, lalu badan
 ## kembali ke gait supaya tidak terasa berhenti mendadak.
 const LAND_RECOVERY := 0.28
@@ -43,6 +49,12 @@ var avatar: Skeleton3D
 var skin: SkinShell
 var cast_layer: CastLayer
 var metrics: Dictionary = {}
+var measure_metrics := true
+var sword_layer_enabled := false
+var sustained_cast := false
+var sword_layer: SwordLayer
+var weapon_attachment: BoneAttachment3D
+var weapon_instance: Node3D
 var mode := Mode.LOCOMOTION
 var clip := IDLE
 var gait := IDLE
@@ -50,6 +62,10 @@ var ground_offset := 0.0
 var playback_scale := 1.0
 var _hold_after := false
 var _action_left := 0.0
+## Skala kecepatan lokomosi terakhir. Dipakai lagi saat aksi selesai supaya kaki
+## tidak sempat memutar 1x (kelamaan) selama satu frame sebelum pemain menyetel
+## skala yang benar lagi.
+var _locomotion_scale := 1.0
 var _model: Node3D
 var _skin_material: ShaderMaterial
 var _library: AnimationLibrary
@@ -75,10 +91,13 @@ func _ready() -> void:
 	_apply_material()
 	_setup_skin()
 	_configure_clips()
-	metrics = Metrics.measure_catalog(animation, skeleton, Catalog)
 	animation.play(Catalog.play_name(IDLE), 0.0)
 	animation.advance(0.0)
 	_setup_cast_layer()
+	if sword_layer_enabled:
+		_setup_sword_layer()
+	if measure_metrics:
+		metrics = Metrics.measure_catalog(animation, skeleton, Catalog)
 	print("[mannequin] %d klip dimuat, %d metrik terukur" % [
 		animation.get_animation_list().size(), metrics.size()])
 
@@ -111,6 +130,8 @@ func _apply_material() -> void:
 	var outline := ShaderMaterial.new()
 	outline.shader = OUTLINE
 	outline.set_shader_parameter("outline_width", 0.005)
+	# Putih tipis: mesh mannequin kini hitam gelap, jadi tepinya harus terang.
+	outline.set_shader_parameter("outline_color", Color.WHITE)
 	_skin_material.next_pass = outline
 	for node in _model.find_children("*", "MeshInstance3D", true, false):
 		(node as MeshInstance3D).material_override = _skin_material
@@ -140,14 +161,16 @@ func visible_meshes() -> Array[MeshInstance3D]:
 	return skin.covers()
 
 
-## Mode ringan: kurangi kerumitan bahan kulit (pola energi & percikan) tanpa
-## mengubah siluetnya, jadi HP kelas bawah tetap dapat karakter yang sama.
+## Mode ringan: dulu mengubah kerumitan pola energi kulit. Sejak kulit jadi
+## HITAM POLOS (garis energi dihapus), tidak ada lagi pola yang bisa dikurangi —
+## pemanggil di `performance_panel.gd` tetap memakai fungsi ini, dan parameter
+## `vein_*` yang masih dideklarasikan di shader tetap diberi nilai valid supaya
+## tidak ada setelan yang menggantung. Tampilan kulit tidak berubah lagi.
 func set_light_cloth(light: bool) -> void:
 	if _skin_material == null:
 		return
-	# Mode ringan tetap memakai pola yang sama, hanya sedikit lebih kasar —
-	# kalau angkanya jauh berbeda, kulit terlihat berganti model saat setelan
-	# grafis diubah (band bawaan 15,5/0,115).
+	# Kulit polos: satu hash bercak + rim statis. Nilai ini sudah tidak dipakai
+	# shader, tapi tetap disetel supaya bahan tidak menyimpan parameter kosong.
 	_skin_material.set_shader_parameter("vein_scale", 12.0 if light else 16.5)
 	_skin_material.set_shader_parameter("vein_width", 0.130 if light else 0.105)
 	if skin != null and skin.skin != null:
@@ -179,6 +202,65 @@ func _setup_cast_layer() -> void:
 		push_error("Mannequin: filter tulang casting kosong")
 
 
+func _setup_sword_layer() -> void:
+	sword_layer = SwordLayer.new()
+	sword_layer.name = "UpperBodySword"
+	skeleton.add_child(sword_layer)
+	sword_layer.configure(animation, skeleton)
+
+
+func _start_sword_attack(names: Array[String]) -> float:
+	if sword_layer == null:
+		return 0.0
+	if cast_layer != null:
+		cast_layer.cancel()
+	return sword_layer.play_sequence(names)
+
+
+func _stop_sword_attack() -> void:
+	if sword_layer != null:
+		sword_layer.cancel()
+
+
+func _is_sword_attacking() -> bool:
+	return sword_layer != null and sword_layer.playing
+
+
+func _set_weapon_visible(enabled: bool) -> void:
+	if not enabled:
+		if weapon_instance != null:
+			weapon_instance.hide()
+		return
+	if weapon_instance == null:
+		if skeleton == null:
+			return
+		var hand := skeleton.find_bone("hand_r")
+		if hand < 0:
+			push_error("Mannequin: tulang hand_r untuk pedang tidak ditemukan")
+			return
+		weapon_attachment = BoneAttachment3D.new()
+		weapon_attachment.name = "RightHandSword"
+		weapon_attachment.bone_name = skeleton.get_bone_name(hand)
+		skeleton.add_child(weapon_attachment)
+		var instance: Node3D = SwordModel.instantiate() as Node3D
+		if instance == null:
+			push_error("Mannequin: model pedang tidak bisa dimuat")
+			weapon_attachment.queue_free()
+			weapon_attachment = null
+			return
+		instance.name = "Sword"
+		weapon_attachment.add_child(instance)
+		weapon_instance = instance
+		# Model CC0 dibuat dengan grip di origin dan bilah di +Y. Arah tangan
+		# siaga UAL menentukan rotasi lokal; bilah diarahkan ke depan karakter.
+		var hand_basis := skeleton.get_bone_global_pose(hand).basis
+		var forward_in_skeleton := Vector3.BACK
+		var blade_direction := (hand_basis.inverse() * forward_in_skeleton).normalized()
+		weapon_instance.rotation = Quaternion(Vector3.UP, blade_direction).get_euler()
+		weapon_instance.scale = Vector3.ONE * 0.62
+	weapon_instance.show()
+
+
 # ------------------------------------------------------------- lokomosi ----
 
 func natural_speed(name: String) -> float:
@@ -188,6 +270,7 @@ func natural_speed(name: String) -> float:
 
 
 func set_locomotion(name: String, playback_speed := 1.0) -> void:
+	_locomotion_scale = clampf(playback_speed, 0.1, 3.0)
 	if mode == Mode.HELD:
 		# Pose tahan (klip aksi yang berhenti di frame terakhir) DILEPAS begitu
 		# pemain meminta gait. Dulu mode HELD juga menolak mengganti klip, jadi
@@ -200,13 +283,14 @@ func set_locomotion(name: String, playback_speed := 1.0) -> void:
 	gait = name
 	mode = Mode.LOCOMOTION
 	if name != clip:
-		_play(name, FADE, playback_speed)
+		_play(name, FADE, _locomotion_scale)
 	else:
-		animation.speed_scale = clampf(playback_speed, 0.1, 3.0)
+		animation.speed_scale = _locomotion_scale
 
 
 func set_air_clip(name: String, playback_speed := 1.0) -> void:
 	# Klip udara dipilih pemain (lompat), bukan dari band kecepatan.
+	_stop_sword_attack()
 	mode = Mode.LOCOMOTION
 	gait = name
 	if name != clip:
@@ -215,14 +299,23 @@ func set_air_clip(name: String, playback_speed := 1.0) -> void:
 		animation.speed_scale = clampf(playback_speed, 0.1, 3.0)
 
 
-func play_action(name: String) -> float:
+func play_action(name: String, max_time := 0.0) -> float:
 	var measured: Dictionary = metrics.get(name, {})
 	var length := float(measured.get("length", 0.0))
-	if length <= 0.0 or not animation.has_animation(Catalog.play_name(name)):
+	var play_name: String = Catalog.play_name(name)
+	if not animation.has_animation(play_name):
 		return 0.0
+	if length <= 0.0:
+		length = animation.get_animation(play_name).length
+	if length <= 0.0:
+		return 0.0
+	_stop_sword_attack()
 	_hold_after = Catalog.holds_last_frame(name)
 	mode = Mode.ACTION
-	_action_left = length
+	# Klip boleh lebih panjang daripada aksinya. Tanpa batas ini kaki berdiam di
+	# SISA klip yang tidak dipakai selama seperempat detik sebelum kembali jalan —
+	# persis "jeda" yang dikeluhkan.
+	_action_left = length if max_time <= 0.0 else minf(length, max_time)
 	_play(name, FADE, 1.0)
 	return length
 
@@ -267,7 +360,7 @@ func return_to_locomotion() -> void:
 	# di frame berikutnya.
 	if gait == AIR_CLIP:
 		gait = IDLE
-	_play(gait, 0.24, 1.0)
+	_play(gait, HANDOFF, _locomotion_scale)
 
 
 func freeze_at_last_frame() -> void:
@@ -306,11 +399,15 @@ func progress() -> float:
 
 
 func is_busy() -> bool:
-	return mode == Mode.ACTION or mode == Mode.SHOWCASE
+	return mode == Mode.ACTION or mode == Mode.SHOWCASE or _is_sword_attacking()
 
 
 func start_cast() -> void:
-	if cast_layer != null:
+	if cast_layer == null:
+		return
+	if sustained_cast:
+		cast_layer.begin_held()
+	else:
 		cast_layer.begin()
 
 

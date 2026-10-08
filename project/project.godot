@@ -29,6 +29,10 @@ renderer/rendering_method="mobile"
 renderer/rendering_method.mobile="mobile"
 textures/vram_compression/import_etc2_astc=true
 anti_aliasing/quality/msaa_3d=0
+; Renderer Mobile TIDAK punya depth prepass, jadi overdraw jadi biaya utama.
+; Dokumentasi Godot menyebut occlusion culling justru paling terasa di backend
+; Mobile. Penutupnya (bukit jauh) ada di world/scenery.gd.
+occlusion_culling/use_occlusion_culling=true
 
 [physics]
 

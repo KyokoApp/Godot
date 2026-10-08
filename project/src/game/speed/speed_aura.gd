@@ -1,8 +1,13 @@
 extends Node3D
-## Short pose echoes wrapped in soft smoke. No bright ribbons or sphere shell.
+## Efek kecepatan: pita jejak gerak + gumpalan asap + bloom layar.
+##
+## Permintaan ronde 18: efek dash harus terasa seperti BLUR/GLOW, bukan
+## "setelah gambar" (afterimage). Karena itu bekas pose beku (afterimage_trail.gd)
+## sudah DIHAPUS dan diganti pita jejak aditif (speed_trail.gd) yang mengikuti
+## jejak posisi karakter, plus denyut bloom di badan karakter (mannequin).
 
 const Character = preload("res://src/game/mannequin.gd")
-const Ghosts = preload("res://src/game/speed/afterimage_trail.gd")
+const Trail = preload("res://src/game/speed/speed_trail.gd")
 const SMOKE = preload("res://src/game/speed/smoke.gdshader")
 const WASH = preload("res://src/game/speed/speed_wash.gdshader")
 const TINT := Color("ae65ff")
@@ -12,7 +17,7 @@ var environment: Environment
 var strength := 0.0
 var tint := TINT
 var wash: ColorRect
-var ghosts: Ghosts
+var trail: Trail
 var _puffs: Array[MeshInstance3D] = []
 var _materials: Array[ShaderMaterial] = []
 var _ages: Array[float] = []
@@ -24,12 +29,13 @@ var _time := 0.0
 var _glow_before := false
 var _glow_strength_before := 0.0
 var _glow_threshold_before := 1.0
+var _bloom_level := 0.0
 
 
 func _ready() -> void:
-	ghosts = Ghosts.new()
-	ghosts.character = character
-	add_child(ghosts)
+	trail = Trail.new()
+	trail.character = character
+	add_child(trail)
 	var quad := QuadMesh.new()
 	quad.size = Vector2(1.15, 1.45)
 	for index in range(PUFFS):
@@ -63,7 +69,7 @@ func _ready() -> void:
 
 func clear() -> void:
 	strength = 0
-	ghosts.clear()
+	trail.clear()
 	for index in range(PUFFS):
 		_ages[index] = 1.0
 		_puffs[index].hide()
@@ -83,9 +89,24 @@ func update_motion(delta: float, speed: float, boosted: bool) -> void:
 	if strength < 0.003 and target == 0:
 		clear()
 		return
-	ghosts.update_motion(delta, speed, boosted)
+	trail.set_active(boosted)
 	_update_smoke(delta, origin, target > 0)
 	_apply()
+
+
+func update_character_bloom(delta: float, dashing: bool, boosted: bool,
+		grounded: bool, speed: float) -> void:
+	if character == null or character.skin == null:
+		return
+	var wanted := 1.0 if dashing else 0.0
+	if not dashing and boosted and grounded and speed > 0.3:
+		# Boost biasa memberi denyut tipis; dash tetap yang paling jelas.
+		wanted = 0.25
+	var response := 14.0 if wanted > _bloom_level else 5.0
+	_bloom_level = lerpf(_bloom_level, wanted, 1.0 - exp(-delta * response))
+	if _bloom_level < 0.004 and wanted == 0.0:
+		_bloom_level = 0.0
+	character.skin.set_bloom(_bloom_level)
 
 
 func _apply() -> void:

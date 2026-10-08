@@ -1,11 +1,14 @@
 extends Node3D
-## Sparse crossed 2D cards (4 tris/clump), blended with existing near grass.
+## Kartu 2D bersilang (4 tris/kartu) yang menerima estafet dari helai rapat:
+## helai asli berhenti di 24 m, kartu mengambil alih sampai 128 m supaya rumput
+## tetap terlihat di sepanjang jangkauan kamera, bukan berhenti mendadak.
 
 const TILE := 32.0
-const GRID := 12
-const RADIUS := 3
-const MAX_TILES := 49
+const GRID := 14
+const RADIUS := 4
+const MAX_TILES := (RADIUS * 2 + 1) ** 2
 const MAX_TRIANGLES := MAX_TILES * GRID * GRID * 4
+## Kartu dibangun dua per frame: 81 tile = 41 frame, cukup cepat saat spawn.
 const SHADER = preload("res://src/game/world/grass_distance.gdshader")
 
 var field: Node3D
@@ -21,6 +24,15 @@ func _ready() -> void:
 	_material.shader = SHADER
 	_material.set_shader_parameter("blade_mask", preload("res://assets/nature/grass_cards.png"))
 	_mesh = _make_mesh()
+
+
+func clear_tiles() -> void:
+	for tile: MultiMeshInstance3D in tiles.values():
+		if is_instance_valid(tile):
+			tile.queue_free()
+	tiles.clear()
+	_pending.clear()
+	_center = Vector2i(9999, 9999)
 
 
 func update_center(point: Vector3) -> void:
@@ -40,7 +52,9 @@ func update_center(point: Vector3) -> void:
 					_pending.append(key)
 		_pending.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
 			return a.distance_squared_to(center) < b.distance_squared_to(center))
-	if not _pending.is_empty():
+	for index in range(2):
+		if _pending.is_empty():
+			break
 		_build_tile(_pending.pop_front())
 
 
@@ -53,9 +67,9 @@ func placements_for(key: Vector2i) -> Array[Transform3D]:
 			var local := Vector2((x + random.randf_range(0.2, 0.8)) * TILE / GRID,
 				(z + random.randf_range(0.2, 0.8)) * TILE / GRID)
 			var point := Vector2(key.x * TILE, key.y * TILE) + local
-			if not field.can_grow(point.x, point.y):
+			if not bool(field.call("can_grow", point.x, point.y)):
 				continue
-			var height: float = field.ground.surface_height(point.x, point.y)
+			var height := float(field.call("_surface_height", point.x, point.y))
 			var pose := Basis(Vector3.UP, random.randf_range(0, TAU))
 			result.append(Transform3D(pose, Vector3(local.x, height - 0.02, local.y)))
 	return result
