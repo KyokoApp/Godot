@@ -15,8 +15,25 @@ joined = b''.join((root / 'build/chunks' / (c['sha256'] + '.bin')).read_bytes()
                   for c in manifest['chunks'])
 assert joined == pack
 payload = {path if path.startswith('res://') else 'res://' + path for path in entries(pack)}
-assert 'res://src/game/main.tscn' in payload, 'World-only scene missing from content PCK'
+# Script export mode 2 stores scenes as optimized .scn files and leaves a .remap
+# alias at the original path, rather than storing the editable .tscn itself.
+main_scene_paths = {'res://src/game/main.tscn', 'res://src/game/main.tscn.remap'}
+assert main_scene_paths & payload, 'World-only scene missing from content PCK'
 assert 'res://src/game/blue_flame.gdshader' in payload, 'Blue flame shader missing from content PCK'
+
+
+def exported_path_variants(path):
+    """Include Godot bytecode/remap aliases, not only source filenames."""
+    variants = {path}
+    if path.endswith('.gd'):
+        variants.update({path + '.remap', path[:-3] + '.gdc'})
+    elif path.endswith('.tscn'):
+        variants.add(path + '.remap')
+    else:
+        variants.add(path + '.import')
+    return variants
+
+
 for removed in (
     'res://src/game/legacy_main.gd', 'res://src/game/legacy_main.tscn',
     'res://src/game/ui/rune_button.gd', 'res://src/game/player.gd',
@@ -24,7 +41,8 @@ for removed in (
     'res://src/game/survival/buff_system.gd', 'res://assets/audio/fire_loop.wav',
     'res://assets/mannequin/UAL1_Standard.glb',
 ):
-    assert removed not in payload, 'Legacy gameplay residue in content PCK: ' + removed
+    leaked = exported_path_variants(removed) & payload
+    assert not leaked, 'Legacy gameplay residue in content PCK: ' + ', '.join(sorted(leaked))
 print('[incremental-export] blocks reassembled; world-only payload verified')
 with zipfile.ZipFile(root / 'build/asekai.apk') as apk:
     seed = apk.getinfo('assets/bootstrap/base.pck')
