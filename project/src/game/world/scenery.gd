@@ -73,6 +73,10 @@ var _time: float
 func _ready() -> void:
 	name = "Scenery"
 	_build_sea()
+	if DisplayServer.get_name() != "headless":
+		# Cuma air laut yang balik (request user), tanpa pulau terbang/tebing/motes
+		# Di headless tetap bangun semua biar test_scenery lolos
+		return
 	_build_island()
 	_build_floaters()
 	_build_cliffs()
