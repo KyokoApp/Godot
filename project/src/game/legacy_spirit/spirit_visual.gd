@@ -9,6 +9,12 @@ var _shell: ShaderMaterial
 var _time := 0.0
 var _pulse := 0.0
 var _trail := Vector3.ZERO
+var _current_tint := Color(1.0, 0.45, 0.14)
+var _target_tint := Color(1.0, 0.45, 0.14)
+var _tint_mix := 0.0
+var _target_mix := 0.0
+var _halo: MeshInstance3D
+var _embers: GPUParticles3D
 
 
 func _ready() -> void:
@@ -16,6 +22,8 @@ func _ready() -> void:
 	_shell = ShaderMaterial.new()
 	_shell.shader = FLAME
 	_shell.set_shader_parameter("outline_pixels", 0.55)
+	_shell.set_shader_parameter("spell_tint", Vector3(1.0, 0.45, 0.14))
+	_shell.set_shader_parameter("tint_mix", 0.0)
 	var flame := MeshInstance3D.new()
 	flame.name = "FireTongues"
 	var card := QuadMesh.new()
@@ -26,16 +34,57 @@ func _ready() -> void:
 	flame.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	flame.extra_cull_margin = 0.5
 	add_child(flame)
-	var halo := MeshInstance3D.new()
-	halo.name = "SoftHalo"
-	halo.mesh = _quad(0.24, Color(0.45, 0.35, 1.0, 0.16), false)
-	halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(halo)
+	_halo = MeshInstance3D.new()
+	_halo.name = "SoftHalo"
+	_halo.mesh = _quad(0.24, Color(0.45, 0.35, 1.0, 0.16), false)
+	_halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(_halo)
 	_build_embers()
 
 
 func pulse() -> void:
 	_pulse = 1.0
+
+
+func set_spell(skill_id: String) -> void:
+	if skill_id == "lightning":
+		_target_tint = Color(0.58, 0.78, 1.0)
+		_target_mix = 0.72
+	else:
+		_target_tint = Color(1.0, 0.45, 0.14)
+		_target_mix = 0.68
+	# Jika masih 0, langsung set awal tanpa tween panjang.
+	if _tint_mix == 0.0:
+		_current_tint = _target_tint
+		_tint_mix = _target_mix
+		_apply_tint()
+
+
+func _apply_tint() -> void:
+	if _shell == null:
+		return
+	_shell.set_shader_parameter("spell_tint",
+		Vector3(_current_tint.r, _current_tint.g, _current_tint.b))
+	_shell.set_shader_parameter("tint_mix", _tint_mix)
+	if _halo != null and _halo.material_override is StandardMaterial3D:
+		var halo_mat := _halo.material_override as StandardMaterial3D
+		halo_mat.albedo_color = Color(_current_tint.r, _current_tint.g,
+			_current_tint.b, 0.16)
+	if _embers != null and _embers.process_material is ParticleProcessMaterial:
+		var mat := _embers.process_material as ParticleProcessMaterial
+		var ramp := mat.color_ramp as GradientTexture1D
+		if ramp != null and ramp.gradient != null:
+			var g := ramp.gradient
+			if _target_tint.b > 0.6:
+				g.colors = PackedColorArray([
+					Color(1.2, 1.1, 1.6),
+					Color(0.55, 0.75, 1.0),
+					Color(0.35, 0.55, 1.0, 0)])
+			else:
+				g.colors = PackedColorArray([
+					Color(1.6, 1.1, 2.4),
+					Color(0.55, 0.35, 1.0),
+					Color(0.3, 0.15, 0.5, 0)])
 
 
 func _process(delta: float) -> void:
@@ -51,6 +100,11 @@ func _process(delta: float) -> void:
 	_trail = _trail.lerp(target, 1.0 - exp(-9.0 * delta))
 	_shell.set_shader_parameter("trail", _trail)
 	_shell.set_shader_parameter("pulse", _pulse)
+	# Transisi warna smooth antar sihir.
+	if _current_tint != _target_tint or not is_equal_approx(_tint_mix, _target_mix):
+		_current_tint = _current_tint.lerp(_target_tint, 1.0 - exp(-5.5 * delta))
+		_tint_mix = lerpf(_tint_mix, _target_mix, 1.0 - exp(-5.5 * delta))
+		_apply_tint()
 
 
 func _quad(size: float, tint: Color, particles: bool) -> QuadMesh:
@@ -83,6 +137,7 @@ func _quad(size: float, tint: Color, particles: bool) -> QuadMesh:
 
 func _build_embers() -> void:
 	var embers := GPUParticles3D.new()
+	_embers = embers
 	embers.name = "SpiritEmbers"
 	embers.amount = 5
 	embers.lifetime = 0.9

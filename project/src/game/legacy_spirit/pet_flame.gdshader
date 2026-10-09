@@ -5,6 +5,8 @@ render_mode unshaded, blend_mix, cull_disabled, depth_draw_never, shadows_disabl
 uniform vec3 trail = vec3(0.0);
 uniform float pulse = 0.0;
 uniform float outline_pixels : hint_range(0.0, 1.0) = 0.55;
+uniform vec3 spell_tint : source_color = vec3(1.0, 0.45, 0.14);
+uniform float tint_mix : hint_range(0.0, 1.0) = 0.0;
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -51,6 +53,9 @@ void fragment() {
 	vec3 color = mix(vec3(0.38, 0.13, 0.82), vec3(0.70, 0.45, 1.0), main);
 	color = mix(color, vec3(0.34, 0.72, 1.0), heat * 0.90);
 	color = mix(color, vec3(0.85, 0.96, 1.0), core);
+	// Sihir tint: blending smooth antar skill, tetap pakai lidah api yang sama.
+	color = mix(color, spell_tint * (0.85 + core * 0.35), tint_mix * 0.72);
+	color = mix(color, vec3(1.0, 1.0, 0.95) * 0.9 + spell_tint * 0.15, core * tint_mix * 0.55);
 	// Subpixel inner contour: same silhouette/motion, no extra pass or expanded halo.
 	float width = clamp(fwidth(flame) * outline_pixels, 0.001, 0.55);
 	float outline = (1.0 - smoothstep(0.12, 0.12 + width, flame));

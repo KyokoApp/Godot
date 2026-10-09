@@ -7,7 +7,10 @@ signal impact_landed(target: Node3D, damage: int, critical: bool)
 const CastLayer = preload("res://src/game/animation/cast_layer.gd")
 const Spirit = preload("res://src/game/legacy_spirit/spirit_visual.gd")
 const Projectile = preload("res://src/game/fire_projectile.gd")
+const Lightning = preload("res://src/game/lightning_strike.gd")
 const COOLDOWN := 0.85
+const LIGHTNING_COOLDOWN := 1.0
+const LIGHTNING_DAMAGE := 182
 const AUTO_FIRE_INTERVAL := 0.18
 const RAPID_FIRE_COOLDOWN := 0.14
 const MAGIC_DAMAGE := 48
@@ -30,6 +33,7 @@ var homing_turn_rate_multiplier := 1.0
 var single_target_multiplier := 1.0
 var projectile_speed_multiplier := 1.0
 var rapid_fire_enabled := false
+var active_spell := "fireball"
 var casting := false
 var shots_fired := 0
 var projectiles: Array[CharacterBody3D] = []
@@ -79,13 +83,22 @@ func _physics_process(delta: float) -> void:
 		_windup -= delta
 		if _windup <= 0:
 			casting = false
-			_release_shot()
+			if active_spell == "lightning":
+				_release_lightning()
+			else:
+				_release_shot()
+
+
+func _update_cooldown_duration() -> void:
+	var base := LIGHTNING_COOLDOWN if active_spell == "lightning" else COOLDOWN
+	if rapid_fire_enabled:
+		base = RAPID_FIRE_COOLDOWN
+	cooldown_duration = base * cooldown_multiplier
 
 
 func set_rapid_fire(enabled: bool) -> void:
 	rapid_fire_enabled = enabled
-	var base_cooldown := RAPID_FIRE_COOLDOWN if enabled else COOLDOWN
-	cooldown_duration = base_cooldown * cooldown_multiplier
+	_update_cooldown_duration()
 	projectile_limit = RAPID_FIRE_MAX_PROJECTILES if enabled else MAX_PROJECTILES
 
 
@@ -106,9 +119,20 @@ func reset_survival_modifiers() -> void:
 	set_rapid_fire(false)
 
 
+func set_spell(skill_id: String) -> void:
+	if skill_id != "lightning" and skill_id != "fireball":
+		return
+	active_spell = skill_id
+	if _body != null and _body.has_method("set_spell"):
+		_body.call("set_spell", skill_id)
+	_update_cooldown_duration()
+
+
 func attack(lock_target: Node3D = null) -> bool:
 	_prune()
-	if casting or cooldown > 0.0 or projectiles.size() >= projectile_limit or camera == null:
+	if casting or cooldown > 0.0 or camera == null:
+		return false
+	if active_spell != "lightning" and projectiles.size() >= projectile_limit:
 		return false
 	_locked_target = lock_target if is_instance_valid(lock_target) else null
 	cooldown = cooldown_duration
@@ -116,6 +140,49 @@ func attack(lock_target: Node3D = null) -> bool:
 	_windup = CastLayer.RELEASE_TIME
 	cast_started.emit()
 	return true
+
+
+func _release_lightning() -> void:
+	if not is_instance_valid(camera):
+		_locked_target = null
+		return
+	_body.pulse()
+	var lock_target := _locked_target
+	_locked_target = null
+	var has_target := is_instance_valid(lock_target)
+	if has_target and lock_target.has_method("can_be_targeted"):
+		has_target = bool(lock_target.call("can_be_targeted"))
+	var aim: Vector3
+	if has_target:
+		aim = lock_target.global_position
+	else:
+		var screen := camera.get_viewport().get_visible_rect().size
+		screen *= Vector2(0.5, 0.42)
+		var start := camera.project_ray_origin(screen)
+		var direction := camera.project_ray_normal(screen)
+		aim = start + direction * 35.0
+		var query := PhysicsRayQueryParameters3D.create(start, aim, 1)
+		var hit := get_world_3d().direct_space_state.intersect_ray(query)
+		if not hit.is_empty():
+			aim = hit["position"]
+	# Jepit ke permukaan tanah biar petir tepat di tanah.
+	if has_target and lock_target is Node3D:
+		aim = lock_target.global_position
+	var strike := Lightning.new()
+	strike.damage_value = maxi(1, roundi(LIGHTNING_DAMAGE * damage_multiplier))
+	strike.radius_value = 2.8
+	get_parent().add_child(strike)
+	# Snap y ke ground bila ada field.
+	var ground_y := aim.y
+	if player != null and player.field != null:
+		if player.field.has_method("surface_height"):
+			ground_y = float(player.field.call("surface_height", aim.x, aim.z))
+	strike.global_position = Vector3(aim.x, ground_y + 0.02, aim.z)
+	shots_fired += 1
+	var audio := get_tree().get_first_node_in_group("world_audio")
+	if audio != null:
+		audio.shoot(global_position)
+
 
 
 func _release_shot() -> void:

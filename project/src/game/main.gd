@@ -24,6 +24,8 @@ const Footsteps = preload("res://src/game/audio/footsteps.gd")
 const FootFire = preload("res://src/game/foot_fire/foot_fire_trail.gd")
 const SpeedAura = preload("res://src/game/speed/speed_aura.gd")
 const FirePet = preload("res://src/game/fire_pet.gd")
+const Hotbar = preload("res://src/game/ui/hotbar.gd")
+const SpellBook = preload("res://src/game/ui/spell_book.gd")
 const RuneButton = preload("res://src/game/ui/rune_button.gd")
 const SpeedButton = preload("res://src/game/ui/speed_button.gd")
 const AnimationPanel = preload("res://src/game/ui/animation_panel.gd")
@@ -36,6 +38,8 @@ const ShaderWarmup = preload("res://src/game/loading/shader_warmup.gd")
 const BOOT_TRACE := "user://boot_trace.txt"
 const BOOT_READY := "game ready"
 const FIRE_ICON = preload("res://src/game/ui/flame.svg")
+const BOOK_ICON = preload("res://src/game/ui/book.svg")
+const LIGHTNING_ICON = preload("res://src/game/ui/lightning.svg")
 const SETTINGS_ICON = preload("res://src/game/ui/settings.svg")
 const SPEED_ICON = preload("res://src/game/ui/speed.svg")
 const SWORD_ICON = preload("res://src/game/ui/sword.svg")
@@ -51,6 +55,7 @@ const ACTION_DIAMETER := 94.0
 const DASH_DIAMETER := 94.0
 const SPEED_DIAMETER := 88.0
 const RUNE_DIAMETER := 68.0
+const SKILL_DIAMETER := 110.0
 ## Beri jeda di antara cast auto supaya pose tangan tidak turun di sela tembakan.
 const CAST_POSE_RELEASE_DELAY := 0.42
 
@@ -86,6 +91,11 @@ var _footsteps: Footsteps
 var _foot_fire: FootFire
 var _speed_aura: SpeedAura
 var _pet: FirePet
+var _hotbar: Hotbar
+var _spell_book: SpellBook
+var _skill_button: RuneButton
+var _active_skill := "fireball"
+var _skill_button_mode := "skill"
 var _joystick: Joystick
 var _attack: RuneButton
 var _fire_button: RuneButton
@@ -333,16 +343,17 @@ func _build_hud() -> void:
 	_build_graphics_drawer(layer)
 	_build_layout_editor(layer)
 	_load_hud_layout()
+	_build_spell_hud(layer)
 	_panel = AnimationPanel.new()
 	_panel.character = _visual
 	layer.add_child(_panel)
 	_panel.closed.connect(_close_panel)
 	_joystick.input_exclusions = [_survival_panel, _panel, _graphics_drawer, _layout_editor, _settings,
 		_layout_button, _catalog_button, _attack, _fire_button, _jump, _crouch,
-		_speed_button, _dash]
+		_speed_button, _dash, _hotbar, _spell_book, _skill_button]
 	_orbit.exclusions = [_survival_panel, _panel, _graphics_drawer, _layout_editor, _settings,
 		_layout_button, _catalog_button, _attack, _fire_button, _jump, _crouch,
-		_speed_button, _dash]
+		_speed_button, _dash, _hotbar, _spell_book, _skill_button]
 	_npc_interaction = NPCInteraction.new()
 	_npc_interaction.player = _player
 	_npc_interaction.npc = _npc
@@ -650,7 +661,126 @@ func _toggle_layout_editor() -> void:
 	_apply_input_state()
 
 
+func _build_spell_hud(layer: CanvasLayer) -> void:
+	_hotbar = Hotbar.new()
+	layer.add_child(_hotbar)
+	_hotbar.slot_selected.connect(_on_hotbar_selected)
+	_spell_book = SpellBook.new()
+	layer.add_child(_spell_book)
+	_spell_book.skill_selected.connect(_on_spell_picked)
+	_spell_book.closed.connect(_on_spell_book_closed)
+	_skill_button = _rune("BUKU", SKILL_DIAMETER, BOOK_ICON)
+	_skill_button.name = "SkillRune"
+	_skill_button.tooltip_text = "Buka buku sihir / cast skill"
+	layer.add_child(_skill_button)
+	_place(_skill_button, Control.PRESET_BOTTOM_LEFT, 22, -148)
+	_skill_button.pressed.connect(_on_skill_button_pressed)
+	_active_skill = "fireball"
+	_skill_button_mode = "book"
+	_refresh_skill_button()
+	if _pet != null and _pet.has_method("set_spell"):
+		_pet.call("set_spell", _active_skill)
+
+
+func _refresh_skill_button() -> void:
+	if _skill_button == null:
+		return
+	if _skill_button_mode == "book":
+		_skill_button.caption = "BUKU"
+		_skill_button.glyph = BOOK_ICON
+		_skill_button.accent = Color("f2bd35", 0.85)
+	else:
+		if _active_skill == "lightning":
+			_skill_button.caption = "PETIR"
+			_skill_button.glyph = LIGHTNING_ICON
+			_skill_button.accent = Color("7fb8ff", 0.90)
+		else:
+			_skill_button.caption = "TEMBAK"
+			_skill_button.glyph = FIRE_ICON
+			_skill_button.accent = Color("ff7a45", 0.90)
+	_skill_button.queue_redraw()
+
+
+func _on_hotbar_selected(_index: int, item_id: String) -> void:
+	if item_id == "spell_book":
+		_skill_button_mode = "book"
+	elif item_id == "lightning" or item_id == "fireball":
+		_active_skill = item_id
+		_skill_button_mode = "skill"
+		if _pet != null and _pet.has_method("set_spell"):
+			_pet.call("set_spell", _active_skill)
+	elif item_id == "":
+		_skill_button_mode = "skill"
+	else:
+		_skill_button_mode = "skill"
+	_refresh_skill_button()
+
+
+func _on_spell_picked(skill_id: String) -> void:
+	_active_skill = skill_id
+	if _pet != null and _pet.has_method("set_spell"):
+		_pet.call("set_spell", skill_id)
+	if _hotbar != null:
+		var placed := false
+		for i in _hotbar.items.size():
+			if _hotbar.items[i] == skill_id:
+				_hotbar.selected = i
+				placed = true
+				break
+		if not placed:
+			for i in _hotbar.items.size():
+				if _hotbar.items[i] == "":
+					_hotbar.items[i] = skill_id
+					_hotbar.selected = i
+					placed = true
+					break
+			if not placed:
+				_hotbar.items[0] = skill_id
+				_hotbar.selected = 0
+		_hotbar.refresh()
+	_skill_button_mode = "skill"
+	_refresh_skill_button()
+
+
+func _on_spell_book_closed() -> void:
+	_apply_input_state()
+
+
+func _on_skill_button_pressed() -> void:
+	if _skill_button_mode == "book":
+		if _spell_book != null:
+			_spell_book.open_book(_active_skill)
+			_apply_input_state()
+	else:
+		_cast_active_spell()
+
+
+func _cast_active_spell() -> void:
+	if _death_return_pending or _player.health <= 0:
+		return
+	if _pet == null:
+		return
+	if _pet.get("active_spell") != _active_skill:
+		if _pet.has_method("set_spell"):
+			_pet.call("set_spell", _active_skill)
+	if _active_mode != "survival":
+		_pet.attack()
+		return
+	if not is_instance_valid(_survival_world):
+		return
+	var bonus: float = _survival_world.get_magic_lock_range_bonus()
+	var target: Node3D = _survival_world.acquire_magic_target(
+		_player.global_position, bonus)
+	if not is_instance_valid(target) and _active_skill == "lightning":
+		_pet.attack(null)
+		return
+	if not is_instance_valid(target):
+		return
+	_pet.attack(target)
+
+
 # --------------------------------------------------------------- mode game --
+
 
 func _show_mode_selector() -> void:
 	if _active_mode != "hub" or _mode_selector == null:
@@ -894,15 +1024,16 @@ func _toggle_graphics() -> void:
 func _apply_input_state() -> void:
 	var selector_open := _mode_selector != null and _mode_selector.visible
 	var layout_open := _layout_editor != null and _layout_editor.visible
+	var book_open := _spell_book != null and _spell_book.visible
 	var hide_actions := _panel.visible or _graphics_drawer.visible or selector_open \
 		or _death_return_pending or _run_zone_intro_active
-	var overlay := hide_actions or layout_open
+	var overlay := hide_actions or layout_open or book_open
 	_joystick.reset()
 	_joystick.input_enabled = not overlay
 	_orbit.reset_touches()
 	_orbit.input_enabled = not overlay
 	_settings.visible = not selector_open and not _death_return_pending \
-		and not _run_zone_intro_active
+		and not _run_zone_intro_active and not book_open
 	# HUD analog-only; tembakan otomatis Survival berjalan mandiri.
 	_layout_button.hide()
 	for control: Control in [_attack, _fire_button, _jump, _crouch, _speed_button, _dash]:
@@ -910,13 +1041,28 @@ func _apply_input_state() -> void:
 		control.set("disabled", true)
 	_catalog_button.visible = not _graphics_drawer.visible and not layout_open \
 		and not selector_open and not _death_return_pending \
-		and _active_mode != "run_zone"
+		and not book_open and _active_mode != "run_zone"
 	_banner.visible = not overlay and _active_mode != "run_zone"
+	if _hotbar != null:
+		_hotbar.visible = not hide_actions and not selector_open \
+			and not _death_return_pending and not book_open \
+			and _active_mode != "run_zone"
+	if _skill_button != null:
+		_skill_button.visible = not overlay and _active_mode != "run_zone"
+		_skill_button.set("disabled", overlay)
 
 
 func _input(event: InputEvent) -> void:
 	if _run_zone_flow.handle_back_event(self, event, SPAWN):
 		get_viewport().set_input_as_handled()
+		return
+	if _spell_book != null and _spell_book.visible:
+		if event is InputEventKey and event.pressed:
+			var key := event as InputEventKey
+			if key.keycode == KEY_ESCAPE:
+				_spell_book.close_book()
+				_apply_input_state()
+				get_viewport().set_input_as_handled()
 		return
 	if not _graphics_drawer.visible and not _layout_editor.visible:
 		return
@@ -957,6 +1103,10 @@ func _process(delta: float) -> void:
 	_fire_button.cooldown_fraction = clampf(
 		_pet.cooldown / maxf(_pet.cooldown_duration, 0.001), 0, 1)
 	_fire_button.queue_redraw()
+	if _skill_button != null and _pet != null:
+		_skill_button.cooldown_fraction = clampf(
+			_pet.cooldown / maxf(_pet.cooldown_duration, 0.001), 0, 1)
+		_skill_button.queue_redraw()
 	if _active_mode == "survival" and not _death_return_pending \
 			and is_instance_valid(_survival_world):
 		_survival_auto_fire_left = maxf(0.0, _survival_auto_fire_left - delta)
