@@ -295,9 +295,9 @@ static func terrain_height(x: float, z: float) -> float:
 	var base_height := 16.0 + dune + shoulder_dunes + small_ridges + broad + fine
 	# Overlapping smooth hummocks break up the wind-aligned waves in the opening view.
 	var forward_dune := 16.0 + _dune_mound(
-		x, z, -20.0, -60.0, 75.0, 90.0, 16.0)
+		x, z, -12.0, -30.0, 55.0, 65.0, 18.0)
 	var right_dune := 16.0 + _dune_mound(
-		x, z, 65.0, -135.0, 95.0, 115.0, 14.0)
+		x, z, 55.0, -90.0, 80.0, 100.0, 14.0)
 	var far_left_dune := 16.0 + _dune_mound(
 		x, z, -110.0, -170.0, 105.0, 120.0, 15.0)
 	var far_right_dune := 16.0 + _dune_mound(
