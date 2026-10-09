@@ -1,5 +1,5 @@
 extends CharacterBody3D
-## Pemain di pulau 100 m. Gerak mengikuti animasi, bukan sebaliknya.
+## Pemain di pulau 300 m. Gerak mengikuti animasi, bukan sebaliknya.
 ##
 ## Satu keputusan gait per frame dipakai bersama oleh badan dan animasi:
 ##   kecepatan input → gait (band dari kecepatan alami terukur) → skala main
@@ -78,7 +78,7 @@ const SCALE_MAX_BOOST := 2.05
 ## batas ini klip masih bergerak seirama, sementara mode biasa tetap 1,5x.
 const RUN_ZONE_MAX_SCALE := 2.8
 const HYSTERESIS := 0.35
-## Jarak aman dari bibir pulau 100 m; pemain berhenti di darat, bukan di laut.
+## Jarak aman dari bibir pulau 300 m; pemain berhenti di darat, bukan di laut.
 const SHORE_MARGIN := 1.4
 const FALL_RESET := -12.0
 const IDLE := "Idle_Loop"

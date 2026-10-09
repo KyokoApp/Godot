@@ -4,7 +4,7 @@ extends Node3D
 const HAZE_SHADER = preload("res://src/game/world/horizon_haze.gdshader")
 
 const BUILDING_COUNT := 56
-const CITY_RADIUS := 235.0
+const CITY_RADIUS := 355.0
 const HILL_SEGMENTS := 72
 const MIST_COLOR := Color("#303448")
 

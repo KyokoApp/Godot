@@ -27,7 +27,7 @@ const CityHorizon = preload("res://src/game/world/city_horizon.gd")
 ## tanah yang persis menyentuh y = 0. Bidangnya 900 m — jauh melampaui pulau
 ## terbang terjauh supaya ujungnya tidak terlihat sebelum ditutup kabut.
 const SEA_LEVEL := -0.15
-const SEA_SIZE := 900.0
+const SEA_SIZE := 1500.0
 ## Pulau terbang: setiap entri [jarak dari pusat, sudut, tinggi melayang, skala].
 ## Jaraknya jauh di luar garis pantai 100 m dan pulau batu supaya tetap menjadi
 ## latar, bukan menutupi jalan pemain. Kabut menjaga siluetnya tetap lembut.

@@ -36,7 +36,7 @@ static func make_environment() -> Environment:
 	# tidak ikut berkabut supaya awan dan pendar matahari tetap tajam.
 	environment.fog_enabled = true
 	environment.fog_mode = Environment.FOG_MODE_DEPTH
-	# Pulau utama 100 m, dengan pulau terbang tetap jauh di horizon. Kabut
+	# Pulau utama 300 m, dengan pulau terbang tetap jauh di horizon. Kabut
 	# berakhir di 420 m supaya siluet latar memudar lembut, bukan terpotong; mulai
 	# setelah 45 m agar bukit pemain sendiri tetap tajam.
 	environment.fog_depth_begin = 45.0

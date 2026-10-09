@@ -53,7 +53,7 @@ func _run() -> void:
 
 
 func _test_size() -> void:
-	_check(is_equal_approx(Field.SIZE, 100.0), "Dunia bukan 100 m: %.0f m" % Field.SIZE)
+	_check(is_equal_approx(Field.SIZE, 300.0), "Dunia bukan 300 m: %.0f m" % Field.SIZE)
 	_notes.append(
 		"dunia: %.0f x %.0f m, daratan pulau %.0f m²" % [Field.SIZE, Field.SIZE, _land_area()]
 	)
@@ -131,7 +131,7 @@ func _test_land_and_sea() -> void:
 			not Field.is_inside(x, z, 0.0),
 			"Titik di laut dihitung di dalam pulau pada sudut %.1f" % angle
 		)
-	# Tepi dunia (100 m) pasti air: pemain tidak pernah keluar pulau.
+	# Tepi dunia (300 m) pasti air: pemain tidak pernah keluar pulau.
 	_check(Field.terrain_height(Field.HALF - 1.0, 0.0) < 0.0, "Tepi dunia timur masih darat")
 	_check(Field.terrain_height(-Field.HALF + 1.0, 0.0) < 0.0, "Tepi dunia barat masih darat")
 	# Garis pantai harus tepat di nol: di situlah air dan pasir bertemu.

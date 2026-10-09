@@ -1,23 +1,21 @@
 extends Node3D
-## Pulau 100 m × 100 m: dataran bergelombang dengan garis pantai tidak beraturan
+## Pulau 300 m × 300 m: dataran bergelombang dengan garis pantai tidak beraturan
 ## (bukan bulat, bukan kotak), dikelilingi laut di permukaan y = 0. Semua panjang
-## (radius pulau, lekukan pantai, tanjakan pantai, jalan) ditulis sepersepuluh
-## dari versi 1 km supaya dunia menjadi arena kecil yang tetap terasa alami.
+## (radius pulau, lekukan pantai, tanjakan pantai, jalan) diskalakan dari 100 m.
 ##
 ## Satu fungsi tinggi (`terrain_height`) dipakai oleh SEMUA: mesh, collider,
 ## karakter, rumput, tapak api, dan langkah kaki. Itu sebabnya fungsi ini statis
 ## dan murni — tidak boleh bergantung pada node, frame, atau urutan build.
 ##
-## Kenapa chunk streaming (bukan satu mesh 100 m): medan 100 m pada sel 2 m =
-## 2,5 ribu sel — bisa dibuat sekali jalan, tapi streaming tetap dipakai supaya
-## bentuk dunia tidak berubah kalau nanti dibesarkan lagi. Chunk 32 m × 32 m
-## (16 × 16 sel) dibangun SATU per frame mengelilingi pemain; jangkauan 2 berarti
-## 5 × 5 = 25 chunk (± 64 m), cukup menutup seluruh pulau dari mana pun pemain
+## Kenapa chunk streaming (bukan satu mesh 300 m): medan 300 m pada sel 2 m =
+## ~22 ribu sel — streaming tetap dipakai. Chunk 32 m × 32 m (16 × 16 sel)
+## dibangun SATU per frame mengelilingi pemain; jangkauan 5 berarti 11 × 11 =
+## 121 chunk (± 352 m), cukup menutup seluruh pulau 300 m dari mana pun pemain
 ## berdiri. Chunk yang seluruhnya di laut tidak pernah dibangun.
 
 const SHADER = preload("res://src/game/ground.gdshader")
 const MEADOW = preload("res://assets/nature/meadow_cover.png")
-const SIZE := 100.0
+const SIZE := 300.0
 const HALF := SIZE * 0.5
 
 ## Chunk 32 m, sel 2 m (16 × 16 sel, 17 × 17 titik) agar bukit halus.
@@ -25,16 +23,16 @@ const CHUNK := 32.0
 const CHUNK_CELLS := 16
 const SIDE := CHUNK_CELLS + 1
 const CELL := CHUNK / float(CHUNK_CELLS)
-## Radius chunk yang dipegang: 2 -> 5 × 5 = 25 chunk = 160 m × 160 m.
-const CHUNK_RADIUS := 2
+## Radius chunk yang dipegang: 5 -> 11 × 11 = 121 chunk = 352 m × 352 m.
+const CHUNK_RADIUS := 5
 const WALK_MARGIN := 0.7
 
-## Bentuk pulau.
-const ISLAND_MIN := 29.0
-const ISLAND_MAX := 38.0
-## Lekukan halus garis pantai (meter) supaya tidak terlihat seperti lingkaran.
-const COAST_WAVE := 3.0
-const COAST_WAVE_B := 1.5
+## Bentuk pulau — diskalakan 3× dari 100 m (29/38 -> 87/114).
+const ISLAND_MIN := 87.0
+const ISLAND_MAX := 114.0
+## Lekukan halus garis pantai (meter) — skala 3× biar proporsi tetap cozy.
+const COAST_WAVE := 9.0
+const COAST_WAVE_B := 4.5
 ## Dasar laut dan tinggi dataran pulau (meter di atas permukaan air). Dataran
 ## harus DI ATAS pita pasir shader (2,6 m), kalau tidak seluruh pulau berbunyi
 ## tanah dan bukan rumput. 3 m / 12 m = 0,25 < 0,30 (MAX_SLOPE), jadi rumput
@@ -61,8 +59,8 @@ const GRASS_DARK := Color("2d4f27")
 const SAND_COLOR := Color("9a8260")
 # Jalan tanah berliku (digambar shader, tanpa mesh/collision tambahan).
 const PATH_WIDTH := 1.2
-## Lekuk 4,8 m dengan panjang gelombang ± 60 m: jalan berliku ± 2 kali sepanjang
-## pulau 100 m dan kemiringannya tetap di bawah 37°. Aturannya: hasil kali
+## Lekuk 4,8 m dengan panjang gelombang ± 60 m: jalan berliku ± 5 kali sepanjang
+## pulau 300 m dan kemiringannya tetap di bawah 37°. Aturannya: hasil kali
 ## lekuk × frekuensi harus di bawah 0,75, kalau tidak jalannya terbelok tajam
 ## (terbaca garis diagonal, bukan jalan) — itu yang terjadi dulu.
 const PATH_CURVE := 4.8
@@ -115,7 +113,7 @@ func _ready() -> void:
 	var center := _chunk_key(0.0, 0.0)
 	_build_chunk(center)
 	_recenter(center)
-	# Pulau cuma 100 m: SELURUH chunk tanah dibangun sekali di awal. Dengan
+	# Pulau 300 m: SELURUH chunk tanah dibangun sekali di awal. Dengan
 	# streaming satu-per-frame, rumput (dan jejak kaki, dan tapak api) bisa
 	# dibangun SEBELUM chunk-nya ada lalu memakai fungsi analitik; beberapa
 	# sentimeter kemudian chunk-nya muncul dan tingginya bergeser — itu yang
@@ -123,8 +121,8 @@ func _ready() -> void:
 	_build_everything()
 
 
-## Bangun semua chunk yang mengandung daratan. Jumlahnya terbatas (pulau 100 m
-## ≈ 25 chunk), jadi ini murah dan hanya terjadi sekali.
+## Bangun semua chunk yang mengandung daratan. Jumlahnya terbatas (pulau 300 m
+## ≈ 121 chunk), jadi ini murah dan hanya terjadi sekali.
 func _build_everything() -> void:
 	var reach := CHUNK_RADIUS + 2
 	for cz in range(-reach, reach + 1):

@@ -6,7 +6,7 @@ const DEFAULT_DISTANCE := 4.0
 ## Titik pandang ada di setinggi kepala, jadi pada jarak ini yang tampak hanya
 ## sebagian wajah/rambut — bukan lagi seluruh badan seperti batas 2,4 m dulu.
 const MIN_DISTANCE := 0.35
-## Dunia kembali 100 m: 62 m cukup untuk melihat sebagian besar pulau tanpa
+## Dunia kembali 300 m: 62 m cukup untuk melihat sebagian besar pulau tanpa
 ## menjauh berlebihan dari karakter.
 const MAX_DISTANCE := 62.0
 ## Cukup panjang untuk zoom keluar di pulau kecil tanpa menembus bukit jauh.

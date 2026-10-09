@@ -28,8 +28,8 @@ func _run() -> void:
 	var player_visual: Node3D = game.get("_visual")
 	var npc_visual: Node3D = npc.get("visual") if npc != null else null
 	_check(
-		field != null and is_equal_approx(Field.SIZE, 100.0),
-		"Dunia interaksi tidak berukuran 100 m"
+		field != null and is_equal_approx(Field.SIZE, 300.0),
+		"Dunia interaksi tidak berukuran 300 m"
 	)
 	_check(npc != null and npc.get("display_name") == "Mira", "NPC Mira tidak dibuat")
 	_check(npc_visual != null, "Visual NPC tidak ditemukan")

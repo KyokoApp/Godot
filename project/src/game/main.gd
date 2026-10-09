@@ -1,5 +1,5 @@
 extends Node3D
-## Pulau 100 m × 100 m, pemain beranimasi UAL1/UAL2, dan seorang NPC.
+## Pulau 300 m × 300 m, pemain beranimasi UAL1/UAL2, dan seorang NPC.
 
 const Field = preload("res://src/game/world/field.gd")
 const Scenery = preload("res://src/game/world/scenery.gd")
@@ -42,7 +42,7 @@ const SWORD_ICON = preload("res://src/game/ui/sword.svg")
 const JUMP_ICON = preload("res://src/game/ui/jump.svg")
 const CROUCH_ICON = preload("res://src/game/ui/crouch.svg")
 const DASH_ICON = preload("res://src/game/ui/dash.svg")
-## Titik muncul pemain di padang 100 m; dijaga kosong dari dedaunan.
+## Titik muncul pemain di padang 300 m; dijaga kosong dari dedaunan.
 const SPAWN := Vector2(0.0, 7.0)
 const NPC_HOME := Vector2(0.0, 0.0)
 const ATTACK_DIAMETER := 136.0
