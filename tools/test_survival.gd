@@ -76,7 +76,7 @@ func _test_repeatable_buff_pool() -> void:
 func _run() -> void:
 	_remove_test_meta_save()
 	_test_repeatable_buff_pool()
-	var game := load("res://src/game/main.tscn").instantiate() as Node3D
+	var game := load("res://src/game/legacy_main.tscn").instantiate() as Node3D
 	root.add_child(game)
 	var test_meta := MetaProgress.new(TEST_META_SAVE_PATH)
 	game.set("_meta_progress", test_meta)

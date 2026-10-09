@@ -20,7 +20,7 @@ func _check(condition: bool, message: String) -> void:
 
 
 func _run() -> void:
-	var game := load("res://src/game/main.tscn").instantiate() as Node3D
+	var game := load("res://src/game/legacy_main.tscn").instantiate() as Node3D
 	root.add_child(game)
 	var player: CharacterBody3D = game.get("_player")
 	for frame in range(60):

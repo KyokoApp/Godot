@@ -192,6 +192,19 @@ jobs:
             exit 1
           fi
 
+      - name: Tes scene world-only dan player api biru
+        run: |
+          set +e
+          timeout 180 ./godot --headless --path project \
+            --script "$GITHUB_WORKSPACE/tools/test_flame_world.gd" 2>&1 | tee flame-world-test.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' flame-world-test.log; then
+            tail -60 flame-world-test.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[flame-world-test] HASIL: OK' flame-world-test.log
+
       - name: Tes karakter dan animasi tulang
         run: |
           set +e

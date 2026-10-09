@@ -33,7 +33,7 @@ func _run() -> void:
 
 
 func _test_contacts() -> void:
-	var game := load("res://src/game/main.tscn").instantiate() as Node3D
+	var game := load("res://src/game/legacy_main.tscn").instantiate() as Node3D
 	root.add_child(game)
 	var trail: Trail = game.get("_foot_fire")
 	var stick: Control = game.get("_joystick")

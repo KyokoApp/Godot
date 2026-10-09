@@ -1,7 +1,7 @@
 extends SceneTree
-## Pack dibuka dalam proses baru, sebelum resource gameplay masuk cache.
+## Pack dibuka dalam proses baru; pastikan payload minimal bisa boot tanpa UI/rig lama.
 
-const CHARACTER_CLIPS := 85
+var _scene: PackedScene
 
 
 func _init() -> void:
@@ -29,47 +29,57 @@ func _run() -> void:
 
 
 func _verify_payload() -> String:
-	for path in ["fire_shoot", "fire_explode", "fire_loop", "pet_crackle", "step_grass_0",
-			"step_dirt_0", "step_stone_0"]:
-		var sound: AudioStream = load("res://assets/audio/" + path + ".wav")
-		if sound == null or sound.get_length() <= 0:
-			return "Audio tidak ikut PCK: " + path
-	var card: Texture2D = load("res://assets/nature/grass_cards.png")
-	if card == null or card.get_width() <= 0:
-		return "Tekstur rumput tidak masuk PCK"
-	# Dua berkas animasi wajib ikut: UAL1 (badan) dan UAL2 (pustaka combat).
-	for model_path in ["res://assets/mannequin/UAL1_Standard.glb",
-			"res://assets/combat/UAL2_Standard.glb"]:
-		var model: PackedScene = load(model_path)
-		if model == null or not model.can_instantiate():
-			return "Model animasi tidak ikut PCK: " + model_path
+	_scene = load("res://src/game/main.tscn") as PackedScene
+	if _scene == null or not _scene.can_instantiate():
+		return "Scene world-only tidak ikut PCK"
+	var meadow: Texture2D = load("res://assets/nature/meadow_cover.png")
+	if meadow == null or meadow.get_width() <= 0:
+		return "Tekstur medan tidak ikut PCK"
+	var tree: PackedScene = load("res://assets/nature/models/CommonTree_1.gltf")
+	if tree == null or not tree.can_instantiate():
+		return "Model pepohonan dunia tidak ikut PCK"
+	var flame_shader: Shader = load("res://src/game/blue_flame.gdshader")
+	if flame_shader == null:
+		return "Shader api biru tidak ikut PCK"
 	return ""
 
 
 func _boot_scene() -> void:
-	var scene: PackedScene = load("res://src/game/main.tscn")
-	if scene == null or not scene.can_instantiate():
-		_fail("Scene utama tidak bisa dibuka")
-		return
 	var marker := FileAccess.open("user://content_boot_pending", FileAccess.WRITE)
 	marker.store_string("test")
 	marker.close()
-	var game: Node = scene.instantiate()
+	var game := _scene.instantiate() as Node3D
 	root.add_child(game)
-	for frame in range(5):
+	for _frame in range(5):
 		await process_frame
+
+	var problem := ""
+	var player := game.get("_player") as Node3D
+	var flame: Node
+	if player != null:
+		flame = player.get_node_or_null("BlueFlameVisual")
 	if FileAccess.file_exists("user://content_boot_pending"):
-		_fail("Konten tidak mengonfirmasi boot")
+		problem = "Konten tidak mengonfirmasi boot"
+	elif player == null or flame == null:
+		problem = "Player api biru tidak dibangun"
+	elif player is CharacterBody3D:
+		problem = "Player masih memakai tubuh/rig karakter"
+	elif flame.get_node_or_null("BlueFlameLight") == null:
+		problem = "Cahaya biru pada player tidak ada"
+	elif game.find_child("GameplayHUD", true, false) != null \
+			or game.find_child("AnimationPanel", true, false) != null:
+		problem = "UI atau panel karakter lama masih muncul"
+	elif game.find_child("MovementAnalog", true, false) == null:
+		problem = "Analog gerak tidak ada"
+	elif game.find_child("UpdateContentButton", true, false) == null:
+		problem = "Tombol update in-game tidak ada"
+	elif not game.find_children("*", "AnimationPlayer", true, false).is_empty():
+		problem = "Rig animasi lama masih ikut world utama"
+
+	if not problem.is_empty():
+		_fail(problem)
 		return
-	var visual: Node = game.get("_visual")
-	if visual == null or game.get("_player") == null:
-		_fail("Pack tidak membangun mannequin/pemain")
-		return
-	var animation := visual.get("animation") as AnimationPlayer
-	if animation == null or animation.get_animation_list().size() < CHARACTER_CLIPS:
-		_fail("Klip animasi tidak lengkap di Pack")
-		return
-	print("[pack-test] klip=%d HASIL: OK" % animation.get_animation_list().size())
+	print("[pack-test] world + api biru + analog HASIL: OK")
 	quit(0)
 
 

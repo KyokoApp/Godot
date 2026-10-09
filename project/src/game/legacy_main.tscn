@@ -1,0 +1,7 @@
+; Legacy fixture for regression tests only; excluded from the playable content pack.
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/game/legacy_main.gd" id="1_main"]
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")

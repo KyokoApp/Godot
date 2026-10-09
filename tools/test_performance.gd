@@ -54,7 +54,7 @@ func _check(condition: bool, message: String) -> void:
 func _run() -> void:
 	var existed := FileAccess.file_exists(PerfPanel.SETTINGS)
 	var saved := FileAccess.get_file_as_string(PerfPanel.SETTINGS) if existed else ""
-	var scene: PackedScene = load("res://src/game/main.tscn")
+	var scene: PackedScene = load("res://src/game/legacy_main.tscn")
 	var game: Node3D = scene.instantiate()
 	root.add_child(game)
 	await process_frame

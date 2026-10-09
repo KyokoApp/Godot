@@ -6,7 +6,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import zipfile
-from chunk_content import build
+from chunk_content import build, entries
 
 root = Path(__file__).resolve().parents[1]
 manifest = json.loads((root / 'build/content-v2.json').read_text())
@@ -14,7 +14,18 @@ pack = (root / 'build/content.pck').read_bytes()
 joined = b''.join((root / 'build/chunks' / (c['sha256'] + '.bin')).read_bytes()
                   for c in manifest['chunks'])
 assert joined == pack
-print('[incremental-export] blocks reassembled')
+payload = {path if path.startswith('res://') else 'res://' + path for path in entries(pack)}
+assert 'res://src/game/main.tscn' in payload, 'World-only scene missing from content PCK'
+assert 'res://src/game/blue_flame.gdshader' in payload, 'Blue flame shader missing from content PCK'
+for removed in (
+    'res://src/game/legacy_main.gd', 'res://src/game/legacy_main.tscn',
+    'res://src/game/ui/rune_button.gd', 'res://src/game/player.gd',
+    'res://src/game/mannequin.gd', 'res://src/game/world/run_zone.gd',
+    'res://src/game/survival/buff_system.gd', 'res://assets/audio/fire_loop.wav',
+    'res://assets/mannequin/UAL1_Standard.glb',
+):
+    assert removed not in payload, 'Legacy gameplay residue in content PCK: ' + removed
+print('[incremental-export] blocks reassembled; world-only payload verified')
 with zipfile.ZipFile(root / 'build/asekai.apk') as apk:
     seed = apk.getinfo('assets/bootstrap/base.pck')
     assert seed.compress_type == zipfile.ZIP_STORED, 'Seed must support efficient Android seeks'

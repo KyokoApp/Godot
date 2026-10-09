@@ -303,7 +303,11 @@ func _launch() -> void:
 			return # Never mix a partially mounted pack with another build in this process.
 	Trace.write("pack terpasang")
 	_bar.value = 100
-	# Editor/tests may use unpacked gameplay; production APK has only the bundled seed.
-	if get_tree().change_scene_to_file(GAME) != OK:
+	# Reload recursively so an in-game update does not reuse the scene/script cache
+	# from the world that opened this launcher.
+	var gameplay := ResourceLoader.load(
+		GAME, "PackedScene", ResourceLoader.CACHE_MODE_REPLACE_DEEP) as PackedScene
+	if (gameplay == null or not gameplay.can_instantiate()
+			or get_tree().change_scene_to_packed(gameplay) != OK):
 		Trace.write("scene gagal")
 		_status.text = "Konten gagal dibuka. Tutup dan buka aplikasi untuk pemulihan."

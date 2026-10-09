@@ -7,6 +7,17 @@ tersimpan penuh di branch `archive` pada repo `KyokoApp/Unity` — tidak ada
 yang hilang, termasuk 176 model Medieval Village dan seluruh sistem
 delta-update.
 
+## Gameplay aktif
+
+Scene utama sekarang hanya membangun world pulau dan player berupa nyala api
+biru kecil dengan pendar cahaya biru. Gerak memakai analog sentuh yang muncul
+saat layar disentuh; di desktop tersedia WASD/tombol panah. Tombol ↻ kecil di
+kanan membuka pemeriksaan/update konten tanpa menutup aplikasi; posisi player dan
+kamera dipulihkan saat world dimuat kembali. HUD lain, mannequin, NPC, combat,
+serta mode survival/run-zone tidak dimasukkan ke content pack aktif. Scene dan
+skrip lama tetap ada khusus untuk regresi tes, tetapi tidak dipakai launcher atau
+scene utama.
+
 ## Kenapa dimulai ulang
 
 Project lama tumbuh jadi 46+ ronde pivot dan akumulasi masalah yang tidak

@@ -65,7 +65,12 @@ func _process(_delta: float) -> void:
 		return
 	var position_3d := player.global_position
 	distant.update_center(position_3d)
-	_material.set_shader_parameter("player_position", position_3d - Vector3(0, 0.9, 0))
+	# Pemain lama berada setinggi pinggang; api player baru expose titik tanahnya
+	# sendiri supaya reaksi rumput tetap tepat di sekitar nyala kecil.
+	if player.has_method("ground_position"):
+		_material.set_shader_parameter("player_position", player.call("ground_position"))
+	else:
+		_material.set_shader_parameter("player_position", position_3d - Vector3(0, 0.9, 0))
 	var center := Vector2i(floori(position_3d.x / TILE_SIZE), floori(position_3d.z / TILE_SIZE))
 	if center != _center:
 		_recenter(center)

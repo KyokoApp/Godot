@@ -53,7 +53,7 @@ func _drag(index: int, point: Vector2) -> void:
 
 func _run() -> void:
 	DirAccess.remove_absolute("user://hud_layout.cfg")
-	var game := load("res://src/game/main.tscn").instantiate() as Node3D
+	var game := load("res://src/game/legacy_main.tscn").instantiate() as Node3D
 	root.add_child(game)
 	var player: CharacterBody3D = game.get("_player")
 	for _frame in range(60):

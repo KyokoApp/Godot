@@ -104,7 +104,7 @@ func _run() -> void:
 
 
 func _test_steps() -> void:
-	var scene: PackedScene = load("res://src/game/main.tscn")
+	var scene: PackedScene = load("res://src/game/legacy_main.tscn")
 	var game: Node3D = scene.instantiate()
 	root.add_child(game)
 	for frame in range(20):

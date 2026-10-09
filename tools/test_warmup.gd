@@ -21,7 +21,7 @@ func _run() -> void:
 	var marker := FileAccess.open("user://content_boot_pending", FileAccess.WRITE)
 	marker.store_string("test warmup")
 	marker.close()
-	var scene: PackedScene = load("res://src/game/main.tscn")
+	var scene: PackedScene = load("res://src/game/legacy_main.tscn")
 	var game := scene.instantiate() as Node3D
 	game.set("warmup_requested", true)
 	root.add_child(game)

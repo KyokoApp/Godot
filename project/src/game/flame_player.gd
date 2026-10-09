@@ -1,0 +1,88 @@
+extends Node3D
+## Player sederhana tanpa karakter fisik: hanya api biru yang mengikuti analog.
+
+const Field = preload("res://src/game/world/field.gd")
+const Joystick = preload("res://src/game/virtual_joystick.gd")
+const Orbit = preload("res://src/game/orbit_camera.gd")
+const FlameVisual = preload("res://src/game/blue_flame_visual.gd")
+
+const FLOAT_HEIGHT := 0.24
+const EDGE_MARGIN := 1.3
+const ACCELERATION := 18.0
+const BRAKING := 22.0
+
+var max_speed := 5.0
+var move_speed := 0.0
+var field: Node3D
+var joystick: Joystick
+var orbit: Orbit
+
+var _velocity := Vector3.ZERO
+var _flame: FlameVisual
+
+
+func _ready() -> void:
+	name = "Player"
+	_flame = FlameVisual.new()
+	_flame.name = "BlueFlameVisual"
+	add_child(_flame)
+
+
+func spawn(point: Vector2) -> void:
+	var safe_point := Field.clamp_inside(point, EDGE_MARGIN)
+	var ground := _surface_height(safe_point.x, safe_point.y)
+	global_position = Vector3(safe_point.x, ground + FLOAT_HEIGHT, safe_point.y)
+	_velocity = Vector3.ZERO
+	move_speed = 0.0
+
+
+func ground_position() -> Vector3:
+	return global_position - Vector3(0.0, FLOAT_HEIGHT, 0.0)
+
+
+func _physics_process(delta: float) -> void:
+	var input_direction := _read_input()
+	var desired_velocity := Vector3.ZERO
+	if input_direction.length_squared() > 0.0001:
+		var direction := Vector3(input_direction.x, 0.0, input_direction.y)
+		if orbit != null:
+			direction = orbit.movement_direction(input_direction)
+		desired_velocity = direction * max_speed
+	var response := ACCELERATION if desired_velocity.length_squared() > 0.0001 else BRAKING
+	_velocity = _velocity.move_toward(desired_velocity, response * delta)
+	move_speed = Vector2(_velocity.x, _velocity.z).length()
+
+	var next_position := global_position + _velocity * delta
+	var safe_point := Field.clamp_inside(
+		Vector2(next_position.x, next_position.z), EDGE_MARGIN)
+	next_position.x = safe_point.x
+	next_position.z = safe_point.y
+	var target_height := _surface_height(safe_point.x, safe_point.y) + FLOAT_HEIGHT
+	next_position.y = lerpf(global_position.y, target_height, 1.0 - exp(-12.0 * delta))
+	global_position = next_position
+	_flame.external_velocity = _velocity
+
+
+func _read_input() -> Vector2:
+	if joystick != null and joystick.input_enabled:
+		if joystick.direction.length_squared() > 0.0001:
+			return joystick.direction.limit_length(1.0)
+
+	var keyboard := Vector2.ZERO
+	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
+		keyboard.x -= 1.0
+	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
+		keyboard.x += 1.0
+	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
+		keyboard.y -= 1.0
+	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN):
+		keyboard.y += 1.0
+	if not keyboard.is_zero_approx():
+		return keyboard.limit_length(1.0)
+	return Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down", 0.16)
+
+
+func _surface_height(x: float, z: float) -> float:
+	if field != null and field.has_method("surface_height"):
+		return float(field.call("surface_height", x, z))
+	return Field.terrain_height(x, z)

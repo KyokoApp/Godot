@@ -26,7 +26,7 @@ func _check(condition: bool, message: String) -> void:
 
 
 func _run() -> void:
-	var game: Node3D = load("res://src/game/main.tscn").instantiate()
+	var game: Node3D = load("res://src/game/legacy_main.tscn").instantiate()
 	root.add_child(game)
 	for frame in range(60):
 		await physics_frame

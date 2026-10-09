@@ -1,7 +1,7 @@
 extends SceneTree
 ## Tes Run Zone: jalur tiga petak, speed button, Black Flash, Hollow Purple, dan pulang.
 
-const MainScene = preload("res://src/game/main.tscn")
+const MainScene = preload("res://src/game/legacy_main.tscn")
 const RunZone = preload("res://src/game/world/run_zone.gd")
 
 var _failures := 0

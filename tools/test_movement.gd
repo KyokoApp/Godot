@@ -31,7 +31,7 @@ func _drag(stick: Control, index: int, point: Vector2) -> void:
 
 
 func _run() -> void:
-	var scene: PackedScene = load("res://src/game/main.tscn")
+	var scene: PackedScene = load("res://src/game/legacy_main.tscn")
 	var game: Node3D = scene.instantiate()
 	root.add_child(game)
 	await process_frame
