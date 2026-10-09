@@ -82,13 +82,22 @@ func _run() -> void:
 	var camera_forward := Vector2(-sin(0.68), -cos(0.68))
 	var forward_min := 1e20
 	var forward_max := -1e20
+	var near_forward_min := 1e20
+	var near_forward_max := -1e20
 	for distance in range(8, 105, 8):
 		var ahead := Vector2(0.0, 7.0) + camera_forward * float(distance)
 		var forward_height := DesertWorld.terrain_height(ahead.x, ahead.y)
 		forward_min = minf(forward_min, forward_height)
 		forward_max = maxf(forward_max, forward_height)
+		if distance <= 40:
+			near_forward_min = minf(near_forward_min, forward_height)
+			near_forward_max = maxf(near_forward_max, forward_height)
+	print("::notice::relief dekat kamera: %.2fm" % (
+		near_forward_max - near_forward_min))
 	print("::notice::relief sepanjang pandangan gameplay: %.2fm" % (
 		forward_max - forward_min))
+	_check(near_forward_max - near_forward_min > 4.0,
+		"Dune dekat kamera masih tampak datar")
 	_check(forward_max - forward_min > 5.0,
 		"Dune tidak cukup bergulung sepanjang pandangan gameplay")
 	var nearby_min := 1e20

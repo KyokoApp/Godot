@@ -294,9 +294,21 @@ static func terrain_height(x: float, z: float) -> float:
 	var small_ridges := sin(ripple_phase) * 0.32
 	var broad := _broad_noise.get_noise_2d(x, z) * 4.8
 	var fine := _detail_noise.get_noise_2d(x, z) * 5.0
-	# Multi-scale, warped waves keep the walkable near ground rolling instead of
-	# hiding all relief in one smooth, stripe-like foreground crest.
-	return 16.0 + dune + shoulder_dunes + cross_roll + small_ridges + broad + fine
+	# Multi-scale, warped waves keep the walkable near ground rolling. A nearby
+	# rounded crest breaks the opening view's long, empty valley without forming
+	# a continuous stripe across the horizon.
+	var rolling_base := 16.0 + dune + shoulder_dunes + cross_roll + small_ridges + broad + fine
+	var near_crest := _dune_mound(x, z, -17.0, -15.0, 28.0, 30.0, 13.0)
+	return rolling_base + near_crest
+
+
+static func _dune_mound(
+	x: float, z: float, center_x: float, center_z: float,
+	radius_x: float, radius_z: float, height: float
+) -> float:
+	var dx := (x - center_x) / radius_x
+	var dz := (z - center_z) / radius_z
+	return height * exp(-(dx * dx + dz * dz))
 
 
 static func _prepare_noise() -> void:
