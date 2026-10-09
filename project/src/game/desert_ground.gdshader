@@ -21,10 +21,10 @@ void fragment() {
 	float ripple_phase = dot(world_position.xz, normalize(wind_axis)) * 2.7
 		+ (grain.r - grain.g) * 4.0;
 	float ripples = smoothstep(0.28, 0.94, sin(ripple_phase)) * 0.075;
-	float sunward = clamp(dot(world_normal, normalize(sun_direction)) * 0.82 + 0.18,
+	float sunward = clamp(dot(world_normal, normalize(sun_direction)) * 1.15 + 0.08,
 		0.0, 1.0);
-	vec3 shadow_sand = vec3(0.68, 0.48, 0.31);
-	vec3 lit_sand = vec3(0.96, 0.75, 0.51);
+	vec3 shadow_sand = vec3(0.55, 0.37, 0.24);
+	vec3 lit_sand = vec3(0.98, 0.77, 0.53);
 	vec3 sand_tint = mix(shadow_sand, lit_sand, sunward);
 	ALBEDO = grain * sand_tint * (0.95 + ripples);
 	ROUGHNESS = 0.97;

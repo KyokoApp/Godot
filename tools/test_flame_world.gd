@@ -86,7 +86,7 @@ func _run() -> void:
 			var local_height := DesertWorld.terrain_height(float(local_x), float(local_z))
 			nearby_min = minf(nearby_min, local_height)
 			nearby_max = maxf(nearby_max, local_height)
-	_check(nearby_max - nearby_min > 3.0,
+	_check(nearby_max - nearby_min > 4.5,
 		"Dune lokal tidak cukup terlihat dari kamera pemain")
 
 	if player != null and desert != null and joystick != null and fire != null:

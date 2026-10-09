@@ -53,12 +53,12 @@ func _build_flame_body() -> void:
 		var material := ShaderMaterial.new()
 		material.shader = FIRE_SHADER
 		var card := QuadMesh.new()
-		card.size = Vector2(0.92, 1.20)
+		card.size = Vector2(1.05, 1.40)
 		var plane := MeshInstance3D.new()
 		plane.name = "FlameFront" if index == 0 else "FlameCross"
 		plane.mesh = card
 		plane.material_override = material
-		plane.position.y = 0.58
+		plane.position.y = 0.68
 		plane.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		plane.extra_cull_margin = 0.7
 		_body.add_child(plane)
