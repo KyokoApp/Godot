@@ -5,6 +5,8 @@ const GROUND_SHADER = preload("res://src/game/desert_ground.gdshader")
 const SAND_ALBEDO: Texture2D = preload("res://assets/desert/sand_albedo.png")
 
 const PLAYABLE_HALF := 360.0
+const CAMERA_COLLISION_HALF := 424.0
+const CAMERA_COLLISION_STEP := 4.0
 const NEAR_HALF := 256.0
 const NEAR_STEP := 2.0
 const WORLD_HALF := 1024.0
@@ -23,10 +25,39 @@ var _stone_material: StandardMaterial3D
 func _ready() -> void:
 	name = "Desert"
 	_prepare_noise()
+	_build_camera_collision()
 	_build_materials()
 	_build_near_ground()
 	_build_far_ground()
 	_build_mesas()
+
+
+func _build_camera_collision() -> void:
+	var step := CAMERA_COLLISION_STEP
+	var cells := int(round(CAMERA_COLLISION_HALF * 2.0 / step))
+	var side := cells + 1
+	var heights := PackedFloat32Array()
+	heights.resize(side * side)
+	for z in range(side):
+		var world_z := -CAMERA_COLLISION_HALF + float(z) * step
+		for x in range(side):
+			var world_x := -CAMERA_COLLISION_HALF + float(x) * step
+			heights[z * side + x] = terrain_height(world_x, world_z)
+
+	var heightmap := HeightMapShape3D.new()
+	heightmap.map_width = side
+	heightmap.map_depth = side
+	heightmap.map_data = heights
+	var shape := CollisionShape3D.new()
+	shape.name = "HeightMap"
+	shape.shape = heightmap
+	shape.scale = Vector3(step, 1.0, step)
+	var body := StaticBody3D.new()
+	body.name = "CameraGroundCollision"
+	body.collision_layer = 1
+	body.collision_mask = 0
+	body.add_child(shape)
+	add_child(body)
 
 
 func _build_materials() -> void:

@@ -42,6 +42,12 @@ func _run() -> void:
 	_check(desert != null and desert.find_child("NearDunes", true, false) != null
 		and desert.find_child("FarDunes", true, false) != null,
 		"Terrain gurun bertingkat tidak lengkap")
+	var camera_collision: StaticBody3D
+	if desert != null:
+		camera_collision = desert.find_child(
+			"CameraGroundCollision", true, false) as StaticBody3D
+	_check(camera_collision != null and camera_collision.collision_layer == 1,
+		"Kamera tidak memiliki collider dune untuk mencegah clipping")
 	var mesa_meshes := []
 	if desert != null:
 		mesa_meshes = desert.find_children("*Mesa*", "MeshInstance3D", true, false)
