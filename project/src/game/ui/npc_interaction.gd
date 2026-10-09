@@ -333,7 +333,7 @@ func _cozy_close() -> void:
 		_bubble_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 		_bubble_tween.tween_property(_bubble, "modulate", Color(1, 1, 1, 0), 0.22)
 		_bubble_tween.tween_property(_bubble, "scale", Vector2(0.86, 0.86), 0.22)
-		_bubble_tween.finished.connect(func(): 
+		_bubble_tween.finished.connect(func():
 			if _bubble != null:
 				_bubble.hide()
 		)
