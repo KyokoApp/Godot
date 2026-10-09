@@ -280,27 +280,28 @@ static func terrain_height(x: float, z: float) -> float:
 	var across := point.dot(Vector2(DUNE_AXIS.y, -DUNE_AXIS.x))
 	var phase := (along + warp_x) * 0.018 \
 		+ sin((across + warp_z) * 0.006 + warp_x * 0.012) * 1.02
-	var dune := sin(phase) * 9.0 \
+	var dune := sin(phase) * 8.5 \
 		+ sin(phase * 0.50 + warp_z * 0.018) * 2.4 \
 		+ sin(phase * 1.95 + 0.6) * 0.72
 	var shoulder_phase := (along + warp_x * 0.55) * 0.052 \
 		+ sin((across + warp_z) * 0.018 + warp_x * 0.008) * 0.42
-	var shoulder_dunes := sin(shoulder_phase) * 2.3 \
-		+ sin(shoulder_phase * 1.9 + 1.1) * 0.40
+	var shoulder_dunes := sin(shoulder_phase) * 1.8 \
+		+ sin(shoulder_phase * 1.9 + 1.1) * 0.32
 	var ripple_phase := (along + warp_x * 0.3) * 0.092 \
 		+ (across + warp_z * 0.75) * 0.016
 	var small_ridges := sin(ripple_phase) * 0.32
-	var broad := _broad_noise.get_noise_2d(x, z) * 5.0
-	var fine := _detail_noise.get_noise_2d(x, z) * 0.38
+	var broad := _broad_noise.get_noise_2d(x, z) * 3.2
+	var fine := _detail_noise.get_noise_2d(x, z) * 4.0
 	var base_height := 16.0 + dune + shoulder_dunes + small_ridges + broad + fine
+	# Overlapping smooth hummocks break up the wind-aligned waves in the opening view.
 	var forward_dune := 16.0 + _dune_mound(
-		x, z, -48.0, -110.0, 98.0, 132.0, 24.0)
+		x, z, -20.0, -60.0, 75.0, 90.0, 16.0)
 	var right_dune := 16.0 + _dune_mound(
-		x, z, 105.0, -210.0, 115.0, 150.0, 20.0)
+		x, z, 65.0, -135.0, 95.0, 115.0, 14.0)
 	var far_left_dune := 16.0 + _dune_mound(
-		x, z, -155.0, -315.0, 140.0, 160.0, 21.0)
+		x, z, -110.0, -170.0, 105.0, 120.0, 15.0)
 	var far_right_dune := 16.0 + _dune_mound(
-		x, z, 130.0, -370.0, 145.0, 160.0, 19.0)
+		x, z, 20.0, -300.0, 125.0, 150.0, 18.0)
 	var dune_ridge := maxf(maxf(forward_dune, right_dune),
 		maxf(far_left_dune, far_right_dune))
 	return maxf(base_height, dune_ridge)
@@ -338,5 +339,5 @@ static func _prepare_noise() -> void:
 	_detail_noise = FastNoiseLite.new()
 	_detail_noise.seed = 12761
 	_detail_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
-	_detail_noise.frequency = 0.018
+	_detail_noise.frequency = 0.012
 	_detail_noise.fractal_octaves = 2
