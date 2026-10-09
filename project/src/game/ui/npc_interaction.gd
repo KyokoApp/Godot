@@ -1,7 +1,7 @@
 extends Node
 ## Jembatan input NPC: tombol dekat karakter, kunci gerak, lalu pulihkan HUD
-## setelah layar pilihan ditutup. Versi cozy: interaksi bukan menu fullscreen
-## tapi bubble chat "Test Arena - Coming Soon" + animasi kamera.
+## setelah layar pilihan ditutup. Versi cozy: bubble di samping NPC dengan
+## dua pilihan Test Arena + Back, plus animasi kamera.
 
 signal gameplay_requested
 
@@ -22,8 +22,9 @@ var _prompt: Button
 var _dialogue: Dialogue
 var _upgrade_menu: Control
 var _bubble: PanelContainer
-var _bubble_title: Label
-var _bubble_sub: Label
+var _arena_button: Button
+var _back_button: Button
+var _bubble_hint: Label
 var _modal_open := false
 var _saved_visibility: Dictionary = {}
 var _saved_joystick_input := true
@@ -50,7 +51,6 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	# update bubble posisi biar nempel di samping NPC
 	if _bubble != null and _bubble.visible and npc != null and is_instance_valid(npc):
 		_update_bubble_position()
 	if _modal_open or player == null or npc == null:
@@ -80,7 +80,6 @@ func _unhandled_input(event: InputEvent) -> void:
 						or key.keycode == KEY_SPACE:
 					_dialogue.call("activate_selected")
 		else:
-			# cozy: ESC/E tutup bubble lebih cepat
 			if key.keycode == KEY_ESCAPE or key.keycode == KEY_E:
 				_cozy_close()
 		get_viewport().set_input_as_handled()
@@ -136,40 +135,79 @@ func _build_bubble() -> void:
 	_bubble = PanelContainer.new()
 	_bubble.name = "ArenaBubble"
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.07, 0.10, 0.92)
+	style.bg_color = Color(0.08, 0.07, 0.10, 0.94)
 	style.border_color = Color("f2bd35")
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(16)
-	style.content_margin_left = 18
-	style.content_margin_right = 18
-	style.content_margin_top = 12
-	style.content_margin_bottom = 12
+	style.content_margin_left = 16
+	style.content_margin_right = 16
+	style.content_margin_top = 14
+	style.content_margin_bottom = 14
 	_bubble.add_theme_stylebox_override("panel", style)
 	canvas_layer.add_child(_bubble)
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 4)
+	vbox.add_theme_constant_override("separation", 8)
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	_bubble.add_child(vbox)
-	_bubble_title = Label.new()
-	_bubble_title.text = "Test Arena"
-	_bubble_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_bubble_title.add_theme_font_size_override("font_size", 20)
-	_bubble_title.add_theme_color_override("font_color", Color("fff4d8"))
-	vbox.add_child(_bubble_title)
-	_bubble_sub = Label.new()
-	_bubble_sub.text = "Coming Soon"
-	_bubble_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_bubble_sub.add_theme_font_size_override("font_size", 12)
-	_bubble_sub.add_theme_color_override("font_color", Color("f2bd35"))
-	vbox.add_child(_bubble_sub)
-	var hint := Label.new()
-	hint.text = "Arena PvP cozy segera hadir"
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", 10)
-	hint.add_theme_color_override("font_color", Color("cfc6d4"))
-	vbox.add_child(hint)
+	var title := Label.new()
+	title.text = "Test Arena"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_color_override("font_color", Color("fff4d8"))
+	vbox.add_child(title)
+	var sub := Label.new()
+	sub.text = "Coming Soon"
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sub.add_theme_font_size_override("font_size", 11)
+	sub.add_theme_color_override("font_color", Color("f2bd35"))
+	vbox.add_child(sub)
+	_bubble_hint = Label.new()
+	_bubble_hint.text = "Arena PvP cozy segera hadir"
+	_bubble_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_bubble_hint.add_theme_font_size_override("font_size", 10)
+	_bubble_hint.add_theme_color_override("font_color", Color("cfc6d4"))
+	vbox.add_child(_bubble_hint)
+	_arena_button = Button.new()
+	_arena_button.text = "Test Arena"
+	_arena_button.custom_minimum_size = Vector2(200, 44)
+	_arena_button.focus_mode = Control.FOCUS_NONE
+	_arena_button.add_theme_font_size_override("font_size", 13)
+	_arena_button.add_theme_color_override("font_color", Color("fff4d8"))
+	var ab_n := _bubble_btn_style(Color("2a241f"), Color("f2bd35"))
+	_arena_button.add_theme_stylebox_override("normal", ab_n)
+	var ab_h := _bubble_btn_style(Color("3a3528"), Color("ffe074"))
+	_arena_button.add_theme_stylebox_override("hover", ab_h)
+	_arena_button.add_theme_stylebox_override("pressed", ab_h)
+	_arena_button.pressed.connect(_on_arena_pressed)
+	vbox.add_child(_arena_button)
+	_back_button = Button.new()
+	_back_button.text = "Back"
+	_back_button.custom_minimum_size = Vector2(200, 38)
+	_back_button.focus_mode = Control.FOCUS_NONE
+	_back_button.add_theme_font_size_override("font_size", 12)
+	_back_button.add_theme_color_override("font_color", Color("cfc6d4"))
+	var bb_n := _bubble_btn_style(Color(0.12, 0.11, 0.14, 0.92), Color(1, 1, 1, 0.18))
+	_back_button.add_theme_stylebox_override("normal", bb_n)
+	var bb_h := _bubble_btn_style(Color("2e2b33"), Color("f2bd35"))
+	_back_button.add_theme_stylebox_override("hover", bb_h)
+	_back_button.add_theme_stylebox_override("pressed", bb_h)
+	_back_button.pressed.connect(_cozy_close)
+	vbox.add_child(_back_button)
 	_bubble.hide()
 	_bubble.modulate = Color(1, 1, 1, 0)
+
+
+func _bubble_btn_style(fill: Color, border: Color) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = fill
+	s.border_color = border
+	s.set_border_width_all(1)
+	s.set_corner_radius_all(10)
+	s.content_margin_left = 12
+	s.content_margin_right = 12
+	s.content_margin_top = 6
+	s.content_margin_bottom = 6
+	return s
 
 
 func _update_bubble_position() -> void:
@@ -177,16 +215,14 @@ func _update_bubble_position() -> void:
 		return
 	var cam := get_viewport().get_camera_3d()
 	if cam == null:
-		# fallback tengah
 		var vp := get_viewport().get_visible_rect().size
 		_bubble.position = (vp - _bubble.size) * 0.5
 		return
-	var world_pos := npc.global_position + Vector3(0, 1.9, 0)
+	# Kepala NPC + sedikit di atas, bubble di samping kanan NPC
+	var world_pos := npc.global_position + Vector3(0, 1.85, 0)
 	var screen := cam.unproject_position(world_pos)
 	var vp := get_viewport().get_visible_rect().size
-	# taruh di kanan atas NPC, dengan offset cozy
-	var target := screen + Vector2(28, -74)
-	# clamp biar tidak keluar layar
+	var target := screen + Vector2(32, -_bubble.size.y * 0.5 - 12)
 	target.x = clampf(target.x, 12, vp.x - _bubble.size.x - 12)
 	target.y = clampf(target.y, 12, vp.y - _bubble.size.y - 12)
 	_bubble.position = target
@@ -294,8 +330,6 @@ func _begin_interaction_cozy() -> void:
 	_focus_conversation_camera()
 	npc.call("start_conversation", player.global_position)
 	_show_cozy_bubble()
-	# auto close setelah 3 detik cozy
-	get_tree().create_timer(2.8).timeout.connect(_cozy_close)
 
 
 func _show_cozy_bubble() -> void:
@@ -314,18 +348,20 @@ func _show_cozy_bubble() -> void:
 	_bubble_tween.tween_property(_bubble, "modulate", Color.WHITE, 0.34)
 	_bubble_tween.tween_property(_bubble, "scale", Vector2.ONE, 0.38)
 	_dialogue_close_done = false
-	# bubble dianggap “dialog” sudah terbuka, jadi tidak perlu closing dialogue
-	# _dialogue_close_done akan di-set true saat bubble mulai menghilang
+	_bubble_hint.text = "Arena PvP cozy segera hadir"
+
+
+func _on_arena_pressed() -> void:
+	if _bubble_hint != null:
+		_bubble_hint.text = "Coming Soon — stay tuned!"
+	var t := create_tween()
+	t.tween_property(_arena_button, "scale", Vector2(1.06, 1.06), 0.09)
+	t.tween_property(_arena_button, "scale", Vector2.ONE, 0.14)
 
 
 func _cozy_close() -> void:
 	if not _modal_open:
 		return
-	# cegah double close
-	if _bubble_tween != null and _bubble_tween.is_running():
-		# biarkan tween jalan, tapi jangan duplicate
-		pass
-	# animasi bubble hilang
 	if _bubble != null and _bubble.visible:
 		if _bubble_tween != null and _bubble_tween.is_running():
 			_bubble_tween.kill()
@@ -339,7 +375,6 @@ func _cozy_close() -> void:
 		)
 	_dialogue_close_done = true
 	_on_dialogue_closing()
-	# _finish_close_if_ready akan nunggu kamera
 
 
 func _focus_conversation_camera() -> void:
@@ -351,9 +386,6 @@ func _focus_conversation_camera() -> void:
 	_saved_orbit_distance = float(orbit.get("distance"))
 	_saved_orbit_focus = orbit.get("focus_offset")
 	_camera_restore_done = false
-
-	# Arah NPC dijadikan sisi kanan kamera agar Mira masuk ke area kanan,
-	# tanpa SubViewport atau panggung putih yang menutupi dunia aktif.
 	var toward_npc := Vector2(
 		npc.global_position.x - player.global_position.x,
 		npc.global_position.z - player.global_position.z
@@ -363,7 +395,6 @@ func _focus_conversation_camera() -> void:
 		toward_npc = Vector2(0.0, -1.0)
 	else:
 		toward_npc /= separation
-	# Sedikit dari sisi pemain memberi wajah Mira sudut tiga perempat, bukan profil penuh.
 	var desired_yaw := atan2(-toward_npc.y, toward_npc.x) + 0.14
 	var current_yaw := float(orbit.get("yaw"))
 	var target_yaw := current_yaw + wrapf(desired_yaw - current_yaw, -PI, PI)
@@ -373,8 +404,6 @@ func _focus_conversation_camera() -> void:
 	var aspect := viewport_size.x / maxf(viewport_size.y, 1.0)
 	var half_horizontal_fov := atan(tan(deg_to_rad(65.0) * 0.5) * aspect)
 	var frame_width := 2.0 * target_distance * tan(half_horizontal_fov)
-	# Komposisi kamera memusatkan NPC kira-kira di 3/4 layar. Jika jarak
-	# percakapan lebar, fokus bergeser ke tengah pasangan agar Mira tidak terpotong.
 	var focus_ratio := clampf(1.0 - frame_width * 0.24 / maxf(separation, 0.01), 0.0, 0.45)
 	var focus_point := player.global_position.lerp(npc.global_position, focus_ratio)
 	focus_point.y += 0.35
