@@ -9,9 +9,9 @@ extends Node3D
 ##
 ## Kenapa chunk streaming (bukan satu mesh 300 m): medan 300 m pada sel 2 m =
 ## ~22 ribu sel — streaming tetap dipakai. Chunk 32 m × 32 m (16 × 16 sel)
-## dibangun SATU per frame mengelilingi pemain; jangkauan 5 berarti 11 × 11 =
-## 121 chunk (± 352 m), cukup menutup seluruh pulau 300 m dari mana pun pemain
-## berdiri. Chunk yang seluruhnya di laut tidak pernah dibangun.
+## dibangun SATU per frame mengelilingi pemain; jangkauan 4 berarti 9 × 9 =
+## 81 chunk (± 288 m), cukup menutup hampir seluruh pulau 300 m dari mana pun
+## pemain berdiri. Chunk yang seluruhnya di laut tidak pernah dibangun.
 
 const SHADER = preload("res://src/game/ground.gdshader")
 const MEADOW = preload("res://assets/nature/meadow_cover.png")
@@ -23,8 +23,8 @@ const CHUNK := 32.0
 const CHUNK_CELLS := 16
 const SIDE := CHUNK_CELLS + 1
 const CELL := CHUNK / float(CHUNK_CELLS)
-## Radius chunk yang dipegang: 5 -> 11 × 11 = 121 chunk = 352 m × 352 m.
-const CHUNK_RADIUS := 5
+## Radius chunk yang dipegang: 4 -> 9 × 9 = 81 chunk = 288 m × 288 m.
+const CHUNK_RADIUS := 4
 const WALK_MARGIN := 0.7
 
 ## Bentuk pulau — diskalakan 3× dari 100 m (29/38 -> 87/114).
