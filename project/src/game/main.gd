@@ -147,14 +147,11 @@ func _build_environment() -> void:
 func _build_world() -> void:
 	_field = Field.new()
 	add_child(_field)
-	# Pulau polos tanpa objek & tanpa rumput (request user): scenery & forest dimatikan
-	# _scenery = Scenery.new()
-	# add_child(_scenery)
-	# _forest = Forest.new()
-	# add_child(_forest)
-	_scenery = null
+	# Cozy pulau polos + laut: scenery (sea) balik, forest tetap mati biar tanpa pohon
+	_scenery = Scenery.new()
+	add_child(_scenery)
 	_forest = null
-	# matikan cover rumput di shader biar tanah polos
+	# matikan cover rumput di shader biar tanah cozy polos (tekstur di screenshot)
 	if _field and _field.has_method("set_grass_cover"):
 		_field.set_grass_cover(false)
 
