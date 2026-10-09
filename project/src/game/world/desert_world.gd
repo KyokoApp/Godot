@@ -149,9 +149,9 @@ func _build_mesa(site: Dictionary) -> void:
 	var seed := float(site["seed"])
 	var base_height := terrain_height(center.x, center.y)
 	var segment_count := 40
-	var ring_heights := [0.0, 0.13, 0.17, 0.61, 0.66, 0.91, 0.95, 1.0]
-	var ring_widths := [1.06, 1.00, 0.83, 0.79, 0.72, 0.70, 0.61, 0.51]
-	var ring_colors := [
+	var ring_heights: Array[float] = [0.0, 0.13, 0.17, 0.61, 0.66, 0.91, 0.95, 1.0]
+	var ring_widths: Array[float] = [1.06, 1.00, 0.83, 0.79, 0.72, 0.70, 0.61, 0.51]
+	var ring_colors: Array[Color] = [
 		Color(0.47, 0.32, 0.21), Color(0.65, 0.46, 0.30),
 		Color(0.77, 0.56, 0.37), Color(0.56, 0.38, 0.25),
 		Color(0.80, 0.60, 0.40), Color(0.61, 0.42, 0.28),
@@ -193,7 +193,7 @@ func _build_mesa(site: Dictionary) -> void:
 			_add_mesa_triangle(surface, lower_b, upper_b, upper_a,
 				band_color.lightened(0.025), outward)
 	var top_center := Vector3(0.0, height, 0.0)
-	var top_ring := rings.back()
+	var top_ring: PackedVector3Array = rings.back()
 	for segment in range(segment_count):
 		var next := (segment + 1) % segment_count
 		_add_mesa_triangle(surface, top_center, top_ring[segment], top_ring[next],
