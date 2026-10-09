@@ -252,9 +252,16 @@ static func terrain_height(x: float, z: float) -> float:
 	var dune := sin(phase) * 8.0 \
 		+ sin(phase * 0.50 + warp_z * 0.018) * 2.2 \
 		+ sin(phase * 1.95 + 0.6) * 0.72
+	var shoulder_phase := (along + warp_x * 0.55) * 0.052 \
+		+ sin((across + warp_z) * 0.018 + warp_x * 0.008) * 0.42
+	var shoulder_dunes := sin(shoulder_phase) * 2.8 \
+		+ sin(shoulder_phase * 1.9 + 1.1) * 0.44
+	var ripple_phase := (along + warp_x * 0.3) * 0.092 \
+		+ (across + warp_z * 0.75) * 0.016
+	var small_ridges := sin(ripple_phase) * 0.9
 	var broad := _broad_noise.get_noise_2d(x, z) * 2.4
-	var fine := _detail_noise.get_noise_2d(x, z) * 0.38
-	return 14.0 + dune + broad + fine
+	var fine := _detail_noise.get_noise_2d(x, z) * 0.48
+	return 16.0 + dune + shoulder_dunes + small_ridges + broad + fine
 
 
 static func _prepare_noise() -> void:

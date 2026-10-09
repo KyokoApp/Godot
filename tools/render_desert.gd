@@ -36,6 +36,11 @@ func _run() -> void:
 
 	orbit.set("yaw", 0.68)
 	orbit.set("pitch", 0.42)
+	orbit.set("distance", 8.0)
+	for _frame in range(35):
+		await physics_frame
+	await _capture("desert-gameplay")
+
 	orbit.set("distance", 3.8)
 	for _frame in range(35):
 		await physics_frame

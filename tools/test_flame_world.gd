@@ -73,6 +73,15 @@ func _run() -> void:
 	_check(absf(DesertWorld.terrain_height(0.0, 0.0)
 		- DesertWorld.terrain_height(140.0, -92.0)) > 0.35,
 		"Relief dune tidak berubah pada jarak berjalan")
+	var nearby_min := 1e20
+	var nearby_max := -1e20
+	for local_z in range(-40, 41, 10):
+		for local_x in range(-40, 41, 10):
+			var local_height := DesertWorld.terrain_height(float(local_x), float(local_z))
+			nearby_min = minf(nearby_min, local_height)
+			nearby_max = maxf(nearby_max, local_height)
+	_check(nearby_max - nearby_min > 3.0,
+		"Dune lokal tidak cukup terlihat dari kamera pemain")
 
 	if player != null and desert != null and joystick != null and fire != null:
 		var start := Vector2(player.global_position.x, player.global_position.z)
