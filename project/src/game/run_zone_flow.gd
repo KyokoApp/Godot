@@ -99,7 +99,9 @@ func enter(main: Node3D) -> void:
 	if not joystick.input_exclusions.has(speed_control):
 		joystick.input_exclusions.append(speed_control)
 
-	(main.get("_grass") as Node).call("set_ground", run_zone.ground)
+	var grass := main.get("_grass") as Node
+	if is_instance_valid(grass):
+		grass.call("set_ground", run_zone.ground)
 	(main.get("_footsteps") as Node).set("field", run_zone.ground)
 	var foot_fire := main.get("_foot_fire") as Node
 	foot_fire.set("field", run_zone.ground)
@@ -206,10 +208,12 @@ func return_home(main: Node3D, home_spawn: Vector2) -> void:
 	interaction.set_physics_process(true)
 	var footsteps := main.get("_footsteps") as Node
 	footsteps.set("field", field)
-	var foot_fire := main.get("_foot_fire") as Node
-	foot_fire.set("field", field)
-	foot_fire.call("clear")
-	(main.get("_grass") as Node).call("set_ground", field)
+	var foot_fire2 := main.get("_foot_fire") as Node
+	foot_fire2.set("field", field)
+	foot_fire2.call("clear")
+	var grass2 := main.get("_grass") as Node
+	if is_instance_valid(grass2):
+		grass2.call("set_ground", field)
 	(main.get("_survival_panel") as Control).hide()
 	main.call("_apply_input_state")
 	print("[main] Run Zone selesai; kembali ke home hub")
