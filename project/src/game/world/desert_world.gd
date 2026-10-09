@@ -291,7 +291,7 @@ static func terrain_height(x: float, z: float) -> float:
 		+ (across + warp_z * 0.75) * 0.016
 	var small_ridges := sin(ripple_phase) * 0.32
 	var broad := _broad_noise.get_noise_2d(x, z) * 3.2
-	var fine := _detail_noise.get_noise_2d(x, z) * 4.0
+	var fine := _detail_noise.get_noise_2d(x, z) * 5.0
 	var base_height := 16.0 + dune + shoulder_dunes + small_ridges + broad + fine
 	# Overlapping smooth hummocks break up the wind-aligned waves in the opening view.
 	var forward_dune := 16.0 + _dune_mound(
@@ -339,5 +339,5 @@ static func _prepare_noise() -> void:
 	_detail_noise = FastNoiseLite.new()
 	_detail_noise.seed = 12761
 	_detail_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
-	_detail_noise.frequency = 0.012
+	_detail_noise.frequency = 0.025
 	_detail_noise.fractal_octaves = 2
