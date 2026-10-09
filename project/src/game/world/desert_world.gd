@@ -302,8 +302,13 @@ static func terrain_height(x: float, z: float) -> float:
 		x, z, -110.0, -170.0, 105.0, 120.0, 15.0)
 	var far_right_dune := 16.0 + _dune_mound(
 		x, z, 20.0, -300.0, 125.0, 150.0, 18.0)
+	var near_right_roll := 16.0 + _dune_mound(
+		x, z, 15.0, -15.0, 42.0, 50.0, 20.0)
+	var near_left_roll := 16.0 + _dune_mound(
+		x, z, -25.0, 17.0, 42.0, 50.0, 19.0)
 	var dune_ridge := maxf(maxf(forward_dune, right_dune),
 		maxf(far_left_dune, far_right_dune))
+	dune_ridge = maxf(dune_ridge, maxf(near_right_roll, near_left_roll))
 	return maxf(base_height, dune_ridge)
 
 
