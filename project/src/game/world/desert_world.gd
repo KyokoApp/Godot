@@ -278,8 +278,8 @@ static func terrain_height(x: float, z: float) -> float:
 	var point := Vector2(x, z)
 	var along := point.dot(DUNE_AXIS)
 	var across := point.dot(Vector2(DUNE_AXIS.y, -DUNE_AXIS.x))
-	var phase := (along + warp_x) * 0.018 \
-		+ sin((across + warp_z) * 0.006 + warp_x * 0.012) * 1.02
+	var phase := (along + warp_x * 0.8) * 0.032 \
+		+ sin((across + warp_z) * 0.012 + warp_x * 0.018) * 0.95
 	var dune := sin(phase) * 8.5 \
 		+ sin(phase * 0.50 + warp_z * 0.018) * 2.4 \
 		+ sin(phase * 1.95 + 0.6) * 0.72
@@ -287,38 +287,16 @@ static func terrain_height(x: float, z: float) -> float:
 		+ sin((across + warp_z) * 0.018 + warp_x * 0.008) * 0.42
 	var shoulder_dunes := sin(shoulder_phase) * 1.8 \
 		+ sin(shoulder_phase * 1.9 + 1.1) * 0.32
+	var cross_roll := sin((across + warp_z * 0.75) * 0.018 \
+		+ warp_x * 0.014) * 2.4
 	var ripple_phase := (along + warp_x * 0.3) * 0.092 \
 		+ (across + warp_z * 0.75) * 0.016
 	var small_ridges := sin(ripple_phase) * 0.32
-	var broad := _broad_noise.get_noise_2d(x, z) * 3.2
+	var broad := _broad_noise.get_noise_2d(x, z) * 4.8
 	var fine := _detail_noise.get_noise_2d(x, z) * 5.0
-	var base_height := 16.0 + dune + shoulder_dunes + small_ridges + broad + fine
-	# Overlapping smooth hummocks break up the wind-aligned waves in the opening view.
-	var forward_dune := 16.0 + _dune_mound(
-		x, z, -12.0, -30.0, 55.0, 65.0, 18.0)
-	var right_dune := 16.0 + _dune_mound(
-		x, z, 55.0, -90.0, 80.0, 100.0, 14.0)
-	var far_left_dune := 16.0 + _dune_mound(
-		x, z, -110.0, -170.0, 105.0, 120.0, 15.0)
-	var far_right_dune := 16.0 + _dune_mound(
-		x, z, 20.0, -300.0, 125.0, 150.0, 18.0)
-	var near_right_roll := 16.0 + _dune_mound(
-		x, z, 15.0, -15.0, 42.0, 50.0, 20.0)
-	var near_left_roll := 16.0 + _dune_mound(
-		x, z, -25.0, 17.0, 42.0, 50.0, 19.0)
-	var dune_ridge := maxf(maxf(forward_dune, right_dune),
-		maxf(far_left_dune, far_right_dune))
-	dune_ridge = maxf(dune_ridge, maxf(near_right_roll, near_left_roll))
-	return maxf(base_height, dune_ridge)
-
-
-static func _dune_mound(
-	x: float, z: float, center_x: float, center_z: float,
-	radius_x: float, radius_z: float, height: float
-) -> float:
-	var dx := (x - center_x) / radius_x
-	var dz := (z - center_z) / radius_z
-	return height * exp(-(dx * dx + dz * dz))
+	# Multi-scale, warped waves keep the walkable near ground rolling instead of
+	# hiding all relief in one smooth, stripe-like foreground crest.
+	return 16.0 + dune + shoulder_dunes + cross_roll + small_ridges + broad + fine
 
 
 static func _prepare_noise() -> void:
@@ -327,7 +305,7 @@ static func _prepare_noise() -> void:
 	_broad_noise = FastNoiseLite.new()
 	_broad_noise.seed = 29173
 	_broad_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
-	_broad_noise.frequency = 0.0042
+	_broad_noise.frequency = 0.006
 	_broad_noise.fractal_octaves = 3
 	_broad_noise.fractal_lacunarity = 2.1
 	_broad_noise.fractal_gain = 0.48

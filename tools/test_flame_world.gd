@@ -79,10 +79,18 @@ func _run() -> void:
 	_check(absf(DesertWorld.terrain_height(0.0, 0.0)
 		- DesertWorld.terrain_height(140.0, -92.0)) > 0.35,
 		"Relief dune tidak berubah pada jarak berjalan")
-	var spawn_height := DesertWorld.terrain_height(0.0, 7.0)
-	var forward_crest := DesertWorld.terrain_height(-12.0, -30.0)
-	_check(forward_crest - spawn_height > 4.0,
-		"Punggung dune lebar tidak tampak di arah kamera gameplay")
+	var camera_forward := Vector2(-sin(0.68), -cos(0.68))
+	var forward_min := 1e20
+	var forward_max := -1e20
+	for distance in range(8, 105, 8):
+		var ahead := Vector2(0.0, 7.0) + camera_forward * float(distance)
+		var forward_height := DesertWorld.terrain_height(ahead.x, ahead.y)
+		forward_min = minf(forward_min, forward_height)
+		forward_max = maxf(forward_max, forward_height)
+	print("::notice::relief sepanjang pandangan gameplay: %.2fm" % (
+		forward_max - forward_min))
+	_check(forward_max - forward_min > 5.0,
+		"Dune tidak cukup bergulung sepanjang pandangan gameplay")
 	var nearby_min := 1e20
 	var nearby_max := -1e20
 	for local_z in range(-40, 41, 10):
