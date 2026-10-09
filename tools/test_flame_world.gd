@@ -79,6 +79,10 @@ func _run() -> void:
 	_check(absf(DesertWorld.terrain_height(0.0, 0.0)
 		- DesertWorld.terrain_height(140.0, -92.0)) > 0.35,
 		"Relief dune tidak berubah pada jarak berjalan")
+	var spawn_height := DesertWorld.terrain_height(0.0, 7.0)
+	var forward_crest := DesertWorld.terrain_height(-48.0, -110.0)
+	_check(forward_crest - spawn_height > 4.0,
+		"Punggung dune lebar tidak tampak di arah kamera gameplay")
 	var nearby_min := 1e20
 	var nearby_max := -1e20
 	for local_z in range(-40, 41, 10):

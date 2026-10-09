@@ -292,7 +292,27 @@ static func terrain_height(x: float, z: float) -> float:
 	var small_ridges := sin(ripple_phase) * 0.32
 	var broad := _broad_noise.get_noise_2d(x, z) * 5.0
 	var fine := _detail_noise.get_noise_2d(x, z) * 0.38
-	return 16.0 + dune + shoulder_dunes + small_ridges + broad + fine
+	var base_height := 16.0 + dune + shoulder_dunes + small_ridges + broad + fine
+	var forward_dune := 16.0 + _dune_mound(
+		x, z, -48.0, -110.0, 98.0, 132.0, 24.0)
+	var right_dune := 16.0 + _dune_mound(
+		x, z, 105.0, -210.0, 115.0, 150.0, 20.0)
+	var far_left_dune := 16.0 + _dune_mound(
+		x, z, -155.0, -315.0, 140.0, 160.0, 21.0)
+	var far_right_dune := 16.0 + _dune_mound(
+		x, z, 130.0, -370.0, 145.0, 160.0, 19.0)
+	var dune_ridge := maxf(maxf(forward_dune, right_dune),
+		maxf(far_left_dune, far_right_dune))
+	return maxf(base_height, dune_ridge)
+
+
+static func _dune_mound(
+	x: float, z: float, center_x: float, center_z: float,
+	radius_x: float, radius_z: float, height: float
+) -> float:
+	var dx := (x - center_x) / radius_x
+	var dz := (z - center_z) / radius_z
+	return height * exp(-(dx * dx + dz * dz))
 
 
 static func _prepare_noise() -> void:
