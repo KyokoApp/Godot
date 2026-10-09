@@ -1,7 +1,7 @@
 extends SceneTree
-## Smoke test scene utama yang tersisa: world, api player, dan analog saja.
+## Smoke test: the active scene is a warm fire crossing a clean desert, not the old island.
 
-const Field = preload("res://src/game/world/field.gd")
+const DesertWorld = preload("res://src/game/world/desert_world.gd")
 const UPDATE_RESUME := "user://in_game_update_resume.cfg"
 
 var _failures := 0
@@ -30,39 +30,68 @@ func _run() -> void:
 	root.add_child(game)
 	for _frame in range(8):
 		await physics_frame
+
 	var player := game.get("_player") as Node3D
+	var desert := game.get("_desert") as Node3D
 	var joystick := game.get("_joystick") as Control
+	var fire := game.find_child("FireVisual", true, false) as Node3D
+	var fire_light := game.find_child("FireLight", true, false) as OmniLight3D
 	var update_button := game.find_child("UpdateContentButton", true, false) as Button
 	_check(player != null and not player is CharacterBody3D,
-		"Player belum diganti menjadi node api tanpa rig")
-	_check(game.get("_field") != null and game.get("_scenery") != null
-		and game.get("_forest") != null and game.get("_grass") != null,
-		"World utama tidak lengkap")
+		"Player memakai tubuh karakter, bukan api sederhana")
+	_check(desert != null and desert.find_child("NearDunes", true, false) != null
+		and desert.find_child("FarDunes", true, false) != null,
+		"Terrain gurun bertingkat tidak lengkap")
+	var mesa_meshes := []
+	if desert != null:
+		mesa_meshes = desert.find_children("*Mesa*", "MeshInstance3D", true, false)
+		mesa_meshes.append_array(
+			desert.find_children("*Butte*", "MeshInstance3D", true, false))
+	_check(mesa_meshes.size() >= 5, "Landmark mesa gurun tidak terbentuk")
+	for old_node in [
+		"Field", "Scenery", "Forest", "Grass", "Water", "Ocean", "Lake", "Island",
+		"DuskEnvironment",
+	]:
+		_check(game.find_child(old_node, true, false) == null,
+			"Node world lama masih dibuat: " + old_node)
 	_check(joystick != null and bool(joystick.get("input_enabled")),
 		"Analog gerak tidak aktif")
 	_check(update_button != null and update_button.is_visible_in_tree(),
-		"Tombol update konten tidak tersedia di dalam game")
+		"Tombol update konten tidak tersedia")
+	_check(fire != null and fire_light != null,
+		"Api realistis atau cahaya lokal tidak terbentuk")
+	_check(fire_light != null and fire_light.light_color.r > fire_light.light_color.b,
+		"Warna api belum hangat")
+	_check(player == null or player.find_child("BlueFlameVisual", true, false) == null,
+		"Visual api lama masih dipakai")
 	_check(game.find_child("GameplayHUD", true, false) == null,
 		"HUD lama masih dibuat")
 	_check(game.find_child("Mira", true, false) == null,
 		"NPC masih dibuat")
 	_check(game.find_children("*", "AnimationPlayer", true, false).is_empty(),
-		"Rig/animasi masih dibuat di scene utama")
+		"Rig/animasi lama masih dibuat di scene utama")
+	_check(absf(DesertWorld.terrain_height(0.0, 0.0)
+		- DesertWorld.terrain_height(140.0, -92.0)) > 0.35,
+		"Relief dune tidak berubah pada jarak berjalan")
 
-	if player != null and joystick != null:
-		var flame := player.get_node_or_null("BlueFlameVisual")
-		_check(flame != null, "Visual api biru kecil tidak ada")
-		_check(flame != null and flame.get_node_or_null("BlueFlameLight") != null,
-			"Player tidak memiliki cahaya api biru")
+	if player != null and desert != null and joystick != null and fire != null:
 		var start := Vector2(player.global_position.x, player.global_position.z)
 		joystick.set("direction", Vector2(1.0, 0.0))
 		for _frame in range(30):
 			await physics_frame
 		var finish := Vector2(player.global_position.x, player.global_position.z)
 		_check(start.distance_to(finish) > 0.7, "Analog tidak menggerakkan player")
-		_check(Field.is_inside(finish.x, finish.y, 0.0),
-			"Api keluar dari pulau saat digerakkan")
+		_check(bool(desert.call("is_inside", finish.x, finish.y, 0.0)),
+			"Player keluar dari area gurun yang dapat dijelajahi")
+		_check(float(fire.get("motion_strength")) > 0.35,
+			"Api tidak merespons kecepatan analog")
+		var lean: Vector2 = fire.get("lean_vector")
+		_check(lean.length() > 0.08, "Api tidak condong mengikuti arah gerak")
 		joystick.set("direction", Vector2.ZERO)
+		for _frame in range(24):
+			await physics_frame
+		_check(float(fire.get("motion_strength")) < 0.20,
+			"Api tidak kembali tenang setelah player berhenti")
 
 	var orbit := game.get("_orbit") as Node3D
 	var return_position := Vector2(2.75, -3.5)

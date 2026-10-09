@@ -192,7 +192,7 @@ jobs:
             exit 1
           fi
 
-      - name: Tes scene world-only dan player api biru
+      - name: Tes scene desert dan api responsif
         run: |
           set +e
           timeout 180 ./godot --headless --path project \
@@ -724,6 +724,30 @@ jobs:
       - name: Import proyek
         run: ./godot --headless --path project --import --editor --quit
 
+      - name: Render desert dan api responsif (Mobile Vulkan software)
+        run: |
+          set +e
+          timeout 300 xvfb-run -a env \
+            VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+            ./godot --path project --rendering-method mobile --rendering-driver vulkan \
+            --audio-driver Dummy --resolution 640x360 \
+            --script "$GITHUB_WORKSPACE/tools/render_desert.gd" 2>&1 | tee desert-render.log
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' desert-render.log; then
+            tail -60 desert-render.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          grep -F '[desert-render-test] HASIL: OK' desert-render.log
+
+      - name: Simpan screenshot desert/api
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desert-screenshots
+          path: ~/.local/share/godot/app_userdata/**/desert-*.png
+          if-no-files-found: ignore
+
       # Render avatar dari kamera pemain (0,4 m / 0,85 m / 2,2 m + pose jalan):
       # bug material & kain hanya terlihat dari gambar, bukan dari angka.
       - name: Render avatar dekat (Mobile Vulkan software)
@@ -808,11 +832,12 @@ jobs:
           path: ~/.local/share/godot/app_userdata/**/avatar-*-test.png
           if-no-files-found: ignore
 
-      - name: Pratinjau avatar + dunia (JPEG untuk komentar)
+      - name: Pratinjau desert, avatar + dunia (JPEG untuk komentar)
         if: always()
         run: |
           shopt -s globstar nullglob
-          SHOTS=(~/.local/share/godot/app_userdata/**/avatar-*-test.png \
+          SHOTS=(~/.local/share/godot/app_userdata/**/desert-*.png \
+            ~/.local/share/godot/app_userdata/**/avatar-*-test.png \
             ~/.local/share/godot/app_userdata/**/world-*-test.png \
             ~/.local/share/godot/app_userdata/**/survival-*-test.png \
             ~/.local/share/godot/app_userdata/**/run-zone-*-test.png)
@@ -825,7 +850,7 @@ jobs:
           ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/make_preview.gd" -- "$PWD/preview" 560 \
             > /dev/null 2>&1 || true
-      - name: Simpan pratinjau avatar + dunia
+      - name: Simpan pratinjau desert + avatar + dunia
         if: always()
         uses: actions/upload-artifact@v4
         with:

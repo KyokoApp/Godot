@@ -1,16 +1,13 @@
 extends Node3D
-## World-only game scene: satu pulau dan player berupa nyala api biru.
+## World-only game scene: open dunes, distant sandstone mesas, and one warm fire player.
 
-const Field = preload("res://src/game/world/field.gd")
-const Scenery = preload("res://src/game/world/scenery.gd")
-const Forest = preload("res://src/game/world/forest.gd")
-const Grass = preload("res://src/game/grass_field.gd")
+const DesertWorld = preload("res://src/game/world/desert_world.gd")
 const Player = preload("res://src/game/flame_player.gd")
 const Orbit = preload("res://src/game/orbit_camera.gd")
 const Joystick = preload("res://src/game/virtual_joystick.gd")
-const Dusk = preload("res://src/game/environment/dusk_environment.gd")
+const DesertEnvironment = preload("res://src/game/environment/desert_environment.gd")
 
-## Dipertahankan sebagai penanda versi gameplay untuk pemeriksaan PCK incremental.
+## Preserved as the movement-speed marker for the incremental-export test.
 const MOVE_SPEED := 5.0
 const SPAWN := Vector2(0.0, 7.0)
 const BOOT_TRACE := "user://boot_trace.txt"
@@ -18,10 +15,7 @@ const BOOT_READY := "game ready"
 const UPDATE_RESUME := "user://in_game_update_resume.cfg"
 
 var _previous_occlusion := false
-var _field: Field
-var _scenery: Scenery
-var _forest: Forest
-var _grass: Grass
+var _desert: DesertWorld
 var _player: Player
 var _orbit: Orbit
 var _joystick: Joystick
@@ -35,42 +29,37 @@ var _resume_loaded := false
 func _ready() -> void:
 	_load_resume_state()
 	_previous_occlusion = get_viewport().use_occlusion_culling
-	get_viewport().use_occlusion_culling = true
+	get_viewport().use_occlusion_culling = false
 	_build_environment()
 	_build_world()
 	_build_player()
 	_build_camera()
-	_build_grass()
 	_build_controls()
-	print("[main] world pulau + player api biru siap")
+	print("[main] desert dunes + api hangat siap")
 	_confirm_boot.call_deferred()
 
 
 func _build_environment() -> void:
 	var world_environment := WorldEnvironment.new()
-	world_environment.name = "DuskEnvironment"
-	world_environment.environment = Dusk.make_environment()
+	world_environment.name = "DesertAtmosphere"
+	world_environment.environment = DesertEnvironment.make_environment()
 	add_child(world_environment)
-	_sun = Dusk.make_sunlight()
+	_sun = DesertEnvironment.make_sunlight()
 	add_child(_sun)
-	_sun.look_at_from_position(Vector3.ZERO, -Dusk.SUN_DIRECTION)
+	_sun.look_at_from_position(Vector3.ZERO, -DesertEnvironment.SUN_DIRECTION)
 
 
 func _build_world() -> void:
-	_field = Field.new()
-	add_child(_field)
-	_scenery = Scenery.new()
-	add_child(_scenery)
-	_forest = Forest.new()
-	add_child(_forest)
+	_desert = DesertWorld.new()
+	_desert.name = "Desert"
+	add_child(_desert)
 
 
 func _build_player() -> void:
 	_player = Player.new()
 	_player.name = "Player"
-	_player.field = _field
+	_player.field = _desert
 	_player.max_speed = MOVE_SPEED
-	_field.player = _player
 	add_child(_player)
 	_player.spawn(_spawn_point)
 
@@ -79,9 +68,9 @@ func _build_camera() -> void:
 	_orbit = Orbit.new()
 	_orbit.name = "FollowCamera"
 	_orbit.distance = 8.0
-	_orbit.pitch = 0.48
+	_orbit.pitch = 0.42
 	_orbit.pitch_min = 0.12
-	_orbit.pitch_max = 1.15
+	_orbit.pitch_max = 1.12
 	_orbit.focus_offset = Vector3(0.0, 0.18, 0.0)
 	if _resume_loaded:
 		_orbit.yaw = float(_resume_camera.get("yaw", _orbit.yaw))
@@ -92,14 +81,7 @@ func _build_camera() -> void:
 	add_child(_orbit)
 	_orbit.position = _player.global_position + _orbit.focus_offset
 	_player.orbit = _orbit
-
-
-func _build_grass() -> void:
-	_grass = Grass.new()
-	_grass.name = "Grass"
-	_grass.ground = _field
-	_grass.player = _player
-	add_child(_grass)
+	_player.set_view_camera(_orbit.camera)
 
 
 func _build_controls() -> void:
@@ -115,20 +97,20 @@ func _build_controls() -> void:
 	_update_button = Button.new()
 	_update_button.name = "UpdateContentButton"
 	_update_button.text = "↻"
-	_update_button.tooltip_text = "Periksa pembaruan konten"
+	_update_button.tooltip_text = "Periksa dan pasang pembaruan konten"
 	_update_button.custom_minimum_size = Vector2(46, 46)
 	_update_button.focus_mode = Control.FOCUS_NONE
 	_update_button.add_theme_font_size_override("font_size", 20)
-	_update_button.add_theme_color_override("font_color", Color("b9e6ff"))
-	_update_button.add_theme_color_override("font_hover_color", Color.WHITE)
+	_update_button.add_theme_color_override("font_color", Color("f1d2a4"))
+	_update_button.add_theme_color_override("font_hover_color", Color("fff0d3"))
 	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.025, 0.07, 0.14, 0.72)
-	normal.border_color = Color(0.24, 0.66, 1.0, 0.55)
+	normal.bg_color = Color(0.09, 0.065, 0.042, 0.86)
+	normal.border_color = Color(0.73, 0.48, 0.23, 0.68)
 	normal.set_border_width_all(1)
 	normal.set_corner_radius_all(23)
 	_update_button.add_theme_stylebox_override("normal", normal)
 	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.06, 0.16, 0.28, 0.92)
+	hover.bg_color = Color(0.17, 0.11, 0.065, 0.96)
 	_update_button.add_theme_stylebox_override("hover", hover)
 	layer.add_child(_update_button)
 	_update_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
@@ -153,7 +135,7 @@ func _load_resume_state() -> void:
 		float(config.get_value("player", "z", SPAWN.y)))
 	_resume_camera = {
 		"yaw": float(config.get_value("camera", "yaw", 0.0)),
-		"pitch": float(config.get_value("camera", "pitch", 0.48)),
+		"pitch": float(config.get_value("camera", "pitch", 0.42)),
 		"distance": float(config.get_value("camera", "distance", 8.0)),
 	}
 	_resume_loaded = true
@@ -205,7 +187,7 @@ func _write_boot_marker() -> void:
 		file.seek_end()
 		file.store_line("%s %s" % [Time.get_datetime_string_from_system(false, true), BOOT_READY])
 		file.close()
-	# Launcher memakai marker ini untuk memulihkan unduhan yang terputus saat boot.
+	# The launcher uses this marker to recover an interrupted content boot.
 	DirAccess.remove_absolute("user://content_boot_pending")
 	if _resume_loaded:
 		DirAccess.remove_absolute(UPDATE_RESUME)

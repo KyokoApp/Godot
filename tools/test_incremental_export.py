@@ -19,7 +19,10 @@ payload = {path if path.startswith('res://') else 'res://' + path for path in en
 # alias at the original path, rather than storing the editable .tscn itself.
 main_scene_paths = {'res://src/game/main.tscn', 'res://src/game/main.tscn.remap'}
 assert main_scene_paths & payload, 'World-only scene missing from content PCK'
-assert 'res://src/game/blue_flame.gdshader' in payload, 'Blue flame shader missing from content PCK'
+assert 'res://src/game/desert_ground.gdshader' in payload, 'Desert ground shader missing from content PCK'
+assert 'res://src/game/realistic_fire.gdshader' in payload, 'Warm fire shader missing from content PCK'
+sand_paths = {'res://assets/desert/sand_albedo.png', 'res://assets/desert/sand_albedo.png.import'}
+assert sand_paths & payload, 'Desert sand texture missing from content PCK'
 
 
 def exported_path_variants(path):
@@ -39,7 +42,18 @@ for removed in (
     'res://src/game/ui/rune_button.gd', 'res://src/game/player.gd',
     'res://src/game/mannequin.gd', 'res://src/game/world/run_zone.gd',
     'res://src/game/survival/buff_system.gd', 'res://assets/audio/fire_loop.wav',
-    'res://assets/mannequin/UAL1_Standard.glb',
+    'res://assets/mannequin/UAL1_Standard.glb', 'res://assets/nature/meadow_cover.png',
+    'res://assets/nature/grass_cards.png',
+    'res://assets/nature/models/CommonTree_1.gltf', 'res://src/game/grass_field.gd',
+    'res://src/game/grass.gdshader', 'res://src/game/ground.gdshader',
+    'res://src/game/world/field.gd', 'res://src/game/world/forest.gd',
+    'res://src/game/world/scenery.gd', 'res://src/game/world/city_horizon.gd',
+    'res://src/game/world/horizon_haze.gdshader',
+    'res://src/game/world/water.gdshader', 'res://src/game/world/distant_grass.gd',
+    'res://src/game/world/grass_distance.gdshader',
+    'res://src/game/blue_flame_visual.gd', 'res://src/game/blue_flame.gdshader',
+    'res://src/game/environment/dusk_environment.gd',
+    'res://src/game/environment/dusk_sky.gdshader',
 ):
     leaked = exported_path_variants(removed) & payload
     assert not leaked, 'Legacy gameplay residue in content PCK: ' + ', '.join(sorted(leaked))

@@ -1,5 +1,5 @@
 extends SceneTree
-## Pack dibuka dalam proses baru; pastikan payload minimal bisa boot tanpa UI/rig lama.
+## Open the exported content pack in a fresh process and verify the active desert payload.
 
 var _scene: PackedScene
 
@@ -31,16 +31,16 @@ func _run() -> void:
 func _verify_payload() -> String:
 	_scene = load("res://src/game/main.tscn") as PackedScene
 	if _scene == null or not _scene.can_instantiate():
-		return "Scene world-only tidak ikut PCK"
-	var meadow: Texture2D = load("res://assets/nature/meadow_cover.png")
-	if meadow == null or meadow.get_width() <= 0:
-		return "Tekstur medan tidak ikut PCK"
-	var tree: PackedScene = load("res://assets/nature/models/CommonTree_1.gltf")
-	if tree == null or not tree.can_instantiate():
-		return "Model pepohonan dunia tidak ikut PCK"
-	var flame_shader: Shader = load("res://src/game/blue_flame.gdshader")
-	if flame_shader == null:
-		return "Shader api biru tidak ikut PCK"
+		return "Scene desert tidak ikut PCK"
+	var sand: Texture2D = load("res://assets/desert/sand_albedo.png")
+	if sand == null or sand.get_width() < 512:
+		return "Tekstur pasir desert tidak ikut PCK"
+	var ground_shader: Shader = load("res://src/game/desert_ground.gdshader")
+	if ground_shader == null:
+		return "Shader pasir tidak ikut PCK"
+	var fire_shader: Shader = load("res://src/game/realistic_fire.gdshader")
+	if fire_shader == null:
+		return "Shader api hangat tidak ikut PCK"
 	return ""
 
 
@@ -55,17 +55,28 @@ func _boot_scene() -> void:
 
 	var problem := ""
 	var player := game.get("_player") as Node3D
-	var flame: Node
+	var desert := game.find_child("Desert", true, false)
+	var fire: Node
 	if player != null:
-		flame = player.get_node_or_null("BlueFlameVisual")
+		fire = player.find_child("FireVisual", true, false)
 	if FileAccess.file_exists("user://content_boot_pending"):
 		problem = "Konten tidak mengonfirmasi boot"
-	elif player == null or flame == null:
-		problem = "Player api biru tidak dibangun"
+	elif player == null or fire == null:
+		problem = "Player api realistis tidak dibangun"
 	elif player is CharacterBody3D:
 		problem = "Player masih memakai tubuh/rig karakter"
-	elif flame.get_node_or_null("BlueFlameLight") == null:
-		problem = "Cahaya biru pada player tidak ada"
+	elif fire.find_child("FireLight", true, false) == null:
+		problem = "Cahaya lokal api tidak ada"
+	elif desert == null or desert.find_child("NearDunes", true, false) == null:
+		problem = "Terrain dune tidak dimuat"
+	elif game.find_child("Field", true, false) != null \
+			or game.find_child("Scenery", true, false) != null \
+			or game.find_child("Forest", true, false) != null \
+			or game.find_child("Grass", true, false) != null \
+			or game.find_child("Water", true, false) != null \
+			or game.find_child("Ocean", true, false) != null \
+			or game.find_child("DuskEnvironment", true, false) != null:
+		problem = "World pulau/laut/rumput lama masih dibuat"
 	elif game.find_child("GameplayHUD", true, false) != null \
 			or game.find_child("AnimationPanel", true, false) != null:
 		problem = "UI atau panel karakter lama masih muncul"
@@ -79,7 +90,7 @@ func _boot_scene() -> void:
 	if not problem.is_empty():
 		_fail(problem)
 		return
-	print("[pack-test] world + api biru + analog HASIL: OK")
+	print("[pack-test] desert + api realistis + analog HASIL: OK")
 	quit(0)
 
 
