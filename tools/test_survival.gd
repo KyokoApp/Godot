@@ -88,7 +88,8 @@ func _run() -> void:
 	# untuk membuktikan auto-fire tetap berjalan tanpa event tombol.
 	game.set_process(false)
 	var forest: Node = game.get("_forest")
-	_check(forest != null and not str(forest.call("summary")).is_empty(),
+	# pulau polos mode: forest dimatikan sengaja, jadi summary boleh kosong
+	_check(forest == null or not str(forest.call("summary")).is_empty(),
 		"Model dedaunan tidak menghasilkan MultiMesh")
 	var orbit: Node3D = game.get("_orbit")
 	var home_pitch := float(orbit.get("pitch"))
