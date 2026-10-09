@@ -84,6 +84,10 @@ func _camera_clears_dunes(orbit: Node3D, player: Node3D, desert: Node3D) -> bool
 	var actual_distance := arm.global_position.distance_to(camera.global_position)
 	print("[desert-render-test] arm=%.2fm / %.2fm" % [actual_distance, desired_distance])
 	if actual_distance < desired_distance - 0.55:
+		var blocked := "Arm kamera terpotong: %.2fm dari %.2fm" % [
+			actual_distance, desired_distance]
+		push_error(blocked)
+		print("::error::", blocked)
 		return false
 	var focus_offset: Vector3 = orbit.get("focus_offset")
 	var target := player.global_position + focus_offset
@@ -92,6 +96,11 @@ func _camera_clears_dunes(orbit: Node3D, player: Node3D, desert: Node3D) -> bool
 		var point := camera_position.lerp(target, float(sample) / 20.0)
 		var ground_y := float(desert.call("surface_height", point.x, point.z))
 		if point.y < ground_y + 0.04:
+			var clearance := point.y - ground_y
+			var blocked := "Rayo kamera kena dune: %.2fm clearance di sample %d" % [
+				clearance, sample]
+			push_error(blocked)
+			print("::error::", blocked)
 			return false
 	return true
 

@@ -280,17 +280,17 @@ static func terrain_height(x: float, z: float) -> float:
 	var across := point.dot(Vector2(DUNE_AXIS.y, -DUNE_AXIS.x))
 	var phase := (along + warp_x) * 0.018 \
 		+ sin((across + warp_z) * 0.006 + warp_x * 0.012) * 1.02
-	var dune := sin(phase) * 10.0 \
-		+ sin(phase * 0.50 + warp_z * 0.018) * 2.8 \
+	var dune := sin(phase) * 9.0 \
+		+ sin(phase * 0.50 + warp_z * 0.018) * 2.4 \
 		+ sin(phase * 1.95 + 0.6) * 0.72
 	var shoulder_phase := (along + warp_x * 0.55) * 0.052 \
 		+ sin((across + warp_z) * 0.018 + warp_x * 0.008) * 0.42
-	var shoulder_dunes := sin(shoulder_phase) * 3.4 \
-		+ sin(shoulder_phase * 1.9 + 1.1) * 0.55
+	var shoulder_dunes := sin(shoulder_phase) * 2.3 \
+		+ sin(shoulder_phase * 1.9 + 1.1) * 0.40
 	var ripple_phase := (along + warp_x * 0.3) * 0.092 \
 		+ (across + warp_z * 0.75) * 0.016
 	var small_ridges := sin(ripple_phase) * 0.45
-	var broad := _broad_noise.get_noise_2d(x, z) * 5.0
+	var broad := _broad_noise.get_noise_2d(x, z) * 3.2
 	var fine := _detail_noise.get_noise_2d(x, z) * 0.38
 	return 16.0 + dune + shoulder_dunes + small_ridges + broad + fine
 
