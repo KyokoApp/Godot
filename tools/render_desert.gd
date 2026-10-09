@@ -28,27 +28,38 @@ func _run() -> void:
 		_fail("Analog tidak tersedia untuk uji api bergerak")
 		return
 	orbit.set("yaw", 0.0)
-	orbit.set("pitch", 0.24)
+	orbit.set("pitch", 0.36)
 	orbit.set("distance", 58.0)
 	for _frame in range(40):
 		await physics_frame
-	await _capture("desert-horizon")
+	if _camera_clears_dunes(orbit, player, desert):
+		await _capture("desert-horizon")
+	else:
+		_record_failure("Kamera horizon terhalang atau masuk ke dune")
 
 	orbit.set("yaw", 0.68)
 	orbit.set("pitch", 0.42)
 	orbit.set("distance", 8.0)
 	for _frame in range(35):
 		await physics_frame
-	await _capture("desert-gameplay")
+	if _camera_clears_dunes(orbit, player, desert):
+		await _capture("desert-gameplay")
+	else:
+		_record_failure("Kamera gameplay standar terhalang dune")
 
 	orbit.set("distance", 3.8)
 	for _frame in range(35):
 		await physics_frame
-	await _capture("desert-fire-idle")
+	if _camera_clears_dunes(orbit, player, desert):
+		await _capture("desert-fire-idle")
+	else:
+		_record_failure("Kamera close-up terhalang dune")
 
 	joystick.set("direction", Vector2(1.0, 0.0))
 	for _frame in range(36):
 		await physics_frame
+	if not _camera_clears_dunes(orbit, player, desert):
+		_record_failure("Kamera saat analog bergerak terhalang dune")
 	var fire := player.find_child("FireVisual", true, false)
 	if fire == null or float(fire.get("motion_strength")) < 0.25:
 		_fail("Api tidak bereaksi saat analog mendorong player")
@@ -64,10 +75,29 @@ func _run() -> void:
 	quit(0 if _failures == 0 else 1)
 
 
-func _fail(message: String) -> void:
+func _camera_clears_dunes(orbit: Node3D, player: Node3D, desert: Node3D) -> bool:
+	var camera := orbit.get("camera") as Camera3D
+	if camera == null:
+		return false
+	var focus_offset: Vector3 = orbit.get("focus_offset")
+	var target := player.global_position + focus_offset
+	var camera_position := camera.global_position
+	for sample in range(1, 20):
+		var point := camera_position.lerp(target, float(sample) / 20.0)
+		var ground_y := float(desert.call("surface_height", point.x, point.z))
+		if point.y < ground_y + 0.04:
+			return false
+	return true
+
+
+func _record_failure(message: String) -> void:
 	_failures += 1
 	push_error(message)
 	print("::error::", message)
+
+
+func _fail(message: String) -> void:
+	_record_failure(message)
 	quit(1)
 
 
