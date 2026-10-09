@@ -77,7 +77,13 @@ func _run() -> void:
 
 func _camera_clears_dunes(orbit: Node3D, player: Node3D, desert: Node3D) -> bool:
 	var camera := orbit.get("camera") as Camera3D
-	if camera == null:
+	var arm := orbit.get("arm") as SpringArm3D
+	if camera == null or arm == null:
+		return false
+	var desired_distance := float(orbit.get("distance"))
+	var actual_distance := arm.global_position.distance_to(camera.global_position)
+	print("[desert-render-test] arm=%.2fm / %.2fm" % [actual_distance, desired_distance])
+	if actual_distance < desired_distance - 0.55:
 		return false
 	var focus_offset: Vector3 = orbit.get("focus_offset")
 	var target := player.global_position + focus_offset

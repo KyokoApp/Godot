@@ -68,6 +68,7 @@ func _build_camera() -> void:
 	_orbit = Orbit.new()
 	_orbit.name = "FollowCamera"
 	_orbit.distance = 8.0
+	_orbit.camera_lift_ratio = 0.12
 	_orbit.pitch = 0.42
 	_orbit.pitch_min = 0.12
 	_orbit.pitch_max = 1.12
