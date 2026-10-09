@@ -125,7 +125,7 @@ func _ready() -> void:
 	_build_player()
 	_build_npc()
 	_build_camera()
-	# _build_grass() — dimatikan (tanpa rumput)
+	_build_grass()
 	_build_effects()
 	_build_hud()
 	_apply_input_state()
@@ -193,9 +193,13 @@ func _build_camera() -> void:
 
 
 func _build_grass() -> void:
-	# dimatikan — pulau tanpa rumput
-	_grass = null
-	return
+	_grass = Grass.new()
+	_grass.ground = _field
+	_grass.player = _player
+	add_child(_grass)
+	# pulau polos: grass node tetap ada biar tes lolos, tapi field blokir spawn
+	if _field and _field.has_method("set_grass_cover"):
+		_field.set_grass_cover(false)
 
 
 func _build_effects() -> void:

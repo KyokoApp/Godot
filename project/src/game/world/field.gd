@@ -76,6 +76,8 @@ const PATH_PHASE_B := 1.33
 ## lebih dari cukup. Tanpa batas ini rumput tumbuh tepat di atas jalan dan pas
 ## pemain mendekat, jalan terlihat "hilang" ditelan rumput.
 const GRASS_PATH_MARGIN := 1.0
+# Pulau polos tanpa rumput (request user) — matikan spawn rumput sepenuhnya
+const DISABLE_GRASS := true
 
 ## Tabel radius pulau per sudut (dihitung sekali): tanpa ini setiap pemeriksaan
 ## "di dalam pulau?" harus menghitung noise, dan rumput memanggilnya 11 ribu
@@ -293,6 +295,8 @@ static func clamp_inside(point: Vector2, margin: float) -> Vector2:
 
 ## Versi statis untuk penyebaran dedaunan yang tidak punya instance Field.
 static func can_grow_static(x: float, z: float) -> bool:
+	if DISABLE_GRASS:
+		return false
 	if not is_inside(x, z, GRASS_SHORE_MARGIN):
 		return false
 	if terrain_height(x, z) < GRASS_MIN_HEIGHT:
@@ -308,6 +312,8 @@ static func can_grow_static(x: float, z: float) -> bool:
 
 
 func can_grow(x: float, z: float) -> bool:
+	if DISABLE_GRASS:
+		return false
 	if not is_inside(x, z, GRASS_SHORE_MARGIN):
 		return false
 	if surface_height(x, z) < GRASS_MIN_HEIGHT:
