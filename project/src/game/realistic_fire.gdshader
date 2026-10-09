@@ -68,18 +68,18 @@ void fragment() {
 	float inner_heat = 1.0 - smoothstep(0.12, 0.78, radial);
 	float base_heat = 1.0 - smoothstep(0.18, 0.78, h);
 
-	vec3 ember = vec3(0.34, 0.035, 0.004);
-	vec3 orange = vec3(0.92, 0.16, 0.012);
-	vec3 gold = vec3(1.0, 0.48, 0.055);
-	vec3 yellow = vec3(1.0, 0.78, 0.28);
-	vec3 hot_core = vec3(1.0, 0.94, 0.70);
+	vec3 ember = vec3(0.20, 0.018, 0.001);
+	vec3 orange = vec3(0.88, 0.10, 0.006);
+	vec3 gold = vec3(1.0, 0.32, 0.018);
+	vec3 yellow = vec3(1.0, 0.62, 0.12);
+	vec3 hot_core = vec3(1.0, 0.82, 0.45);
 	vec3 color = mix(ember, orange, 1.0 - smoothstep(0.22, 0.95, radial));
-	color = mix(color, gold, inner_heat * (0.52 + base_heat * 0.20));
-	color = mix(color, yellow, inner_heat * base_heat * 0.58);
-	color = mix(color, hot_core, inner_heat * base_heat * 0.21);
-	color = mix(color, orange, smoothstep(0.45, 0.98, h) * 0.58);
-	float pulse = 0.92 + flicker * 0.12 + sin(TIME * 9.3 + UV.x * 18.0) * 0.025;
+	color = mix(color, gold, inner_heat * (0.50 + base_heat * 0.18));
+	color = mix(color, yellow, inner_heat * base_heat * 0.50);
+	color = mix(color, hot_core, inner_heat * base_heat * 0.12);
+	color = mix(color, orange, smoothstep(0.45, 0.98, h) * 0.72);
+	float pulse = 0.90 + flicker * 0.10 + sin(TIME * 9.3 + UV.x * 18.0) * 0.02;
 	ALBEDO = color * pulse;
-	EMISSION = color * (0.16 + inner_heat * base_heat * 0.48);
-	ALPHA = opacity * (0.82 + inner_heat * 0.12);
+	EMISSION = color * (0.08 + inner_heat * base_heat * 0.24);
+	ALPHA = opacity * (0.84 + inner_heat * 0.10);
 }

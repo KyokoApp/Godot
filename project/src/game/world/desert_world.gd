@@ -127,16 +127,16 @@ func _make_ground_mesh(extent: float, step: float, leave_near_hole: bool) -> Arr
 
 func _build_mesas() -> void:
 	var sites: Array[Dictionary] = [
-		{"name": "Northwest Mesa", "position": Vector2(-720, -700),
-			"radius": Vector2(112, 72), "height": 72.0, "seed": 1.4},
-		{"name": "Northeast Butte", "position": Vector2(680, -760),
-			"radius": Vector2(78, 55), "height": 49.0, "seed": 4.7},
-		{"name": "East Mesa", "position": Vector2(800, 40),
-			"radius": Vector2(128, 68), "height": 84.0, "seed": 8.2},
-		{"name": "Southeast Mesa", "position": Vector2(680, 710),
-			"radius": Vector2(96, 62), "height": 61.0, "seed": 11.3},
-		{"name": "Southwest Butte", "position": Vector2(-760, 700),
-			"radius": Vector2(84, 58), "height": 56.0, "seed": 14.6},
+		{"name": "Northwest Mesa", "position": Vector2(-510, -490),
+			"radius": Vector2(150, 100), "height": 110.0, "seed": 1.4},
+		{"name": "Northeast Butte", "position": Vector2(500, -560),
+			"radius": Vector2(100, 75), "height": 76.0, "seed": 4.7},
+		{"name": "East Mesa", "position": Vector2(590, 40),
+			"radius": Vector2(145, 85), "height": 120.0, "seed": 8.2},
+		{"name": "Southeast Mesa", "position": Vector2(500, 520),
+			"radius": Vector2(132, 82), "height": 98.0, "seed": 11.3},
+		{"name": "Southwest Butte", "position": Vector2(-560, 520),
+			"radius": Vector2(112, 72), "height": 82.0, "seed": 14.6},
 	]
 	for site in sites:
 		_build_mesa(site)
@@ -247,12 +247,14 @@ static func terrain_height(x: float, z: float) -> float:
 	var point := Vector2(x, z)
 	var along := point.dot(DUNE_AXIS)
 	var across := point.dot(Vector2(DUNE_AXIS.y, -DUNE_AXIS.x))
-	var phase := (along + warp_x) * 0.020 \
-		+ sin((across + warp_z) * 0.008 + warp_x * 0.012) * 0.88
-	var dune := sin(phase) * 4.2 + sin(phase * 0.53 + warp_z * 0.018) * 1.35
-	var broad := _broad_noise.get_noise_2d(x, z) * 2.2
-	var fine := _detail_noise.get_noise_2d(x, z) * 0.32
-	return 11.5 + dune + broad + fine
+	var phase := (along + warp_x) * 0.018 \
+		+ sin((across + warp_z) * 0.006 + warp_x * 0.012) * 1.02
+	var dune := sin(phase) * 8.0 \
+		+ sin(phase * 0.50 + warp_z * 0.018) * 2.2 \
+		+ sin(phase * 1.95 + 0.6) * 0.72
+	var broad := _broad_noise.get_noise_2d(x, z) * 2.4
+	var fine := _detail_noise.get_noise_2d(x, z) * 0.38
+	return 14.0 + dune + broad + fine
 
 
 static func _prepare_noise() -> void:

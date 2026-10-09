@@ -2,7 +2,7 @@ extends RefCounted
 ## Clear, dusty late-afternoon light: warm horizon haze, cool high sky, no night sky or bloom.
 
 const SKY_SHADER = preload("res://src/game/environment/desert_sky.gdshader")
-const SUN_DIRECTION := Vector3(-0.4698, 0.7596, -0.4498)
+const SUN_DIRECTION := Vector3(-0.608, 0.52, -0.599)
 
 
 static func make_environment() -> Environment:
@@ -18,15 +18,15 @@ static func make_environment() -> Environment:
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color("c6ab82")
-	environment.ambient_light_energy = 0.46
+	environment.ambient_light_energy = 0.42
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	environment.fog_enabled = true
 	environment.fog_mode = Environment.FOG_MODE_DEPTH
 	environment.fog_light_color = Color("d2b58b")
 	environment.fog_light_energy = 0.78
-	environment.fog_depth_begin = 170.0
-	environment.fog_depth_end = 760.0
-	environment.fog_depth_curve = 1.18
+	environment.fog_depth_begin = 210.0
+	environment.fog_depth_end = 1080.0
+	environment.fog_depth_curve = 1.12
 	environment.fog_sky_affect = 0.14
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	environment.adjustment_enabled = true
