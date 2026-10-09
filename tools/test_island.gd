@@ -162,10 +162,13 @@ func _test_rolling_terrain() -> void:
 				walkable += 1
 	var relief := high - low
 	_check(relief > 1.0, "Medan terlalu datar: relief tengah %.2f m" % relief)
-	_check(
-		walkable > 50,
-		"Bukit terlalu curam untuk dijelajahi/ditumbuhi rumput: %d/%d titik" % [walkable, samples]
-	)
+	if Field.DISABLE_GRASS:
+		_check(walkable == 0, "Pulau polos harus 0 walkable, got %d/%d" % [walkable, samples])
+	else:
+		_check(
+			walkable > 50,
+			"Bukit terlalu curam untuk dijelajahi/ditumbuhi rumput: %d/%d titik" % [walkable, samples]
+		)
 	_notes.append(
 		(
 			"medan: relief pedalaman %.2f m, %d/%d titik landai untuk rumput"
@@ -257,8 +260,11 @@ func _test_grass() -> void:
 	var field := Field.new()
 	root.add_child(field)
 	await process_frame
-	# Bukit tengah tetap dapat ditanami; jalan tanah tetap bebas rumput.
-	_check(field.can_grow(0.0, 0.0), "Rumput tidak tumbuh di bukit tengah")
+	# Pulau polos: semua can_grow false. Jika tidak polos, bukit tengah tetap dapat ditanami.
+	if Field.DISABLE_GRASS:
+		_check(not field.can_grow(0.0, 0.0), "Pulau polos tapi can_grow tengah masih true")
+	else:
+		_check(field.can_grow(0.0, 0.0), "Rumput tidak tumbuh di bukit tengah")
 	_check(not field.can_grow(0.0, Field.path_centre(0.0)), "Rumput tumbuh di jalan tanah")
 	for step in range(12):
 		var angle := TAU * float(step) / 12.0

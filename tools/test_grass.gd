@@ -60,8 +60,12 @@ func _run() -> void:
 	sun.rotation_degrees = Vector3(-50, 20, 0)
 	world.add_child(sun)
 	# Rumput mengikuti bukit; hanya pantai, lereng curam, dan jalan yang kosong.
-	_check(field.can_grow(0, 0), "Rumput tidak tumbuh di bukit tengah")
-	_check(field.can_grow(8, 10), "Rumput tidak tumbuh di pedalaman timur")
+	if Field.DISABLE_GRASS:
+		_check(not field.can_grow(0, 0), "Pulau polos tapi can_grow tengah true")
+		_check(not field.can_grow(8, 10), "Pulau polos tapi can_grow timur true")
+	else:
+		_check(field.can_grow(0, 0), "Rumput tidak tumbuh di bukit tengah")
+		_check(field.can_grow(8, 10), "Rumput tidak tumbuh di pedalaman timur")
 	_check(not field.can_grow(0, Field.path_centre(0)), "Rumput menutupi jalan tanah")
 	for angle in [0.0, 1.1, 2.2, 3.3, 4.4, 5.5]:
 		var coast := Field.island_radius(angle) + 25.0
@@ -72,11 +76,12 @@ func _run() -> void:
 	_check(not field.can_grow(cos(shore_angle) * shore_radius,
 		sin(shore_angle) * shore_radius),
 		"Rumput tumbuh menempel garis pantai (pasir harus polos)")
-	for _sample in range(40):
-		var x := randf_range(-Field.HALF, Field.HALF)
-		var z := randf_range(-Field.HALF, Field.HALF)
-		if ground.can_grow(x, z):
-			_check(Field.is_inside(x, z, 0.0), "Penempatan rumput di luar pulau")
+	if not Field.DISABLE_GRASS:
+		for _sample in range(40):
+			var x := randf_range(-Field.HALF, Field.HALF)
+			var z := randf_range(-Field.HALF, Field.HALF)
+			if ground.can_grow(x, z):
+				_check(Field.is_inside(x, z, 0.0), "Penempatan rumput di luar pulau")
 	# 49 tile dibangun satu per frame, jadi butuh 49 frame (bukan 35).
 	for frame in range(60):
 		await process_frame
@@ -97,8 +102,11 @@ func _run() -> void:
 			_check(field.can_grow(point.x, point.z), "Penempatan di area terlarang")
 			_check(absf(point.y + 0.03 - ground.surface_height(point.x, point.z)) < 0.01,
 				"Akar rumput mengambang")
-	_test_lod_subset(field, Vector2i(0, 0))
-	_check(total > 100, "Tidak ada padang rumput yang cukup untuk dirender")
+	if Field.DISABLE_GRASS:
+		_check(total == 0, "Pulau polos tapi total rumput %d" % total)
+	else:
+		_test_lod_subset(field, Vector2i(0, 0))
+		_check(total > 100, "Tidak ada padang rumput yang cukup untuk dirender")
 	_check(total <= Grass.MAX_CLUMPS, "Budget rumput terlampaui")
 	if "--render" in OS.get_cmdline_user_args():
 		await RenderingServer.frame_post_draw
