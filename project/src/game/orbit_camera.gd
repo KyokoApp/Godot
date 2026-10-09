@@ -203,7 +203,7 @@ func _update_combat_shake(delta: float) -> void:
 func _apply_orbit() -> void:
 	rotation.y = yaw
 	arm.rotation.x = -pitch
-	arm.position.y = minf(maxf(camera_lift_ratio, 0.0) * distance, 1.0)
+	arm.position.y = minf(maxf(camera_lift_ratio, 0.0) * distance, 2.4)
 	arm.spring_length = distance
 	# Zoom dekat: jangan tembus tanah/wajah. Zoom jauh: tabrakan dimatikan lewat
 	# mask 0 (SpringArm3D tidak punya sakelar collide_with_bodies), kalau tidak

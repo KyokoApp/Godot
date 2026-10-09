@@ -38,7 +38,7 @@ func _run() -> void:
 		_record_failure("Kamera horizon terhalang atau masuk ke dune")
 
 	orbit.set("yaw", 0.68)
-	orbit.set("pitch", 0.82)
+	orbit.set("pitch", 0.55)
 	orbit.set("distance", 8.0)
 	for _frame in range(35):
 		await physics_frame
@@ -90,7 +90,7 @@ func _camera_clears_dunes(orbit: Node3D, player: Node3D, desert: Node3D) -> bool
 		print("::error::", blocked)
 		return false
 	var focus_offset: Vector3 = orbit.get("focus_offset")
-	var target := player.global_position + focus_offset
+	var target := player.global_position + focus_offset + Vector3(0.0, arm.position.y, 0.0)
 	var camera_position := camera.global_position
 	for sample in range(1, 20):
 		var point := camera_position.lerp(target, float(sample) / 20.0)

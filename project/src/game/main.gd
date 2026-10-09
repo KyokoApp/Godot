@@ -68,11 +68,11 @@ func _build_camera() -> void:
 	_orbit = Orbit.new()
 	_orbit.name = "FollowCamera"
 	_orbit.distance = 8.0
-	_orbit.camera_lift_ratio = 0.12
-	_orbit.pitch = 0.82
+	_orbit.camera_lift_ratio = 0.70
+	_orbit.pitch = 0.55
 	_orbit.pitch_min = 0.12
 	_orbit.pitch_max = 1.12
-	_orbit.focus_offset = Vector3(0.0, 0.18, 0.0)
+	_orbit.focus_offset = Vector3(0.0, -1.0, 0.0)
 	if _resume_loaded:
 		_orbit.yaw = float(_resume_camera.get("yaw", _orbit.yaw))
 		_orbit.pitch = clampf(float(_resume_camera.get("pitch", _orbit.pitch)),
