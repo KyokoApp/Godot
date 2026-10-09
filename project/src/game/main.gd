@@ -125,11 +125,11 @@ func _ready() -> void:
 	_build_player()
 	_build_npc()
 	_build_camera()
-	_build_grass()
+	# _build_grass() — dimatikan (tanpa rumput)
 	_build_effects()
 	_build_hud()
 	_apply_input_state()
-	print("[main] pulau %.0f m + pemain + NPC (%d klip) siap" % [
+	print("[main] pulau %.0f m polos tanpa rumput/objek + pemain + NPC (%d klip) siap" % [
 		Field.SIZE, Catalog.clip_count()])
 	_confirm_boot.call_deferred()
 
@@ -147,12 +147,16 @@ func _build_environment() -> void:
 func _build_world() -> void:
 	_field = Field.new()
 	add_child(_field)
-	# Scenery hub tanpa collision; haze horizon khusus home, bukan Survival.
-	_scenery = Scenery.new()
-	add_child(_scenery)
-	# Dedaunan pulau memakai MultiMesh tanpa collision.
-	_forest = Forest.new()
-	add_child(_forest)
+	# Pulau polos tanpa objek & tanpa rumput (request user): scenery & forest dimatikan
+	# _scenery = Scenery.new()
+	# add_child(_scenery)
+	# _forest = Forest.new()
+	# add_child(_forest)
+	_scenery = null
+	_forest = null
+	# matikan cover rumput di shader biar tanah polos
+	if _field and _field.has_method("set_grass_cover"):
+		_field.set_grass_cover(false)
 
 
 func _build_player() -> void:
@@ -189,10 +193,9 @@ func _build_camera() -> void:
 
 
 func _build_grass() -> void:
-	_grass = Grass.new()
-	_grass.ground = _field
-	_grass.player = _player
-	add_child(_grass)
+	# dimatikan — pulau tanpa rumput
+	_grass = null
+	return
 
 
 func _build_effects() -> void:
@@ -406,7 +409,8 @@ func _build_graphics_drawer(layer: CanvasLayer) -> void:
 	content.add_child(title)
 	_performance = PerformancePanel.new()
 	_performance.sun = _sun
-	_performance.grass = _grass
+	if _grass:
+		_performance.grass = _grass
 	_performance.character = _visual
 	content.add_child(_performance)
 	_graphics_drawer.hide()
@@ -727,7 +731,8 @@ func _enter_survival() -> void:
 	_survival_world.publish_progress()
 	_footsteps.field = _survival_world.ground
 	_foot_fire.field = _survival_world.ground
-	_grass.set_ground(_survival_world.ground)
+	if _grass and _grass.has_method("set_ground"):
+		_grass.set_ground(_survival_world.ground)
 	_survival_panel.show()
 	_survival_status.text = SurvivalWorld.format_status(_survival_world.stage,
 		_survival_world.stage_time_left, _survival_world.living_zombie_count(),
@@ -814,7 +819,8 @@ func _return_home_from_survival(force: bool = false) -> void:
 	_npc_interaction.set_physics_process(true)
 	_footsteps.field = _field
 	_foot_fire.field = _field
-	_grass.set_ground(_field)
+	if _grass and _grass.has_method("set_ground"):
+		_grass.set_ground(_field)
 	_survival_panel.hide()
 	_on_health_changed(_player.health)
 	_apply_input_state()
