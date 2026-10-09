@@ -389,7 +389,8 @@ func _focus_conversation_camera() -> void:
 func _on_dialogue_closing() -> void:
 	if not _modal_open:
 		return
-	_dialogue_close_done = _is_headless() ? _dialogue_close_done : true
+	if not _is_headless():
+		_dialogue_close_done = true
 	if orbit == null or not is_instance_valid(orbit):
 		_camera_restore_done = true
 		return
