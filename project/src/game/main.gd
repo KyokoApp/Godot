@@ -10,6 +10,10 @@ const DesertEnvironment = preload("res://src/game/environment/desert_environment
 ## Preserved as the movement-speed marker for the incremental-export test.
 const MOVE_SPEED := 5.0
 const SPAWN := Vector2(0.0, 7.0)
+const CAMERA_FAR_DISTANCE := 8.0
+const CAMERA_NEAR_DISTANCE := 3.8
+const CAMERA_FAR_FOCUS_Y := -5.0
+const CAMERA_NEAR_FOCUS_Y := -2.0
 const BOOT_TRACE := "user://boot_trace.txt"
 const BOOT_READY := "game ready"
 const UPDATE_RESUME := "user://in_game_update_resume.cfg"
@@ -67,12 +71,12 @@ func _build_player() -> void:
 func _build_camera() -> void:
 	_orbit = Orbit.new()
 	_orbit.name = "FollowCamera"
-	_orbit.distance = 8.0
+	_orbit.distance = CAMERA_FAR_DISTANCE
 	_orbit.camera_lift_ratio = 0.70
 	_orbit.pitch = 0.42
 	_orbit.pitch_min = 0.12
 	_orbit.pitch_max = 1.12
-	_orbit.focus_offset = Vector3(0.0, -5.0, 0.0)
+	_orbit.focus_offset = Vector3(0.0, CAMERA_FAR_FOCUS_Y, 0.0)
 	if _resume_loaded:
 		_orbit.yaw = float(_resume_camera.get("yaw", _orbit.yaw))
 		_orbit.pitch = clampf(float(_resume_camera.get("pitch", _orbit.pitch)),
@@ -138,7 +142,7 @@ func _load_resume_state() -> void:
 	_resume_camera = {
 		"yaw": float(config.get_value("camera", "yaw", 0.0)),
 		"pitch": float(config.get_value("camera", "pitch", 0.42)),
-		"distance": float(config.get_value("camera", "distance", 8.0)),
+		"distance": float(config.get_value("camera", "distance", CAMERA_FAR_DISTANCE)),
 	}
 	_resume_loaded = true
 
@@ -179,11 +183,13 @@ func _physics_process(delta: float) -> void:
 func _update_flight_camera_focus() -> void:
 	if _orbit == null:
 		return
-	# Keep the airborne flame in view as the player zooms close; the spring arm
-	# sits higher at longer distances, so lower its pivot as distance decreases.
-	var arm_lift := minf(maxf(_orbit.camera_lift_ratio, 0.0) * _orbit.distance, 4.0)
-	var spring_lift := sin(_orbit.pitch) * _orbit.distance
-	_orbit.focus_offset.y = 2.25 - arm_lift - spring_lift
+	# Keep the airborne flame in view as the player zooms close, while retaining
+	# the low terrain framing at the normal and wide gameplay distances.
+	var close_zoom := clampf(
+		(CAMERA_FAR_DISTANCE - _orbit.distance)
+		/ (CAMERA_FAR_DISTANCE - CAMERA_NEAR_DISTANCE),
+		0.0, 1.0)
+	_orbit.focus_offset.y = lerpf(CAMERA_FAR_FOCUS_Y, CAMERA_NEAR_FOCUS_Y, close_zoom)
 
 
 func _confirm_boot() -> void:
