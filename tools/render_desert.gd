@@ -32,43 +32,43 @@ func _run() -> void:
 	orbit.set("distance", 58.0)
 	for _frame in range(40):
 		await physics_frame
-	if _camera_clears_dunes(orbit, player, desert, false):
+	if _camera_clear_of_ground(orbit, player, desert, false):
 		await _capture("desert-horizon")
 	else:
-		_record_failure("Kamera horizon terhalang atau masuk ke dune")
+		_record_failure("Kamera horizon menembus permukaan pasir")
 
 	orbit.set("pitch", 0.42)
 	orbit.set("distance", 8.0)
 	for _frame in range(35):
 		await physics_frame
-	if _camera_clears_dunes(orbit, player, desert):
+	if _camera_clear_of_ground(orbit, player, desert):
 		await _capture("desert-default-gameplay")
 	else:
-		_record_failure("Kamera gameplay default terhalang dune")
+		_record_failure("Kamera gameplay default menembus permukaan pasir")
 
 	orbit.set("yaw", 0.68)
 	orbit.set("pitch", 0.42)
 	orbit.set("distance", 8.0)
 	for _frame in range(35):
 		await physics_frame
-	if _camera_clears_dunes(orbit, player, desert):
+	if _camera_clear_of_ground(orbit, player, desert):
 		await _capture("desert-gameplay")
 	else:
-		_record_failure("Kamera gameplay standar terhalang dune")
+		_record_failure("Kamera gameplay standar menembus permukaan pasir")
 
 	orbit.set("distance", 3.8)
 	for _frame in range(35):
 		await physics_frame
-	if _camera_clears_dunes(orbit, player, desert):
+	if _camera_clear_of_ground(orbit, player, desert):
 		await _capture("desert-fire-idle")
 	else:
-		_record_failure("Kamera close-up terhalang dune")
+		_record_failure("Kamera close-up menembus permukaan pasir")
 
 	joystick.set("direction", Vector2(1.0, 0.0))
 	for _frame in range(36):
 		await physics_frame
-	if not _camera_clears_dunes(orbit, player, desert):
-		_record_failure("Kamera saat analog bergerak terhalang dune")
+	if not _camera_clear_of_ground(orbit, player, desert):
+		_record_failure("Kamera saat analog bergerak menembus pasir")
 	var fire := player.find_child("FireVisual", true, false)
 	if fire == null or float(fire.get("motion_strength")) < 0.25:
 		_fail("Api tidak bereaksi saat analog mendorong player")
@@ -84,7 +84,7 @@ func _run() -> void:
 	quit(0 if _failures == 0 else 1)
 
 
-func _camera_clears_dunes(
+func _camera_clear_of_ground(
 	orbit: Node3D, player: Node3D, desert: Node3D, check_fire_visibility: bool = true
 ) -> bool:
 	var camera := orbit.get("camera") as Camera3D
@@ -118,7 +118,7 @@ func _camera_clears_dunes(
 		var ground_y := float(desert.call("surface_height", point.x, point.z))
 		if point.y < ground_y + 0.04:
 			var clearance := point.y - ground_y
-			var blocked := "Rayo kamera kena dune: %.2fm clearance di sample %d" % [
+			var blocked := "Sinar kamera menembus pasir: %.2fm clearance di sample %d" % [
 				clearance, sample]
 			push_error(blocked)
 			print("::error::", blocked)

@@ -5,7 +5,7 @@ const Joystick = preload("res://src/game/virtual_joystick.gd")
 const Orbit = preload("res://src/game/orbit_camera.gd")
 const FireVisual = preload("res://src/game/realistic_fire_visual.gd")
 
-## Leave a clear, readable air gap between the fire avatar and dune silhouettes.
+## Keep the fire avatar visibly separated from the flat sand surface.
 const FLOAT_HEIGHT := 6.0
 const EDGE_MARGIN := 1.3
 const ACCELERATION := 18.0
@@ -64,7 +64,7 @@ func _physics_process(delta: float) -> void:
 	next_position.z = safe_point.y
 	var target_height := _surface_height(safe_point.x, safe_point.y) + FLOAT_HEIGHT
 	if target_height > global_position.y:
-		# Rise with the sampled mesh so the flame never lags inside an uphill dune.
+		# Rise with the sampled ground so the flame never slips below the sand.
 		next_position.y = target_height
 	else:
 		# Ease down over a descent to avoid a visibly dropping flame.

@@ -1,5 +1,5 @@
 extends Node3D
-## World-only game scene: open dunes, distant sandstone mesas, and one warm fire player.
+## World-only game scene: a flat desert plain, distant mesas, and one warm fire player.
 
 const DesertWorld = preload("res://src/game/world/desert_world.gd")
 const Player = preload("res://src/game/flame_player.gd")
@@ -39,7 +39,7 @@ func _ready() -> void:
 	_build_player()
 	_build_camera()
 	_build_controls()
-	print("[main] desert dunes + api hangat siap")
+	print("[main] gurun datar + api hangat siap")
 	_confirm_boot.call_deferred()
 
 

@@ -1,9 +1,10 @@
 extends Node3D
-## A broad dune field with a coarse distance ring and mesa silhouettes at the horizon.
+## A level sand plain with a coarse distance ring and mesa silhouettes at the horizon.
 
 const GROUND_SHADER = preload("res://src/game/desert_ground.gdshader")
 const SAND_ALBEDO: Texture2D = preload("res://assets/desert/sand_albedo.png")
 
+const FLAT_GROUND_HEIGHT := 16.0
 const PLAYABLE_HALF := 360.0
 const CAMERA_COLLISION_HALF := 424.0
 const CAMERA_COLLISION_STEP := 4.0
@@ -11,12 +12,7 @@ const NEAR_HALF := 256.0
 const NEAR_STEP := 2.0
 const WORLD_HALF := 1024.0
 const FAR_STEP := 16.0
-const DUNE_AXIS := Vector2(0.82, 0.57)
-
-static var _broad_noise: FastNoiseLite
-static var _warp_x: FastNoiseLite
-static var _warp_z: FastNoiseLite
-static var _detail_noise: FastNoiseLite
+const SAND_WIND_AXIS := Vector2(0.82, 0.57)
 
 var _ground_material: ShaderMaterial
 var _stone_material: StandardMaterial3D
@@ -24,7 +20,6 @@ var _stone_material: StandardMaterial3D
 
 func _ready() -> void:
 	name = "Desert"
-	_prepare_noise()
 	_build_camera_collision()
 	_build_materials()
 	_build_near_ground()
@@ -64,7 +59,7 @@ func _build_materials() -> void:
 	_ground_material = ShaderMaterial.new()
 	_ground_material.shader = GROUND_SHADER
 	_ground_material.set_shader_parameter("sand_albedo", SAND_ALBEDO)
-	_ground_material.set_shader_parameter("wind_axis", DUNE_AXIS)
+	_ground_material.set_shader_parameter("wind_axis", SAND_WIND_AXIS)
 	_stone_material = StandardMaterial3D.new()
 	_stone_material.vertex_color_use_as_albedo = true
 	_stone_material.roughness = 0.98
@@ -74,7 +69,7 @@ func _build_materials() -> void:
 
 func _build_near_ground() -> void:
 	var ground := MeshInstance3D.new()
-	ground.name = "NearDunes"
+	ground.name = "NearSand"
 	ground.mesh = _make_ground_mesh(NEAR_HALF, NEAR_STEP, false)
 	ground.material_override = _ground_material
 	ground.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -83,7 +78,7 @@ func _build_near_ground() -> void:
 
 func _build_far_ground() -> void:
 	var ground := MeshInstance3D.new()
-	ground.name = "FarDunes"
+	ground.name = "FarSand"
 	ground.mesh = _make_ground_mesh(WORLD_HALF, FAR_STEP, true)
 	ground.material_override = _ground_material
 	ground.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -293,68 +288,5 @@ func is_inside(x: float, z: float, margin: float = 0.0) -> bool:
 	return absf(x) <= limit and absf(z) <= limit
 
 
-static func terrain_height(x: float, z: float) -> float:
-	_prepare_noise()
-	var warp_x := _warp_x.get_noise_2d(x, z) * 38.0
-	var warp_z := _warp_z.get_noise_2d(x, z) * 38.0
-	var point := Vector2(x, z)
-	var along := point.dot(DUNE_AXIS)
-	var across := point.dot(Vector2(DUNE_AXIS.y, -DUNE_AXIS.x))
-	var phase := (along + warp_x * 0.8) * 0.032 \
-		+ sin((across + warp_z) * 0.012 + warp_x * 0.018) * 0.95
-	var dune := sin(phase) * 8.5 \
-		+ sin(phase * 0.50 + warp_z * 0.018) * 2.4 \
-		+ sin(phase * 1.95 + 0.6) * 0.72
-	var shoulder_phase := (along + warp_x * 0.55) * 0.052 \
-		+ sin((across + warp_z) * 0.018 + warp_x * 0.008) * 0.42
-	var shoulder_dunes := sin(shoulder_phase) * 1.8 \
-		+ sin(shoulder_phase * 1.9 + 1.1) * 0.32
-	var cross_roll := sin((across + warp_z * 0.75) * 0.018 \
-		+ warp_x * 0.014) * 2.4
-	var ripple_phase := (along + warp_x * 0.3) * 0.092 \
-		+ (across + warp_z * 0.75) * 0.016
-	var small_ridges := sin(ripple_phase) * 0.32
-	var broad := _broad_noise.get_noise_2d(x, z) * 4.8
-	var fine := _detail_noise.get_noise_2d(x, z) * 5.0
-	# Multi-scale, warped waves keep the walkable near ground rolling. A nearby
-	# rounded crest breaks the opening view's long, empty valley without forming
-	# a continuous stripe across the horizon.
-	var rolling_base := 16.0 + dune + shoulder_dunes + cross_roll + small_ridges + broad + fine
-	var near_crest := _dune_mound(x, z, -11.0, -8.0, 25.0, 28.0, 16.0)
-	return rolling_base + near_crest
-
-
-static func _dune_mound(
-	x: float, z: float, center_x: float, center_z: float,
-	radius_x: float, radius_z: float, height: float
-) -> float:
-	var dx := (x - center_x) / radius_x
-	var dz := (z - center_z) / radius_z
-	return height * exp(-(dx * dx + dz * dz))
-
-
-static func _prepare_noise() -> void:
-	if _broad_noise != null:
-		return
-	_broad_noise = FastNoiseLite.new()
-	_broad_noise.seed = 29173
-	_broad_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
-	_broad_noise.frequency = 0.006
-	_broad_noise.fractal_octaves = 3
-	_broad_noise.fractal_lacunarity = 2.1
-	_broad_noise.fractal_gain = 0.48
-	_warp_x = FastNoiseLite.new()
-	_warp_x.seed = 4171
-	_warp_x.noise_type = FastNoiseLite.TYPE_SIMPLEX
-	_warp_x.frequency = 0.0034
-	_warp_x.fractal_octaves = 2
-	_warp_z = FastNoiseLite.new()
-	_warp_z.seed = 8827
-	_warp_z.noise_type = FastNoiseLite.TYPE_SIMPLEX
-	_warp_z.frequency = 0.0031
-	_warp_z.fractal_octaves = 2
-	_detail_noise = FastNoiseLite.new()
-	_detail_noise.seed = 12761
-	_detail_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
-	_detail_noise.frequency = 0.025
-	_detail_noise.fractal_octaves = 2
+static func terrain_height(_x: float, _z: float) -> float:
+	return FLAT_GROUND_HEIGHT

@@ -39,15 +39,15 @@ func _run() -> void:
 	var update_button := game.find_child("UpdateContentButton", true, false) as Button
 	_check(player != null and not player is CharacterBody3D,
 		"Player memakai tubuh karakter, bukan api sederhana")
-	_check(desert != null and desert.find_child("NearDunes", true, false) != null
-		and desert.find_child("FarDunes", true, false) != null,
-		"Terrain gurun bertingkat tidak lengkap")
+	_check(desert != null and desert.find_child("NearSand", true, false) != null
+		and desert.find_child("FarSand", true, false) != null,
+		"Bidang pasir datar tidak lengkap")
 	var camera_collision: StaticBody3D
 	if desert != null:
 		camera_collision = desert.find_child(
 			"CameraGroundCollision", true, false) as StaticBody3D
 	_check(camera_collision != null and camera_collision.collision_layer == 1,
-		"Kamera tidak memiliki collider dune untuk mencegah clipping")
+		"Kamera tidak memiliki collider pasir untuk mencegah clipping")
 	if player != null and desert != null:
 		var initial_ground_position: Vector3 = player.call("ground_position")
 		var initial_mesh_height := float(desert.call(
@@ -57,9 +57,9 @@ func _run() -> void:
 		print("::notice::selisih pijakan player dengan mesh: %.3fm" % initial_ground_error)
 		print("::notice::tinggi terbang awal: %.3fm" % initial_flight_height)
 		_check(absf(initial_ground_error) < 0.02,
-			"Player tertanam atau melayang dari mesh dune saat spawn")
+			"Player tidak sejajar dengan permukaan pasir saat spawn")
 		_check(initial_flight_height >= 5.8 and initial_flight_height <= 6.2,
-			"Api player tidak melayang jelas di atas dune saat spawn")
+			"Api player tidak melayang jelas di atas pasir saat spawn")
 	var mesa_meshes := []
 	if desert != null:
 		mesa_meshes = desert.find_children("*Mesa*", "MeshInstance3D", true, false)
@@ -88,39 +88,24 @@ func _run() -> void:
 		"NPC masih dibuat")
 	_check(game.find_children("*", "AnimationPlayer", true, false).is_empty(),
 		"Rig/animasi lama masih dibuat di scene utama")
-	_check(absf(DesertWorld.terrain_height(0.0, 0.0)
-		- DesertWorld.terrain_height(140.0, -92.0)) > 0.35,
-		"Relief dune tidak berubah pada jarak berjalan")
-	var camera_forward := Vector2(-sin(0.68), -cos(0.68))
-	var forward_min := 1e20
-	var forward_max := -1e20
-	var near_forward_min := 1e20
-	var near_forward_max := -1e20
-	for distance in range(8, 105, 8):
-		var ahead := Vector2(0.0, 7.0) + camera_forward * float(distance)
-		var forward_height := DesertWorld.terrain_height(ahead.x, ahead.y)
-		forward_min = minf(forward_min, forward_height)
-		forward_max = maxf(forward_max, forward_height)
-		if distance <= 40:
-			near_forward_min = minf(near_forward_min, forward_height)
-			near_forward_max = maxf(near_forward_max, forward_height)
-	print("::notice::relief dekat kamera: %.2fm" % (
-		near_forward_max - near_forward_min))
-	print("::notice::relief sepanjang pandangan gameplay: %.2fm" % (
-		forward_max - forward_min))
-	_check(near_forward_max - near_forward_min > 4.0,
-		"Dune dekat kamera masih tampak datar")
-	_check(forward_max - forward_min > 5.0,
-		"Dune tidak cukup bergulung sepanjang pandangan gameplay")
-	var nearby_min := 1e20
-	var nearby_max := -1e20
-	for local_z in range(-40, 41, 10):
-		for local_x in range(-40, 41, 10):
-			var local_height := DesertWorld.terrain_height(float(local_x), float(local_z))
-			nearby_min = minf(nearby_min, local_height)
-			nearby_max = maxf(nearby_max, local_height)
-	_check(nearby_max - nearby_min > 4.5,
-		"Dune lokal tidak cukup terlihat dari kamera pemain")
+	var flat_samples: Array[Vector2] = [
+		Vector2(0.0, 7.0), Vector2(140.0, -92.0),
+		Vector2(-250.0, 220.0), Vector2(350.0, 300.0),
+		Vector2(-400.0, 280.0), Vector2(800.0, -700.0),
+	]
+	var maximum_surface_variation := 1e20
+	if desert != null:
+		maximum_surface_variation = 0.0
+		for point in flat_samples:
+			var analytic_height := DesertWorld.terrain_height(point.x, point.y)
+			var mesh_height := float(desert.call("surface_height", point.x, point.y))
+			maximum_surface_variation = maxf(maximum_surface_variation,
+				absf(analytic_height - DesertWorld.FLAT_GROUND_HEIGHT))
+			maximum_surface_variation = maxf(maximum_surface_variation,
+				absf(mesh_height - DesertWorld.FLAT_GROUND_HEIGHT))
+	print("::notice::variasi permukaan gurun: %.3fm" % maximum_surface_variation)
+	_check(maximum_surface_variation < 0.001,
+		"Permukaan pasir belum benar-benar rata")
 
 	if player != null and desert != null and joystick != null and fire != null:
 		var start := Vector2(player.global_position.x, player.global_position.z)
@@ -133,9 +118,9 @@ func _run() -> void:
 			"surface_height", finish.x, finish.y))
 		var moved_flight_height := player.global_position.y - moved_mesh_height
 		_check(moved_ground_position.y >= moved_mesh_height - 0.02,
-			"Player menembus mesh dune saat bergerak analog")
+			"Player melewati permukaan pasir saat bergerak analog")
 		_check(moved_flight_height >= 5.8,
-			"Player kehilangan jarak terbang di atas dune saat bergerak analog")
+			"Player kehilangan jarak terbang di atas pasir saat bergerak analog")
 		_check(start.distance_to(finish) > 0.7, "Analog tidak menggerakkan player")
 		_check(bool(desert.call("is_inside", finish.x, finish.y, 0.0)),
 			"Player keluar dari area gurun yang dapat dijelajahi")

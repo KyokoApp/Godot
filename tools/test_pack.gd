@@ -67,8 +67,8 @@ func _boot_scene() -> void:
 		problem = "Player masih memakai tubuh/rig karakter"
 	elif fire.find_child("FireLight", true, false) == null:
 		problem = "Cahaya lokal api tidak ada"
-	elif desert == null or desert.find_child("NearDunes", true, false) == null:
-		problem = "Terrain dune tidak dimuat"
+	elif desert == null or desert.find_child("NearSand", true, false) == null:
+		problem = "Bidang pasir datar tidak dimuat"
 	elif game.find_child("Field", true, false) != null \
 			or game.find_child("Scenery", true, false) != null \
 			or game.find_child("Forest", true, false) != null \
