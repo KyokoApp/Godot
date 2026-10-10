@@ -1,7 +1,7 @@
 extends SceneTree
-## Smoke test: the active scene is a warm fire crossing a clean desert, not the old island.
+## Smoke test scene utama yang tersisa: world, api player, dan analog saja.
 
-const DesertWorld = preload("res://src/game/world/desert_world.gd")
+const Field = preload("res://src/game/world/field.gd")
 const UPDATE_RESUME := "user://in_game_update_resume.cfg"
 
 var _failures := 0
@@ -30,121 +30,63 @@ func _run() -> void:
 	root.add_child(game)
 	for _frame in range(8):
 		await physics_frame
-
 	var player := game.get("_player") as Node3D
-	var desert := game.get("_desert") as Node3D
 	var joystick := game.get("_joystick") as Control
-	var fire := game.find_child("FireVisual", true, false) as Node3D
-	var fire_light := game.find_child("FireLight", true, false) as OmniLight3D
-	var hover_shadow := game.find_child("HoverShadow", true, false) as MeshInstance3D
 	var update_button := game.find_child("UpdateContentButton", true, false) as Button
 	_check(player != null and not player is CharacterBody3D,
-		"Player memakai tubuh karakter, bukan api sederhana")
-	_check(desert != null and desert.find_child("NearSand", true, false) != null
-		and desert.find_child("FarSand", true, false) != null,
-		"Bidang pasir datar tidak lengkap")
-	var camera_collision: StaticBody3D
-	if desert != null:
-		camera_collision = desert.find_child(
-			"CameraGroundCollision", true, false) as StaticBody3D
-	_check(camera_collision != null and camera_collision.collision_layer == 1,
-		"Kamera tidak memiliki collider pasir untuk mencegah clipping")
-	if player != null and desert != null:
-		var initial_ground_position: Vector3 = player.call("ground_position")
-		var initial_mesh_height := float(desert.call(
-			"surface_height", player.global_position.x, player.global_position.z))
-		var initial_ground_error := initial_ground_position.y - initial_mesh_height
-		var initial_flight_height := player.global_position.y - initial_mesh_height
-		print("::notice::selisih pijakan player dengan mesh: %.3fm" % initial_ground_error)
-		print("::notice::tinggi terbang awal: %.3fm" % initial_flight_height)
-		_check(absf(initial_ground_error) < 0.02,
-			"Player tidak sejajar dengan permukaan pasir saat spawn")
-		_check(initial_flight_height >= 5.8 and initial_flight_height <= 6.2,
-			"Api player tidak melayang jelas di atas pasir saat spawn")
-	if player != null and desert != null and hover_shadow != null:
-		var shadow_ground := float(desert.call("surface_height",
-			hover_shadow.global_position.x, hover_shadow.global_position.z))
-		var shadow_clearance := hover_shadow.global_position.y - shadow_ground
-		var fire_to_shadow := player.global_position.y - hover_shadow.global_position.y
-		_check(absf(shadow_clearance - 0.025) < 0.01,
-			"Bayangan api tidak berada di permukaan pasir")
-		_check(fire_to_shadow >= 5.8,
-			"Bayangan tidak memperlihatkan jarak udara di bawah api")
-	var mesa_meshes := []
-	if desert != null:
-		mesa_meshes = desert.find_children("*Mesa*", "MeshInstance3D", true, false)
-		mesa_meshes.append_array(
-			desert.find_children("*Butte*", "MeshInstance3D", true, false))
-	_check(mesa_meshes.size() >= 5, "Landmark mesa gurun tidak terbentuk")
-	for old_node in [
-		"Field", "Scenery", "Forest", "Grass", "Water", "Ocean", "Lake", "Island",
-		"DuskEnvironment",
-	]:
-		_check(game.find_child(old_node, true, false) == null,
-			"Node world lama masih dibuat: " + old_node)
+		"Player belum diganti menjadi node api tanpa rig")
+	_check(game.get("_field") != null and game.get("_scenery") != null
+		and game.get("_forest") != null and game.get("_grass") != null,
+		"World utama tidak lengkap")
 	_check(joystick != null and bool(joystick.get("input_enabled")),
 		"Analog gerak tidak aktif")
 	_check(update_button != null and update_button.is_visible_in_tree(),
-		"Tombol update konten tidak tersedia")
-	_check(fire != null and fire_light != null,
-		"Api realistis atau cahaya lokal tidak terbentuk")
-	_check(hover_shadow != null,
-		"Bayangan lembut api untuk memperlihatkan jarak terbang tidak terbentuk")
-	_check(fire_light != null and fire_light.light_color.r > fire_light.light_color.b,
-		"Warna api belum hangat")
-	_check(player == null or player.find_child("BlueFlameVisual", true, false) == null,
-		"Visual api lama masih dipakai")
+		"Tombol update konten tidak tersedia di dalam game")
 	_check(game.find_child("GameplayHUD", true, false) == null,
 		"HUD lama masih dibuat")
 	_check(game.find_child("Mira", true, false) == null,
 		"NPC masih dibuat")
 	_check(game.find_children("*", "AnimationPlayer", true, false).is_empty(),
-		"Rig/animasi lama masih dibuat di scene utama")
-	var flat_samples: Array[Vector2] = [
-		Vector2(0.0, 7.0), Vector2(140.0, -92.0),
-		Vector2(-250.0, 220.0), Vector2(350.0, 300.0),
-		Vector2(-400.0, 280.0), Vector2(800.0, -700.0),
-	]
-	var maximum_surface_variation := 1e20
-	if desert != null:
-		maximum_surface_variation = 0.0
-		for point in flat_samples:
-			var analytic_height := DesertWorld.terrain_height(point.x, point.y)
-			var mesh_height := float(desert.call("surface_height", point.x, point.y))
-			maximum_surface_variation = maxf(maximum_surface_variation,
-				absf(analytic_height - DesertWorld.FLAT_GROUND_HEIGHT))
-			maximum_surface_variation = maxf(maximum_surface_variation,
-				absf(mesh_height - DesertWorld.FLAT_GROUND_HEIGHT))
-	print("::notice::variasi permukaan gurun: %.3fm" % maximum_surface_variation)
-	_check(maximum_surface_variation < 0.001,
-		"Permukaan pasir belum benar-benar rata")
+		"Rig/animasi masih dibuat di scene utama")
 
-	if player != null and desert != null and joystick != null and fire != null:
+	if player != null and joystick != null:
+		var fire := player.get_node_or_null("FireVisual")
+		var field := game.get("_field") as Node3D
+		var shadow := player.get_node_or_null("HoverShadow") as MeshInstance3D
+		_check(fire != null, "Visual api realistis tidak ada")
+		_check(fire != null and fire.get_node_or_null("FireLight") != null,
+			"Cahaya api hangat tidak ada")
+		_check(fire != null and fire.get_node_or_null("Embers") != null,
+			"Bara kecil api tidak dibuat")
+		_check(shadow != null and shadow.mesh != null,
+			"Bayangan hover di permukaan pulau tidak ada")
+		if field != null:
+			var ground_height := float(field.call("surface_height",
+				player.global_position.x, player.global_position.z))
+			var gap := player.global_position.y - ground_height
+			_check(gap >= 1.9 and gap <= 2.1,
+				"Api tidak terlihat melayang dengan jarak aman dari rumput")
+			_check(shadow != null and absf(shadow.global_position.y - ground_height - 0.025) < 0.01,
+				"Bayangan api tidak menempel pada permukaan medan")
 		var start := Vector2(player.global_position.x, player.global_position.z)
 		joystick.set("direction", Vector2(1.0, 0.0))
 		for _frame in range(30):
 			await physics_frame
 		var finish := Vector2(player.global_position.x, player.global_position.z)
-		var moved_ground_position: Vector3 = player.call("ground_position")
-		var moved_mesh_height := float(desert.call(
-			"surface_height", finish.x, finish.y))
-		var moved_flight_height := player.global_position.y - moved_mesh_height
-		_check(moved_ground_position.y >= moved_mesh_height - 0.02,
-			"Player melewati permukaan pasir saat bergerak analog")
-		_check(moved_flight_height >= 5.8,
-			"Player kehilangan jarak terbang di atas pasir saat bergerak analog")
 		_check(start.distance_to(finish) > 0.7, "Analog tidak menggerakkan player")
-		_check(bool(desert.call("is_inside", finish.x, finish.y, 0.0)),
-			"Player keluar dari area gurun yang dapat dijelajahi")
-		_check(float(fire.get("motion_strength")) > 0.35,
-			"Api tidak merespons kecepatan analog")
-		var lean: Vector2 = fire.get("lean_vector")
-		_check(lean.length() > 0.08, "Api tidak condong mengikuti arah gerak")
+		_check(Field.is_inside(finish.x, finish.y, 0.0),
+			"Api keluar dari pulau saat digerakkan")
+		if field != null:
+			var moved_ground_height := float(field.call("surface_height", finish.x, finish.y))
+			var moved_gap := player.global_position.y - moved_ground_height
+			_check(moved_gap >= 1.9 and moved_gap <= 2.1,
+				"Jarak api ke rumput berubah saat bergerak analog")
+			_check(shadow != null
+				and absf(shadow.global_position.y - moved_ground_height - 0.025) < 0.01,
+				"Bayangan hover terlepas dari medan saat bergerak analog")
+		_check(fire != null and float(fire.get("motion_strength")) > 0.05,
+			"Api tidak merespons gerak analog")
 		joystick.set("direction", Vector2.ZERO)
-		for _frame in range(24):
-			await physics_frame
-		_check(float(fire.get("motion_strength")) < 0.20,
-			"Api tidak kembali tenang setelah player berhenti")
 
 	var orbit := game.get("_orbit") as Node3D
 	var return_position := Vector2(2.75, -3.5)

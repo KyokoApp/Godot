@@ -9,16 +9,14 @@ delta-update.
 
 ## Gameplay aktif
 
-Scene utama sekarang hanya membangun gurun terbuka: dune pasir bertekstur,
-mesa batu pasir jauh di horizon, serta player yang hanya berupa api kecil warna
-amber. Api bergolak ke atas dan condong/meninggi secara halus mengikuti arah,
-kecepatan, dan akselerasi analog; cahaya hangatnya tetap lokal, tanpa halo biru
-atau bloom layar penuh. Gerak juga tersedia lewat WASD/tombol panah di desktop.
-Tombol ↻ kecil di kanan membuka pemeriksaan/update konten tanpa menutup aplikasi;
-posisi player dan kamera dipulihkan saat gurun dimuat kembali. Pulau, laut,
-rumput, pepohonan, NPC, mannequin, combat, dan mode survival/run-zone lama tidak
-masuk ke content pack aktif. Scene dan skrip lama tetap untuk regresi tes, bukan
-untuk launcher atau scene utama.
+Scene utama kembali memakai pulau hijau awal: medan berumput, pantai, laut,
+pepohonan, dan bukit jauh. Player tetap hanya berupa api hangat realistis yang
+melayang jelas di atas rumput, dengan bayangan kecil di tanah; nyala dan bara
+merespons gerakan analog secara halus. Gerak juga tersedia lewat WASD/tombol
+panah. Tombol ↻ kecil di kanan membuka pemeriksaan/update konten tanpa menutup
+aplikasi; posisi player dan kamera dipulihkan setelah kembali dari updater. Tidak
+ada karakter atau HUD tambahan. Scene dan skrip lama tetap ada untuk regresi tes,
+tetapi tidak dipakai launcher atau scene utama.
 
 ## Kenapa dimulai ulang
 

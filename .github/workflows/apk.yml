@@ -83,7 +83,9 @@ jobs:
           # langkah ambil aset dengan pesan yang menyesatkan. Daftar ini membuat
           # "pohon berkas ter-revert" ketahuan dalam hitungan detik.
           for wajib in tools/fetch_assets.sh tools/render_mannequin.gd \
-                tools/test_skin_shell.gd tools/test_camera_zoom.gd \
+                tools/render_grass_world.gd tools/test_flame_world.gd tools/test_pack.gd \
+                tools/test_incremental_export.py tools/test_skin_shell.gd tools/test_camera_zoom.gd \
+                project/src/game/realistic_fire.gdshader project/src/game/hover_shadow.gdshader \
                 tools/test_scenery.gd tools/test_island.gd tools/test_survival.gd \
                 tools/test_meta_progress.gd tools/test_run_zone.gd \
                 tools/render_world.gd tools/render_survival.gd tools/render_run_zone.gd \
@@ -192,7 +194,7 @@ jobs:
             exit 1
           fi
 
-      - name: Tes scene desert dan api responsif
+      - name: Tes scene pulau hijau dan api melayang
         run: |
           set +e
           timeout 180 ./godot --headless --path project \
@@ -724,28 +726,28 @@ jobs:
       - name: Import proyek
         run: ./godot --headless --path project --import --editor --quit
 
-      - name: Render desert dan api responsif (Mobile Vulkan software)
+      - name: Render pulau hijau + api melayang (Mobile Vulkan software)
         run: |
           set +e
           timeout 300 xvfb-run -a env \
             VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
             ./godot --path project --rendering-method mobile --rendering-driver vulkan \
             --audio-driver Dummy --resolution 640x360 \
-            --script "$GITHUB_WORKSPACE/tools/render_desert.gd" 2>&1 | tee desert-render.log
+            --script "$GITHUB_WORKSPACE/tools/render_grass_world.gd" 2>&1 | tee grass-world-render.log
           STATUS=${PIPESTATUS[0]}
           set -e
-          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' desert-render.log; then
-            tail -60 desert-render.log | while IFS= read -r line; do echo "::error::$line"; done
+          if [ "$STATUS" != 0 ] || grep -Eq 'SCRIPT ERROR|SHADER ERROR|Shader compilation failed' grass-world-render.log; then
+            tail -60 grass-world-render.log | while IFS= read -r line; do echo "::error::$line"; done
             exit 1
           fi
-          grep -F '[desert-render-test] HASIL: OK' desert-render.log
+          grep -F '[grass-render-test] HASIL: OK' grass-world-render.log
 
-      - name: Simpan screenshot desert/api
+      - name: Simpan screenshot pulau hijau/api
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: desert-screenshots
-          path: ~/.local/share/godot/app_userdata/**/desert-*.png
+          name: grass-world-screenshots
+          path: ~/.local/share/godot/app_userdata/**/grass-world-*.png
           if-no-files-found: ignore
 
       # Render avatar dari kamera pemain (0,4 m / 0,85 m / 2,2 m + pose jalan):
@@ -832,15 +834,11 @@ jobs:
           path: ~/.local/share/godot/app_userdata/**/avatar-*-test.png
           if-no-files-found: ignore
 
-      - name: Pratinjau desert, avatar + dunia (JPEG untuk komentar)
+      - name: Pratinjau gameplay pulau hijau (JPEG untuk komentar)
         if: always()
         run: |
           shopt -s globstar nullglob
-          SHOTS=(~/.local/share/godot/app_userdata/**/desert-*.png \
-            ~/.local/share/godot/app_userdata/**/avatar-*-test.png \
-            ~/.local/share/godot/app_userdata/**/world-*-test.png \
-            ~/.local/share/godot/app_userdata/**/survival-*-test.png \
-            ~/.local/share/godot/app_userdata/**/run-zone-*-test.png)
+          SHOTS=(~/.local/share/godot/app_userdata/**/grass-world-*.png)
           if [ ${#SHOTS[@]} -eq 0 ]; then
             echo "tidak ada screenshot untuk pratinjau"
             exit 0
@@ -850,11 +848,11 @@ jobs:
           ./godot --headless --path project \
             --script "$GITHUB_WORKSPACE/tools/make_preview.gd" -- "$PWD/preview" 560 \
             > /dev/null 2>&1 || true
-      - name: Simpan pratinjau desert + avatar + dunia
+      - name: Simpan pratinjau gameplay aktif
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: preview-avatar-world
+          name: preview-active-world
           path: preview/*.jpg
           if-no-files-found: ignore
 
