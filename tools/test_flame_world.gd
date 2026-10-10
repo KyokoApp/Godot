@@ -58,7 +58,7 @@ func _run() -> void:
 		print("::notice::tinggi terbang awal: %.3fm" % initial_flight_height)
 		_check(absf(initial_ground_error) < 0.02,
 			"Player tertanam atau melayang dari mesh dune saat spawn")
-		_check(initial_flight_height >= 1.8 and initial_flight_height <= 2.2,
+		_check(initial_flight_height >= 3.8 and initial_flight_height <= 4.2,
 			"Api player tidak melayang jelas di atas dune saat spawn")
 	var mesa_meshes := []
 	if desert != null:
@@ -134,7 +134,7 @@ func _run() -> void:
 		var moved_flight_height := player.global_position.y - moved_mesh_height
 		_check(moved_ground_position.y >= moved_mesh_height - 0.02,
 			"Player menembus mesh dune saat bergerak analog")
-		_check(moved_flight_height >= 1.8,
+		_check(moved_flight_height >= 3.8,
 			"Player kehilangan jarak terbang di atas dune saat bergerak analog")
 		_check(start.distance_to(finish) > 0.7, "Analog tidak menggerakkan player")
 		_check(bool(desert.call("is_inside", finish.x, finish.y, 0.0)),
