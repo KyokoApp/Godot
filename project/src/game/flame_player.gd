@@ -62,7 +62,12 @@ func _physics_process(delta: float) -> void:
 	next_position.x = safe_point.x
 	next_position.z = safe_point.y
 	var target_height := _surface_height(safe_point.x, safe_point.y) + FLOAT_HEIGHT
-	next_position.y = lerpf(global_position.y, target_height, 1.0 - exp(-12.0 * delta))
+	if target_height > global_position.y:
+		# Rise with the sampled mesh so the flame never lags inside an uphill dune.
+		next_position.y = target_height
+	else:
+		# Ease down over a descent to avoid a visibly dropping flame.
+		next_position.y = lerpf(global_position.y, target_height, 1.0 - exp(-12.0 * delta))
 	global_position = next_position
 	_fire.external_velocity = _velocity
 

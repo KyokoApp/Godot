@@ -258,7 +258,29 @@ func _add_mesa_triangle(
 
 
 func surface_height(x: float, z: float) -> float:
-	return terrain_height(x, z)
+	if absf(x) <= NEAR_HALF and absf(z) <= NEAR_HALF:
+		return _sample_mesh_height(x, z, NEAR_HALF, NEAR_STEP)
+	return _sample_mesh_height(x, z, WORLD_HALF, FAR_STEP)
+
+
+static func _sample_mesh_height(x: float, z: float, extent: float, step: float) -> float:
+	var cells := int(round(extent * 2.0 / step))
+	var grid_x := clampf((x + extent) / step, 0.0, float(cells))
+	var grid_z := clampf((z + extent) / step, 0.0, float(cells))
+	var cell_x := mini(int(floor(grid_x)), cells - 1)
+	var cell_z := mini(int(floor(grid_z)), cells - 1)
+	var fx := grid_x - float(cell_x)
+	var fz := grid_z - float(cell_z)
+	var origin_x := -extent + float(cell_x) * step
+	var origin_z := -extent + float(cell_z) * step
+	var h_a := terrain_height(origin_x, origin_z)
+	var h_b := terrain_height(origin_x + step, origin_z)
+	var h_c := terrain_height(origin_x, origin_z + step)
+	var h_d := terrain_height(origin_x + step, origin_z + step)
+	# Match the near/far mesh diagonal: triangles are (a, c, b) and (b, c, d).
+	if fx + fz <= 1.0:
+		return h_a * (1.0 - fx - fz) + h_b * fx + h_c * fz
+	return h_b * (1.0 - fz) + h_c * (1.0 - fx) + h_d * (fx + fz - 1.0)
 
 
 func clamp_inside(point: Vector2, margin: float = 0.0) -> Vector2:
