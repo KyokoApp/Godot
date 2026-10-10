@@ -4,6 +4,7 @@ extends Node3D
 const Joystick = preload("res://src/game/virtual_joystick.gd")
 const Orbit = preload("res://src/game/orbit_camera.gd")
 const FireVisual = preload("res://src/game/realistic_fire_visual.gd")
+const HoverShadowShader = preload("res://src/game/hover_shadow.gdshader")
 
 ## Keep the fire avatar visibly separated from the flat sand surface.
 const FLOAT_HEIGHT := 6.0
@@ -20,6 +21,7 @@ var orbit: Orbit
 
 var _velocity := Vector3.ZERO
 var _fire: FireVisual
+var _hover_shadow: MeshInstance3D
 
 
 func _ready() -> void:
@@ -27,6 +29,28 @@ func _ready() -> void:
 	_fire = FireVisual.new()
 	_fire.name = "FireVisual"
 	add_child(_fire)
+	_build_hover_shadow()
+
+
+func _build_hover_shadow() -> void:
+	var material := ShaderMaterial.new()
+	material.shader = HoverShadowShader
+	var plane := PlaneMesh.new()
+	plane.orientation = PlaneMesh.FACE_Y
+	plane.size = Vector2(2.8, 1.9)
+	_hover_shadow = MeshInstance3D.new()
+	_hover_shadow.name = "HoverShadow"
+	_hover_shadow.mesh = plane
+	_hover_shadow.material_override = material
+	_hover_shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(_hover_shadow)
+
+
+func _update_hover_shadow() -> void:
+	if _hover_shadow == null:
+		return
+	var ground := _surface_height(global_position.x, global_position.z)
+	_hover_shadow.position.y = ground - global_position.y + 0.025
 
 
 func spawn(point: Vector2) -> void:
@@ -35,6 +59,7 @@ func spawn(point: Vector2) -> void:
 	global_position = Vector3(safe_point.x, ground + FLOAT_HEIGHT, safe_point.y)
 	_velocity = Vector3.ZERO
 	move_speed = 0.0
+	_update_hover_shadow()
 
 
 func set_view_camera(camera: Camera3D) -> void:
@@ -70,6 +95,7 @@ func _physics_process(delta: float) -> void:
 		# Ease down over a descent to avoid a visibly dropping flame.
 		next_position.y = lerpf(global_position.y, target_height, 1.0 - exp(-12.0 * delta))
 	global_position = next_position
+	_update_hover_shadow()
 	_fire.external_velocity = _velocity
 
 

@@ -37,17 +37,17 @@ func _run() -> void:
 	else:
 		_record_failure("Kamera horizon menembus permukaan pasir")
 
-	orbit.set("pitch", 0.70)
+	orbit.set("pitch", 0.42)
 	orbit.set("distance", 8.0)
 	for _frame in range(35):
 		await physics_frame
-	if _camera_clear_of_ground(orbit, player, desert):
+	if _camera_clear_of_ground(orbit, player, desert, true, true):
 		await _capture("desert-default-gameplay")
 	else:
 		_record_failure("Kamera gameplay default menembus permukaan pasir")
 
 	orbit.set("yaw", 0.68)
-	orbit.set("pitch", 0.70)
+	orbit.set("pitch", 0.42)
 	orbit.set("distance", 8.0)
 	for _frame in range(35):
 		await physics_frame
@@ -85,21 +85,36 @@ func _run() -> void:
 
 
 func _camera_clear_of_ground(
-	orbit: Node3D, player: Node3D, desert: Node3D, check_fire_visibility: bool = true
+	orbit: Node3D, player: Node3D, desert: Node3D,
+	check_fire_visibility: bool = true, check_shadow_visibility: bool = false
 ) -> bool:
 	var camera := orbit.get("camera") as Camera3D
 	var arm := orbit.get("arm") as SpringArm3D
 	if camera == null or arm == null:
 		return false
+	var viewport_rect := camera.get_viewport().get_visible_rect()
+	var fire_center := player.global_position + Vector3(0.0, 0.68, 0.0)
+	var fire_screen_position := camera.unproject_position(fire_center)
 	if check_fire_visibility:
-		var fire_center := player.global_position + Vector3(0.0, 0.68, 0.0)
-		var fire_screen_position := camera.unproject_position(fire_center)
-		var viewport_rect := camera.get_viewport().get_visible_rect()
-		if camera.is_position_behind(fire_center) or not viewport_rect.has_point(fire_screen_position):
+		if camera.is_position_behind(fire_center) \
+				or not viewport_rect.has_point(fire_screen_position):
 			var message := "Api keluar dari bingkai kamera pada jarak %.2fm" % float(
 				orbit.get("distance"))
 			push_error(message)
 			print("::error::", message)
+			return false
+	if check_shadow_visibility:
+		var shadow := player.find_child("HoverShadow", true, false) as Node3D
+		if shadow == null:
+			push_error("Bayangan api untuk frame pemisah terbang tidak ada")
+			return false
+		var shadow_screen_position := camera.unproject_position(shadow.global_position)
+		if camera.is_position_behind(shadow.global_position) \
+				or not viewport_rect.has_point(shadow_screen_position):
+			push_error("Bayangan api berada di luar bingkai gameplay")
+			return false
+		if fire_screen_position.distance_to(shadow_screen_position) < 24.0:
+			push_error("Jarak visual api ke bayangan terlalu kecil")
 			return false
 	var desired_distance := float(orbit.get("distance"))
 	var actual_distance := arm.global_position.distance_to(camera.global_position)

@@ -36,6 +36,7 @@ func _run() -> void:
 	var joystick := game.get("_joystick") as Control
 	var fire := game.find_child("FireVisual", true, false) as Node3D
 	var fire_light := game.find_child("FireLight", true, false) as OmniLight3D
+	var hover_shadow := game.find_child("HoverShadow", true, false) as MeshInstance3D
 	var update_button := game.find_child("UpdateContentButton", true, false) as Button
 	_check(player != null and not player is CharacterBody3D,
 		"Player memakai tubuh karakter, bukan api sederhana")
@@ -60,6 +61,15 @@ func _run() -> void:
 			"Player tidak sejajar dengan permukaan pasir saat spawn")
 		_check(initial_flight_height >= 5.8 and initial_flight_height <= 6.2,
 			"Api player tidak melayang jelas di atas pasir saat spawn")
+	if player != null and desert != null and hover_shadow != null:
+		var shadow_ground := float(desert.call("surface_height",
+			hover_shadow.global_position.x, hover_shadow.global_position.z))
+		var shadow_clearance := hover_shadow.global_position.y - shadow_ground
+		var fire_to_shadow := player.global_position.y - hover_shadow.global_position.y
+		_check(absf(shadow_clearance - 0.025) < 0.01,
+			"Bayangan api tidak berada di permukaan pasir")
+		_check(fire_to_shadow >= 5.8,
+			"Bayangan tidak memperlihatkan jarak udara di bawah api")
 	var mesa_meshes := []
 	if desert != null:
 		mesa_meshes = desert.find_children("*Mesa*", "MeshInstance3D", true, false)
@@ -78,6 +88,8 @@ func _run() -> void:
 		"Tombol update konten tidak tersedia")
 	_check(fire != null and fire_light != null,
 		"Api realistis atau cahaya lokal tidak terbentuk")
+	_check(hover_shadow != null,
+		"Bayangan lembut api untuk memperlihatkan jarak terbang tidak terbentuk")
 	_check(fire_light != null and fire_light.light_color.r > fire_light.light_color.b,
 		"Warna api belum hangat")
 	_check(player == null or player.find_child("BlueFlameVisual", true, false) == null,

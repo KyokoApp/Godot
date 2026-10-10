@@ -73,7 +73,7 @@ func _build_camera() -> void:
 	_orbit.name = "FollowCamera"
 	_orbit.distance = CAMERA_FAR_DISTANCE
 	_orbit.camera_lift_ratio = 0.70
-	_orbit.pitch = 0.70
+	_orbit.pitch = 0.42
 	_orbit.pitch_min = 0.12
 	_orbit.pitch_max = 1.12
 	_orbit.focus_offset = Vector3(0.0, CAMERA_FAR_FOCUS_Y, 0.0)
@@ -141,7 +141,7 @@ func _load_resume_state() -> void:
 		float(config.get_value("player", "z", SPAWN.y)))
 	_resume_camera = {
 		"yaw": float(config.get_value("camera", "yaw", 0.0)),
-		"pitch": float(config.get_value("camera", "pitch", 0.70)),
+		"pitch": float(config.get_value("camera", "pitch", 0.42)),
 		"distance": float(config.get_value("camera", "distance", CAMERA_FAR_DISTANCE)),
 	}
 	_resume_loaded = true
