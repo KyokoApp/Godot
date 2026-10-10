@@ -37,7 +37,7 @@ func _run() -> void:
 	else:
 		_record_failure("Kamera horizon menembus permukaan pasir")
 
-	orbit.set("pitch", 0.42)
+	orbit.set("pitch", 0.70)
 	orbit.set("distance", 8.0)
 	for _frame in range(35):
 		await physics_frame
@@ -47,7 +47,7 @@ func _run() -> void:
 		_record_failure("Kamera gameplay default menembus permukaan pasir")
 
 	orbit.set("yaw", 0.68)
-	orbit.set("pitch", 0.42)
+	orbit.set("pitch", 0.70)
 	orbit.set("distance", 8.0)
 	for _frame in range(35):
 		await physics_frame
