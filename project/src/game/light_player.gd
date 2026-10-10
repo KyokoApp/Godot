@@ -30,6 +30,7 @@ var flight_blend := 0.0
 var _velocity := Vector3.ZERO
 var _light_visual: LightVisual
 var _hover_shadow: MeshInstance3D
+var _shadow_material: ShaderMaterial
 var _transition_start := 0.0
 var _transition_target := 0.0
 var _transition_elapsed := TRANSFORM_DURATION
@@ -44,15 +45,16 @@ func _ready() -> void:
 
 
 func _build_hover_shadow() -> void:
-	var material := ShaderMaterial.new()
-	material.shader = HoverShadowShader
+	_shadow_material = ShaderMaterial.new()
+	_shadow_material.shader = HoverShadowShader
+	_shadow_material.set_shader_parameter("flight_blend", flight_blend)
 	var plane := PlaneMesh.new()
 	plane.orientation = PlaneMesh.FACE_Y
-	plane.size = Vector2(0.85, 0.6)
+	plane.size = Vector2(0.92, 0.68)
 	_hover_shadow = MeshInstance3D.new()
 	_hover_shadow.name = "HoverShadow"
 	_hover_shadow.mesh = plane
-	_hover_shadow.material_override = material
+	_hover_shadow.material_override = _shadow_material
 	_hover_shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(_hover_shadow)
 
@@ -62,6 +64,7 @@ func _update_hover_shadow() -> void:
 		return
 	var ground := _surface_height(global_position.x, global_position.z)
 	_hover_shadow.position.y = ground - global_position.y + 0.025
+	_shadow_material.set_shader_parameter("flight_blend", flight_blend)
 
 
 func spawn(point: Vector2) -> void:

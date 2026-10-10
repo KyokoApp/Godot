@@ -116,6 +116,11 @@ func _run() -> void:
 			"Cahaya terbang terlalu dekat/menembus permukaan tanah")
 		_check(shadow != null and absf(shadow.global_position.y - ground_height - 0.025) < 0.01,
 			"Bayangan tidak tertinggal di permukaan saat cahaya terbang")
+		var shadow_material := shadow.material_override as ShaderMaterial \
+			if shadow != null else null
+		_check(shadow_material != null
+			and float(shadow_material.get_shader_parameter("flight_blend")) >= 0.98,
+			"Lingkar cahaya biru tidak muncul di tanah saat bola terbang")
 
 		var bob_min := INF
 		var bob_max := -INF
