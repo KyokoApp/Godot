@@ -38,7 +38,7 @@ func _run() -> void:
 		_record_failure("Kamera horizon terhalang atau masuk ke dune")
 
 	orbit.set("yaw", 0.68)
-	orbit.set("pitch", 0.55)
+	orbit.set("pitch", 0.42)
 	orbit.set("distance", 8.0)
 	for _frame in range(35):
 		await physics_frame
