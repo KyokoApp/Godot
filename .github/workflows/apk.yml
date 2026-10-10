@@ -83,9 +83,11 @@ jobs:
           # langkah ambil aset dengan pesan yang menyesatkan. Daftar ini membuat
           # "pohon berkas ter-revert" ketahuan dalam hitungan detik.
           for wajib in tools/fetch_assets.sh tools/render_mannequin.gd \
-                tools/render_grass_world.gd tools/test_flame_world.gd tools/test_pack.gd \
+                tools/render_grass_world.gd tools/test_light_world.gd tools/test_pack.gd \
                 tools/test_incremental_export.py tools/test_skin_shell.gd tools/test_camera_zoom.gd \
-                project/src/game/realistic_fire.gdshader project/src/game/hover_shadow.gdshader \
+                project/src/game/blue_light_blob.gdshader project/src/game/light_player.gd \
+                project/src/game/blue_light_visual.gd project/src/game/light_switch_button.gd \
+                project/src/game/hover_shadow.gdshader \
                 tools/test_scenery.gd tools/test_island.gd tools/test_survival.gd \
                 tools/test_meta_progress.gd tools/test_run_zone.gd \
                 tools/render_world.gd tools/render_survival.gd tools/render_run_zone.gd \
@@ -194,18 +196,18 @@ jobs:
             exit 1
           fi
 
-      - name: Tes scene pulau hijau dan api melayang
+      - name: Tes cahaya biru, tombol SWITCH, dan transformasi smooth
         run: |
           set +e
           timeout 180 ./godot --headless --path project \
-            --script "$GITHUB_WORKSPACE/tools/test_flame_world.gd" 2>&1 | tee flame-world-test.log
+            --script "$GITHUB_WORKSPACE/tools/test_light_world.gd" 2>&1 | tee light-world-test.log
           STATUS=${PIPESTATUS[0]}
           set -e
-          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' flame-world-test.log; then
-            tail -60 flame-world-test.log | while IFS= read -r line; do echo "::error::$line"; done
+          if [ "$STATUS" != 0 ] || grep -q 'SCRIPT ERROR' light-world-test.log; then
+            tail -60 light-world-test.log | while IFS= read -r line; do echo "::error::$line"; done
             exit 1
           fi
-          grep -F '[flame-world-test] HASIL: OK' flame-world-test.log
+          grep -F '[light-world-test] HASIL: OK' light-world-test.log
 
       - name: Tes karakter dan animasi tulang
         run: |
@@ -726,7 +728,7 @@ jobs:
       - name: Import proyek
         run: ./godot --headless --path project --import --editor --quit
 
-      - name: Render pulau hijau + api melayang (Mobile Vulkan software)
+      - name: Render gumpalan cahaya biru + transformasi (Mobile Vulkan software)
         run: |
           set +e
           timeout 300 xvfb-run -a env \

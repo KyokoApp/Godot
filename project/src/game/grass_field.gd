@@ -65,8 +65,8 @@ func _process(_delta: float) -> void:
 		return
 	var position_3d := player.global_position
 	distant.update_center(position_3d)
-	# Pemain lama berada setinggi pinggang; api player baru expose titik tanahnya
-	# sendiri supaya reaksi rumput tetap tepat di sekitar nyala kecil.
+	# Player cahaya dapat terbang tinggi; gunakan titik tanahnya agar reaksi rumput
+	# tetap berpusat tepat di bawah bola, bukan ikut naik bersama visualnya.
 	if player.has_method("ground_position"):
 		_material.set_shader_parameter("player_position", player.call("ground_position"))
 	else:

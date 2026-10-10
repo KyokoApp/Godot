@@ -19,7 +19,7 @@ payload = {path if path.startswith('res://') else 'res://' + path for path in en
 # alias at the original path, rather than storing the editable .tscn itself.
 main_scene_paths = {'res://src/game/main.tscn', 'res://src/game/main.tscn.remap'}
 assert main_scene_paths & payload, 'World-only scene missing from content PCK'
-assert 'res://src/game/realistic_fire.gdshader' in payload, 'Warm fire shader missing from content PCK'
+assert 'res://src/game/blue_light_blob.gdshader' in payload, 'Blue light orb shader missing from content PCK'
 meadow_paths = {'res://assets/nature/meadow_cover.png',
                 'res://assets/nature/meadow_cover.png.import'}
 assert meadow_paths & payload, 'Grass cover missing from content PCK'

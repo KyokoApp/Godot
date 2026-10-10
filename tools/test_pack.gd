@@ -38,9 +38,9 @@ func _verify_payload() -> String:
 	var tree: PackedScene = load("res://assets/nature/models/CommonTree_1.gltf")
 	if tree == null or not tree.can_instantiate():
 		return "Model pepohonan dunia tidak ikut PCK"
-	var flame_shader: Shader = load("res://src/game/realistic_fire.gdshader")
-	if flame_shader == null:
-		return "Shader api hangat realistis tidak ikut PCK"
+	var light_shader: Shader = load("res://src/game/blue_light_blob.gdshader")
+	if light_shader == null:
+		return "Shader gumpalan cahaya biru tidak ikut PCK"
 	return ""
 
 
@@ -55,24 +55,29 @@ func _boot_scene() -> void:
 
 	var problem := ""
 	var player := game.get("_player") as Node3D
-	var flame: Node
+	var light_visual: Node
 	if player != null:
-		flame = player.get_node_or_null("FireVisual")
+		light_visual = player.get_node_or_null("BlueLightVisual")
+	var aura := light_visual.get_node_or_null("BlueAura") as OmniLight3D \
+		if light_visual != null else null
+	var switch_button := game.find_child("TransformSwitchButton", true, false) as Button
+	var orb := light_visual.get_node_or_null("BlueWaveOrb") as MeshInstance3D \
+		if light_visual != null else null
+	var sphere := orb.mesh as SphereMesh if orb != null else null
 	if FileAccess.file_exists("user://content_boot_pending"):
 		problem = "Konten tidak mengonfirmasi boot"
-	elif player == null or flame == null:
-		problem = "Player api realistis tidak dibangun"
+	elif player == null or light_visual == null or orb == null:
+		problem = "Gumpalan cahaya biru tidak dibangun"
 	elif player is CharacterBody3D:
 		problem = "Player masih memakai tubuh/rig karakter"
-	elif flame.get_node_or_null("FireLight") == null:
+	elif aura == null or aura.light_color.b <= aura.light_color.r:
 		problem = "Cahaya biru player tidak ada"
-	elif (flame.get_node_or_null("FireLight") as OmniLight3D).light_color.b \
-			<= (flame.get_node_or_null("FireLight") as OmniLight3D).light_color.r:
-		problem = "Cahaya player bukan biru"
-	elif float(flame.get("flame_height")) > 0.75:
-		problem = "Mesh api player terlalu besar"
+	elif sphere == null or sphere.radius > 0.30:
+		problem = "Gumpalan cahaya tidak berupa bola kecil 3D"
 	elif player.get_node_or_null("HoverShadow") == null:
-		problem = "Bayangan untuk api melayang tidak ada"
+		problem = "Bayangan untuk cahaya terbang tidak ada"
+	elif switch_button == null or not switch_button.is_visible_in_tree():
+		problem = "Tombol SWITCH untuk transformasi tidak ada"
 	elif game.find_child("GameplayHUD", true, false) != null \
 			or game.find_child("AnimationPanel", true, false) != null:
 		problem = "UI atau panel karakter lama masih muncul"
@@ -86,7 +91,7 @@ func _boot_scene() -> void:
 	if not problem.is_empty():
 		_fail(problem)
 		return
-	print("[pack-test] pulau hijau + api realistis melayang + analog HASIL: OK")
+	print("[pack-test] pulau hijau + cahaya biru + switch terbang + analog HASIL: OK")
 	quit(0)
 
 

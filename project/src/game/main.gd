@@ -1,14 +1,15 @@
 extends Node3D
-## World-only game scene: pulau hijau asli, player berupa api hangat yang melayang.
+## World-only grass island where the player is a small blue light orb.
 
 const Field = preload("res://src/game/world/field.gd")
 const Scenery = preload("res://src/game/world/scenery.gd")
 const Forest = preload("res://src/game/world/forest.gd")
 const Grass = preload("res://src/game/grass_field.gd")
-const Player = preload("res://src/game/flame_player.gd")
+const Player = preload("res://src/game/light_player.gd")
 const Orbit = preload("res://src/game/orbit_camera.gd")
 const Joystick = preload("res://src/game/virtual_joystick.gd")
 const Dusk = preload("res://src/game/environment/dusk_environment.gd")
+const LightSwitchButton = preload("res://src/game/light_switch_button.gd")
 
 ## Dipertahankan sebagai penanda versi gameplay untuk pemeriksaan PCK incremental.
 const MOVE_SPEED := 5.0
@@ -26,9 +27,11 @@ var _player: Player
 var _orbit: Orbit
 var _joystick: Joystick
 var _update_button: Button
+var _switch_button: LightSwitchButton
 var _sun: DirectionalLight3D
 var _spawn_point := SPAWN
 var _resume_camera: Dictionary = {}
+var _resume_flying := false
 var _resume_loaded := false
 
 
@@ -42,7 +45,7 @@ func _ready() -> void:
 	_build_camera()
 	_build_grass()
 	_build_controls()
-	print("[main] pulau hijau + api melayang siap")
+	print("[main] pulau hijau + cahaya biru siap; tekan SWITCH untuk terbang")
 	_confirm_boot.call_deferred()
 
 
@@ -73,6 +76,8 @@ func _build_player() -> void:
 	_field.player = _player
 	add_child(_player)
 	_player.spawn(_spawn_point)
+	if _resume_flying:
+		_player.set_flying(true, true)
 
 
 func _build_camera() -> void:
@@ -137,8 +142,30 @@ func _build_controls() -> void:
 	_update_button.offset_right = -18
 	_update_button.offset_bottom = 64
 	_update_button.pressed.connect(_open_update_flow)
-	_joystick.input_exclusions = [_update_button]
-	_orbit.exclusions = [_update_button]
+
+	_switch_button = LightSwitchButton.new()
+	_switch_button.name = "TransformSwitchButton"
+	_switch_button.caption = "SWITCH"
+	_switch_button.tooltip_text = "Beralih antara gumpalan biru dan cahaya terbang"
+	_switch_button.custom_minimum_size = Vector2(98, 98)
+	layer.add_child(_switch_button)
+	_switch_button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	_switch_button.offset_left = -116
+	_switch_button.offset_top = -116
+	_switch_button.offset_right = -18
+	_switch_button.offset_bottom = -18
+	_switch_button.pressed.connect(_toggle_player_form)
+	_switch_button.set_flying(_player.is_flying)
+
+	_joystick.input_exclusions = [_update_button, _switch_button]
+	_orbit.exclusions = [_update_button, _switch_button]
+
+
+func _toggle_player_form() -> void:
+	if _player == null or _switch_button == null:
+		return
+	_player.toggle_flight()
+	_switch_button.set_flying(_player.is_flying)
 
 
 func _load_resume_state() -> void:
@@ -151,6 +178,7 @@ func _load_resume_state() -> void:
 	_spawn_point = Vector2(
 		float(config.get_value("player", "x", SPAWN.x)),
 		float(config.get_value("player", "z", SPAWN.y)))
+	_resume_flying = bool(config.get_value("player", "flying", false))
 	_resume_camera = {
 		"yaw": float(config.get_value("camera", "yaw", 0.0)),
 		"pitch": float(config.get_value("camera", "pitch", 0.48)),
@@ -165,6 +193,7 @@ func _save_resume_state() -> bool:
 	var config := ConfigFile.new()
 	config.set_value("player", "x", _player.global_position.x)
 	config.set_value("player", "z", _player.global_position.z)
+	config.set_value("player", "flying", _player.is_flying)
 	config.set_value("camera", "yaw", _orbit.yaw)
 	config.set_value("camera", "pitch", _orbit.pitch)
 	config.set_value("camera", "distance", _orbit.distance)
