@@ -10,13 +10,14 @@ delta-update.
 ## Gameplay aktif
 
 Scene utama kembali memakai pulau hijau awal: medan berumput, pantai, laut,
-pepohonan, dan bukit jauh. Player tetap hanya berupa api hangat realistis yang
-melayang jelas di atas rumput, dengan bayangan kecil di tanah; nyala dan bara
-merespons gerakan analog secara halus. Gerak juga tersedia lewat WASD/tombol
-panah. Tombol ↻ kecil di kanan membuka pemeriksaan/update konten tanpa menutup
-aplikasi; posisi player dan kamera dipulihkan setelah kembali dari updater. Tidak
-ada karakter atau HUD tambahan. Scene dan skrip lama tetap ada untuk regresi tes,
-tetapi tidak dipakai launcher atau scene utama.
+pepohonan, dan bukit jauh. Player hanya berupa api 3D kecil dengan inti hangat,
+cahaya biru lembut seperti kunang-kunang, dan gerak melayang naik-turun. Api
+bereaksi halus terhadap analog; bayangannya tetap kecil di permukaan rumput.
+Gerak juga tersedia lewat WASD/tombol panah. Tombol ↻ kecil di kanan membuka
+pemeriksaan/update konten tanpa menutup aplikasi; posisi player dan kamera
+dipulihkan setelah kembali dari updater. Tidak ada karakter atau HUD tambahan.
+Scene dan skrip lama tetap ada untuk regresi tes, tetapi tidak dipakai launcher
+atau scene utama.
 
 ## Kenapa dimulai ulang
 

@@ -1,13 +1,13 @@
 extends Node3D
-## A light, non-physical player represented only by a warm flame.
+## A light, non-physical player represented only by a small 3D flame and blue glow.
 
 const Joystick = preload("res://src/game/virtual_joystick.gd")
 const Orbit = preload("res://src/game/orbit_camera.gd")
 const FireVisual = preload("res://src/game/realistic_fire_visual.gd")
 const HoverShadowShader = preload("res://src/game/hover_shadow.gdshader")
 
-## Keep the fire clearly airborne above the island grass without losing ground contact visually.
-const FLOAT_HEIGHT := 2.0
+## Keep the small firefly flame visibly hovering above the island grass.
+const FLOAT_HEIGHT := 1.2
 const EDGE_MARGIN := 1.3
 const ACCELERATION := 18.0
 const BRAKING := 22.0
@@ -37,7 +37,7 @@ func _build_hover_shadow() -> void:
 	material.shader = HoverShadowShader
 	var plane := PlaneMesh.new()
 	plane.orientation = PlaneMesh.FACE_Y
-	plane.size = Vector2(2.8, 1.9)
+	plane.size = Vector2(0.85, 0.6)
 	_hover_shadow = MeshInstance3D.new()
 	_hover_shadow.name = "HoverShadow"
 	_hover_shadow.mesh = plane
@@ -60,11 +60,6 @@ func spawn(point: Vector2) -> void:
 	_velocity = Vector3.ZERO
 	move_speed = 0.0
 	_update_hover_shadow()
-
-
-func set_view_camera(camera: Camera3D) -> void:
-	if _fire != null:
-		_fire.look_camera = camera
 
 
 func ground_position() -> Vector3:

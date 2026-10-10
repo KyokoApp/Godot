@@ -65,7 +65,12 @@ func _boot_scene() -> void:
 	elif player is CharacterBody3D:
 		problem = "Player masih memakai tubuh/rig karakter"
 	elif flame.get_node_or_null("FireLight") == null:
-		problem = "Cahaya hangat player tidak ada"
+		problem = "Cahaya biru player tidak ada"
+	elif (flame.get_node_or_null("FireLight") as OmniLight3D).light_color.b \
+			<= (flame.get_node_or_null("FireLight") as OmniLight3D).light_color.r:
+		problem = "Cahaya player bukan biru"
+	elif float(flame.get("flame_height")) > 0.75:
+		problem = "Mesh api player terlalu besar"
 	elif player.get_node_or_null("HoverShadow") == null:
 		problem = "Bayangan untuk api melayang tidak ada"
 	elif game.find_child("GameplayHUD", true, false) != null \

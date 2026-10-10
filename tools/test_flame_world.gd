@@ -1,5 +1,5 @@
 extends SceneTree
-## Smoke test scene utama yang tersisa: world, api player, dan analog saja.
+## Smoke test pulau hijau, api 3D kecil bercahaya biru, bobbing, dan analog.
 
 const Field = preload("res://src/game/world/field.gd")
 const UPDATE_RESUME := "user://in_game_update_resume.cfg"
@@ -54,20 +54,50 @@ func _run() -> void:
 		var field := game.get("_field") as Node3D
 		var shadow := player.get_node_or_null("HoverShadow") as MeshInstance3D
 		_check(fire != null, "Visual api realistis tidak ada")
-		_check(fire != null and fire.get_node_or_null("FireLight") != null,
-			"Cahaya api hangat tidak ada")
+		var light := fire.get_node_or_null("FireLight") as OmniLight3D if fire != null else null
+		_check(light != null and light.light_color.b > light.light_color.r * 1.2,
+			"Cahaya api belum biru seperti kunang-kunang")
+		_check(light != null and light.omni_range <= 2.2,
+			"Jangkauan cahaya api terlalu besar")
+		_check(fire != null and float(fire.get("flame_height")) <= 0.75,
+			"Bentuk api masih terlalu besar")
+		var outer_flame := fire.get_node_or_null("FlameBody/OuterFlame") as MeshInstance3D \
+			if fire != null else null
+		_check(outer_flame != null and outer_flame.mesh is ArrayMesh,
+			"Api belum memakai mesh 3D")
 		_check(fire != null and fire.get_node_or_null("Embers") != null,
-			"Bara kecil api tidak dibuat")
+			"Bara biru kecil api tidak dibuat")
 		_check(shadow != null and shadow.mesh != null,
 			"Bayangan hover di permukaan pulau tidak ada")
 		if field != null:
 			var ground_height := float(field.call("surface_height",
 				player.global_position.x, player.global_position.z))
 			var gap := player.global_position.y - ground_height
-			_check(gap >= 1.9 and gap <= 2.1,
+			_check(gap >= 1.1 and gap <= 1.3,
 				"Api tidak terlihat melayang dengan jarak aman dari rumput")
 			_check(shadow != null and absf(shadow.global_position.y - ground_height - 0.025) < 0.01,
 				"Bayangan api tidak menempel pada permukaan medan")
+		if fire is Node3D:
+			var flame_visual := fire as Node3D
+			var process_enabled := flame_visual.is_processing()
+			flame_visual.set_process(false)
+			var bob_min := INF
+			var bob_max := -INF
+			var lowest_fire_gap := INF
+			for _step in range(90):
+				flame_visual.call("_process", 1.0 / 30.0)
+				bob_min = minf(bob_min, flame_visual.position.y)
+				bob_max = maxf(bob_max, flame_visual.position.y)
+				if field != null:
+					var ground := float(field.call("surface_height",
+						player.global_position.x, player.global_position.z))
+					lowest_fire_gap = minf(lowest_fire_gap,
+						flame_visual.global_position.y - ground)
+			flame_visual.set_process(process_enabled)
+			_check(bob_max - bob_min >= 0.18 and bob_max - bob_min <= 0.24,
+				"Animasi naik-turun api tidak terlihat atau terlalu besar")
+			_check(lowest_fire_gap >= 1.0,
+				"Api turun terlalu dekat/menembus rumput saat bobbing")
 		var start := Vector2(player.global_position.x, player.global_position.z)
 		joystick.set("direction", Vector2(1.0, 0.0))
 		for _frame in range(30):
@@ -79,7 +109,7 @@ func _run() -> void:
 		if field != null:
 			var moved_ground_height := float(field.call("surface_height", finish.x, finish.y))
 			var moved_gap := player.global_position.y - moved_ground_height
-			_check(moved_gap >= 1.9 and moved_gap <= 2.1,
+			_check(moved_gap >= 1.1 and moved_gap <= 1.3,
 				"Jarak api ke rumput berubah saat bergerak analog")
 			_check(shadow != null
 				and absf(shadow.global_position.y - moved_ground_height - 0.025) < 0.01,

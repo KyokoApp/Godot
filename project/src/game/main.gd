@@ -92,7 +92,6 @@ func _build_camera() -> void:
 	add_child(_orbit)
 	_orbit.position = _player.global_position + _orbit.focus_offset
 	_player.orbit = _orbit
-	_player.set_view_camera(_orbit.camera)
 
 
 func _build_grass() -> void:

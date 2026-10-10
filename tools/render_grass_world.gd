@@ -91,8 +91,8 @@ func _check_flight_gap(field: Node3D, player: Node3D, shadow: MeshInstance3D) ->
 	var ground_height := float(field.call("surface_height",
 		player.global_position.x, player.global_position.z))
 	var gap := player.global_position.y - ground_height
-	if gap < 1.9 or gap > 2.1:
-		_record_failure("Jarak api ke rumput di luar 1,9–2,1 m: %.2f m" % gap)
+	if gap < 1.1 or gap > 1.3:
+		_record_failure("Jarak api ke rumput di luar 1,1–1,3 m: %.2f m" % gap)
 	if absf(shadow.global_position.y - ground_height - 0.025) > 0.01:
 		_record_failure("Bayangan hover tidak menempel pada permukaan pulau")
 
@@ -125,7 +125,10 @@ func _camera_clear_of_ground(
 func _flight_markers_visible(
 	camera: Camera3D, player: Node3D, viewport_rect: Rect2, check_shadow: bool
 ) -> bool:
-	var fire_center := player.global_position + Vector3(0.0, 0.68, 0.0)
+	var fire := player.get_node_or_null("FireVisual") as Node3D
+	if fire == null or not fire.has_method("flame_center_position"):
+		return false
+	var fire_center: Vector3 = fire.call("flame_center_position")
 	var fire_screen_position := camera.unproject_position(fire_center)
 	if camera.is_position_behind(fire_center) or not viewport_rect.has_point(fire_screen_position):
 		return false
