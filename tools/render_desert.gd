@@ -92,31 +92,13 @@ func _camera_clear_of_ground(
 	var arm := orbit.get("arm") as SpringArm3D
 	if camera == null or arm == null:
 		return false
-	var viewport_rect := camera.get_viewport().get_visible_rect()
-	var fire_center := player.global_position + Vector3(0.0, 0.68, 0.0)
-	var fire_screen_position := camera.unproject_position(fire_center)
-	if check_fire_visibility:
-		if camera.is_position_behind(fire_center) \
-				or not viewport_rect.has_point(fire_screen_position):
-			var message := "Api keluar dari bingkai kamera pada jarak %.2fm" % float(
-				orbit.get("distance"))
-			push_error(message)
-			print("::error::", message)
-			return false
-	if check_shadow_visibility:
-		var shadow := player.find_child("HoverShadow", true, false) as Node3D
-		if shadow == null:
-			push_error("Bayangan api untuk frame pemisah terbang tidak ada")
-			return false
-		var shadow_screen_position := camera.unproject_position(shadow.global_position)
-		if camera.is_position_behind(shadow.global_position) \
-				or not viewport_rect.has_point(shadow_screen_position):
-			push_error("Bayangan api berada di luar bingkai gameplay")
-			return false
-		if fire_screen_position.distance_to(shadow_screen_position) < 24.0:
-			push_error("Jarak visual api ke bayangan terlalu kecil")
-			return false
 	var desired_distance := float(orbit.get("distance"))
+	var viewport_rect := camera.get_viewport().get_visible_rect()
+	if not _flight_markers_visible(
+		camera, player, viewport_rect, desired_distance,
+		check_fire_visibility, check_shadow_visibility
+	):
+		return false
 	var actual_distance := arm.global_position.distance_to(camera.global_position)
 	print("[desert-render-test] arm=%.2fm / %.2fm" % [actual_distance, desired_distance])
 	if actual_distance < desired_distance - 0.55:
@@ -138,6 +120,35 @@ func _camera_clear_of_ground(
 			push_error(blocked)
 			print("::error::", blocked)
 			return false
+	return true
+
+
+func _flight_markers_visible(
+	camera: Camera3D, player: Node3D, viewport_rect: Rect2, camera_distance: float,
+	check_fire_visibility: bool, check_shadow_visibility: bool
+) -> bool:
+	var fire_center := player.global_position + Vector3(0.0, 0.68, 0.0)
+	var fire_screen_position := camera.unproject_position(fire_center)
+	if check_fire_visibility and (camera.is_position_behind(fire_center)
+			or not viewport_rect.has_point(fire_screen_position)):
+		var message := "Api keluar dari bingkai kamera pada jarak %.2fm" % camera_distance
+		push_error(message)
+		print("::error::", message)
+		return false
+	if not check_shadow_visibility:
+		return true
+	var shadow := player.find_child("HoverShadow", true, false) as Node3D
+	if shadow == null:
+		push_error("Bayangan api untuk frame pemisah terbang tidak ada")
+		return false
+	var shadow_screen_position := camera.unproject_position(shadow.global_position)
+	if camera.is_position_behind(shadow.global_position) \
+			or not viewport_rect.has_point(shadow_screen_position):
+		push_error("Bayangan api berada di luar bingkai gameplay")
+		return false
+	if fire_screen_position.distance_to(shadow_screen_position) < 24.0:
+		push_error("Jarak visual api ke bayangan terlalu kecil")
+		return false
 	return true
 
 
