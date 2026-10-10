@@ -32,7 +32,7 @@ func _run() -> void:
 	orbit.set("distance", 58.0)
 	for _frame in range(40):
 		await physics_frame
-	if _camera_clears_dunes(orbit, player, desert):
+	if _camera_clears_dunes(orbit, player, desert, false):
 		await _capture("desert-horizon")
 	else:
 		_record_failure("Kamera horizon terhalang atau masuk ke dune")
@@ -84,11 +84,23 @@ func _run() -> void:
 	quit(0 if _failures == 0 else 1)
 
 
-func _camera_clears_dunes(orbit: Node3D, player: Node3D, desert: Node3D) -> bool:
+func _camera_clears_dunes(
+	orbit: Node3D, player: Node3D, desert: Node3D, check_fire_visibility: bool = true
+) -> bool:
 	var camera := orbit.get("camera") as Camera3D
 	var arm := orbit.get("arm") as SpringArm3D
 	if camera == null or arm == null:
 		return false
+	if check_fire_visibility:
+		var fire_center := player.global_position + Vector3(0.0, 0.68, 0.0)
+		var fire_screen_position := camera.unproject_position(fire_center)
+		var viewport_rect := camera.get_viewport().get_visible_rect()
+		if camera.is_position_behind(fire_center) or not viewport_rect.has_point(fire_screen_position):
+			var message := "Api keluar dari bingkai kamera pada jarak %.2fm" % float(
+				orbit.get("distance"))
+			push_error(message)
+			print("::error::", message)
+			return false
 	var desired_distance := float(orbit.get("distance"))
 	var actual_distance := arm.global_position.distance_to(camera.global_position)
 	print("[desert-render-test] arm=%.2fm / %.2fm" % [actual_distance, desired_distance])

@@ -79,6 +79,7 @@ func _build_camera() -> void:
 			_orbit.pitch_min, _orbit.pitch_max)
 		_orbit.distance = clampf(float(_resume_camera.get("distance", _orbit.distance)),
 			Orbit.MIN_DISTANCE, Orbit.MAX_DISTANCE)
+	_update_flight_camera_focus()
 	add_child(_orbit)
 	_orbit.position = _player.global_position + _orbit.focus_offset
 	_player.orbit = _orbit
@@ -171,7 +172,18 @@ func _open_update_flow() -> void:
 func _physics_process(delta: float) -> void:
 	if _orbit == null or _player == null:
 		return
+	_update_flight_camera_focus()
 	_orbit.follow(_player.global_position + _orbit.focus_offset, delta)
+
+
+func _update_flight_camera_focus() -> void:
+	if _orbit == null:
+		return
+	# Keep the airborne flame in view as the player zooms close; the spring arm
+	# sits higher at longer distances, so lower its pivot as distance decreases.
+	var arm_lift := minf(maxf(_orbit.camera_lift_ratio, 0.0) * _orbit.distance, 4.0)
+	var spring_lift := sin(_orbit.pitch) * _orbit.distance
+	_orbit.focus_offset.y = 2.25 - arm_lift - spring_lift
 
 
 func _confirm_boot() -> void:
