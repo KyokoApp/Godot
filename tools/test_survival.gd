@@ -352,7 +352,7 @@ func _run() -> void:
 		var chosen_buff_id := ""
 		for choice in choice_row.get_children():
 			var option_id := str(choice.get("buff_id"))
-			if option_id != "arcane_aegis":
+			if option_id != "arcane_aegis" and option_id != "cinder_orbit":
 				chosen_buff_id = option_id
 				break
 		if chosen_buff_id.is_empty():

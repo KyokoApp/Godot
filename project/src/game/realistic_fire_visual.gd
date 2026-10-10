@@ -20,6 +20,7 @@ var _flames: Array[MeshInstance3D] = []
 var _materials: Array[ShaderMaterial] = []
 var _body: Node3D
 var _light: OmniLight3D
+var _core_material: StandardMaterial3D
 var _particles: GPUParticles3D
 var _particle_material: ParticleProcessMaterial
 var _filtered_velocity := Vector3.ZERO
@@ -201,9 +202,9 @@ func _build_embers() -> void:
 	var colors := Gradient.new()
 	colors.offsets = PackedFloat32Array([0.0, 0.38, 1.0])
 	colors.colors = PackedColorArray([
-		Color(0.48, 0.88, 1.0, 0.9),
-		Color(0.12, 0.48, 1.0, 0.64),
-		Color(0.035, 0.13, 0.42, 0.0),
+		Color(0.25, 0.58, 1.0, 0.9),
+		Color(0.08, 0.30, 1.0, 0.64),
+		Color(0.025, 0.08, 0.42, 0.0),
 	])
 	var color_ramp := GradientTexture1D.new()
 	color_ramp.gradient = colors
@@ -228,7 +229,7 @@ func _make_spark_mesh() -> QuadMesh:
 	material.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
 	material.vertex_color_use_as_albedo = true
 	material.emission_enabled = true
-	material.emission = Color("75caff")
+	material.emission = Color("3178ff")
 	material.emission_energy_multiplier = 0.55
 	material.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
 	var spark := QuadMesh.new()
@@ -238,13 +239,34 @@ func _make_spark_mesh() -> QuadMesh:
 
 
 func _build_light() -> void:
+	var core_mesh := SphereMesh.new()
+	core_mesh.radius = 0.045
+	core_mesh.height = 0.09
+	core_mesh.radial_segments = 12
+	core_mesh.rings = 8
+	var core := MeshInstance3D.new()
+	core.name = "FireflyCore"
+	core.mesh = core_mesh
+	core.position.y = 0.32
+	core.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_core_material = StandardMaterial3D.new()
+	_core_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_core_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_core_material.albedo_color = Color(0.12, 0.34, 1.0, 0.82)
+	_core_material.emission_enabled = true
+	_core_material.emission = Color("3178ff")
+	_core_material.emission_energy_multiplier = 1.2
+	_core_material.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+	core.material_override = _core_material
+	add_child(core)
+
 	_light = OmniLight3D.new()
 	_light.name = "FireLight"
 	_light.position.y = 0.22
-	_light.light_color = Color("75caff")
-	_light.light_energy = 0.82
-	_light.omni_range = 2.1
-	_light.omni_attenuation = 1.75
+	_light.light_color = Color("3178ff")
+	_light.light_energy = 1.0
+	_light.omni_range = 1.9
+	_light.omni_attenuation = 1.35
 	_light.shadow_enabled = false
 	add_child(_light)
 
@@ -253,3 +275,4 @@ func _update_light(delta: float) -> void:
 	var pulse := sin(_time * 4.7) * 0.07 + sin(_time * 2.2 + 0.5) * 0.035
 	var target_energy := 0.80 + pulse + motion_strength * 0.08 + gust_strength * 0.05
 	_light.light_energy = lerpf(_light.light_energy, target_energy, 1.0 - exp(-8.0 * delta))
+	_core_material.emission_energy_multiplier = 1.12 + pulse * 0.45

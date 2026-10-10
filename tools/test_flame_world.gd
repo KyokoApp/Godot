@@ -59,6 +59,12 @@ func _run() -> void:
 			"Cahaya api belum biru seperti kunang-kunang")
 		_check(light != null and light.omni_range <= 2.2,
 			"Jangkauan cahaya api terlalu besar")
+		var glow_core := fire.get_node_or_null("FireflyCore") as MeshInstance3D \
+			if fire != null else null
+		var glow_material := glow_core.material_override as StandardMaterial3D \
+			if glow_core != null else null
+		_check(glow_material != null and glow_material.emission.b > glow_material.emission.r * 2.0,
+			"Inti cahaya kunang-kunang tidak berwarna biru")
 		_check(fire != null and float(fire.get("flame_height")) <= 0.75,
 			"Bentuk api masih terlalu besar")
 		var outer_flame := fire.get_node_or_null("FlameBody/OuterFlame") as MeshInstance3D \
