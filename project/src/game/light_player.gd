@@ -10,7 +10,7 @@ const HoverShadowShader = preload("res://src/game/hover_shadow.gdshader")
 
 const ORB_RADIUS := 0.24
 const GROUNDED_CENTER_HEIGHT := 0.27
-const FLYING_CENTER_HEIGHT := 1.22
+const FLYING_CENTER_HEIGHT := 1.48
 const FLIGHT_BOB_AMPLITUDE := 0.045
 const FLIGHT_BOB_SPEED := 2.3
 const TRANSFORM_DURATION := 0.95

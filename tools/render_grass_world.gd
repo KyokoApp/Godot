@@ -104,7 +104,7 @@ func _check_flight_gap(field: Node3D, player: Node3D, shadow: MeshInstance3D) ->
 	var ground_height := float(field.call("surface_height",
 		player.global_position.x, player.global_position.z))
 	var bottom_gap := player.global_position.y - ground_height - 0.24
-	if bottom_gap < 0.72 or bottom_gap > 1.10:
+	if bottom_gap < 1.10 or bottom_gap > 1.35:
 		_record_failure("Bola cahaya terlalu dekat/tinggi dari rumput: celah %.2f m" % bottom_gap)
 	if shadow == null or absf(shadow.global_position.y - ground_height - 0.025) > 0.01:
 		_record_failure("Bayangan tidak menempel pada permukaan pulau")

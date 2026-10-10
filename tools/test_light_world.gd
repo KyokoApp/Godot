@@ -112,7 +112,7 @@ func _run() -> void:
 		ground_height = float(field.call("surface_height",
 			player.global_position.x, player.global_position.z))
 		var flight_bottom_gap := player.global_position.y - ground_height - ORB_RADIUS
-		_check(flight_bottom_gap >= 0.72,
+		_check(flight_bottom_gap >= 1.10,
 			"Cahaya terbang terlalu dekat/menembus permukaan tanah")
 		_check(shadow != null and absf(shadow.global_position.y - ground_height - 0.025) < 0.01,
 			"Bayangan tidak tertinggal di permukaan saat cahaya terbang")

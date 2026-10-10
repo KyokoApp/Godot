@@ -53,7 +53,7 @@ func _build_orb() -> void:
 func _build_aura() -> void:
 	_light = OmniLight3D.new()
 	_light.name = "BlueAura"
-	_light.light_color = Color("3898ff")
+	_light.light_color = Color("286dff")
 	_light.light_energy = 0.16
 	_light.omni_range = 0.82
 	_light.omni_attenuation = 1.45

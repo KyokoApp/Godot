@@ -13,7 +13,7 @@ void vertex() {
 		* cos(p.z * 11.0 - p.y * 7.0 - time * 0.61);
 	float soft_wave = cos(p.x * 8.0 - p.z * 12.0 + time * 0.57)
 		* sin(p.y * 10.0 + p.x * 6.0 - time * 0.73);
-	float ripple = broad_wave * 0.014 + soft_wave * 0.006;
+	float ripple = broad_wave * 0.024 + soft_wave * 0.011;
 	VERTEX += NORMAL * ripple * (0.82 + flight_blend * 0.28 + motion_strength * 0.08);
 	blob_position = p;
 }
