@@ -72,7 +72,7 @@ func _build_camera() -> void:
 	_orbit.pitch = 0.42
 	_orbit.pitch_min = 0.12
 	_orbit.pitch_max = 1.12
-	_orbit.focus_offset = Vector3(0.0, -3.0, 0.0)
+	_orbit.focus_offset = Vector3(0.0, -5.0, 0.0)
 	if _resume_loaded:
 		_orbit.yaw = float(_resume_camera.get("yaw", _orbit.yaw))
 		_orbit.pitch = clampf(float(_resume_camera.get("pitch", _orbit.pitch)),

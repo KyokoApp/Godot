@@ -6,7 +6,7 @@ const Orbit = preload("res://src/game/orbit_camera.gd")
 const FireVisual = preload("res://src/game/realistic_fire_visual.gd")
 
 ## Leave a clear, readable air gap between the fire avatar and dune silhouettes.
-const FLOAT_HEIGHT := 4.0
+const FLOAT_HEIGHT := 6.0
 const EDGE_MARGIN := 1.3
 const ACCELERATION := 18.0
 const BRAKING := 22.0
