@@ -298,7 +298,7 @@ static func terrain_height(x: float, z: float) -> float:
 	# rounded crest breaks the opening view's long, empty valley without forming
 	# a continuous stripe across the horizon.
 	var rolling_base := 16.0 + dune + shoulder_dunes + cross_roll + small_ridges + broad + fine
-	var near_crest := _dune_mound(x, z, -17.0, -15.0, 28.0, 30.0, 13.0)
+	var near_crest := _dune_mound(x, z, -11.0, -8.0, 25.0, 28.0, 16.0)
 	return rolling_base + near_crest
 
 
