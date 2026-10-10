@@ -5,7 +5,8 @@ const Joystick = preload("res://src/game/virtual_joystick.gd")
 const Orbit = preload("res://src/game/orbit_camera.gd")
 const FireVisual = preload("res://src/game/realistic_fire_visual.gd")
 
-const FLOAT_HEIGHT := 0.36
+## Keep the fire avatar visibly aloft above the rendered dune surface.
+const FLOAT_HEIGHT := 2.0
 const EDGE_MARGIN := 1.3
 const ACCELERATION := 18.0
 const BRAKING := 22.0

@@ -53,9 +53,13 @@ func _run() -> void:
 		var initial_mesh_height := float(desert.call(
 			"surface_height", player.global_position.x, player.global_position.z))
 		var initial_ground_error := initial_ground_position.y - initial_mesh_height
+		var initial_flight_height := player.global_position.y - initial_mesh_height
 		print("::notice::selisih pijakan player dengan mesh: %.3fm" % initial_ground_error)
+		print("::notice::tinggi terbang awal: %.3fm" % initial_flight_height)
 		_check(absf(initial_ground_error) < 0.02,
 			"Player tertanam atau melayang dari mesh dune saat spawn")
+		_check(initial_flight_height >= 1.8 and initial_flight_height <= 2.2,
+			"Api player tidak melayang jelas di atas dune saat spawn")
 	var mesa_meshes := []
 	if desert != null:
 		mesa_meshes = desert.find_children("*Mesa*", "MeshInstance3D", true, false)
@@ -127,8 +131,11 @@ func _run() -> void:
 		var moved_ground_position: Vector3 = player.call("ground_position")
 		var moved_mesh_height := float(desert.call(
 			"surface_height", finish.x, finish.y))
+		var moved_flight_height := player.global_position.y - moved_mesh_height
 		_check(moved_ground_position.y >= moved_mesh_height - 0.02,
 			"Player menembus mesh dune saat bergerak analog")
+		_check(moved_flight_height >= 1.8,
+			"Player kehilangan jarak terbang di atas dune saat bergerak analog")
 		_check(start.distance_to(finish) > 0.7, "Analog tidak menggerakkan player")
 		_check(bool(desert.call("is_inside", finish.x, finish.y, 0.0)),
 			"Player keluar dari area gurun yang dapat dijelajahi")
